@@ -41,7 +41,7 @@ namespace Pokemon.Bench
 open Trainer
 
 /-- A Basic Pokémon ex with 50 HP: its Knock Out gives two Prize cards. -/
-def exMon : PokemonCard := ⟨"ExMon", .basic, none, 5, .grass, [], 1, none, none, .ex, false⟩
+def exMon : PokemonCard := ⟨"ExMon", .basic, none, 5, .grass, [], 1, none, none, .ex, false, []⟩
 
 /-- Put 5 damage counters on the opponent's Active Pokémon. -/
 def hit5 : Card := .trainer "Hit5" .item (.counters 5)
@@ -98,10 +98,10 @@ theorem lastPrize_reachable :
 /-! ## Energy and evolution on the Bench, and a Knock Out on the Bench -/
 
 /-- A Basic Pokémon with 50 HP. -/
-def low : PokemonCard := ⟨"Low", .basic, none, 5, .grass, [], 1, none, none, .none, false⟩
+def low : PokemonCard := ⟨"Low", .basic, none, 5, .grass, [], 1, none, none, .none, false, []⟩
 
 /-- A Stage 1 Pokémon that evolves from `low` and has 20 HP. -/
-def weak : PokemonCard := ⟨"Weak", .stage1, some "Low", 2, .grass, [], 1, none, none, .none, false⟩
+def weak : PokemonCard := ⟨"Weak", .stage1, some "Low", 2, .grass, [], 1, none, none, .none, false, []⟩
 
 /-- `low` on the Bench since an earlier turn, with 3 damage counters. -/
 def lowBenched : InPlay := { InPlay.ofBasic low with damage := 3, fresh := false }
@@ -205,7 +205,7 @@ theorem doubleKO_reachable :
 /-! ## A Char counter on the Bench -/
 
 /-- A Basic Pokémon with 20 HP. -/
-def tiny : PokemonCard := ⟨"Tiny", .basic, none, 2, .grass, [], 1, none, none, .none, false⟩
+def tiny : PokemonCard := ⟨"Tiny", .basic, none, 2, .grass, [], 1, none, none, .none, false, []⟩
 
 /-- `tiny` on the Bench with a Char counter. -/
 def charred : InPlay := (InPlay.ofBasic tiny).setMarks (Marks.set .char true)
@@ -337,7 +337,7 @@ theorem switch_cures :
 one of the opponent's Benched Pokémon. -/
 def whirl : Attack := ⟨"Whirl", [], 1, .seq (.inflict .paralyzed) (.switch .opp), false⟩
 
-def whirler : PokemonCard := ⟨"Whirler", .basic, none, 10, .grass, [whirl], 1, none, none, .none, false⟩
+def whirler : PokemonCard := ⟨"Whirler", .basic, none, 10, .grass, [whirl], 1, none, none, .none, false, []⟩
 
 def whirlStart : GameState :=
   ⟨side [] [.energy .fire] (InPlay.ofBasic whirler) [],
@@ -375,7 +375,7 @@ theorem whirl_reachable :
 /-! ## More Prize counts, healing and single-target damage on the Bench -/
 
 /-- A Basic Mega Evolution Pokémon ex with 50 HP: its Knock Out gives three Prize cards. -/
-def megaMon : PokemonCard := ⟨"MegaMon", .basic, none, 5, .grass, [], 1, none, none, .megaEx, false⟩
+def megaMon : PokemonCard := ⟨"MegaMon", .basic, none, 5, .grass, [], 1, none, none, .megaEx, false, []⟩
 
 /-- The player to move has `prizes` and `hit5` in hand; the opponent has `megaMon` Active and a
 100-HP Pokémon on the Bench. -/
@@ -661,10 +661,10 @@ theorem switchThenHit_not_wf : switchThenHit.wf = false ∧ hitThenSwitch.wf = t
 def snipe : Attack := ⟨"Snipe", [], 0, .spreadDamage .opp 5, false⟩
 
 /-- A 100-HP Basic Pokémon with `snipe`. -/
-def sniper : PokemonCard := ⟨"Sniper", .basic, none, 10, .grass, [snipe], 1, none, none, .none, false⟩
+def sniper : PokemonCard := ⟨"Sniper", .basic, none, 10, .grass, [snipe], 1, none, none, .none, false, []⟩
 
 /-- A 50-HP Basic Tera Pokémon ex. -/
-def teraMon : PokemonCard := ⟨"TeraMon", .basic, none, 5, .grass, [], 1, none, none, .ex, true⟩
+def teraMon : PokemonCard := ⟨"TeraMon", .basic, none, 5, .grass, [], 1, none, none, .ex, true, []⟩
 
 def snipeStart : GameState :=
   ⟨side [] [.energy .fire, .energy .fire] (InPlay.ofBasic sniper) [],
@@ -702,7 +702,7 @@ theorem teraBench_reachable :
 /-- 50 damage to one of the opponent's Benched Pokémon. -/
 def poke : Attack := ⟨"Poke", [], 0, .benchDamage .opp 5, false⟩
 
-def poker : PokemonCard := ⟨"Poker", .basic, none, 10, .grass, [poke], 1, none, none, .none, false⟩
+def poker : PokemonCard := ⟨"Poker", .basic, none, 10, .grass, [poke], 1, none, none, .none, false, []⟩
 
 def pokeStart : GameState :=
   ⟨side [] [.energy .fire, .energy .fire] (InPlay.ofBasic poker) [],

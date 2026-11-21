@@ -89,6 +89,12 @@ structure InPlay where
   fresh : Bool
   /-- markers (Imprison, Shock-wave, Lightning Rod, Char) and the Coloring counter -/
   marks : Marks
+  /-- has used an Ability this turn (milestone M8a): set by `Move.ability`, read by the "once
+  during your turn" limit (`AbilityUse.once`), cleared at the end of its owner's turn
+  (`InPlay.unfresh`) and by evolution (the evolved Pokémon has the new card's Abilities, unused).
+  One flag per Pokémon: exact for cards with at most one Ability, which is every Standard card
+  (survey S9); for a card with two once-per-turn Abilities the flag would let only one be used. -/
+  used : Bool
 
 namespace InPlay
 
@@ -102,9 +108,14 @@ def cardList (p : InPlay) : List Card := Card.pokemon p.top :: (p.under ++ p.ene
 def ofBasic (p : PokemonCard) : InPlay :=
   { top := p, under := [], energy := [], tools := [], damage := 0,
     rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-    marks := Marks.empty }
+    marks := Marks.empty, used := false }
 
-def unfresh (p : InPlay) : InPlay := { p with fresh := false }
+/-- The end of its owner's turn for a Pokémon in play: it is no longer one put into play or evolved
+this turn, and (milestone M8a) it has not used an Ability this turn. -/
+def unfresh (p : InPlay) : InPlay := { p with fresh := false, used := false }
+
+/-- Record that the Pokémon has used an Ability this turn (milestone M8a). -/
+def markUsed (p : InPlay) : InPlay := { p with used := true }
 
 /-- The units of Energy attached to this Pokémon (`Card.provides`), which pay attack costs
 (`Pays`). -/

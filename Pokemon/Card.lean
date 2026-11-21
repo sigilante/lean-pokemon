@@ -674,6 +674,53 @@ theorem Attack.script_switchSafe {atk : Attack} (h : atk.wf = true) :
   · simp only [Effect.switchSafe, Effect.switchesOwn, h.2, Bool.not_false, Bool.true_or,
       Bool.and_self]
 
+/-! ## Abilities (milestone M8a) -/
+
+/-- How an on-play Ability is triggered: "When you play this Pokémon from your hand onto your
+Bench during your turn" (`bench`), "When you play this Pokémon from your hand to evolve 1 of your
+Pokémon during your turn" (`evolve`), or either. -/
+inductive PlayWay where
+  | bench | evolve | either
+  deriving DecidableEq
+
+/-- The use limit of an Ability (survey S9 part 2, `ability_kind`): "Once during your turn, you
+may …" (`once`: once per turn for each Pokémon in play that has it); "As often as you like during
+your turn, you may …" (`unlimited`); or a trigger on entering play from the hand (`onPlay`; "you
+may", so optional). Static (passive) and other triggered Abilities are milestone M8b and have no
+constructor. -/
+inductive AbilityUse where
+  | once
+  | unlimited
+  | onPlay (w : PlayWay)
+  deriving DecidableEq
+
+/-- An Ability (milestone M8a). `spot` is where the Pokémon must be to use it, as printed ("if
+this Pokémon is in the Active Spot": `some .active`; "if this Pokémon is on your Bench":
+`some .bench`; no restriction: `none`); `cond` is a further printed condition, a `Test` that must
+hold when the Ability is used; `effect` resolves as a Trainer card's effect does (`TRun`). An
+Ability belongs to the Pokémon card: a Pokémon in play has the Abilities of its top card, so it
+loses them on leaving play and an evolved Pokémon has the new card's Abilities. -/
+structure Ability where
+  name : String
+  use : AbilityUse
+  spot : Option Spot
+  cond : Option Test
+  effect : Effect
+  deriving DecidableEq
+
+/-- An Ability that a player uses during their turn by choice (`once` or `unlimited`), as opposed
+to an on-play trigger. -/
+def AbilityUse.activated : AbilityUse → Bool
+  | .once => true
+  | .unlimited => true
+  | .onPlay _ => false
+
+/-- Can the Ability be used by a Pokémon at `sp`? -/
+def Ability.spotOk (ab : Ability) (sp : Spot) : Bool :=
+  match ab.spot with
+  | none => true
+  | some s => decide (s = sp)
+
 /-- The rule box of a Pokémon card, as far as it decides how many Prize cards its Knock Out gives
 (milestone M3; survey S8 C3, S9). The kinds are those of today's Standard (regulation marks H, I,
 J): no rule box (1 Prize, "take one of your Prize cards", rulebook 2023 p. 7); Pokémon ex, Tera
@@ -726,6 +773,9 @@ structure PokemonCard where
   p. 24: "a new effect that prevents all attack damage done to them while they're on your
   Bench"). In today's Standard every Tera Pokémon is a Pokémon ex (101 card records). -/
   tera : Bool
+  /-- the Abilities printed on the card (milestone M8a; in today's Standard at most one, survey
+  S9: 316 of 1,860 Pokémon have exactly one) -/
+  abilities : List Ability
   deriving DecidableEq
 
 /-- How many Prize cards the opponent takes when this Pokémon is Knocked Out (1, 2 or 3). -/
@@ -822,8 +872,21 @@ def attacksTame : List Attack → Bool
   | [] => true
   | a :: as => a.effect.tame && attacksTame as
 
+/-- The largest test constant of an Ability: its condition's and its effect's. -/
+def Ability.tmax (ab : Ability) : Nat :=
+  max (match ab.cond with | some t => t.bound | none => 0) ab.effect.tmax
+
+/-- The largest test constant over a list of Abilities. -/
+def abilitiesTmax : List Ability → Nat
+  | [] => 0
+  | a :: as => max a.tmax (abilitiesTmax as)
+
+def abilitiesTame : List Ability → Bool
+  | [] => true
+  | a :: as => a.effect.tame && abilitiesTame as
+
 def Card.tmax : Card → Nat
-  | .pokemon p => attacksTmax p.attacks
+  | .pokemon p => max (attacksTmax p.attacks) (abilitiesTmax p.abilities)
   | .energy _ => 0
   | .trainer _ _ e => e.tmax
 
@@ -843,7 +906,7 @@ theorem Attack.script_tmax (atk : Attack) : atk.script.tmax = atk.effect.tmax :=
   · simp only [Effect.tmax, Nat.zero_max]
 
 def Card.tame : Card → Bool
-  | .pokemon p => attacksTame p.attacks
+  | .pokemon p => attacksTame p.attacks && abilitiesTame p.abilities
   | .energy _ => true
   | .trainer _ _ e => e.tame
 

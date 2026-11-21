@@ -340,6 +340,42 @@ theorem TRun.settled_or_won {e : Effect} {g g' : GameState} (h : TRun e g g')
   | iterNil => exact hs
   | iterCons _ _ ih₁ ih₂ => exact ih₂ (ih₁ hs)
 
+/-- Marking a Pokémon as having used an Ability keeps `Settled` (milestone M8a): damage and
+HP are unchanged. -/
+theorem UseAt.settled {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
+    (hs : Settled g) : Settled g₁ := by
+  obtain ⟨hk, h1, h2⟩ := hs
+  cases h with
+  | active ha =>
+      refine ⟨fun p hp => ?_, by simp, h2⟩
+      rcases hp with hp | hp | hp | hp
+      · simp only [Option.some.injEq] at hp; subst hp; exact hk x (.inl ha)
+      · exact hk p (.inr (.inl hp))
+      · exact hk p (.inr (.inr (.inl hp)))
+      · exact hk p (.inr (.inr (.inr hp)))
+  | bench hb =>
+      refine ⟨fun p hp => ?_, h1, h2⟩
+      rcases hp with hp | hp | hp | hp
+      · exact hk p (.inl hp)
+      · simp only at hp
+        rcases List.mem_append.1 hp with hp | hp
+        · exact hk p (.inr (.inl (by rw [hb]; exact List.mem_append_left _ hp)))
+        · cases hp with
+          | head => exact hk x (.inr (.inl (by rw [hb]; exact List.mem_append_right _ (.head _))))
+          | tail _ hp =>
+              exact hk p (.inr (.inl (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))))
+      · exact hk p (.inr (.inr (.inl hp)))
+      · exact hk p (.inr (.inr (.inr hp)))
+
+/-- Marking a Pokémon as having used an Ability keeps well-formedness (milestone M8a). -/
+theorem UseAt.wellFormed {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
+    (hw : WellFormed g) : WellFormed g₁ := by
+  cases h with
+  | active ha => exact hw
+  | bench hb =>
+      exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 x (hb ▸ List.mem_append_right _
+        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
+
 /-- Legal play preserves well-formedness. -/
 theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
     WellFormed g' := by
@@ -367,6 +403,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
   | item hh hbt hst hr => exact hr.wellFormed hw
   | supporter hh hs hbt hst hr => exact hr.wellFormed hw
+  | ability hu _ _ _ _ _ _ _ _ hr => exact hr.wellFormed (hu.wellFormed hw)
   | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | @knockOut p c ps ha hk hp =>

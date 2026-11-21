@@ -367,10 +367,10 @@ theorem atkB_wf (M : Machine) : (atkB M).wf = true := by
 /-- The first player's Pokémon: its damage is the program counter, so its HP exceeds every
 value the counter takes. -/
 def clock (M : Machine) : PokemonCard :=
-  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0, none, none, .none, false⟩
+  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0, none, none, .none, false, []⟩
 
 /-- The second player's Pokémon, the target of the first player's zero tests. -/
-def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0, none, none, .none, false⟩
+def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0, none, none, .none, false, []⟩
 
 /-- The halt mark: an Imprison marker on the Clock. -/
 def haltMarks : Marks := Marks.set .imprison true Marks.empty
@@ -1097,7 +1097,7 @@ deck out), or swaps it (end of turn). No other move is legal: hands hold only En
 are empty, nothing is Confused, and no Pokémon is at its HP. -/
 theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape kc ko g)
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hcc : kc.marks.char = false)
-    (hoc : ko.marks.char = false) :
+    (hoc : ko.marks.char = false) (hab : kc.top.abilities = []) :
     Shape kc.weak ko.weak g' ∨ Shape ko.weak kc.weak g' ∨
       ∃ atk g'', atk ∈ kc.top.attacks ∧ Run atk.script g g'' ∧
         g' = { g'' with
@@ -1122,6 +1122,10 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | retreat ha hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim
+  | @ability _ _ x _ ab hu hm' =>
+      cases hu with
+      | active ha => rw [hp] at ha; cases ha; rw [h1, hab] at hm'; cases hm'
+      | bench hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | @attack g'' a atk ha hm' _ _ _ _ _ _ hr _ _ =>
       rw [hp] at ha; cases ha
       exact .inr (.inr ⟨atk, g'', h1 ▸ hm', hr, rfl⟩)
@@ -1224,7 +1228,7 @@ theorem reach_trans {g₁ g₂ g₃ : GameState} (h₁ : Reach g₁ g₂) (h₂ 
 
 /-- A Basic Pokémon just set up as Active: no damage, no Energy, no markers. -/
 def onPlay (top : PokemonCard) : InPlay :=
-  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty⟩
+  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty, false⟩
 
 /-- **The start state for machine `M` with inputs `a`, `b`.** The first player (to move, in
 the main phase of a turn after the draw) has the Clock Active, one Energy in hand, an empty
@@ -1374,7 +1378,7 @@ machine (or do nothing), and every other legal move leaves the abstract state un
 theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g')
     (hi : Inv M c₀ g) : Inv M c₀ g' := by
   obtain ⟨s, hg, hr, hs | hs⟩ := hi
-  · rcases move_shape hm hs (hg.hpA _ _) (hg.hpB _ _) (mkOf_char _) rfl with h | h | ⟨atk, g'', ha, hr', rfl⟩
+  · rcases move_shape hm hs (hg.hpA _ _) (hg.hpB _ _) (mkOf_char _) rfl rfl with h | h | ⟨atk, g'', ha, hr', rfl⟩
     · exact ⟨s, hg, hr, .inl h⟩
     · exact ⟨s, hg, hr, .inr h⟩
     · simp only [pkA, clock, List.mem_singleton] at ha
@@ -1382,7 +1386,7 @@ theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g
       have h := (Does.attackA hg false false false false g hs).2 g'' hr'
       exact ⟨_, (tickS_spec hg).1, reaches_of_spec hr (tickS_spec hg).2,
         .inl ⟨h.cur.setGx _, h.opp⟩⟩
-  · rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) with h | h | ⟨atk, g'', ha, hr', rfl⟩
+  · rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) rfl with h | h | ⟨atk, g'', ha, hr', rfl⟩
     · exact ⟨s, hg, hr, .inr h⟩
     · exact ⟨s, hg, hr, .inl h⟩
     · simp only [pkB, tape, List.mem_singleton] at ha

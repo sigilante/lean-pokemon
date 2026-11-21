@@ -787,6 +787,47 @@ theorem GameState.XFit.attack {k : Nat} {g : GameState} (hF : g.XFit k) {a : InP
   have h2 := attacksTmax_mem (as := a.top.attacks) hm
   rw [Attack.script_tmax]; omega
 
+/-- An Ability's test constants, its condition's included, are below `k` (milestone M8a). -/
+theorem GameState.XFit.ability {k : Nat} {g g₁ : GameState} (hF : g.XFit k) {x : InPlay}
+    {sp : Spot} {ab : Ability} (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) :
+    ab.tmax < k :=
+  Nat.lt_of_le_of_lt (Card.ability_tmax hm) (hF.2 _ hu.top_mem)
+
+/-- An Ability's condition holds in a state with the same `xclamp`, with no Knock Out pending
+(milestone M8a). -/
+theorem Ability.CondOk.of_xclamp {k : Nat} {ab : Ability} {g₁ g₂ : GameState} (h : ab.CondOk g₁)
+    (hc : g₁.xclamp = g₂.xclamp) (hk : DamageBounded g₁) (hb : ab.tmax < k) : ab.CondOk g₂ := by
+  unfold Ability.CondOk at h ⊢
+  cases hcd : ab.cond with
+  | none => trivial
+  | some t =>
+      rw [hcd] at h
+      obtain ⟨p, hp, he⟩ := h
+      have ht : t.bound < k := by simp only [Ability.tmax, hcd] at hb; omega
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) (GameState.xrclamp_of_xclamp hc hk) hp
+      exact ⟨q, hq, by rw [Test.eval_agree _ (GameState.count_of_xclampAt hc) hqa ht]; exact he⟩
+
+/-- **Marking a Pokémon as having used an Ability commutes with `xclamp`** (milestone M8a). -/
+theorem UseAt.xclamp_sim {g₁ g₁' g₂ : GameState} {x : InPlay} {sp : Spot}
+    (hu : UseAt g₁ x sp g₁') (hc : g₁.xclamp = g₂.xclamp) :
+    ∃ x' g₂', UseAt g₂ x' sp g₂' ∧ x'.top = x.top ∧ x'.used = x.used ∧
+      g₁'.xclamp = g₂'.xclamp := by
+  obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+  subst hg
+  cases hu with
+  | active ha =>
+      rw [ha] at hc₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+      exact ⟨q, _, .active rfl, hq.top, hq.used, by
+        simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂, he₁, he₂,
+          InPlay.clamp_of_agree hq.markUsed]⟩
+  | @bench b₁ b₂ hb =>
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
+      have hr := InPlay.agree_of_clamp h2
+      exact ⟨r, _, .bench rfl, hr.top, hr.used, by
+        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
+          List.map_cons, h1, h3, InPlay.clamp_of_agree hr.markUsed]⟩
+
 /-- **The kernel of `xclamp` is a bisimulation for `Move`**, for a state that is `XFit k`, with
 no hypothesis on damage reduction, `drain` or modifiers: if `g₁` and `g₂` have the same
 `xclamp`, every move from `g₁` is matched by a move from `g₂` to a state with the same `xclamp`.
@@ -867,6 +908,15 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (.inl hst)
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
         (by subst hg; exact hl) (by subst hg; exact hat) hnd hbh, hc'⟩
+  | @ability g₁m g' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
+      have hs' := hs₂ hst
+      have hb := hF.ability hu hm
+      have hcd' := hcd.of_xclamp hc hst.1 hb
+      obtain ⟨x', g₂m, hu', hxt, hxu, hcm⟩ := hu.xclamp_sim hc
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt ab.effect_tmax_le hb)
+        (hF.1.of_perm hu.perm) hcm (.inl (hu.settled hst))
+      exact ⟨g₂', .ability hu' (hxt ▸ hm) hk hsp (hxu ▸ hn) hcd' (by subst hg; exact hbt) hs'
+        (by subst hg; exact hat) hr' hnd hbh, hc'⟩
   | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd hbh =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .supporter e ∈ g₁.cur.hand := by

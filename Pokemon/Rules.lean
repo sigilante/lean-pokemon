@@ -565,6 +565,22 @@ theorem BenchChar.refl : ∀ b : List InPlay, BenchChar b b
   | [] => .nil
   | p :: ps => .cons (.keep p) (BenchChar.refl ps)
 
+/-- `UseAt g x sp g'` (milestone M8a): the player's Pokémon `x`, at `sp` (the Active Spot, or a
+place on the Bench), uses an Ability; `g'` is `g` with `x` marked as having used an Ability this
+turn (`InPlay.markUsed`), and nothing else changed. -/
+inductive UseAt : GameState → InPlay → Spot → GameState → Prop where
+  | active {g : GameState} {x : InPlay} (ha : g.cur.active = some x) :
+      UseAt g x .active { g with cur := { g.cur with active := some x.markUsed } }
+  | bench {g : GameState} {x : InPlay} {b₁ b₂ : List InPlay} (hb : g.cur.bench = b₁ ++ x :: b₂) :
+      UseAt g x .bench { g with cur := { g.cur with bench := b₁ ++ x.markUsed :: b₂ } }
+
+/-- The printed condition of an Ability holds (milestone M8a): none, or its test holds on the
+Active Pokémon the test reads (a count test reads the state). -/
+def Ability.CondOk (ab : Ability) (g : GameState) : Prop :=
+  match ab.cond with
+  | none => True
+  | some t => ∃ p, g.activeOf t.whose = some p ∧ t.eval g p = true
+
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
@@ -596,7 +612,8 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂,
         active := some { a with
           top := p, under := Card.pokemon a.top :: a.under,
-          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } } }
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } } }
   /-- attach one Energy card from hand to one of the player's Benched Pokémon; the same
   once-per-turn attachment as `attach` ("Take an Energy card from your hand and put it under your
   Active Pokémon or one of your Benched Pokémon … You can attach Energy just once each turn!",
@@ -622,7 +639,8 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂,
         bench := b₁ ++ { q with
           top := p, under := Card.pokemon q.top :: q.under,
-          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } :: b₂ } }
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } :: b₂ } }
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
@@ -657,6 +675,24 @@ inductive Move : GameState → GameState → Prop where
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
       (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :
+      Move g g'
+  /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, Active or
+  Benched as the Ability allows (`Ability.spotOk`), during the turn proper and before attacking
+  (rulebook 2023 p. 9: "2) … F. Use Abilities (as many as you want). 3) Attack. Then, end your
+  turn."; p. 12: "Many of them can be used before you attack", "You can use Abilities from both
+  your Active and Benched Pokémon"), with no
+  Knock Out pending (`Settled`), and when its printed condition holds (`Ability.CondOk`). A
+  "once during your turn" Ability (`AbilityUse.once`) needs the Pokémon not to have used an
+  Ability this turn (`InPlay.used`); every use marks the Pokémon (`UseAt`). The effect resolves
+  as a Trainer card's does (`TRun`, Knock Outs taken after each step) and, like a Trainer card's,
+  has no attack damage. Using an Ability spends no allowance of the turn: not the Supporter, the
+  Energy attachment or the retreat. -/
+  | ability {g g₁ g' : GameState} {x : InPlay} {sp : Spot} {ab : Ability}
+      (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use.activated = true)
+      (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+      (hr : TRun ab.effect g₁ g') (hnd : ab.effect.hitFree = true)
+      (hbh : ab.effect.benchHitFree = true) :
       Move g g'
   /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage
