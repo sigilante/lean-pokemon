@@ -125,6 +125,9 @@ theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState
   have t3 : ∀ (cb : Cap) (o : Option InPlay),
       (o.map (InPlay.clampWith K cb)).map InPlay.energy = o.map InPlay.energy := fun cb o => by
     cases o <;> rfl
+  have t4 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith K cb)).map InPlay.top = o.map InPlay.top := fun cb o => by
+    cases o <;> rfl
   cases c with
   | pile w z f => cases w <;> cases z <;> rfl
   | prizes w => cases w <;> rfl
@@ -132,6 +135,7 @@ theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState
   | energy w f => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t3]
   | energyAll w f =>
       cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t2, t3]
+  | inPlay w f => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t1, t4]
 
 theorem GameState.count_of_xclampAt {co cp cb : Cap} {g₁ g₂ : GameState}
     (h : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) (c : Count) : c.val g₂ = c.val g₁ := by

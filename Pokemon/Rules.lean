@@ -255,6 +255,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Benched Pokémon whose card passes a filter; the Energy passing a filter attached to a player's
   Active Pokémon or to all of their Pokémon in play; `Amt.count`, `Test.countGe`), none of which
   reads damage, so both clamps keep them exact (`Count.val_clampAt`, `Count.val_xclampAt`);
+  since milestone MV2 tests also read the printed card of either Active Pokémon (`Test.top`: "is a
+  Pokémon ex", "is an Evolution Pokémon", "is a Tera Pokémon") and whether it has a Tool
+  (`Test.hasTool`), and counts read the Pokémon in play passing a filter (`Count.inPlay`), all
+  exact under both clamps (`Pokemon/InPlayTests.lean`); absent: name-prefix filters ("has
+  \"Nidoking\" in its name", 8 refused cards in survey S13 §C), reads of the defender's Retreat
+  Cost or remaining HP, and Special Energy;
   there are no other reads of the damage on Benched Pokémon (no tests or counts of it), none of
   Poison strength, of HP ("if it has full
   HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history ("if you
@@ -644,7 +650,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * zone moves (milestone MV, `Effect.move`, `drawTo`, `attach`, `putBench`, `discardEnergy`,
   `moveEnergy`, semantics `ZStep` lifted by `Run.zone`): cards that pass a filter (`Filter`:
   Pokémon, Basic, Stage, type, name, HP at most `n`, no rule box, Trainer, a Trainer kind, Energy,
-  Energy of a type, and Boolean combinations) move between one player's deck (searched, or its
+  Energy of a type, since milestone MV2 Pokémon ex, Tera, a named printed attack and a printed
+  Ability, and Boolean combinations) move between one player's deck (searched, or its
   top `n` cards), hand and discard pile, to the hand, the discard pile, the top or bottom of the
   deck or shuffled into it, "up to `n`", exactly `n` or all of them; Energy is attached from a
   zone to the Active Pokémon or a Benched one, Basic Pokémon are put onto the Bench from a zone,

@@ -224,7 +224,8 @@ inductive TrainerKind where
 Supporter card", "a Basic Fire Energy card", "up to 2 Pokémon that don't have a Rule Box").
 Evaluated by `Filter.eval`, a `Bool`, so every filter is decidable; a new printed kind is one more
 constructor and one more clause of `Filter.eval`. Pokémon filters read the printed card (stage,
-type, name, HP, rule box), not the Pokémon in play. With Basic Energy only (no Special Energy in
+type, name, HP, rule box; since milestone MV2 also Tera, a printed attack's name and whether the
+card has an Ability), not the Pokémon in play. With Basic Energy only (no Special Energy in
 the model), "an Energy card" and "a Basic Energy card" are the same filter, `energy`. -/
 inductive Filter where
   /-- any card ("a card", "cards") -/
@@ -254,6 +255,18 @@ inductive Filter where
   | energy
   /-- a Basic Energy card of type `t` ("a Basic Fire Energy card") -/
   | energyOf (t : EType)
+  /-- a Pokémon ex, Mega Evolution Pokémon ex included (milestone MV2: "if your opponent's Active
+  Pokémon is a Pokémon ex"; the rule box gives it, `RuleBox`). Today's Standard has no Pokémon V,
+  so "a Pokémon ex or Pokémon V" is this filter -/
+  | ex
+  /-- a Tera Pokémon (milestone MV2: "if your opponent's Active Pokémon is a Tera Pokémon", "if you
+  have any Tera Pokémon on your Bench") -/
+  | tera
+  /-- a Pokémon card with a printed attack of this name (milestone MV2: "for each of your Pokémon in
+  play that has the Round attack"); attacks given by a Tool are not read -/
+  | hasAttack (n : String)
+  /-- a Pokémon card with a printed Ability (milestone MV2: "a Pokémon that has an Ability") -/
+  | hasAbility
   | and (a b : Filter)
   | or (a b : Filter)
   | not (a : Filter)
@@ -313,9 +326,14 @@ inductive Count where
   | bench (w : Whose) (f : Filter)
   | energy (w : Whose) (f : Filter)
   | energyAll (w : Whose) (f : Filter)
+  /-- the `w` player's Pokémon in play, Active and Benched, whose top card passes `f` (milestone
+  MV2: "for each of your Pokémon in play that has the Round attack", "if you have any Tera Pokémon
+  in play", "if you have Tornadus in play") -/
+  | inPlay (w : Whose) (f : Filter)
   deriving DecidableEq
 
-/-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. -/
+/-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. Milestone
+MV2 added tests on the Active Pokémon's printed card (`top`) and its Tools (`hasTool`). -/
 inductive Test where
   /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
   "if it has no damage counters" is the `else` branch of that test) -/
@@ -332,6 +350,13 @@ inductive Test where
   /-- the count is at least `n` (milestone MV; "if you have 3 or more cards in your hand"); it reads
   no Active Pokémon, and like every test it is made while the player has an Active Pokémon -/
   | countGe (c : Count) (n : Nat)
+  /-- its top card passes the filter `f` (milestone MV2: "if your opponent's Active Pokémon is a
+  Pokémon ex" is `top .opp .ex`; "is an Evolution Pokémon", `top .opp (.not .basic)`; "is a Stage 1
+  Pokémon", `top .opp (.stage .stage1)`; "is a Tera Pokémon", `top .opp .tera`). It reads the
+  printed card, which both clamps keep -/
+  | top (w : Whose) (f : Filter)
+  /-- it has a Pokémon Tool attached (milestone MV2) -/
+  | hasTool (w : Whose)
   deriving DecidableEq
 
 /-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
@@ -557,6 +582,7 @@ included). -/
 def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
   | .countGe (.energy .own _) _ => true
+  | .top .own _ | .hasTool .own => true
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
@@ -1147,6 +1173,10 @@ def Filter.eval : Filter → Card → Bool
   | .tool, .tool _ _ => true
   | .energy, .energy _ => true
   | .energyOf t, .energy e => decide (e.type = t)
+  | .ex, .pokemon p => decide (p.ruleBox ≠ .none)
+  | .tera, .pokemon p => p.tera
+  | .hasAttack n, .pokemon p => p.attacks.any fun a => decide (a.name = n)
+  | .hasAbility, .pokemon p => !p.abilities.isEmpty
   | .and a b, c => a.eval c && b.eval c
   | .or a b, c => a.eval c || b.eval c
   | .not a, c => !a.eval c

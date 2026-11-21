@@ -378,6 +378,9 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   have t3 : ∀ (cb : Cap) (o : Option InPlay),
       (o.map (InPlay.clampWith k cb)).map InPlay.energy = o.map InPlay.energy := fun cb o => by
     cases o <;> rfl
+  have t4 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith k cb)).map InPlay.top = o.map InPlay.top := fun cb o => by
+    cases o <;> rfl
   cases c with
   | pile w z f => cases w <;> cases z <;> rfl
   | prizes w => cases w <;> rfl
@@ -385,6 +388,7 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   | energy w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t3]
   | energyAll w f =>
       cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
+  | inPlay w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t1, t4]
 
 /-- States with equal `clampAt` have equal counts. -/
 theorem GameState.count_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
@@ -420,6 +424,8 @@ theorem Test.eval_agree (t : Test) {k : Nat} {g₁ g₂ : GameState} {q p : InPl
       show decide (q.type = t) = decide (p.type = t)
       rw [e]
   | countGe c n => simp only [Test.eval, hv c]
+  | top w f => simp only [Test.eval, h.top]
+  | hasTool w => simp only [Test.eval, h.tools]
 
 /-! ## Capped stores -/
 

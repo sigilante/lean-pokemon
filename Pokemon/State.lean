@@ -232,6 +232,8 @@ def Test.whose : Test → Whose
   | .marked w _ => w
   | .isType w _ => w
   | .countGe _ _ => .own
+  | .top w _ => w
+  | .hasTool w => w
 
 def optCards : Option InPlay → Nat
   | none => 0
@@ -521,6 +523,9 @@ def Count.val : Count → GameState → Nat
   | .energyAll w f, g =>
       ((((g.side w).active.map InPlay.energy).getD []) ++
         ((g.side w).bench.map InPlay.energy).flatten).countP f.eval
+  | .inPlay w f, g =>
+      (((g.side w).active.map InPlay.top).toList ++ (g.side w).bench.map InPlay.top).countP
+        fun p => f.eval (.pokemon p)
 
 /-- The value of a test in a state, on the Active Pokémon `p` it reads (a count test reads the
 state instead). -/
@@ -531,5 +536,7 @@ def Test.eval : Test → GameState → InPlay → Bool
   | .marked _ m, _, p => p.marks.get m
   | .isType _ t, _, p => decide (p.type = t)
   | .countGe c n, g, _ => Nat.ble n (c.val g)
+  | .top _ f, _, p => f.eval (.pokemon p.top)
+  | .hasTool _, _, p => !p.tools.isEmpty
 
 end Pokemon

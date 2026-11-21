@@ -39,4 +39,5 @@ import Pokemon.Terminate
 import Pokemon.Trigger
 import Pokemon.TriggerWitness
 import Pokemon.NoTriggers
+import Pokemon.InPlayTests
 import Pokemon.Audit
