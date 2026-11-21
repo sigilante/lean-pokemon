@@ -186,6 +186,15 @@ theorem ZStep.count {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (x : Ca
         benchCardList, InPlay.count_cardList, InPlay.addEnergy, he, List.count_cons]
       omega
   | moveNone => rfl
+  | @toolsActive w s a ha =>
+      simp only [PlayerState.allCards, List.count_append, optCardList, ha, InPlay.count_cardList,
+        List.count_nil]
+      omega
+  | @toolsBench w s p b₁ b₂ hb =>
+      simp only [PlayerState.allCards, List.count_append, hb, count_benchCardList_append,
+        benchCardList, InPlay.count_cardList, List.count_nil]
+      omega
+  | toolsNone => rfl
 
 theorem ZStep.perm {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
     s'.allCards.Perm s.allCards :=

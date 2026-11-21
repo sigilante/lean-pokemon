@@ -168,9 +168,9 @@ theorem counter_not_gxOnly (M : Machine) (a b : Nat) (h : M.instr 0 ≠ .halt) :
     ¬ (start M a b).GXOnly := by
   intro hG
   have hA : (effA M).amtAt .always = 0 :=
-    hG (clock M) (by rw [start_allCards]; simp) (atkA M) (.head _) rfl
+    hG (.pokemon (clock M)) (by rw [start_allCards]; simp) (atkA M) (.head _) rfl
   have hB : (effB M).amtAt .always = 0 :=
-    hG (tape M) (by rw [start_allCards]; simp) (atkB M) (.head _) rfl
+    hG (.pokemon (tape M)) (by rw [start_allCards]; simp) (atkB M) (.head _) rfl
   have h0 : 0 ∈ List.range (V M) := List.mem_range.2 (Machine.span_pos M)
   have lA : (stepAOf (W M) (M.instr 0)).amtAt .always ≤ (effA M).amtAt .always := by
     have := amtAt_sel (s := .always) (w := .own) (f := fun q => stepAOf (W M) (M.instr q)) h0

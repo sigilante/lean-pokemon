@@ -543,6 +543,7 @@ theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e
   | @attachBench w src f tf s r t q b₁ b₂ hs hb ht => cases src <;> rfl
   | @putBench w src f s r p hs hst hhp hb => cases src <;> rfl
   | discardActive ha => rw [ha]; rfl
+  | toolsActive ha => rw [ha]; rfl
   | moveAB ha => rw [ha]; rfl
   | moveBA ha => rw [ha]; rfl
   | _ => rfl

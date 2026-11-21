@@ -16,11 +16,6 @@ holds. Tools change nothing here: a Tool's grant enters the clauses only through
 
 namespace Pokemon
 
-/-- Is the card a Stadium? -/
-def Card.isStadium : Card → Bool
-  | .trainer _ .stadium _ => true
-  | _ => false
-
 /-- No card of the game is a Stadium. -/
 def GameState.NoStadiums (g : GameState) : Prop := ∀ x ∈ g.allCards, x.isStadium = false
 

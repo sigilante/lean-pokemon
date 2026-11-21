@@ -87,19 +87,15 @@ theorem wgs_allCards : (wgs 0 false).allCards =
 theorem wgs_loopFree : (wgs 0 false).LoopFree := by
   unfold GameState.LoopFree; rw [wgs_allCards]; decide
 
-theorem wgs_gxOnly : (wgs 0 false).GXOnly := by
-  intro p hp atk hm
-  rw [wgs_allCards] at hp
-  simp only [List.mem_cons, Card.pokemon.injEq, List.not_mem_nil, or_false, reduceCtorEq,
-    false_or] at hp
-  rcases hp with rfl | rfl <;> cases hm
+theorem wgs_gxOnly : (wgs 0 false).GXOnly :=
+  GameState.GXOnly.of_noAttacks (by rw [wgs_allCards]; decide)
 
 theorem wgs_recycleSafe : (wgs 0 false).RecycleSafe := by
   unfold GameState.RecycleSafe; rw [wgs_allCards]; decide
 
 theorem wgs_not_abilitySafe : ¬ (wgs 0 false).AbilitySafe := by
   intro h
-  have := (h.get (p := warden) (by rw [wgs_allCards]; simp) (List.mem_singleton.2 rfl)
+  have := (h.get (c := .pokemon warden) (by rw [wgs_allCards]; simp) (List.mem_singleton.2 rfl)
     (guardUp.script_mem (some .active))).1 rfl
   exact absurd this (by decide)
 
@@ -193,12 +189,11 @@ theorem kgs_allCards (u : AbilityUse) : (kgs u [ironDefender] [] 0 false).allCar
     [ironDefender, .energy .metal, .pokemon (keeper u), .energy .metal,
       .pokemon Recycle.guard] := rfl
 
-theorem kgs_gxOnly (u : AbilityUse) : (kgs u [ironDefender] [] 0 false).GXOnly := by
-  intro p hp atk hm
-  rw [kgs_allCards] at hp
-  simp only [List.mem_cons, Card.pokemon.injEq, List.not_mem_nil, or_false, reduceCtorEq,
-    false_or, ironDefender] at hp
-  rcases hp with rfl | rfl <;> cases hm
+theorem kgs_gxOnly (u : AbilityUse) : (kgs u [ironDefender] [] 0 false).GXOnly :=
+  GameState.GXOnly.of_noAttacks fun c hc => by
+    rw [kgs_allCards] at hc
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
+    rcases hc with rfl | rfl | rfl | rfl | rfl <;> rfl
 
 /-- **An "as often as you like" Ability that recycles a modifier writer breaks the store bound**
 (milestone M8a). There is a well-formed start satisfying clauses 1, 2 and 4 of `Faithful` and
@@ -488,11 +483,7 @@ theorem feraligatr_faithful :
     (⟨⟨[], [ironDefender], [], [.energy .water], [], some (InPlay.ofBasic feraligatr), [], false,
       false, false, false, false, Store.empty, true⟩, Recycle.pl [] [] 0, true, false, false,
       false, none, none, false, false⟩ : GameState).Faithful := by
-  refine ⟨by unfold GameState.LoopFree; decide, ?_, by unfold GameState.RecycleSafe; decide,
-    by unfold GameState.AbilitySafe; decide⟩
-  intro p hp atk hm
-  simp [GameState.allCards, PlayerState.allCards, optCardList, benchCardList, InPlay.cardList,
-    InPlay.ofBasic, stadiumCardList, ironDefender, Recycle.pl] at hp
-  rcases hp with rfl | rfl <;> cases hm
+  refine ⟨by unfold GameState.LoopFree; decide, GameState.GXOnly.of_noAttacks (by decide),
+    by unfold GameState.RecycleSafe; decide, by unfold GameState.AbilitySafe; decide, by decide⟩
 
 end Pokemon.Abilities

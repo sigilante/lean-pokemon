@@ -387,9 +387,17 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   discard pile), and a Tool is attached from the hand to a Pokémon with no Tool (`Move.tool`,
   `Move.toolBench`; any number per turn; it stays attached and leaves play with the Pokémon).
   A Stadium's "Once during each player's turn, that player may …" effect is used by
-  `Move.stadiumUse`; static Stadium text is not modelled (a Stadium whose effect is `skip`
-  occupies the slot and does nothing). In this stage a Tool has no effect: it occupies its
-  place and does nothing;
+  `Move.stadiumUse`. A Tool may give the Pokémon it is attached to attacks and activated Abilities
+  (`ToolGrant`, for a holder passing a filter: `InPlay.attacks`, `InPlay.abilities`); a Tool's
+  once-per-turn Ability shares the Pokémon's one use flag (`InPlay.used`), so a Pokémon with an
+  Ability of its own and one from a Tool uses only one of them in a turn (fewer outcomes than the
+  rulebook). Effects discard a Stadium in play (`Effect.discardStadium`) and the Tools of a
+  Pokémon (`Effect.discardTools`). Not modelled: the end-of-turn discard of Technical Machine:
+  Fluorite sv8-188 ("discard it at the end of your turn"; the model keeps it attached), Tools
+  attached to the opponent's Pokémon, more than one Tool on a Pokémon (Rotom ex me2-29 and others
+  that raise the limit, S8 B10), and every static and triggered Stadium and Tool effect (next
+  item): a Stadium whose effect is `skip` and a Tool with an empty grant (`ToolGrant.none`)
+  occupy their place and do nothing, which under-models a printed card with such text;
 * Abilities (milestone M8a): a Pokémon card has a list of Abilities (`PokemonCard.abilities`;
   every Standard Pokémon has at most one, survey S9), each with a use limit, a place, an optional
   printed condition and an effect (`Ability`). Activated Abilities, "once during your turn" (per
@@ -831,7 +839,8 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :
       Move g g'
-  /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, Active or
+  /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, its own or
+  (milestone M5) one an attached Tool gives it (`InPlay.abilities`), Active or
   Benched as the Ability allows (`Ability.spotOk`), during the turn proper and before attacking
   (rulebook 2023 p. 9: "2) … F. Use Abilities (as many as you want). 3) Attack. Then, end your
   turn."; p. 12: "Many of them can be used before you attack", "You can use Abilities from both
@@ -843,7 +852,7 @@ inductive Move : GameState → GameState → Prop where
   taken after each step) and, like a Trainer card's, has no attack damage. Using an Ability spends no allowance of the turn: not the Supporter, the
   Energy attachment or the retreat. -/
   | ability {g g₁ g' : GameState} {x : InPlay} {sp : Spot} {ab : Ability}
-      (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use.activated = true)
+      (hu : UseAt g x sp g₁) (hm : ab ∈ x.abilities) (hk : ab.use.activated = true)
       (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun (ab.script (some sp)) g₁ g') (hnd : (ab.script (some sp)).hitFree = true)
@@ -865,7 +874,8 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun (ab.script none) g₁ g') (hnd : (ab.script none).hitFree = true)
       (hbh : (ab.script none).benchHitFree = true) :
       Move g g'
-  /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
+  /-- attack with one of the Active Pokémon's attacks, its own or (milestone M5) one an attached
+  Tool gives it (`InPlay.attacks`): the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage
   step), making the rulebook's damage calculation at most once (`Attack.wf`, `Effect.oneHit`;
   `dealtBy`), with nothing after a switch of the attacker that acts on the player's Active
@@ -875,7 +885,7 @@ inductive Move : GameState → GameState → Prop where
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
   using it records that (`PlayerState.gxUsed`). -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
-      (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
+      (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g)
@@ -888,7 +898,7 @@ inductive Move : GameState → GameState → Prop where
   only by a player who has not used one in this game; the failed attempt does not use it up
   (an unverified ruling; see the Known gaps). -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}
-      (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
+      (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot = .confused)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g) (hl : g.cur.mods.live.noAttack = false)

@@ -117,14 +117,8 @@ theorem st_wellFormed : WellFormed (st 0) :=
 theorem st_loopFree : (st 0).LoopFree := by
   unfold GameState.LoopFree; decide
 
-theorem st_gxOnly : (st 0).GXOnly := by
-  intro p hp atk hm
-  have : p = guard := by
-    simp [st, gs, pl, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
-      InPlay.cardList, InPlay.ofBasic, stadiumCardList, ironDefender, recA, recB] at hp
-    exact hp
-  subst this
-  cases hm
+theorem st_gxOnly : (st 0).GXOnly :=
+  GameState.GXOnly.of_noAttacks (by decide)
 
 /-- The start violates clause 3: `recA`, an Item, can return `ironDefender`, a non-Supporter
 card that writes a damage reduction. -/

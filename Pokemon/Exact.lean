@@ -646,6 +646,11 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
       exact ⟨_, .handToBottom h, by
         simp only [GameState.xrclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂]⟩
+  | discardStadium g =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      exact ⟨_, .discardStadium _, by
+        simp only [GameState.xrclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂]⟩
   | @zone e w g s' hw hz =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -786,18 +791,23 @@ theorem GameState.XFit.of_xclamp {k : Nat} {g₁ g₂ : GameState} (hF : g₁.XF
 
 /-- The effect an attack resolves has test constants below `k`. -/
 theorem GameState.XFit.attack {k : Nat} {g : GameState} (hF : g.XFit k) {a : InPlay}
-    {atk : Attack} (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks) :
+    {atk : Attack} (ha : g.cur.active = some a) (hm : atk ∈ a.attacks) :
     atk.script.tmax < k := by
-  have hb := hF.2 _ (GameState.top_mem_cur_active ha)
-  simp only [Card.tmax] at hb
-  have h2 := attacksTmax_mem (as := a.top.attacks) hm
+  obtain ⟨c, hc, hmc⟩ := InPlay.attack_mem hm
+  have hb := hF.2 _ (GameState.mem_allCards_of_cur_active ha hc)
+  have h2 : atk.effect.tmax ≤ c.tmax := by
+    cases c with
+    | pokemon p => have := attacksTmax_mem (as := p.attacks) hmc; simp only [Card.tmax]; omega
+    | tool n gr => have := attacksTmax_mem (as := gr.attacks) hmc; simp only [Card.tmax]; omega
+    | _ => nomatch hmc
   rw [Attack.script_tmax]; omega
 
 /-- An Ability's test constants, its condition's included, are below `k` (milestone M8a). -/
 theorem GameState.XFit.ability {k : Nat} {g g₁ : GameState} (hF : g.XFit k) {x : InPlay}
-    {sp : Spot} {ab : Ability} (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) :
-    ab.tmax < k :=
-  Nat.lt_of_le_of_lt (Card.ability_tmax hm) (hF.2 _ hu.top_mem)
+    {sp : Spot} {ab : Ability} (hu : UseAt g x sp g₁) (hm : ab ∈ x.abilities) :
+    ab.tmax < k := by
+  obtain ⟨c, hc, hmc⟩ := InPlay.ability_mem hm
+  exact Nat.lt_of_le_of_lt (Card.ability_tmax hmc) (hF.2 _ (hu.card_mem hc))
 
 /-- **A play from the hand commutes with `xclamp`** (milestone M8a). -/
 theorem PlayFromHand.xclamp_sim {g₁ g₁' g₂ : GameState} {x : InPlay} {w : PlayWay}
@@ -853,20 +863,20 @@ theorem Ability.CondOk.of_xclamp {k : Nat} {ab : Ability} {g₁ g₂ : GameState
 theorem UseAt.xclamp_sim {g₁ g₁' g₂ : GameState} {x : InPlay} {sp : Spot}
     (hu : UseAt g₁ x sp g₁') (hc : g₁.xclamp = g₂.xclamp) :
     ∃ x' g₂', UseAt g₂ x' sp g₂' ∧ x'.top = x.top ∧ x'.used = x.used ∧
-      g₁'.xclamp = g₂'.xclamp := by
+      x'.abilities = x.abilities ∧ g₁'.xclamp = g₂'.xclamp := by
   obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
   subst hg
   cases hu with
   | active ha =>
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨q, _, .active rfl, hq.top, hq.used, by
+      exact ⟨q, _, .active rfl, hq.top, hq.used, hq.grants.2, by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂, he₁, he₂,
           InPlay.clamp_of_agree hq.markUsed]⟩
   | @bench b₁ b₂ hb =>
       obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
       have hr := InPlay.agree_of_clamp h2
-      exact ⟨r, _, .bench rfl, hr.top, hr.used, by
+      exact ⟨r, _, .bench rfl, hr.top, hr.used, hr.grants.2, by
         simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
           List.map_cons, h1, h3, InPlay.clamp_of_agree hr.markUsed]⟩
 
@@ -993,10 +1003,10 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       have hs' := hs₂ hst
       have hb := hF.ability hu hm
       have hcd' := hcd.of_xclamp hc hst.1 hb
-      obtain ⟨x', g₂m, hu', hxt, hxu, hcm⟩ := hu.xclamp_sim hc
+      obtain ⟨x', g₂m, hu', hxt, hxu, hxa, hcm⟩ := hu.xclamp_sim hc
       obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (hF.1.of_perm hu.perm) hcm (.inl (hu.settled hst))
-      exact ⟨g₂', .ability hu' (hxt ▸ hm) hk hsp (hxu ▸ hn) hcd' (by subst hg; exact hbt) hs'
+      exact ⟨g₂', .ability hu' (hxa ▸ hm) hk hsp (hxu ▸ hn) hcd' (by subst hg; exact hbt) hs'
         (by subst hg; exact hat) hr' hnd hbh, hc'⟩
   | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd hbh =>
       have hs' := hs₂ hst
@@ -1023,7 +1033,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      refine ⟨_, .attack rfl (by rw [hq.top]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
+      refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' hl hgx hw, ?_⟩
       have := congrArg (fun g : GameState => ({ g with
         attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
@@ -1034,7 +1044,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
+      exact ⟨_, .attackConfused rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx hw, by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩

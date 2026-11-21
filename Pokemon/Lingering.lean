@@ -237,7 +237,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
       | active ha =>
           simp only [red, st, side, Option.some.injEq] at ha
           subst ha
-          simp [InPlay.ofBasic, hitter, mon] at hm
+          simp [InPlay.abilities, InPlay.ofBasic, hitter, mon] at hm
       | bench hb => simp [red, st, side] at hb
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
@@ -245,7 +245,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
-      simp only [InPlay.ofBasic, hitter, mon, List.mem_singleton] at hm
+      simp only [InPlay.attacks, InPlay.ofBasic, hitter, mon, List.flatMap_nil, List.append_nil,
+        List.mem_singleton] at hm
       subst hm
       change Run (.seq (.damage (.const 1)) .skip) _ _ at hr
       cases hr with
@@ -394,7 +395,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       | active ha =>
           simp only [dr, st, side, Option.some.injEq] at ha
           subst ha
-          simp [InPlay.ofBasic, drainer, mon] at hm
+          simp [InPlay.abilities, InPlay.ofBasic, drainer, mon] at hm
       | bench hb => simp [dr, st, side] at hb
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
@@ -402,7 +403,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha
-      simp only [InPlay.ofBasic, drainer, mon, List.mem_singleton] at hm
+      simp only [InPlay.attacks, InPlay.ofBasic, drainer, mon, List.flatMap_nil, List.append_nil,
+        List.mem_singleton] at hm
       subst hm
       change Run (.seq (.selfDamage (2 * k + 3)) (.drain (.const 1))) _ _ at hr
       cases hr with

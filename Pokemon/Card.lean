@@ -489,6 +489,18 @@ inductive Effect where
   opponent's Pokémon are out of its reach (`Effect.moveCounter` moves the player's own counters
   only) -/
   | moveCounter (f : Filter) (noKO : Bool)
+  /-- discard the Stadium in play, if any, to its owner's discard pile (milestone M5: "Discard a
+  Stadium in play", Hisuian Growlithe sv6-99, Eternatus sv8-141, Megaton Blower sv8-182; "You may
+  discard a Stadium in play" is a `choice` with `skip`); nothing if no Stadium is in play. Whose
+  Stadium it is is not read ("If your opponent has a Stadium in play, discard it", Chi-Yu me1-31,
+  is not expressible exactly) -/
+  | discardStadium
+  /-- discard every Pokémon Tool attached to one of the `w` player's Pokémon at `sp` to that
+  player's discard pile (milestone M5: "Before doing damage, discard all Pokémon Tools from your
+  opponent's Active Pokémon", Spearow me1-102 and eight more; at `bench` one Benched Pokémon chosen
+  when the effect resolves, nothing with an empty Bench; "discard a Pokémon Tool from 1 of your
+  opponent's Pokémon" is a `choice` of the two, exact with one Tool per Pokémon) -/
+  | discardTools (w : Whose) (sp : Spot)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -622,7 +634,8 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ => rfl
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
+  | .discardTools _ _, _ => rfl
 
 /-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
 damage, then place damage counters, and then do all other effects"). An attack with printed base
@@ -660,7 +673,8 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ => rfl
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
+  | .discardTools _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by
@@ -973,6 +987,48 @@ def Filter.eval : Filter → Card → Bool
   | .or a b, c => a.eval c || b.eval c
   | .not a, c => !a.eval c
   | _, _ => false
+
+/-- The attacks a card attached to a Pokémon whose top card is `p` gives it (milestone M5): a
+Tool's granted attacks, if `p` passes the grant's holder filter; nothing for other cards. -/
+def Card.grantAttacks (p : PokemonCard) : Card → List Attack
+  | .tool _ gr => if gr.holder.eval (.pokemon p) then gr.attacks else []
+  | _ => []
+
+/-- The Abilities a card attached to a Pokémon whose top card is `p` gives it (milestone M5), as
+`Card.grantAttacks`. -/
+def Card.grantAbilities (p : PokemonCard) : Card → List Ability
+  | .tool _ gr => if gr.holder.eval (.pokemon p) then gr.abilities else []
+  | _ => []
+
+theorem Card.grantAttacks_sub {p : PokemonCard} {c : Card} {atk : Attack}
+    (h : atk ∈ c.grantAttacks p) : atk ∈ c.attacks := by
+  cases c with
+  | tool n gr =>
+      simp only [Card.grantAttacks] at h
+      split at h
+      · exact h
+      · nomatch h
+  | _ => nomatch h
+
+theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
+    (h : ab ∈ c.grantAbilities p) : ab ∈ c.abilities := by
+  cases c with
+  | tool n gr =>
+      simp only [Card.grantAbilities] at h
+      split at h
+      · exact h
+      · nomatch h
+  | _ => nomatch h
+
+/-- Is the card a Stadium? (milestone M5) -/
+def Card.isStadium : Card → Bool
+  | .trainer _ .stadium _ => true
+  | _ => false
+
+/-- Is the card a Pokémon Tool? (milestone M5) -/
+def Card.isTool : Card → Bool
+  | .tool _ _ => true
+  | _ => false
 
 /-- The Energy a card attached to a Pokémon provides, one entry per unit, each entry the types
 that unit counts as. A Basic Energy card provides one unit of its type. Special Energy cards

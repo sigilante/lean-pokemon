@@ -290,6 +290,11 @@ theorem InPlay.Agree.markUsed {c : Cap} {q p : InPlay} (h : Agree c q p) :
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, rfl,
     h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩
 
+/-- Agreeing Pokémon have the same attacks and Abilities, their Tools' included (milestone M5). -/
+theorem InPlay.Agree.grants {c : Cap} {q p : InPlay} (h : Agree c q p) :
+    q.attacks = p.attacks ∧ q.abilities = p.abilities := by
+  simp only [InPlay.attacks, InPlay.abilities, h.top, h.tools, and_self]
+
 /-- Agreement survives attaching a Tool (milestone M5). -/
 theorem InPlay.Agree.setTools {c : Cap} {q p : InPlay} (h : Agree c q p) (t : List Card) :
     Agree c { q with tools := t } { p with tools := t } :=

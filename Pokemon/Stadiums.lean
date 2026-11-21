@@ -101,12 +101,8 @@ theorem S_allCards : (S 0).allCards =
     [.energy .metal, .energy .metal, .pokemon guard, .energy .metal, .energy .metal,
       .pokemon guard, gym] := rfl
 
-theorem S_gxOnly : (S 0).GXOnly := by
-  intro p hp atk hm
-  rw [S_allCards] at hp
-  simp only [List.mem_cons, Card.pokemon.injEq, List.not_mem_nil, or_false, reduceCtorEq,
-    false_or, gym] at hp
-  rcases hp with rfl | rfl <;> cases hm
+theorem S_gxOnly : (S 0).GXOnly :=
+  GameState.GXOnly.of_noAttacks (by rw [S_allCards]; decide)
 
 theorem S_not_stadiumSafe : ¬ (S 0).StadiumSafe := by
   intro h
@@ -159,12 +155,9 @@ def D : GameState :=
 /-- **A Stadium that returns a modifier-writing Item every turn, to both players, is faithful**
 (milestone M5), so `Faithful.xfinite` applies to `D`. -/
 theorem stadium_recycler_faithful : D.Faithful := by
-  refine ⟨by unfold GameState.LoopFree; decide, ?_, by unfold GameState.RecycleSafe; decide,
-    by unfold GameState.AbilitySafe; decide, by unfold GameState.StadiumSafe; decide⟩
-  intro p hp atk hm
-  simp [D, spl, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
-    InPlay.cardList, mon, InPlay.ofBasic, stadiumCardList, ironDefender, depot] at hp
-  subst hp; cases hm
+  refine ⟨by unfold GameState.LoopFree; decide, GameState.GXOnly.of_noAttacks (by decide),
+    by unfold GameState.RecycleSafe; decide, by unfold GameState.AbilitySafe; decide,
+    by unfold GameState.StadiumSafe; decide⟩
 
 /-- **…and fails the clause 3 of milestone M8a**, which counted every Trainer card's effect,
 a Stadium's included, as a free recycler: clause 3 is weaker for Stadiums since milestone M5. -/
