@@ -169,11 +169,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
   `Test.atLeast` and `Test.exactly`; the proportional write `scale`), their Special
   Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); the
-  only read of a Benched Pokémon is the truncated subtraction of `benchHeal` (milestone M3);
-  there are no tests or counts on Benched Pokémon (none was needed by the Standard texts S9
-  sampled), on Energy, on
-  cards in hand, deck, discard pile or Prizes, on Poison strength, on HP ("if it has full HP",
-  "remaining HP"), or on the lingering modifiers in effect; `scale` writes only to the
+  only read of a Benched Pokémon's damage is the truncated subtraction of `benchHeal`
+  (milestone M3); since milestone MV amounts and tests also read counts (`Count`: the cards that
+  pass a filter in a player's hand, deck or discard pile; a player's Prize cards left; a player's
+  Benched Pokémon whose card passes a filter; the Energy passing a filter attached to a player's
+  Active Pokémon or to all of their Pokémon in play; `Amt.count`, `Test.countGe`), none of which
+  reads damage, so both clamps keep them exact (`Count.val_clampAt`, `Count.val_xclampAt`);
+  there are no reads of the damage on Benched Pokémon, of Poison strength, of HP ("if it has full
+  HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history ("if you
+  played a Supporter this turn"); a count test is made, like every test, while the player has an
+  Active Pokémon; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
   Pokémon, Bench included); the damage step's amount (`Amt`) reads the damage on either
   Active Pokémon (`Amt.per`); the damage step itself reads the Weakness and Resistance of the
@@ -214,9 +219,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`Reach.xfinite_bounded`), which holds for decks with no damage bonus or reduction under
   `iter` (`LoopFree`) and rest-of-game bonuses and reductions only in GX attacks (`GXOnly`;
   `Faithful.reach_boundedStores`). Faithful decks may use damage reduction, `drain`, and
-  carried bonuses and reductions in attacks and Trainers. The bound uses that no card ever
-  leaves a discard pile in this model, so each Trainer card is played at most once per game; a
-  card-recycling effect, "attack twice" or extra turns would break it. The rest-of-game
+  carried bonuses and reductions in attacks and Trainers. Since milestone MV cards leave the discard
+  pile (recycling), and `Faithful` has a third clause, `RecycleSafe`: no Trainer effect can return
+  a non-Supporter modifier writer from a discard pile, and no effect a rest-of-game writer; the
+  bound is then per turn (each non-Supporter writer played at most once a turn, one Supporter, one
+  attack; carried amounts expire within three turns). Without clause 3 the stores are unbounded
+  (`Recycle.recycling_breaks_bound`: two Items that return each other and an Iron Defender-like
+  Item); "attack twice" or extra turns would break the bound too. The rest-of-game
   modifiers of non-GX attacks give two unbounded counters with an exact zero test, and the model
   simulates every two-counter machine (`Counter.universal`; this rests on the
   over-approximation of rest-of-game modifiers just described, on `damage` read by a test later
@@ -242,8 +251,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   differences, and the sum of any number of copies, for "flip until tails") has no tests of its
   own: a damage that depends on a test, a coin flip or a choice is written with the damage step
   inside the branches of `ite` or `choice`, which also lets the same flip decide the damage and
-  another effect. Not expressible: damage counts other than damage counters on the Active
-  Pokémon (Energy, Benched Pokémon, cards in hand or discard pile), and two damage calculations
+  another effect. Since milestone MV the amount may also count cards (`Amt.count`: Energy attached,
+  Benched Pokémon, cards in a hand, deck or discard pile, Prize cards left). Not expressible: two
+  damage calculations
   in one attack on the Active Pokémon (damage to Benched Pokémon is separate: `benchDamage`,
   `spreadDamage`).
   Generality lost
@@ -348,10 +358,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * absent after milestone M3: moving damage counters between Pokémon ("move 1 damage counter from
   1 of your Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an Ability;
   Gengar-style moves among the opponent's Pokémon), tests and counts on Benched Pokémon ("if any
-  of your Benched Pokémon have damage counters", "for each Benched Pokémon"), healing the
-  opponent's Pokémon, effects that put Pokémon onto the Bench from the deck or discard pile (S9:
-  68 Standard texts), moving Energy between Pokémon, and Bench damage whose amount the text
-  computes. Moving counters among the player's own Pokémon would keep both clamps (the player's
+  of your Benched Pokémon have damage counters"), healing the opponent's Pokémon, and Bench damage
+  whose amount the text computes. (Putting Pokémon onto the Bench from the deck or discard pile,
+  moving Energy between Pokémon, and counts of Benched Pokémon came with milestone MV.) Moving counters among the player's own Pokémon would keep both clamps (the player's
   own damage is exact inside an attack); moving counters off the opponent's Active Pokémon would
   read damage that the capped clamp `rclamp` knows only up to its cap inside an attack;
 * Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
@@ -370,6 +379,35 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   that player could evolve on the game's first turn. Consistency is `GameState.FlagsOk`
   (`Pokemon/Turn.lean`); play preserves it (`Reach.flagsOk`), and the first-turn bans are
   theorems under it (`Move.firstTurn_no_attack`, `GameState.FlagsOk.firstTurn_no_evolve`);
+* zone moves (milestone MV, `Effect.move`, `drawTo`, `attach`, `putBench`, `discardEnergy`,
+  `moveEnergy`, semantics `ZStep` lifted by `Run.zone`): cards that pass a filter (`Filter`:
+  Pokémon, Basic, Stage, type, name, HP at most `n`, no rule box, Trainer, a Trainer kind, Energy,
+  Energy of a type, and Boolean combinations) move between one player's deck (searched, or its
+  top `n` cards), hand and discard pile, to the hand, the discard pile, the top or bottom of the
+  deck or shuffled into it, "up to `n`", exactly `n` or all of them; Energy is attached from a
+  zone to the Active Pokémon or a Benched one, Basic Pokémon are put onto the Bench from a zone,
+  Energy is discarded from a Pokémon or moved between a player's Pokémon. Simplifications and
+  departures: "up to `n`" allows 0 in every effect (today's rule allows 0 only in attacks, S8
+  PP26), a superset; `attach`, `putBench` and `moveEnergy` may always do nothing, a superset of
+  "if you can"; a cost ("discard 2 cards from your hand. If you do, …") is `exactly 2`, which has
+  no resolution when it cannot be paid, so a Trainer whose cost cannot be paid cannot be played,
+  and an attack writes the optional reading with `choice`; one card is attached or benched per
+  primitive ("up to 2" is two of them; "to each of your Benched Pokémon" is written as one per
+  Pokémon); the player chooses wherever the printed card lets the opponent choose; hidden
+  information is not modelled (the state is public, so "reveal" and "look at" are no-ops, and a
+  search may take fewer cards than it could, which "up to" already allows); the model resolves a
+  played Item or Supporter with the card already in the discard pile (the rulebook: "follow the
+  instructions on the card and then discard it", 2023 glossary), so a card can recycle itself in
+  the model; clause 3 of `Faithful` constrains that case like any other. For the same reason a
+  count of the discard pile read by that Trainer's own effect includes the card itself. Inside an attack nothing
+  after a `switch .own` may attach Energy to, discard Energy from or move Energy off the player's
+  Active Pokémon (`Effect.ownFree`), and the attacker at a damage step is the same Pokémon (top
+  card and the cards under it) as when the attack began, its attached Energy possibly changed
+  (`Attack.attacker_at_hit`, restated by milestone MV: before it, the whole card list was kept).
+  Absent: returning a Pokémon in play and its cards to the hand or deck (Scoop Up Cyclone, Abra,
+  Dudunsparce, Misty's Psyduck in S10), devolution, evolution by effect, switching a card in play
+  with one in the discard pile (Transformation Tome, Ogre's Mask), Prize-card moves other than
+  taking them, the Lost Zone, and "attach to each of" a varying set;
 * first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
   starting player cannot attack or play a Supporter on the first turn of the game
   (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
@@ -495,10 +533,10 @@ inductive TRun : Effect → GameState → GameState → Prop where
       (hr : Run e g g₁) (hk : Resolve g₁ g₂) : TRun e g g₂
   | stop {e : Effect} {g : GameState} (hn : g.winner ≠ none) : TRun e g g
   | iteT {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} (hn : g.winner = none)
-      (h : g.activeOf t.whose = some p) (ht : t.eval p = true) :
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = true) :
       TRun a g g' → TRun (.ite t a b) g g'
   | iteF {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} (hn : g.winner = none)
-      (h : g.activeOf t.whose = some p) (ht : t.eval p = false) :
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = false) :
       TRun b g g' → TRun (.ite t a b) g g'
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       TRun a g₁ g₂ → TRun b g₂ g₃ → TRun (.seq a b) g₁ g₃

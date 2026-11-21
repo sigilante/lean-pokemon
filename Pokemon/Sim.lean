@@ -1,4 +1,4 @@
-import Pokemon.Damage
+import Pokemon.ZoneSim
 
 /-!
 # The clamp is a bisimulation (for tame decks)
@@ -58,6 +58,7 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | switch w ha hb => intro _ hn; cases w <;> exact hn
   | benchDamage w n h => intro _ hn; cases w <;> exact hn
   | spreadDamage w n g => intro _ hn; cases w <;> exact hn
+  | @zone e w g s' hw hz => intro _ hn; cases w <;> exact hn
   | linger w s m g =>
       intro ht hn
       have hm : ∀ n, m ≠ .reduce n := by
@@ -226,14 +227,14 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       simp only [Effect.tmax] at hb
       obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree hc h
       obtain ⟨g₂', r', hc'⟩ := ih ht.1 (by omega) hn hR hc
-      exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+      exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ (GameState.count_of_clampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | iteF h ht' _ ih =>
       intro ht hb hn hR g₂ hc
       simp only [Effect.tame, Bool.and_eq_true] at ht
       simp only [Effect.tmax] at hb
       obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree hc h
       obtain ⟨g₂', r', hc'⟩ := ih ht.2 (by omega) hn hR hc
-      exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+      exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ (GameState.count_of_clampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | @scale g p q w k' hs h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
@@ -334,7 +335,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       have hwr := GameState.wr_of_rclamp hc
       have hr : g.resist ≤ k := hR.resist
       by_cases hlt : p.damage < k
-      · have hv₂ := hv.congr fun w p' hp' => by
+      · have hv₂ := hv.congr (GameState.count_of_clampAt hc) fun w p' hp' => by
           obtain ⟨q', hq', hd'⟩ := GameState.activeOf_rclamp hc w p' hp'
           refine ⟨q', hq', hd' ?_⟩
           cases w with
@@ -503,6 +504,24 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       subst he₁
       exact ⟨_, .benchHealNone n rfl, hc⟩
   | drain => intro ht; simp [Effect.tame] at ht
+  | @zone e w g s' hw hz =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.cur with active := c₂, bench := e₁, mods := m₁ })
+            ⟨rfl, rfl, rfl, hc₂, he₁⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, ha₂,
+              he₂, hm₁, hm₂]⟩
+      | opp =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.opp with active := a₂, bench := e₂, mods := m₂ })
+            ⟨rfl, rfl, rfl, ha₂, he₂⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, hc₂,
+              he₁, hm₁, hm₂]⟩
   | shuffle h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
@@ -576,7 +595,7 @@ theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameSt
       obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree (GameState.rclamp_of_clamp hc hs'.1) h
       obtain ⟨g₂', r', hc'⟩ := ih ht.1 (by omega) hnr hhp hc hs
       exact ⟨g₂', .iteT (by rw [GameState.winner_of_clamp hc]; exact hn) hq
-        (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+        (by rw [Test.eval_agree _ (GameState.count_of_clampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | iteF hn h ht' _ ih =>
       intro ht hb hnr hhp g₂ hc hs
       have hs' : Settled _ := hs.resolve_right (fun h => h hn)
@@ -585,7 +604,7 @@ theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameSt
       obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree (GameState.rclamp_of_clamp hc hs'.1) h
       obtain ⟨g₂', r', hc'⟩ := ih ht.2 (by omega) hnr hhp hc hs
       exact ⟨g₂', .iteF (by rw [GameState.winner_of_clamp hc]; exact hn) hq
-        (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+        (by rw [Test.eval_agree _ (GameState.count_of_clampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | seq h₁ _ ih₁ ih₂ =>
       intro ht hb hnr hhp g₂ hc hs
       simp only [Effect.tame, Bool.and_eq_true] at ht

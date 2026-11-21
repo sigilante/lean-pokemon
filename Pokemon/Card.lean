@@ -211,7 +211,106 @@ inductive Mod where
   | lock (l : Lock)
   deriving DecidableEq
 
-/-- A test an effect can make on one Active Pokémon. -/
+/-! ## Card filters and zone moves (milestone MV) -/
+
+inductive TrainerKind where
+  | item | supporter | stadium | tool
+  deriving DecidableEq
+
+/-- A card filter (milestone MV): the kind of card a zone move may pick ("a Basic Pokémon", "a
+Supporter card", "a Basic Fire Energy card", "up to 2 Pokémon that don't have a Rule Box").
+Evaluated by `Filter.eval`, a `Bool`, so every filter is decidable; a new printed kind is one more
+constructor and one more clause of `Filter.eval`. Pokémon filters read the printed card (stage,
+type, name, HP, rule box), not the Pokémon in play. With Basic Energy only (no Special Energy in
+the model), "an Energy card" and "a Basic Energy card" are the same filter, `energy`. -/
+inductive Filter where
+  /-- any card ("a card", "cards") -/
+  | any
+  /-- a Pokémon card -/
+  | pokemon
+  /-- a Basic Pokémon card -/
+  | basic
+  /-- a Pokémon card of the given Stage -/
+  | stage (s : Stage)
+  /-- a Pokémon card of type `t` ("a Fire Pokémon") -/
+  | ptype (t : EType)
+  /-- a card with this name, Pokémon or Trainer ("Duskull", "Arven's Sandwich") -/
+  | named (n : String)
+  /-- a Pokémon card with printed HP at most `n` counters ("a Basic Pokémon with 70 HP or less" is
+  `and basic (hpLe 7)`) -/
+  | hpLe (n : Nat)
+  /-- a Pokémon card without a rule box ("Pokémon that don't have a Rule Box") -/
+  | noRuleBox
+  /-- a Trainer card of any kind -/
+  | trainer
+  /-- a Trainer card of the given kind (Item, Supporter, Stadium, Pokémon Tool) -/
+  | kind (k : TrainerKind)
+  /-- an Energy card (in the model every Energy card is a Basic Energy card) -/
+  | energy
+  /-- a Basic Energy card of type `t` ("a Basic Fire Energy card") -/
+  | energyOf (t : EType)
+  | and (a b : Filter)
+  | or (a b : Filter)
+  | not (a : Filter)
+  deriving DecidableEq
+
+/-- Where a zone move takes its cards from, in the zones of one player: the deck (searched: any
+cards of it), the top `n` cards of the deck ("look at the top 7 cards of your deck"; drawing and
+milling take from here), the hand, or the discard pile (recycling: "Put up to 2 Basic Energy cards
+from your discard pile into your hand", "Shuffle up to 5 Pokémon from your discard pile into your
+deck", "Attach a Basic Energy card from your discard pile to this Pokémon", "Put up to 2 Basic
+Pokémon from your discard pile onto your Bench"). -/
+inductive Src where
+  | deck
+  | top (n : Nat)
+  | hand
+  | discard
+  deriving DecidableEq
+
+/-- Where a zone move puts the cards it takes: the hand, the discard pile, the top or the bottom
+of the deck (in an order the player chooses), or shuffled into the deck. -/
+inductive Dst where
+  | hand | discard | top | bottom | shuffle
+  deriving DecidableEq
+
+/-- How many cards a zone move takes, among the cards of its source that pass its filter:
+"up to `n`" (any number from 0 to `n`), exactly `n` (the move has no resolution if fewer can be
+taken: "You can use this card only if you discard 2 other cards from your hand"; a continuation
+after it in `seq` runs only if the cost was paid), or all of them ("discard all Energy from this
+Pokémon"; drawing and milling are `all` from the top `n` cards). Today's rule (S8, PP26) reads "up
+to X" as 0..X in attacks and 1..X in other effects; `upTo` allows 0 in both, a superset. -/
+inductive Qty where
+  | upTo (n : Nat)
+  | exactly (n : Nat)
+  | all
+  deriving DecidableEq
+
+/-- Which of a player's Pokémon in play an effect acts on: the Active Pokémon, or one Benched
+Pokémon chosen when the effect resolves. "1 of your Pokémon" is a `choice` of the two. -/
+inductive Spot where
+  | active | bench
+  deriving DecidableEq
+
+/-- A zone of one player that a count reads (milestone MV). -/
+inductive Pile where
+  | hand | deck | discard
+  deriving DecidableEq
+
+/-- A number read from the state (milestone MV), for amounts ("30 damage for each card in your
+hand") and tests ("if you have 3 or more Benched Pokémon"): the cards passing a filter in one of
+the `w` player's hand, deck or discard pile; the `w` player's Prize cards left; the `w` player's
+Benched Pokémon whose card passes a filter; the Energy cards passing a filter attached to the `w`
+player's Active Pokémon, or to all of the `w` player's Pokémon in play. No count reads damage, so
+both clamps keep every count exact (`Count.val_clampAt`, `Count.val_xclampAt`). -/
+inductive Count where
+  | pile (w : Whose) (z : Pile) (f : Filter)
+  | prizes (w : Whose)
+  | bench (w : Whose) (f : Filter)
+  | energy (w : Whose) (f : Filter)
+  | energyAll (w : Whose) (f : Filter)
+  deriving DecidableEq
+
+/-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. -/
 inductive Test where
   /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
   "if it has no damage counters" is the `else` branch of that test) -/
@@ -225,6 +324,9 @@ inductive Test where
   | marked (w : Whose) (m : Marker)
   /-- its type is `t`: the type of its top card, or the type its Coloring counter set -/
   | isType (w : Whose) (t : EType)
+  /-- the count is at least `n` (milestone MV; "if you have 3 or more cards in your hand"); it reads
+  no Active Pokémon, and like every test it is made while the player has an Active Pokémon -/
+  | countGe (c : Count) (n : Nat)
   deriving DecidableEq
 
 /-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
@@ -244,6 +346,9 @@ inductive Amt where
   /-- the sum of any number of values of `a`: "Flip a coin until you get tails. This attack does
   30 damage for each heads" is `many (const 3)` -/
   | many (a : Amt)
+  /-- `k` for each unit of the count `c` ("30 damage for each Energy attached to this Pokémon" is
+  `count (.energy .own .energy) 3`; milestone MV) -/
+  | count (c : Count) (k : Nat)
   deriving DecidableEq
 
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
@@ -339,6 +444,37 @@ inductive Effect where
   damage to each of your opponent's Benched Pokémon"; with `w = own`, "to each of your Benched
   Pokémon"), as `benchDamage` -/
   | spreadDamage (w : Whose) (n : Nat)
+  /-- move cards between the `w` player's zones (milestone MV): take, from `src`, cards that pass
+  the filter `f`, as many as `q` says, the rest of the source keeping its order, and put them at
+  `dst`. "Search your deck for a Basic Pokémon, reveal it, and put it into your hand. Then, shuffle
+  your deck" is `seq (move .own .deck .hand .basic (.upTo 1)) shuffle`; "discard 2 cards from your
+  hand" is `move .own .hand .discard .any (.exactly 2)`; "draw 3 cards" is
+  `move .own (.top 3) .hand .any .all`; "discard the top 2 cards of your opponent's deck" (mill) is
+  `move .opp (.top 2) .discard .any .all`; "look at the top 6 cards of your deck and put a Supporter
+  you find there into your hand" is `move .own (.top 6) .hand (.kind .supporter) (.upTo 1)` -/
+  | move (w : Whose) (src : Src) (dst : Dst) (f : Filter) (q : Qty)
+  /-- the `w` player draws cards until they have `n` cards in hand (none if they have `n` or more;
+  fewer if the deck runs out) -/
+  | drawTo (w : Whose) (n : Nat)
+  /-- attach one Energy card that passes `f`, taken from `src`, to one of the `w` player's Pokémon
+  at `sp` whose card passes `tf` ("Search your deck for a Basic Energy card and attach it to 1 of
+  your Benched Pokémon"); or nothing (the model always allows attaching nothing, a superset of the
+  printed "attach a … if you can"). "Up to 2" is two of these. Not the once-per-turn attachment
+  from hand (`Move.attach`) -/
+  | attach (w : Whose) (src : Src) (f : Filter) (sp : Spot) (tf : Filter)
+  /-- put a Basic Pokémon card that passes `f`, taken from `src`, onto the `w` player's Bench, if
+  it has room ("Search your deck for up to 2 Basic Pokémon and put them onto your Bench" is two of
+  these, then `shuffle`); or nothing -/
+  | putBench (w : Whose) (src : Src) (f : Filter)
+  /-- discard Energy cards that pass `f` from one of the `w` player's Pokémon at `sp`, as many as
+  `q` says ("Discard 2 Energy from this Pokémon" is `discardEnergy .own .active .energy
+  (.exactly 2)`; "discard an Energy from your opponent's Active Pokémon",
+  `discardEnergy .opp .active .energy (.upTo 1)`); they go to that player's discard pile. With
+  `bench` and an empty Bench, nothing -/
+  | discardEnergy (w : Whose) (sp : Spot) (f : Filter) (q : Qty)
+  /-- move one Energy card that passes `f` from one of the `w` player's Pokémon in play to another
+  ("Move an Energy from 1 of your Benched Pokémon to your Active Pokémon"); or nothing -/
+  | moveEnergy (w : Whose) (f : Filter)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -390,13 +526,17 @@ def Effect.oneHit : Effect → Bool
   | .iter a => a.hitFree
   | _ => true
 
-/-- The test reads the player's own Active Pokémon. -/
+/-- The test reads the player's own Active Pokémon (a count of the Energy attached to it
+included). -/
 def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
+  | .countGe (.energy .own _) _ => true
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
-`selfDamage`, `healAll`, `scale .own`, `switch .own`, no test on the player's own Active Pokémon,
+`selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
+moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
+milestone MV), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/
@@ -409,6 +549,9 @@ def Effect.ownFree : Effect → Bool
   | .drain _ => false
   | .scale .own _ => false
   | .switch .own => false
+  | .attach .own _ _ .active _ => false
+  | .discardEnergy .own .active _ _ => false
+  | .moveEnergy .own _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
   | .seq a b => a.ownFree && b.ownFree
   | .choice a b => a.ownFree && b.ownFree
@@ -462,7 +605,9 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
-  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _ => rfl
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _
+  | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ => rfl
 
 /-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
 damage, then place damage counters, and then do all other effects"). An attack with printed base
@@ -498,7 +643,9 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
-  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ => rfl
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
+  | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by
@@ -605,16 +752,32 @@ theorem PokemonCard.resistTo_le (d : PokemonCard) (t : EType) : d.resistTo t ≤
   · split <;> omega
   · exact Nat.le_refl _
 
-inductive TrainerKind where
-  | item | supporter | stadium | tool
-  deriving DecidableEq
-
 inductive Card where
   | pokemon (p : PokemonCard)
   /-- a Basic Energy card (`BasicEnergy`: nine types, no Colorless or Dragon) -/
   | energy (t : BasicEnergy)
   | trainer (name : String) (kind : TrainerKind) (effect : Effect)
   deriving DecidableEq
+
+/-- Does the card pass the filter? -/
+def Filter.eval : Filter → Card → Bool
+  | .any, _ => true
+  | .pokemon, .pokemon _ => true
+  | .basic, .pokemon p => decide (p.stage = .basic)
+  | .stage s, .pokemon p => decide (p.stage = s)
+  | .ptype t, .pokemon p => decide (p.type = t)
+  | .named n, .pokemon p => decide (p.name = n)
+  | .named n, .trainer m _ _ => decide (m = n)
+  | .hpLe n, .pokemon p => decide (p.hp ≤ n)
+  | .noRuleBox, .pokemon p => decide (p.ruleBox = .none)
+  | .trainer, .trainer _ _ _ => true
+  | .kind k, .trainer _ k' _ => decide (k' = k)
+  | .energy, .energy _ => true
+  | .energyOf t, .energy e => decide (e.type = t)
+  | .and a b, c => a.eval c && b.eval c
+  | .or a b, c => a.eval c || b.eval c
+  | .not a, c => !a.eval c
+  | _, _ => false
 
 /-- The Energy a card attached to a Pokémon provides, one entry per unit, each entry the types
 that unit counts as. A Basic Energy card provides one unit of its type. Special Energy cards

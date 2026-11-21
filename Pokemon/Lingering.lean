@@ -251,10 +251,13 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
                     hitter, mon] at e <;> omega
               | touchActive he => simp [Effect.touch] at he
               | touchBench he => simp [Effect.touch] at he
+              | zone hw => simp [Effect.zSide] at hw
           | touchActive he => simp [Effect.touch] at he
           | touchBench he => simp [Effect.touch] at he
+          | zone hw => simp [Effect.zSide] at hw
       | touchActive he => simp [Effect.touch] at he
       | touchBench he => simp [Effect.touch] at he
+      | zone hw => simp [Effect.zSide] at hw
   | attackConfused ha hm hc hs =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
@@ -393,10 +396,13 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
                     InPlay.ofBasic, drainer, prey, mon] at e <;> omega
               | touchActive he => simp [Effect.touch] at he
               | touchBench he => simp [Effect.touch] at he
+              | zone hw => simp [Effect.zSide] at hw
           | touchActive he => simp [Effect.touch] at he
           | touchBench he => simp [Effect.touch] at he
+          | zone hw => simp [Effect.zSide] at hw
       | touchActive he => simp [Effect.touch] at he
       | touchBench he => simp [Effect.touch] at he
+      | zone hw => simp [Effect.zSide] at hw
   | attackConfused ha hm hc hs =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha

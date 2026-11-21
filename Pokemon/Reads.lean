@@ -122,11 +122,13 @@ theorem run_clamp_not_sim (k : Nat) :
             (show ¬ (drawn.cur.hand.length = (rs 6).cur.hand.length) by decide)
       | touchActive he => simp [Effect.touch] at he
       | touchBench he => simp [Effect.touch] at he
+      | zone hw => simp [Effect.zSide] at hw
   | iteF h ht r =>
       cases h
       exact absurd ht (by decide)
   | touchActive he => simp [probe, Effect.touch] at he
   | touchBench he => simp [probe, Effect.touch] at he
+  | zone hw => simp [probe, Effect.zSide] at hw
 
 /-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
 on itself. -/

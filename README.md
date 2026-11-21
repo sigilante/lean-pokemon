@@ -9,8 +9,8 @@ modifiers add up without limit); with those generalisations the model does have 
 stores, and the finiteness results below need a hypothesis on the deck: tame decks
 (`Reach.finite`) or faithful decks (`Faithful.xfinite`); neither class contains the other.
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 29 constructors) of
-twenty-five primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 35 constructors) of
+thirty-one primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
@@ -66,7 +66,8 @@ support, so the model's Bench damage is not a superset of the printed outcomes),
 player's own or the opponent's Active Pokémon with a Benched one (`switch`, which cures the
 Pokémon sent to the Bench; inside an attack nothing after a `switch .own` may act on the
 player's Active Pokémon, `Effect.switchSafe`, so the attacker stays the attacker,
-`Attack.attacker_at_hit`; printed switch-out attacks do their damage first), Energy attachment
+`Attack.attacker_at_hit`, which since milestone MV keeps the attacker's Pokémon cards, not its
+attached Energy; printed switch-out attacks do their damage first), Energy attachment
 and evolution on the Bench, Char counters acting on Benched Pokémon between turns, Knock Outs of
 any Pokémon in play (a Benched one goes to the discard pile with no promotion; several pending
 Knock Outs are all taken, in any order, before play continues, since no rule fixing the order was
@@ -75,10 +76,29 @@ each player on their last Prize card has two orders with opposite winners, where
 would apply its simultaneous-win rule, which the model lacks), and
 Prize values by rule box (1; 2 for Pokémon ex; 3 for Mega Evolution Pokémon ex), taking the top
 Prize cards and winning when the last one is taken in the middle of a multi-Prize Knock Out
-(witnesses in `Pokemon/Bench.lean`). The Bench holds at most 5 Pokémon. For that model it proves:
+(witnesses in `Pokemon/Bench.lean`). The Bench holds at most 5 Pokémon. Milestone MV (effect
+vocabulary) added card filters (`Filter`: Pokémon, Basic, Stage, type, name, HP at most `n`, no
+rule box, Trainer, a Trainer kind, Energy, Energy of a type, and Boolean combinations; a `Bool`,
+so decidable) and six zone-move primitives on either player's zones (`ZStep`, lifted by the one
+constructor `Run.zone`): `move` (from the deck, its top `n` cards, the hand or the discard pile, to
+the hand, the discard pile, the top or bottom of the deck or shuffled into it, "up to `n`",
+exactly `n` or all: search with a filter, draw `n`, mill, look at the top `n` and take some, a
+discard-from-hand cost whose continuation runs only if it was paid, and recycling to hand or
+deck), `drawTo` ("draw until you have `n` cards"), `attach` (one Energy from a zone to the Active
+Pokémon or a Benched one), `putBench` (a Basic Pokémon from a zone onto the Bench),
+`discardEnergy` and `moveEnergy`; and counts (`Count`: cards passing a filter in a hand, deck or
+discard pile, Prize cards left, Benched Pokémon passing a filter, Energy on the Active Pokémon or on
+all Pokémon in play) as amounts (`Amt.count`, "30 damage for each Energy attached") and tests
+(`Test.countGe`). Its simplifications are in the Known gaps of `Pokemon/Rules.lean` ("up to"
+allows 0 everywhere; `attach`, `putBench` and `moveEnergy` may do nothing; no hidden
+information; a played Trainer is in the discard pile while it resolves; absent: returning a
+Pokémon in play to the hand or deck, devolution, evolution by effect). Zone moves change only zones
+and attached Energy and counts read no damage, so both clamps keep them exact and every clamp
+theorem was re-proved without new hypotheses (`ZStep.sim`, `Count.val_clampAt`). For that model it
+proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects
-  included (`TRun.perm`);
+  and zone moves included (`TRun.perm`, `ZStep.perm`);
 * Knock Out timing inside Trainer effects (`TRun.guarded`, `TRun.iff_guarded`): from a
   `Settled` state, as every Item and Supporter starts, every primitive step and every test of
   the effect starts in a `Settled` state, so no step runs while a Pokémon is at or above its
@@ -180,9 +200,13 @@ every `k ≥ 2`). Expiry follows the turn structure:
 `endTurn` shifts both stores, and `Store.add_now_shift` .. `Store.add_always_shift` state when
 each kind of modifier is in effect. Printed rest-of-game bonuses and reductions come only from
 once-per-game attacks (survey S7), and same-turn ones are bounded by copies of their cards times
-printed constants provided no card-recycling loop replays them, which is an empirical claim
-about the card pool, not a theorem; on that claim the printed game does not reach the
-unbounded case. A reduction carried into the opponent's turn does exist on a printed Item (Iron
+printed constants provided no recycling replays them within a turn; since milestone MV this is
+clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the two decks together. Survey
+S10 found no Trainer card in today's Standard pool whose discard-pile filter admits a
+non-Supporter modifier writer, and no rest-of-game Trainer writer there, so the model's
+encodings of those Trainers and attacks satisfy clause 3 for every pairing of decks (a reading
+of the card pool, not a theorem; Abilities, Stadium effects and returns from play are outside
+the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
 Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
 damage…"), so printed decks are not all tame. The model over-approximates modifiers on purpose;
 `Reach.finite` covers only the tame decks, and `Faithful.xfinite` (next paragraph) covers decks
@@ -214,25 +238,47 @@ finiteness; the deck condition `Faithful` buys it back:
   this gives a finite set of classes and a bisimulation that may leave that set, not a finite
   quotient; the finite quotient is `Faithful.xfinite`;
 * **finiteness for faithful decks** (`Faithful.xfinite`, `Pokemon/Faithful.lean`): a start is
-  `Faithful` if no card's effect has a damage bonus or reduction under `iter` (`LoopFree`) and
-  only GX attacks write rest-of-game bonuses or reductions (`GXOnly`). Then every reachable state
-  satisfies `BoundedStores (storeBound g₀)` (`Faithful.reach_boundedStores`), where `storeBound`
-  adds the start stores, the amounts of every Trainer card in the game, and three times the
+  `Faithful` if no card's effect has a damage bonus or reduction under `iter` (`LoopFree`), only
+  GX attacks write rest-of-game bonuses or reductions (`GXOnly`), and, since milestone MV, no
+  Trainer card's effect can return from a discard pile a non-Supporter card that writes a bonus or
+  reduction, and no effect at all one that writes a rest-of-game amount (`RecycleSafe`, decidable;
+  attacks may recycle every other card, because an attack ends the turn; every deck with no
+  recycling satisfies it, so for such decks `Faithful` means what it meant before). Then every
+  reachable state satisfies `BoundedStores (storeBound g₀)` (`Faithful.reach_boundedStores`), where
+  `storeBound` adds the start stores, six times the Trainer amounts of the cards and three times the
   largest amount of one attack; so from any faithful start (well-formed or not) the `xclamp`s of all
-  reachable states lie in one finite list, with the two-way bisimulation. The bound rests on
-  three facts of the model: no card ever leaves a discard pile (no effect or move returns one),
-  so each Item and Supporter is played at most once per game, with no assumption about
-  recycling loops; at most one attack is made per turn; and carried amounts expire within three
-  turn boundaries. Faithful decks may use damage reduction, `drain`, carried bonuses and
-  reductions in attacks and Trainers (Iron Defender), and rest-of-game modifiers in GX attacks
-  and in Trainer cards;
+  reachable states lie in one finite list, with the two-way bisimulation. The bound is per turn:
+  within a turn, before its attack, each non-Supporter writer is played at most once (clause 3) and
+  one Supporter at most, so Trainers write at most twice the Trainer amounts in a turn; at most one
+  attack is made per turn; carried amounts expire within three turn boundaries; the rest-of-game
+  slot holds only amounts of cards in the discard piles that nothing recycles, and of GX attacks.
+  Before milestone MV the bound counted each Trainer once per game, because nothing left a discard
+  pile; that bound (`storeBoundNR`, with the Trainer amounts once) still holds for decks that recycle
+  nothing (`Faithful.reach_boundedStores_noRecycle`). Faithful decks may use damage reduction,
+  `drain`, carried bonuses and reductions in attacks and Trainers (Iron Defender), rest-of-game
+  modifiers in GX attacks and Trainer cards, and recycling within clause 3 (Energy Retrieval,
+  Night Stretcher, Dedenne's "Put a Trainer card from your discard pile into your hand" attack:
+  `Recycle.printed_shapes_recycleSafe`);
+* **recycling breaks the per-game bound** (`Recycle.recycling_breaks_bound`,
+  `Pokemon/Recycle.lean`): a well-formed start satisfying `LoopFree` and `GXOnly` (all of
+  `Faithful` before milestone MV) but not `RecycleSafe` has reachable states with unbounded stores
+  and `xclamp`s in no finite list. Its loop, within one turn and with no attack: play an Item
+  modelled on Iron Defender (a carried reduction of 3), play Item A ("put up to 2 Item cards from
+  your discard pile into your hand"), which returns Iron Defender and Item B, play Iron Defender,
+  play Item B (the same text), which returns Iron Defender and Item A. Each recycler returns the
+  other, never itself, and each round costs no card. Survey S10 found no Standard card with this
+  shape. Like `xclamp_not_finite`, this is a statement about representation: in the witness
+  nothing ever reads the stored reduction (no attack is made), so the unboundedly many states
+  are not shown to differ in play. Whether unrestricted recycling could simulate a counter
+  machine is open, and nothing here claims either way;
 * **the rule change**: `Attack` has a field `gx`, and `Move.attack` lets a player use a GX
   attack only if they have not used one in the game, and records it (`PlayerState.gxUsed`,
   unused before); `Move.attackConfused` (a Confused Pokémon's failed attempt) has the same
   premise and does not record it (an unverified ruling, listed in the Known gaps of `Pokemon/Rules.lean`). Every earlier
   theorem was re-proved; `Counter.universal` is unchanged;
 * **the dichotomy** (`Faithful.dichotomy`, `Pokemon/Dichotomy.lean`): the two-counter starts
-  satisfy `LoopFree` (`Faithful.counter_loopFree`) and violate `GXOnly` whenever the machine's
+  satisfy `LoopFree` (`Faithful.counter_loopFree`) and `RecycleSafe` (`Faithful.counter_recycleSafe`:
+  they recycle nothing) and violate `GXOnly` whenever the machine's
   first instruction is not `halt` (`Faithful.counter_not_gxOnly`: their attacks, not GX attacks,
   write rest-of-game amounts); for `start countUp 0 0` the `xclamp`s of the reachable states lie
   in no finite list (`Faithful.xclamp_not_finite`, a statement about representation, as for
@@ -245,29 +291,31 @@ finiteness; the deck condition `Faithful` buys it back:
 
 Which theorem applies. `Reach.finite` needs tame cards (no damage reduction, no `drain`) and no
 reduction in effect at the start; it allows bonus writes under `iter` and rest-of-game bonuses
-in attacks that are not GX attacks, and gives a coarser quotient (the clamp caps stored
-bonuses). `Faithful.xfinite` allows damage reduction, `drain`, carried modifiers and Trainer
-modifiers; it forbids amounts written under `iter` and rest-of-game amounts written by attacks
-that are not GX attacks, and gives a finer quotient (the stores are kept exact). Neither class
+in attacks that are not GX attacks, and recycling of every kind (milestone MV), and gives a
+coarser quotient (the clamp caps stored bonuses). `Faithful.xfinite` allows damage reduction,
+`drain`, carried modifiers and Trainer modifiers; it forbids amounts written under `iter`,
+rest-of-game amounts written by attacks that are not GX attacks, and recycling of modifier writers
+by Trainer effects (`RecycleSafe`), and gives a finer quotient (the stores are kept exact). Neither class
 contains the other; for decks in both, both theorems apply.
 
-Not covered by `Faithful`, or not in the model: card recycling (returning Items from the
-discard pile would replay a carried-modifier Item such as Iron Defender without bound; the
-model has none, so "each Trainer once per game" is a fact about the model, not about the printed
-card pool); "attack twice", "attack again" after a Knock Out, and extra turns (absent: more than
+Not covered by `Faithful`, or not in the model: recycling outside clause 3 (an Item that returns
+a modifier-writing Item, as in `Recycle.recycling_breaks_bound`); Abilities and Stadium effects
+(absent: an Ability or Stadium that recycles a writer, or an "as often as you like" Ability that
+writes one, would need clause 3 extended); returning a card from play to the hand (absent);
+"attack twice", "attack again" after a Knock Out, and extra turns (absent: more than
 one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers, Abilities or Stadiums
 (absent); copy attacks, for instance copying a GX attack (absent); static modifiers and
 modifiers from Pokémon Tools, Abilities or Special Energy (absent: every modifier is written by
 an effect when it resolves); reductions restricted by type (printed Iron Defender protects Metal
 Pokémon only, whereas the model's reduction protects all of a player's Pokémon); effects that
-lock GX attacks (absent). The store bound rests on three absences in the model: no effect
-returns a card from a discard pile, at most one attack is made per turn, and there are no extra
-turns. Each exists on printed cards (Item- and Supporter-recycling cards; "attack twice"; "take
-another turn"), so adding any of them to the model reopens the bound. The guess-and-verify
-coupling of the Poet's second session (one replayable effect that writes a this-turn and a carried amount in lockstep) is excluded inside one effect by
-`LoopFree`, and across effects it lacks the replays it needs: an attack writes a bounded amount
-once per turn, and a Trainer card is played at most once per game. Recycling or extra attacks
-would reopen it.
+lock GX attacks (absent). The store bound rests on clause 3, on at most one attack per turn, and
+on there being no extra turns; "attack twice" and "take another turn" exist on printed cards
+(Festival Lead in Standard; extra turns in older sets), so adding them reopens the bound. The
+guess-and-verify coupling of the Poet's second session (one replayable effect that writes a
+this-turn and a carried amount in lockstep) is excluded inside one effect by `LoopFree`, and
+across effects it lacks the replays it needs: an attack writes a bounded amount once per turn,
+and within a turn each non-Supporter Trainer writer is played at most once and one Supporter at
+most (clause 3); survey S10 found no printed card that writes modifiers of two durations.
 
 For tame decks, effects that read damage do not break finiteness, but they change why it holds. Inside an
 attack's effect the clamp is not a simulation: a test against 6 counters separates 5 from 6

@@ -177,6 +177,7 @@ theorem Run.sameTurn {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameTu
   | benchDamage w n h => cases w <;> exact .refl _
   | spreadDamage w n g => cases w <;> exact .refl _
   | linger w s m g => cases w <;> exact .refl _
+  | @zone e w g s' hw hz => cases w <;> exact .refl _
   | _ => exact .refl _
 
 theorem KOMove.sameTurn {g g' : GameState} (h : KOMove g g') : g.SameTurn g' := by

@@ -329,11 +329,39 @@ theorem InPlay.Agree.setDamage {c : Cap} {q p : InPlay} (h : Agree c q p) (d : N
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks,
     InPlay.dmg_congr c h.top rfl, h.poisonUp⟩
 
+/-- The clamps keep every count: counts read zones, Prize cards, the cards of the Pokémon in play
+and their attached Energy, never damage (milestone MV). -/
+theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameState) :
+    c.val (g.clampAt co cp cbo cbp k) = c.val g := by
+  have t1 : ∀ (cb : Cap) (b : List InPlay),
+      (b.map (InPlay.clampWith cb)).map InPlay.top = b.map InPlay.top := fun cb b => by
+    rw [List.map_map]; rfl
+  have t2 : ∀ (cb : Cap) (b : List InPlay),
+      (b.map (InPlay.clampWith cb)).map InPlay.energy = b.map InPlay.energy := fun cb b => by
+    rw [List.map_map]; rfl
+  have t3 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith cb)).map InPlay.energy = o.map InPlay.energy := fun cb o => by
+    cases o <;> rfl
+  cases c with
+  | pile w z f => cases w <;> cases z <;> rfl
+  | prizes w => cases w <;> rfl
+  | bench w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t1]
+  | energy w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t3]
+  | energyAll w f =>
+      cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
+
+/-- States with equal `clampAt` have equal counts. -/
+theorem GameState.count_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
+    (h : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k) (c : Count) :
+    c.val g₂ = c.val g₁ := by
+  rw [← c.val_clampAt co cp cbo cbp k g₂, ← h, c.val_clampAt]
+
 /-- Tests read only what agreement capped at `k` keeps equal, when their constants are below
 `k`: a damage test against `n < k` cannot tell two damages apart that are equal or both at
-least `k`. -/
-theorem Test.eval_agree (t : Test) {k : Nat} {q p : InPlay} (h : InPlay.Agree (.upto k) q p)
-    (hb : t.bound < k) : t.eval q = t.eval p := by
+least `k`; a count test reads counts, which are equal when `hv` says so (milestone MV). -/
+theorem Test.eval_agree (t : Test) {k : Nat} {g₁ g₂ : GameState} {q p : InPlay}
+    (hv : ∀ c : Count, c.val g₂ = c.val g₁) (h : InPlay.Agree (.upto k) q p)
+    (hb : t.bound < k) : t.eval g₂ q = t.eval g₁ p := by
   have hd := h.damage
   simp only [Cap.dmg] at hd
   cases t with
@@ -355,6 +383,7 @@ theorem Test.eval_agree (t : Test) {k : Nat} {q p : InPlay} (h : InPlay.Agree (.
       have e : q.type = p.type := by simp only [InPlay.type, h.marks, h.top]
       show decide (q.type = t) = decide (p.type = t)
       rw [e]
+  | countGe c n => simp only [Test.eval, hv c]
 
 /-! ## Capped stores -/
 

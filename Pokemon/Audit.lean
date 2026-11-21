@@ -4,9 +4,11 @@ import Pokemon.ListPerm
 import Pokemon.State
 import Pokemon.Effect
 import Pokemon.Rules
+import Pokemon.Zone
 import Pokemon.Conservation
 import Pokemon.WellFormed
 import Pokemon.Damage
+import Pokemon.ZoneSim
 import Pokemon.Sim
 import Pokemon.Finite
 import Pokemon.Infinite
@@ -22,6 +24,7 @@ import Pokemon.Dichotomy
 import Pokemon.Turn
 import Pokemon.Calc
 import Pokemon.Bench
+import Pokemon.Recycle
 
 /-! Axiom audit. `#audit_namespace` checks every theorem declared in the `Pokemon` modules
 (private and generated ones included) and fails the build unless each depends only on

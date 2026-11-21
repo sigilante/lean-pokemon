@@ -4,18 +4,22 @@ import Pokemon.Faithful
 # The two sides together: faithful decks are finite, the two-counter decks are not faithful
 
 `Pokemon/Faithful.lean` proves finiteness up to the exact-store clamp for decks satisfying
-`GameState.Faithful`, which has two clauses: `LoopFree` (no damage bonus or reduction under
-`iter`) and `GXOnly` (rest-of-game bonuses and reductions only in GX attacks).
+`GameState.Faithful`, which has three clauses: `LoopFree` (no damage bonus or reduction under
+`iter`), `GXOnly` (rest-of-game bonuses and reductions only in GX attacks) and, since milestone MV,
+`RecycleSafe` (no recycling of modifier writers within a turn, none of rest-of-game writers).
 `Pokemon/Counter.lean` proves that the generalised model simulates every two-counter machine.
 This file shows that clause 2 cannot be dropped from the finiteness theorem: the two-counter
-starts satisfy clause 1, violate clause 2 (when the machine's first instruction is not `halt`),
-and simulate every two-counter machine. It is a sharpness result for clause 2, not a
+starts satisfy clauses 1 and 3 (they recycle nothing), violate clause 2 (when the machine's first
+instruction is not `halt`), and simulate every two-counter machine. (That clause 3 cannot be
+dropped either is `Recycle.recycling_breaks_bound`.) It is a sharpness result for clause 2, not a
 classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
 that violate only clause 2 (the two-counter starts) are universal; nothing is proved here about
 other non-faithful decks, and some of them are finite (for instance tame decks that violate
 clause 2, covered by `Reach.finite`).
 
 * `Faithful.counter_loopFree`: every two-counter start `Counter.start M a b` satisfies clause 1.
+* `Faithful.counter_recycleSafe` (milestone MV): it satisfies clause 3 (`counter_noRecycle`: no
+  effect of its cards moves a card out of a discard pile).
 * `Faithful.counter_not_gxOnly`: it violates clause 2 whenever the machine's initial
   instruction is not `halt`: the Clock's or the Tape's attack, neither a GX attack, writes a
   rest-of-game damage bonus or reduction (an increment writes a reduction, a decrement a bonus;
@@ -95,6 +99,49 @@ theorem counter_loopFree (M : Machine) (a b : Nat) : (start M a b).LoopFree := b
   · rfl
   · simp only [Card.loopFree, tape, atkB, List.all_cons, List.all_nil, effB_loopFree,
       Bool.and_self]
+
+theorem recFilters_sel {w : Whose} {f : Nat → Effect} :
+    ∀ {l : List Nat}, (∀ v ∈ l, (f v).recFilters = []) → (sel w f l).recFilters = []
+  | [], _ => rfl
+  | v :: l, h => by
+      simp only [sel, Effect.recFilters, h v (.head _),
+        recFilters_sel (fun u hu => h u (.tail _ hu)), List.append_nil]
+
+theorem stepAOf_recFilters (w : Nat) (i : Instr) : (stepAOf w i).recFilters = [] := by
+  cases i with
+  | inc r q => cases r <;> rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
+theorem stepBOf_recFilters (w q : Nat) (i : Instr) : (stepBOf w q i).recFilters = [] := by
+  cases i with
+  | inc r q => cases r <;> rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
+/-- **The two-counter decks recycle nothing** (milestone MV), so they satisfy clause 3: no effect
+of theirs moves a card out of a discard pile. -/
+theorem counter_noRecycle (M : Machine) (a b : Nat) : (start M a b).NoRecycle := by
+  have h1 : (normA M).recFilters = [] := recFilters_sel (fun _ _ => rfl)
+  have h2 := recFilters_sel (w := .own) (f := fun q => stepAOf (W M) (M.instr q))
+    (l := List.range (V M)) (fun _ _ => stepAOf_recFilters _ _)
+  have h3 := recFilters_sel (w := .opp) (f := fun q => stepBOf (W M) q (M.instr q))
+    (l := List.range (V M)) (fun _ _ => stepBOf_recFilters _ _ _)
+  intro x hx
+  rw [start_allCards] at hx
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl
+  · rfl
+  · rfl
+  · simp only [Card.allRec, clock, atkA, attacksRec, effA, Effect.recFilters, h1, h2,
+      List.append_nil]
+  · rfl
+  · rfl
+  · simp only [Card.allRec, tape, atkB, attacksRec, effB, Effect.recFilters, h3,
+      List.append_nil]
+
+theorem counter_recycleSafe (M : Machine) (a b : Nat) : (start M a b).RecycleSafe :=
+  (counter_noRecycle M a b).recycleSafe
 
 /-- **The two-counter decks violate clause 2** when the machine's initial instruction is not
 `halt`: the Clock's attack (`atkA`) or the Tape's (`atkB`), neither a GX attack, writes a
@@ -181,12 +228,13 @@ non-faithful decks.
    not used: `Faithful.xfinite` holds from any start; the premise is kept so the statement is
    unchanged) (clause 1,
    `LoopFree`: no damage bonus or reduction under `iter`; clause 2, `GXOnly`: rest-of-game
-   bonuses and reductions only in GX attacks, which are once per player per game), the
+   bonuses and reductions only in GX attacks, which are once per player per game; clause 3,
+   `RecycleSafe`, since milestone MV), the
    `xclamp`s of the reachable states lie in one finite list and the kernel of `xclamp` is a
    two-way bisimulation along reachable states.
 2. *Universal side.* For every two-counter machine `M` whose initial instruction is not `halt`
-   and all inputs `a`, `b`, the start `Counter.start M a b` is well formed, satisfies clause 1,
-   violates clause 2, and reaches a halt-marked state exactly when `M` halts from `(0, a, b)`.
+   and all inputs `a`, `b`, the start `Counter.start M a b` is well formed, satisfies clauses 1
+   and 3 (clause 3 added by milestone MV), violates clause 2, and reaches a halt-marked state exactly when `M` halts from `(0, a, b)`.
 3. *The bound is needed.* For `Counter.start Counter.countUp 0 0` the `xclamp`s of the
    reachable states lie in no finite list.
 
@@ -199,11 +247,13 @@ theorem dichotomy :
         (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
         (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp)) ∧
     (∀ (M : Machine) (a b : Nat), M.instr 0 ≠ .halt →
-      WellFormed (start M a b) ∧ (start M a b).LoopFree ∧ ¬ (start M a b).GXOnly ∧
+      WellFormed (start M a b) ∧ (start M a b).LoopFree ∧ (start M a b).RecycleSafe ∧
+        ¬ (start M a b).GXOnly ∧
       ((∃ g, Reach (start M a b) g ∧ HaltMarked g) ↔ M.Halts (Machine.init a b))) ∧
     ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g → g.xclamp ∈ L :=
   ⟨fun _ _ hF => xfinite hF,
-    fun M a b h => ⟨start_wellFormed M a b, counter_loopFree M a b, counter_not_gxOnly M a b h,
+    fun M a b h => ⟨start_wellFormed M a b, counter_loopFree M a b, counter_recycleSafe M a b,
+      counter_not_gxOnly M a b h,
       (universal M a b).2.2.2⟩,
     xclamp_not_finite⟩
 
