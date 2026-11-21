@@ -235,14 +235,14 @@ def players (C : List Card) : List PlayerState :=
   (listsUpTo (inPlays C) C.length).flatMap fun bench => (opts C).flatMap fun stadium =>
   bools.flatMap fun energyAttached => bools.flatMap fun supporterPlayed =>
   bools.flatMap fun retreated => bools.flatMap fun gxUsed => bools.flatMap fun vstarUsed =>
-  (stores (bound C)).map fun mods =>
+  (stores (bound C)).flatMap fun mods => bools.map fun hadTurn =>
   ⟨deck, hand, discard, prizes, lost, active, bench, stadium, energyAttached, supporterPlayed,
-    retreated, gxUsed, vstarUsed, mods⟩
+    retreated, gxUsed, vstarUsed, mods, hadTurn⟩
 
 theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     (hd : SideDamageLe (bound C) s) : s ∈ players C := by
   obtain ⟨deck, hand, discard, prizes, lost, active, bench, stadium, energyAttached,
-    supporterPlayed, retreated, gxUsed, vstarUsed, mods⟩ := s
+    supporterPlayed, retreated, gxUsed, vstarUsed, mods, hadTurn⟩ := s
   simp only [PlayerState.allCards] at hw
   have hbench : Within C (benchCardList bench) := hw.left.right
   have hactive : Within C (optCardList active) := hw.left.left.right
@@ -254,7 +254,7 @@ theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     lost, mem_cardLists hw.left.left.left.right,
     active, ?_, bench, ?_, stadium, ?_, energyAttached, mem_bools _,
     supporterPlayed, mem_bools _, retreated, mem_bools _, gxUsed, mem_bools _,
-    vstarUsed, mem_bools _, mods, mem_stores hd.2.2, rfl⟩
+    vstarUsed, mem_bools _, mods, mem_stores hd.2.2, hadTurn, mem_bools _, rfl⟩
   · refine mem_opts fun p hp => ?_
     subst hp
     exact mem_inPlays hactive (hd.1 p rfl).1 (hd.1 p rfl).2

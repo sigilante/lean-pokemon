@@ -100,7 +100,7 @@ def mon (h d : Nat) (e : Effect) : PokemonCard :=
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], none, false, false, false,
-    false, false, t⟩
+    false, false, t, true⟩
 
 /-- The player to move has `a` and the store `s`; the opponent has `b` and the store `t`. -/
 def st (hand discard : List Card) (a b : InPlay) (s t : Store) : GameState :=

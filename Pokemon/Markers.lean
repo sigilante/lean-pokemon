@@ -62,7 +62,7 @@ theorem flag_exact (ops : List CountOp) (n : Nat) :
 /-- Evolving the Active Pokémon keeps its markers. -/
 theorem _root_.Pokemon.Move.evolve_marks {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
     {a : InPlay} (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (ha : g.cur.active = some a)
-    (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false) (hf : g.firstTurn = false)
+    (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false) (hf : g.cur.hadTurn = true)
     (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
     ∃ g' a', Move g g' ∧ g'.cur.active = some a' ∧ a'.top = p ∧ a'.marks = a.marks :=
   ⟨_, _, .evolve hh ha he hfr hf hbt hst hat, rfl, rfl, rfl⟩

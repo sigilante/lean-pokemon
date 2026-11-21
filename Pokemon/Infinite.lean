@@ -36,7 +36,7 @@ def item : Card := .trainer "PoisonUpItem" .item eff
 
 def side (hand : List Card) (discard : List Card) (a : InPlay) : PlayerState :=
   ⟨[.energy .grass, .energy .grass], hand, discard, [.energy .fire], [], some a, [],
-    none, false, false, false, false, false, Store.empty⟩
+    none, false, false, false, false, false, Store.empty, true⟩
 
 /-- Each player has one Prize card and a 50-HP Active Pokémon; the player to move holds
 `item`. -/

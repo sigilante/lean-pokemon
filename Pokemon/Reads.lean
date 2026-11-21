@@ -90,7 +90,7 @@ def probe : Effect := .ite (.atLeast .opp 6) .skip .draw
 /-- `rs 5` after drawing a card. -/
 def drawn : GameState :=
   ⟨⟨[.energy .grass], [.energy .grass], [], [.energy .fire], [], some (InPlay.ofBasic mon), [],
-    none, false, false, false, false, false, Store.empty⟩,
+    none, false, false, false, false, false, Store.empty, true⟩,
     side [] [] { InPlay.ofBasic mon with damage := 5 }, true, false, false, false, none⟩
 
 theorem rs_clamp (k : Nat) : (rs 5).clamp k = (rs 6).clamp k := rfl

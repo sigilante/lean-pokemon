@@ -972,7 +972,7 @@ theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
 theorem Fits.toOpp {k : Pk} {s : PlayerState} {b : InPlay} (h : Fits k s)
     (hb : s.active = some b) (hc : k.marks.char = false) (o f sp c : Bool) :
     Fits k { s.unfresh with
-      active := some (b.unfresh.checkup o f sp c), mods := s.mods.shift } := by
+      active := some (b.unfresh.checkup o f sp c), mods := s.mods.shift, hadTurn := true } := by
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
   rw [hb] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm (p := b.unfresh) h2 h3 h4 (by rw [← hc, ← h6]; rfl)
@@ -1117,9 +1117,9 @@ hand and one Prize card. Neither has a Bench. The inputs are rest-of-game damage
 `b` on the first player, `a` on the second. -/
 def start (M : Machine) (a b : Nat) : GameState where
   cur := ⟨[], [.energy .colorless], [], [.energy .colorless], [], some (onPlay (clock M)), [],
-    none, false, false, false, false, false, storeOf 0 b⟩
+    none, false, false, false, false, false, storeOf 0 b, true⟩
   opp := ⟨[.energy .colorless], [], [], [.energy .colorless], [], some (onPlay (tape M)), [],
-    none, false, false, false, false, false, storeOf 0 a⟩
+    none, false, false, false, false, false, storeOf 0 a, true⟩
   curIsFirst := true
   firstTurn := false
   attacked := false

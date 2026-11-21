@@ -709,7 +709,7 @@ theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.
 def cxCard : PokemonCard := ⟨"", .basic, none, 1, .grass, [], 0⟩
 
 def cxSide (a : InPlay) : PlayerState :=
-  ⟨[], [], [], [], [], some a, [], none, false, false, false, false, false, Store.empty⟩
+  ⟨[], [], [], [], [], some a, [], none, false, false, false, false, false, Store.empty, true⟩
 
 /-- Both Active Pokémon have 10 HP and no damage; the opponent's is Poisoned. -/
 def cxState : GameState :=

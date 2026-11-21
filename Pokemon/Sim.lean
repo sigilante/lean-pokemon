@@ -549,7 +549,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (.inl hst)
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
         (by subst hg; rw [hfl.2.2.2]; exact hl) (by subst hg; exact hat), hc'⟩
-  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat =>
+  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.trainer hh
       have hp : ({ g₁ with cur := { g₁.cur with
@@ -563,7 +563,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂])
         (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
-        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat), hc'⟩
+        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf), hc'⟩
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.attack ha hm

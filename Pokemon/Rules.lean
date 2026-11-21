@@ -155,8 +155,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`attackConfused`) only under the same condition, and a failed attempt (tails) does not use it
   up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
   ruling, and the model takes the answer "no"; VSTAR Powers are absent (`vstarUsed` is unused);
-* the first player may play a Supporter on the first turn;
-  each player has their own Stadium slot;
+* each player has their own Stadium slot;
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them only from the player's own Active Pokémon (`cure`); the variants with a number
   ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; a new Poison
@@ -189,8 +188,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Stadium and Tool cards occupy state but have no move; Abilities are absent;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
-  an empty Prize list) a pending Knock Out may be impossible to take;
-* the "no evolving on your first turn" rule is applied to the first turn of the game only.
+  an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
+  be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`);
+* first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
+  starting player cannot attack or play a Supporter on the first turn of the game
+  (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
+  that lifts these bans ("If you go first, you can use this attack during your first turn",
+  Delibird me1-105; 26 Standard cards, survey S9 part 2) is not expressible.
 -/
 
 namespace Pokemon
@@ -318,11 +322,15 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, energyAttached := true,
         active := some { a with energy := Card.energy t :: a.energy } } }
-  /-- evolve the Active Pokémon; Special Conditions are removed -/
+  /-- evolve the Active Pokémon; Special Conditions are removed. Not a Pokémon put into play or
+  evolved this turn (`fresh`: "Neither player can evolve a Pokémon on its first turn in play",
+  "you can't evolve it a second time the same turn"), and not on the player's own first turn
+  (`hadTurn`: "neither player can evolve a Pokémon on that player's first turn unless a card
+  says so"; rulebook 2023 p. 11) -/
   | evolve {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (ha : g.cur.active = some a)
       (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false)
-      (hf : g.firstTurn = false) (hbt : g.between = false) (hst : Settled g)
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
       (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂,
@@ -350,14 +358,16 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
       (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false) :
       Move g g'
-  /-- play a Supporter card, once per turn; its effect resolves as an Item's does (`TRun`) -/
+  /-- play a Supporter card, once per turn, and not on the first turn of the game ("The player
+  who goes first cannot play a Supporter card on their first turn", rulebook 2023 p. 12); its
+  effect resolves as an Item's does (`TRun`) -/
   | supporter {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
       (hh : g.cur.hand = l₁ ++ Card.trainer n .supporter e :: l₂)
       (hs : g.cur.supporterPlayed = false) (hbt : g.between = false) (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
-      (hat : g.attacked = false) :
+      (hat : g.attacked = false) (hf : g.firstTurn = false) :
       Move g g'
   /-- attack: do the base damage (with the lingering modifiers, `Effect.damage`), then resolve
   the attack's effect. The attack ends the turn (`attacked`): afterwards only Knock Outs and
@@ -434,7 +444,8 @@ inductive Move : GameState → GameState → Prop where
             energyAttached := false, supporterPlayed := false, retreated := false,
             mods := g.opp.mods.shift },
           opp := { g.cur.unfresh with
-            active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift },
+            active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift,
+            hadTurn := true },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken

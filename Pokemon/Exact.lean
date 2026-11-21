@@ -590,7 +590,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (.inl hst)
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
         (by subst hg; exact hl) (by subst hg; exact hat), hc'⟩
-  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat =>
+  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .supporter e ∈ g₁.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -606,7 +606,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂])
         (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
-        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat), hc'⟩
+        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf), hc'⟩
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx =>
       have hs' := hs₂ hst
       have hb := hF.attack ha hm
