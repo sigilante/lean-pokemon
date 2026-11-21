@@ -20,6 +20,12 @@ inductive Stage where
   | basic | stage1 | stage2
   deriving DecidableEq
 
+/-- The five Special Conditions an effect can apply. Asleep, Confused and Paralyzed rotate the
+card, so a new one of these replaces the old; Poisoned and Burned are markers beside them. -/
+inductive Condition where
+  | poisoned | burned | asleep | confused | paralyzed
+  deriving DecidableEq
+
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
 `iter` covers "flip until tails" and "as often as you like". -/
 inductive Effect where
@@ -31,6 +37,14 @@ inductive Effect where
   | heal (n : Nat)
   /-- place `n` damage counters on the opponent's Active Pokémon -/
   | counters (n : Nat)
+  /-- apply a Special Condition to the opponent's Active Pokémon -/
+  | inflict (c : Condition)
+  /-- if the opponent's Active Pokémon is Poisoned, it takes `n` more damage counters from
+  Poison at every Pokémon Checkup; repeated uses add up (Croagunk STS 58, *Poison Up*: "This
+  effect can be applied more than once") -/
+  | poisonUp (n : Nat)
+  /-- the player's Active Pokémon recovers from all Special Conditions (Full Heal) -/
+  | cure
   /-- shuffle the player's deck -/
   | shuffle
   /-- move one chosen card from the player's deck to their hand -/

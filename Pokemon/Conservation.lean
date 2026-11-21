@@ -36,13 +36,23 @@ theorem benchCardList_append (a b : List InPlay) :
   | nil => rfl
   | cons p ps ih => simp only [List.cons_append, benchCardList, ih, List.append_assoc]
 
+@[simp] theorem InPlay.inflict_top (c : Condition) (p : InPlay) : (p.inflict c).top = p.top := by
+  cases c <;> rfl
+@[simp] theorem InPlay.inflict_under (c : Condition) (p : InPlay) :
+    (p.inflict c).under = p.under := by cases c <;> rfl
+@[simp] theorem InPlay.inflict_energy (c : Condition) (p : InPlay) :
+    (p.inflict c).energy = p.energy := by cases c <;> rfl
+@[simp] theorem InPlay.inflict_tools (c : Condition) (p : InPlay) :
+    (p.inflict c).tools = p.tools := by cases c <;> rfl
+
 /-- Close a goal `l₁.Perm l₂` by comparing counts after unfolding `allCards`. -/
 macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
   `(tactic| (
     refine ListPerm.perm_of_count fun x => ?_
     simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,
       List.count_nil, optCardList, benchCardList, benchCardList_append, InPlay.cardList,
-      InPlay.ofBasic, stadiumCardList, $hs,*] <;>
+      InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
+      InPlay.inflict_energy, InPlay.inflict_tools, stadiumCardList, $hs,*] <;>
     omega))
 
 /-- Resolving an effect permutes the cards in the game: no card is created, destroyed or
@@ -55,6 +65,10 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | drawEmpty => exact .refl _
   | heal n h => perm_count [h]
   | counters n h => perm_count [h]
+  | inflict c h => perm_count [h]
+  | poisonUp n h hp => perm_count [h]
+  | poisonUpSkip => exact .refl _
+  | cure h => perm_count [h]
   | shuffle h =>
       have := fun x => h.count_eq x
       perm_count [this]
@@ -74,14 +88,15 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | playBasic hh hs hhp hb => perm_count [hh]
   | attach hh hf ha => perm_count [hh, ha]
   | evolve hh ha he hfr hf => perm_count [hh, ha]
-  | retreat ha hb hr he hp hk => perm_count [ha, hb, he]
+  | retreat ha hb hr he hp hk hs => perm_count [ha, hb, he]
   | item hh hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
   | supporter hh hs hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
-  | attack ha hm hc hn hf hr => exact hr.perm
+  | attack ha hm hc hs hn hf hr => exact hr.perm
+  | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | knockOut ha hk hp => perm_count [ha, hp]
   | promote ha hb => perm_count [ha, hb]
   | noPokemon ha hb => exact .refl _
@@ -132,5 +147,21 @@ theorem counters_unbounded (n : Nat) :
         ih { g with opp := { g.opp with active := some { p with damage := p.damage + 1 } } }
           { p with damage := p.damage + 1 } rfl
       exact ⟨g', p', .iterCons (.counters 1 h) hr, hp', by simp at hd; omega⟩
+
+/-- Inside one effect, the Poison strength of a Poisoned opposing Active Pokémon can reach any
+value: `iter (poisonUp 1)` raises `poisonUp` by one per round. Unlike damage, `poisonUp` is not
+reset by a Knock Out check, so `Damage` clamps it too. -/
+theorem poisonUp_unbounded (n : Nat) :
+    ∀ (g : GameState) (p : InPlay), g.opp.active = some p → p.poisoned = true →
+      ∃ g' p', Run (.iter (.poisonUp 1)) g g' ∧ g'.opp.active = some p' ∧
+        p'.poisonUp = p.poisonUp + n := by
+  induction n with
+  | zero => intro g p h _; exact ⟨g, p, .iterNil _ _, h, rfl⟩
+  | succ n ih =>
+      intro g p h hp
+      obtain ⟨g', p', hr, hp', hd⟩ :=
+        ih { g with opp := { g.opp with active := some { p with poisonUp := p.poisonUp + 1 } } }
+          { p with poisonUp := p.poisonUp + 1 } rfl hp
+      exact ⟨g', p', .iterCons (.poisonUp 1 h hp) hr, hp', by simp at hd; omega⟩
 
 end Pokemon

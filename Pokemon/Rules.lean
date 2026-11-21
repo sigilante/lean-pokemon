@@ -15,8 +15,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   suffices while no effect damages the Bench; a Knock Out always gives exactly one Prize;
   until its Knock Out is taken, a Pokémon at or above its HP stays in play and can still be
   affected: in particular, the player's own Active Pokémon, after evolving into a card with
-  less HP, can still attack, take Energy, or be healed back below its HP (the rulebook would
-  Knock it Out at once);
+  less HP or taking 3 counters from Confusion, can still attack, take Energy, or be healed
+  back below its HP (the rulebook would Knock it Out at once, or at the end of the attack);
 * HP is the printed value: there are no HP modifiers (the survey's loophole L1);
 * there are no markers (Imprison, Shock-wave), which the survey found to be uncapped counts;
 * effects cannot read the state: no "for each" counts, no full-HP or zero tests, and no
@@ -24,11 +24,20 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   construction, not by theorem;
 * an attack does not end the turn; the first player may play a Supporter on the first turn;
   each player has their own Stadium slot;
-* Pokémon Checkup (Poison, Burn, Sleep, Paralysis recovery) is absent, and no effect in the
-  language applies a Special Condition yet;
+* Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
+  remove them only from the player's own Active Pokémon (`cure`); the variants with a number
+  ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; poisoning a
+  Pokémon that is already Poisoned keeps its `poisonUp` (no ruling was found either way);
+  Croagunk's cumulative increase is modelled as a number on the Pokémon (`poisonUp`) that
+  lasts until Poison ends, not as a lingering effect; a Confused Pokémon whose flip is tails
+  uses up the turn's attack, and its attack must be one it could otherwise use;
+* Pokémon Checkup (Poison, Burn, Sleep, Paralysis recovery) is absent: Special Conditions are
+  applied, stop attacks and retreats, and Confusion is resolved, but they have no
+  between-turns effect;
 * Stadium and Tool cards occupy state but have no move; Abilities are absent;
-* start states are not required to be well formed: from a state with no winner and an empty
-  Prize list, a pending Knock Out cannot be taken and the game is stuck with no legal move;
+* start states are not required to be well formed; from a `WellFormed` start no reachable
+  state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
+  an empty Prize list) a pending Knock Out may be impossible to take;
 * the "no evolving on your first turn" rule is applied to the first turn of the game only.
 -/
 
@@ -41,6 +50,16 @@ def DamageBounded (g : GameState) : Prop :=
   ∀ p : InPlay,
     (g.cur.active = some p ∨ p ∈ g.cur.bench ∨ g.opp.active = some p ∨ p ∈ g.opp.bench) →
       p.damage < p.top.hp
+
+/-- A Benched Pokémon as the rules leave it: below its HP and with no Special Condition. -/
+def Benched (p : InPlay) : Prop :=
+  p.damage < p.top.hp ∧ p.rot = .none ∧ p.poisoned = false ∧ p.burned = false ∧ p.poisonUp = 0
+
+/-- Well-formed states: while there is no winner both players have Prize cards left, and
+every Benched Pokémon is `Benched`. `Move` preserves it (`Move.wellFormed`). -/
+def WellFormed (g : GameState) : Prop :=
+  (g.winner = none → g.cur.prizes ≠ [] ∧ g.opp.prizes ≠ []) ∧
+    (∀ p ∈ g.cur.bench, Benched p) ∧ ∀ p ∈ g.opp.bench, Benched p
 
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
@@ -66,16 +85,17 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂,
         active := some { a with
           top := p, under := Card.pokemon a.top :: a.under,
-          rot := .none, poisoned := false, burned := false, fresh := true } } }
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } } }
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
       (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
-      (hp : paid.length = a.top.retreat) (hk : a.damage < a.top.hp) :
+      (hp : paid.length = a.top.retreat) (hk : a.damage < a.top.hp)
+      (hs : a.rot.canAct = true) :
       Move g { g with cur := { g.cur with
         active := some q,
         bench := b₁ ++ { a with
-          energy := rest, rot := .none, poisoned := false, burned := false } :: b₂,
+          energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } }
   /-- play an Item card: it goes to the discard pile and its effect resolves -/
   | item {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
@@ -91,13 +111,23 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g') :
       Move g g'
-  /-- attack: place the base damage, then resolve the attack's effect -/
+  /-- attack: place the base damage, then resolve the attack's effect. An Asleep or
+  Paralyzed Pokémon cannot attack; a Confused one can, when its coin flip is heads. -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
-      (hc : atk.cost.length ≤ a.energy.length)
+      (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false)
       (hr : Run (.seq (.counters atk.damage) atk.effect) g g') :
       Move g { g' with attacked := true }
+  /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
+  happen, and the attacker gets 3 damage counters -/
+  | attackConfused {g : GameState} {a : InPlay} {atk : Attack}
+      (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
+      (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot = .confused)
+      (hn : g.attacked = false) (hf : g.firstTurn = false) :
+      Move g { g with
+        cur := { g.cur with active := some { a with damage := a.damage + 3 } },
+        attacked := true }
   /-- Knock Out the opponent's Active Pokémon and take a Prize card -/
   | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
       (ha : g.opp.active = some p) (hk : p.top.hp ≤ p.damage)
