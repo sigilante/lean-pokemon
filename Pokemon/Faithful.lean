@@ -66,7 +66,8 @@ The writers are:
   during your turn" Ability by a Pokémon that has not used one, and each on-play trigger, spends at
   least one unit of a potential of the player to move (`GameState.abPot`: their Pokémon in play
   not yet used, still able to evolve, the free places in play, and the opponent's Prize cards),
-  which no move of the turn raises and which is at most `potBound` of the number of cards; each
+  which no move of the turn raises while the game goes on (a batch Knock Out step that ends the
+  game can raise it, milestone batch-KO) and which is at most `potBound` of the number of cards; each
   such use writes and recycles at most `Q` (`Ability.q`, `cardsAbQ`). The bound rests on there
   being no effect that returns a Pokémon in play to the hand or deck: a Pokémon leaves play only
   by a Knock Out, which costs a Prize card.
@@ -638,12 +639,12 @@ theorem Run.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} 
       intro _ _; simp only [GameState.discW, wsum_append]; omega
   | _ => intro _ _; exact Nat.le_refl _
 
-theorem KOMove.disc_mono (w : Card → Nat) {g g' : GameState} (h : KOMove g g') :
+theorem KOBatch.disc_mono (w : Card → Nat) {g g' : GameState} (h : KOBatch g g') :
     g.discW w ≤ g'.discW w := by
-  cases h <;>
-    first
-    | exact Nat.le_refl _
-    | (simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
+  obtain ⟨-, -, d1, d2, -⟩ := h.piles
+  simp only [GameState.discW, d1, d2, GameState.koStep, PlayerState.takePrizes, GameState.koOf,
+    PlayerState.koOut, GameState.side, wsum_append]
+  omega
 
 theorem Resolve.disc_mono (w : Card → Nat) {g g' : GameState} (h : Resolve g g') :
     g.discW w ≤ g'.discW w := by
@@ -704,7 +705,7 @@ theorem Run.flags_keep {e : Effect} {g g' : GameState} (h : Run e g g') : Flags 
   | @zone e w g s' hw hz => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl⟩
 
-theorem KOMove.flags_keep {g g' : GameState} (h : KOMove g g') : Flags g g' := by
+theorem KOBatch.flags_keep {g g' : GameState} (h : KOBatch g g') : Flags g g' := by
   cases h <;> exact ⟨rfl, rfl, rfl⟩
 
 theorem Resolve.flags_keep {g g' : GameState} (h : Resolve g g') : Flags g g' := by
@@ -747,25 +748,14 @@ theorem Run.keeps {e : Effect} {g g' : GameState} (h : Run e g g') (hn : e.recFi
     rw [GameState.discAmt_eq, GameState.discAmt_eq]; exact this,
    hf.attacked, hf.gxCur, hf.gxOpp⟩
 
-theorem KOMove.keeps {g g' : GameState} (h : KOMove g g') :
+theorem KOBatch.keeps {g g' : GameState} (h : KOBatch g g') :
     Keeps g g' ∧ ∀ s, g'.slotAmt s = g.slotAmt s := by
-  cases h with
-  | knockOut =>
-      refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | knockOutOwn =>
-      refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | knockOutBench =>
-      refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | knockOutBenchOwn =>
-      refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | promote => exact ⟨⟨Nat.le_refl _, rfl, rfl, rfl⟩, fun _ => rfl⟩
-  | noPokemon => exact ⟨⟨Nat.le_refl _, rfl, rfl, rfl⟩, fun _ => rfl⟩
-  | promoteOwn => exact ⟨⟨Nat.le_refl _, rfl, rfl, rfl⟩, fun _ => rfl⟩
-  | noPokemonOwn => exact ⟨⟨Nat.le_refl _, rfl, rfl, rfl⟩, fun _ => rfl⟩
+  have hd : g.discAmt ≤ g'.discAmt := by
+    obtain ⟨-, -, d1, d2, -⟩ := h.piles
+    simp only [GameState.discAmt, d1, d2, GameState.koStep, PlayerState.takePrizes,
+      GameState.koOf, PlayerState.koOut, GameState.side, cardsAmt_append]
+    omega
+  cases h <;> exact ⟨⟨hd, rfl, rfl, rfl⟩, fun _ => rfl⟩
 
 theorem Resolve.keeps {g g' : GameState} (h : Resolve g g') :
     Keeps g g' ∧ ∀ s, g'.slotAmt s = g.slotAmt s := by
@@ -1260,7 +1250,11 @@ play (at most `benchLimit + 1`), and two for each Prize card the opponent has le
 no move raises it; using an Ability on an unused Pokémon lowers it by one; playing a Basic Pokémon
 or evolving lowers it by at least one (a new place is filled, or an evolution spent, and the new
 Pokémon is unused); Knocking Out one of the player's own Pokémon frees a place but gives the
-opponent at least one Prize card. So the uses of these Abilities in one turn are at most the
+opponent at least one Prize card. Since milestone batch-KO one check can Knock Out several of the
+player's Pokémon while the opponent has fewer Prize cards left than they take; the potential can
+then rise, but the opponent has taken their last Prize card and the game is over
+(`KOBatch.abPot_le` holds when the game goes on), so the per-turn invariant asks nothing of the
+potential of a finished game (`TInv.pot`, `TInv.turn`). So the uses of these Abilities in one turn are at most the
 potential at the start of the turn, which is at most `potBound` of the number of cards. The bound
 rests on the model having no effect that returns a Pokémon in play to the hand or deck (a Pokémon
 leaves play only by a Knock Out, which costs a Prize card); with such an effect (Scoop Up Cyclone)
@@ -1539,46 +1533,143 @@ theorem prizes_takePrizes_le {n : Nat} {s : PlayerState} {c : Card} {ps : List C
     (s.takePrizes n).prizes.length + 1 ≤ s.prizes.length := by
   simp only [PlayerState.takePrizes, List.length_drop, hp, List.length_cons]; omega
 
-/-- **No Knock Out move raises the potential**: Knocking Out one of the player's own Pokémon
-frees a place (two units) and gives the opponent at least one Prize card (two units). -/
-theorem KOMove.abPot_le {g g' : GameState} (h : KOMove g g') : g'.abPot ≤ g.abPot := by
-  cases h with
-  | knockOut => exact Nat.le_refl _
-  | promote => exact Nat.le_refl _
-  | noPokemon => exact Nat.le_refl _
-  | @knockOutOwn p c ps ha hk hp =>
-      have := prizes_takePrizes_le (n := p.top.prizeCount) hp p.top.ruleBox.prizes_pos
-      have := p.abW_le
-      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN]
-      omega
-  | @promoteOwn q b₁ b₂ ha hb =>
-      simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs,
-        List.length_append, List.length_cons]; omega
-  | noPokemonOwn => exact Nat.le_refl _
-  | knockOutBench => exact Nat.le_refl _
-  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
-      have := prizes_takePrizes_le (n := p.top.prizeCount) hp p.top.ruleBox.prizes_pos
-      have := p.abW_le
-      simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs,
-        List.length_append, List.length_cons]
-      omega
+theorem abWs_filter (t : InPlay → Bool) : ∀ b : List InPlay,
+    abWs b = abWs (b.filter t) + abWs (b.filter fun p => !t p)
+  | [] => rfl
+  | p :: ps => by
+      have ih := abWs_filter t ps
+      cases h : t p <;>
+        simp only [List.filter_cons, h, Bool.not_false, Bool.not_true, ite_true,
+          Bool.false_eq_true, ite_false, abWs, ih] <;> omega
 
-theorem Resolve.abPot_le {g g' : GameState} (h : Resolve g g') : g'.abPot ≤ g.abPot := by
+theorem length_filter_split (t : InPlay → Bool) : ∀ b : List InPlay,
+    b.length = (b.filter t).length + (b.filter fun p => !t p).length
+  | [] => rfl
+  | p :: ps => by
+      have ih := length_filter_split t ps
+      cases h : t p <;>
+        simp only [List.filter_cons, h, Bool.not_false, Bool.not_true, ite_true,
+          Bool.false_eq_true, ite_false, List.length_cons, ih] <;> omega
+
+theorem abWo_filter (t : InPlay → Bool) (o : Option InPlay) :
+    abWo o = abWo (optFilter t o) + abWo (optFilter (fun p => !t p) o) ∧
+      optN o = optN (optFilter t o) + optN (optFilter (fun p => !t p) o) := by
+  cases o with
+  | none => exact ⟨rfl, rfl⟩
+  | some p => cases h : t p <;> simp [optFilter, h, abWo, optN]
+
+theorem optN_le_optPrizes : ∀ o : Option InPlay, optN o ≤ optPrizes o
+  | none => Nat.le_refl _
+  | some p => p.top.prizeCount_pos
+
+theorem length_le_benchPrizes : ∀ b : List InPlay, b.length ≤ benchPrizes b
+  | [] => Nat.le_refl _
+  | p :: ps => by
+      have := length_le_benchPrizes ps
+      have := p.top.prizeCount_pos
+      simp only [List.length_cons, benchPrizes]; omega
+
+/-- The check's removal raises a player's potential by at most two units for each Pokémon removed
+(the places it frees), and so by at most twice the Prize value of those Pokémon. -/
+theorem PlayerState.koOut_abPot (ta tb : InPlay → Bool) (s : PlayerState) :
+    (s.koOut ta tb).abPot ≤ s.abPot + 2 * s.koValue ta tb := by
+  obtain ⟨a1, a2⟩ := abWo_filter ta s.active
+  have b1 := abWs_filter tb s.bench
+  have b2 := length_filter_split tb s.bench
+  have c1 := optN_le_optPrizes (optFilter ta s.active)
+  have c2 := length_le_benchPrizes (s.bench.filter tb)
+  simp only [PlayerState.abPot, PlayerState.koOut, PlayerState.koValue]
+  omega
+
+/-- A promotion keeps the potential: the same Pokémon, in the same number of places. -/
+theorem Promote.abPot {a a' : Option InPlay} {b b' : List InPlay} (h : Promote a b a' b') :
+    abWo a' + abWs b' = abWo a + abWs b ∧ optN a' + b'.length = optN a + b.length := by
+  cases h with
+  | keep => exact ⟨rfl, rfl⟩
+  | pick =>
+      simp only [abWo, optN, abWs_append, abWs, List.length_append, List.length_cons]
+      constructor <;> omega
+
+/-- **The batch Knock Out step does not raise the potential, unless it ends the game.** Each of
+the player's Knocked Out Pokémon frees a place (two units), and the opponent takes Prize cards for
+it, at least one each (two units each); if the opponent has fewer Prize cards left than they take,
+they have taken their last one and the game is over. (A batch can Knock Out several of the
+player's Pokémon while the opponent's Prize cards run out: then the potential can rise, and the
+game has ended; `TInv` asks nothing of the potential of a finished game.) Promotions move Pokémon
+without changing the weights or the number of places. -/
+theorem KOBatch.abPot_le {g g' : GameState} (h : KOBatch g g') (hw : g'.winner = none) :
+    g'.abPot ≤ g.abPot := by
+  obtain ⟨-, p2, -, -, pw⟩ := h.piles
+  have hw' : g.koStep.winner = none := pw ▸ hw
+  obtain ⟨-, -, h2⟩ := GameState.koStep_winner_none hw'
+  have hpw := (winWays_eq_zero h2).1
+  have hcur : g'.cur.abPot = (g.koOf .own).abPot := by
+    cases h with
+    | won => rfl
+    | go _ _ hc _ =>
+        obtain ⟨e1, e2⟩ := hc.abPot
+        exact PlayerState.abPot_congr e1 e2
+  have hk : (g.koOf .own).abPot ≤ g.cur.abPot + 2 * g.koVal .own :=
+    PlayerState.koOut_abPot (g.koT .own .active) (g.koT .own .bench) g.cur
+  have hpr : g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) := p2
+  have hlen : g'.opp.prizes.length + g.koVal .own = g.opp.prizes.length := by
+    rw [hpr, List.length_drop]
+    cases e : g.koVal .own with
+    | zero => omega
+    | succ n =>
+        rw [e] at hpw
+        have ho : (g.opp.prizes.drop (n + 1)).isEmpty = false := by
+          simpa [PlayerState.prizeWin, PlayerState.prizesOut] using hpw
+        have : n + 1 < g.opp.prizes.length := by
+          cases e2 : g.opp.prizes.drop (n + 1) with
+          | nil => rw [e2] at ho; cases ho
+          | cons x xs =>
+              have := congrArg List.length e2
+              simp only [List.length_drop, List.length_cons] at this
+              omega
+        omega
+  simp only [GameState.abPot, hcur]
+  omega
+
+/-- A resolution that ends with no winner passed only through states with no winner. -/
+theorem Resolve.winner_back {g g' : GameState} (h : Resolve g g') (hw : g'.winner = none) :
+    g.winner = none := by
+  cases h with
+  | done => exact hw
+  | step hn => exact hn
+
+theorem TRun.winner_back {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : g'.winner = none) :
+    g.winner = none := by
+  induction h with
+  | prim _ hn => exact hn
+  | stop => exact hw
+  | iteT hn => exact hn
+  | iteF hn => exact hn
+  | seq _ _ ih₁ ih₂ => exact ih₁ (ih₂ hw)
+  | choiceL _ ih => exact ih hw
+  | choiceR _ ih => exact ih hw
+  | iterNil => exact hw
+  | iterCons _ _ ih₁ ih₂ => exact ih₁ (ih₂ hw)
+
+theorem Resolve.abPot_le {g g' : GameState} (h : Resolve g g') (hw : g'.winner = none) :
+    g'.abPot ≤ g.abPot := by
   induction h with
   | done => exact Nat.le_refl _
-  | step _ hm _ ih => exact Nat.le_trans ih hm.abPot_le
+  | step _ hm hr ih => exact Nat.le_trans (ih hw) (hm.abPot_le (hr.winner_back hw))
 
-theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') : g'.abPot ≤ g.abPot := by
+/-- A Trainer effect's resolution does not raise the potential, unless it ends the game. -/
+theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : g'.winner = none) :
+    g'.abPot ≤ g.abPot := by
   induction h with
-  | prim _ _ hr hk => exact Nat.le_trans hk.abPot_le hr.abPot_le
+  | prim _ _ hr hk => exact Nat.le_trans (hk.abPot_le hw) hr.abPot_le
   | stop => exact Nat.le_refl _
-  | iteT _ _ _ _ ih => exact ih
-  | iteF _ _ _ _ ih => exact ih
-  | seq _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
-  | choiceL _ ih => exact ih
-  | choiceR _ ih => exact ih
+  | iteT _ _ _ _ ih => exact ih hw
+  | iteF _ _ _ _ ih => exact ih hw
+  | seq _ h₂ ih₁ ih₂ => exact Nat.le_trans (ih₂ hw) (ih₁ (h₂.winner_back hw))
+  | choiceL _ ih => exact ih hw
+  | choiceR _ ih => exact ih hw
   | iterNil => exact Nat.le_refl _
-  | iterCons _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
+  | iterCons _ h₂ ih₁ ih₂ => exact Nat.le_trans (ih₂ hw) (ih₁ (h₂.winner_back hw))
 
 /-- **A play from the hand lowers the potential by at least one**: a Basic Pokémon fills a place
 (two units) and is unused (one unit); an evolution spends the Pokémon's evolution for the turn
@@ -1844,22 +1935,7 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
           omega
   | attackConfused =>
       exact hi.frame (fun _ => Nat.le_refl _) (Nat.le_refl _) (atkT_le A g) (Nat.le_refl _)
-  | knockOut =>
-      refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | promote => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-  | noPokemon => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-  | knockOutOwn =>
-      refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | knockOutBench =>
-      refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | knockOutBenchOwn =>
-      refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
-  | promoteOwn => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-  | noPokemonOwn => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
+  | knockOuts h => exact hi.keeps h.keeps.1 fun s => Nat.le_of_eq (h.keeps.2 s)
   | endTurn =>
       exact hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) rfl (Nat.add_comm _ _)
@@ -1937,9 +2013,11 @@ def supT (P : Nat) (g : GameState) : Nat := if g.cur.supporterPlayed then P else
 theorem supT_le (P : Nat) (g : GameState) : supT P g ≤ P := by
   unfold supT; split <;> omega
 
-/-- **No move but the end of the turn raises the potential** (milestone M8a). -/
+/-- **No move but the end of the turn raises the potential** (milestone M8a), unless it ends the
+game (milestone batch-KO added the hypothesis `g'.winner = none`: a batch Knock Out step can
+Knock Out several of the player's Pokémon while the opponent's Prize cards run out). -/
 theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
-    (hc : g'.curIsFirst = g.curIsFirst) : g'.abPot ≤ g.abPot := by
+    (hc : g'.curIsFirst = g.curIsFirst) (hw : g'.winner = none) : g'.abPot ≤ g.abPot := by
   cases hm with
   | @playBasic l₁ l₂ p hh hs hhp hb hbt hst hat =>
       have := optN_le g.cur.active
@@ -1977,9 +2055,9 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
           a.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs, e,
         List.length_append, List.length_cons]; omega
-  | item _ _ _ hr => exact hr.abPot_le
-  | supporter _ _ _ _ hr => exact hr.abPot_le
-  | stadiumUse _ _ _ _ _ hr => exact hr.abPot_le
+  | item _ _ _ hr => exact hr.abPot_le hw
+  | supporter _ _ _ _ hr => exact hr.abPot_le hw
+  | stadiumUse _ _ _ _ _ hr => exact hr.abPot_le hw
   | stadium => exact Nat.le_refl _
   | @tool l₁ l₂ n gr a hh ha =>
       have e : ({ a with tools := [Card.tool n gr] } : InPlay).abW = a.abW := rfl
@@ -1991,22 +2069,15 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
         List.length_append, List.length_cons]; omega
   | ability hu _ _ _ _ _ _ _ _ hr =>
       have := hu.abPot
-      exact Nat.le_trans hr.abPot_le (by omega)
+      exact Nat.le_trans (hr.abPot_le hw) (by omega)
   | onPlay hp _ _ _ _ _ hr =>
       have := hp.abPot
-      exact Nat.le_trans hr.abPot_le (by omega)
+      exact Nat.le_trans (hr.abPot_le hw) (by omega)
   | attack _ _ _ _ _ _ _ _ hr => exact hr.abPot_le
   | @attackConfused a atk ha =>
       have e : ({ a with damage := a.damage + 3 } : InPlay).abW = a.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
-  | knockOut ha hk hp => exact (KOMove.knockOut ha hk hp).abPot_le
-  | promote ha hb => exact (KOMove.promote ha hb).abPot_le
-  | noPokemon ha hb => exact (KOMove.noPokemon ha hb).abPot_le
-  | knockOutOwn ha hk hp => exact (KOMove.knockOutOwn ha hk hp).abPot_le
-  | promoteOwn ha hb => exact (KOMove.promoteOwn ha hb).abPot_le
-  | noPokemonOwn ha hb => exact (KOMove.noPokemonOwn ha hb).abPot_le
-  | knockOutBench hb hk hp => exact (KOMove.knockOutBench hb hk hp).abPot_le
-  | knockOutBenchOwn hb hk hp => exact (KOMove.knockOutBenchOwn hb hk hp).abPot_le
+  | knockOuts h => exact h.abPot_le hw
   | endTurn => simp at hc
   | startTurn => exact Nat.le_refl _
   | deckOut => exact Nat.le_refl _
@@ -2055,6 +2126,7 @@ theorem _root_.Pokemon.Move.stPot_le {g g' : GameState} (hm : Move g g')
   | attack _ _ _ _ _ _ _ _ hr =>
       exact Nat.le_of_eq (GameState.stPot_congr hr.stFlags.1 hr.stFlags.2)
   | endTurn => simp at hc
+  | knockOuts h => cases h <;> exact Nat.le_refl _
   | _ => exact Nat.le_refl _
 
 /-- **The per-turn invariant.** The witnesses: `X₀`, `X₁`, `X₂` the amounts that Trainer cards,
@@ -2066,14 +2138,17 @@ Item writers that went to the discard piles (each such card played this turn), b
 by `Q` for each unit of potential spent (each "once during your turn" or on-play Ability used; `Q`
 bounds what one use writes, plus what it can recycle), and (milestone M5) by `R` for each Stadium
 use (`GameState.stPot` counts the uses still open, two at the start of a turn; `R` bounds what
-one use writes and recycles, `Card.stQ`). -/
+one use writes and recycles, `Card.stQ`). Since milestone batch-KO `pot` and `turn` are asked only
+while the game goes on (`g.winner = none`): a batch Knock Out step that ends the game can raise the
+potential (`KOBatch.abPot_le`), and no move follows it. The store bounds (`after`, `next`, `now`,
+`always`) hold in every state. -/
 structure TInv (S A P Q K R : Nat) (g : GameState) (X₀ X₁ X₂ D E : Nat) : Prop where
   x0 : X₀ ≤ P + P + Q * K + R * 2
   x1 : X₁ ≤ P + P + Q * K + R * 2
   x2 : X₂ ≤ P + P + Q * K + R * 2
   e : E ≤ K
-  pot : g.attacked = false → g.abPot ≤ E
-  turn : g.attacked = false →
+  pot : g.attacked = false → g.winner = none → g.abPot ≤ E
+  turn : g.attacked = false → g.winner = none →
     D + X₀ + Q * g.abPot + R * g.stPot ≤ g.discW Card.wAmt + supT P g + Q * E + R * 2
   after : g.slotAmt .after ≤ S + X₀ + atkT A g
   next : g.slotAmt .next ≤ S + X₀ + X₁ + A + atkT A g
@@ -2083,41 +2158,41 @@ structure TInv (S A P Q K R : Nat) (g : GameState) (X₀ X₁ X₂ D E : Nat) : 
 theorem TInv.start (g : GameState) (A P Q K R : Nat) (hK : g.abPot ≤ K) :
     TInv g.storeTotal A P Q K R g 0 0 0 (g.discW Card.wAmt) g.abPot := by
   have := Nat.mul_le_mul_left R g.stPot_le
-  refine ⟨Nat.zero_le _, Nat.zero_le _, Nat.zero_le _, hK, fun _ => Nat.le_refl _,
-    fun _ => by omega, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨Nat.zero_le _, Nat.zero_le _, Nat.zero_le _, hK, fun _ _ => Nat.le_refl _,
+    fun _ _ => by omega, ?_, ?_, ?_, ?_⟩ <;>
     simp only [GameState.storeTotal] <;> omega
 
 /-- A step that writes nothing and recycles no weighted card. -/
 theorem TInv.frame {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
-    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E)
+    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
     (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s) (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt)
     (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt) (ha : atkT A g ≤ atkT A g')
-    (ht : g'.attacked = false → g.attacked = false ∧ supT P g ≤ supT P g' ∧
+    (ht : g'.attacked = false → g'.winner = none → g.attacked = false ∧ supT P g ≤ supT P g' ∧
       g'.abPot ≤ g.abPot ∧ g'.stPot ≤ g.stPot)
     (hx : gxT A g ≤ gxT A g') : TInv S A P Q K R g' X₀ X₁ X₂ D E := by
   have h1 := hs .after; have h2 := hs .next; have h3 := hs .now; have h4 := hs .always
   have := hi.after; have := hi.next; have := hi.now; have := hi.always
-  refine ⟨hi.x0, hi.x1, hi.x2, hi.e, fun hf => ?_, fun hf => ?_, by omega, by omega, by omega,
-    by omega⟩
-  · obtain ⟨hg, -, hp, -⟩ := ht hf
-    exact Nat.le_trans hp (hi.pot hg)
-  · obtain ⟨hg, hsup, hp, hq⟩ := ht hf
-    have := hi.turn hg
+  refine ⟨hi.x0, hi.x1, hi.x2, hi.e, fun hf hw => ?_, fun hf hw => ?_, by omega, by omega,
+    by omega, by omega⟩
+  · obtain ⟨hg, -, hp, -⟩ := ht hf hw
+    exact Nat.le_trans hp (hi.pot hg hn)
+  · obtain ⟨hg, hsup, hp, hq⟩ := ht hf hw
+    have := hi.turn hg hn
     have := Nat.mul_le_mul_left Q hp
     have := Nat.mul_le_mul_left R hq
     omega
 
 /-- A step that changes no flag, store or discard pile weight of interest. -/
 theorem TInv.same {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
-    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E)
+    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
     (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt) (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt)
     (ha : g'.attacked = g.attacked) (hsp : g'.cur.supporterPlayed = g.cur.supporterPlayed)
     (hgc : g'.cur.gxUsed = g.cur.gxUsed) (hgo : g'.opp.gxUsed = g.opp.gxUsed)
-    (hs : ∀ s, g'.slotAmt s = g.slotAmt s) (hp : g'.abPot ≤ g.abPot)
+    (hs : ∀ s, g'.slotAmt s = g.slotAmt s) (hp : g'.winner = none → g'.abPot ≤ g.abPot)
     (hq : g'.stPot ≤ g.stPot) :
     TInv S A P Q K R g' X₀ X₁ X₂ D E :=
-  hi.frame (fun s => Nat.le_of_eq (hs s)) hW hAl (Nat.le_of_eq (atkT_congr ha).symm)
-    (fun hf => ⟨ha ▸ hf, by simp only [supT, hsp]; exact Nat.le_refl _, hp, hq⟩)
+  hi.frame hn (fun s => Nat.le_of_eq (hs s)) hW hAl (Nat.le_of_eq (atkT_congr ha).symm)
+    (fun hf hw => ⟨ha ▸ hf, by simp only [supT, hsp]; exact Nat.le_refl _, hp hw, hq⟩)
     (Nat.le_of_eq (gxT_congr hgc hgo).symm)
 
 /-- The end of the turn: the witnesses move one turn back, and the potential is counted afresh
@@ -2132,8 +2207,8 @@ theorem TInv.endTurn {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
   have := atkT_le A g
   have := Nat.mul_le_mul_left R g'.stPot_le
   have := hi.after; have := hi.next; have := hi.now; have := hi.always
-  exact ⟨Nat.zero_le _, hi.x0, hi.x1, hK, fun _ => Nat.le_refl _, fun _ => by omega, by omega,
-    by omega, by omega, by omega⟩
+  exact ⟨Nat.zero_le _, hi.x0, hi.x1, hK, fun _ _ => Nat.le_refl _, fun _ _ => by omega,
+    by omega, by omega, by omega, by omega⟩
 
 theorem Card.wAmt_le_P {g : GameState} {P : Nat} (hP : cardsAmt g.allCards ≤ P) :
     g.discW Card.wAmt ≤ P :=
@@ -2147,7 +2222,7 @@ recycles)` at most `C`, keeps the per-turn invariant, with `e.amt` added to this
 This is the case of a "once during your turn" Ability used by a Pokémon that had not used one and
 of an on-play Ability (`C = Q`), and of a Stadium's effect (`C = R`). -/
 theorem TInv.bounded_use {S A P Q K R X₀ X₁ X₂ D E C : Nat} {g g₁ g' : GameState} {e : Effect}
-    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hat : g.attacked = false)
+    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hat : g.attacked = false) (hn : g.winner = none)
     (hpot₁ : g₁.abPot ≤ g.abPot)
     (hpay : Q * g₁.abPot + R * g₁.stPot + C ≤ Q * g.abPot + R * g.stPot)
     (hsl : ∀ s, g₁.slotAmt s = g.slotAmt s)
@@ -2168,7 +2243,6 @@ theorem TInv.bounded_use {S A P Q K R X₀ X₁ X₂ D E C : Nat} {g g₁ g' : G
   have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt := by rw [← hAl₁]; exact hAl₀
   have hsl' := hr.slot_le hlf
   have hp2 := hr.abPot_le
-  have hQ2 := Nat.mul_le_mul_left Q hp2
   have hst2 : g'.stPot = g₁.stPot := GameState.stPot_congr hr.stFlags.1 hr.stFlags.2
   have hfk := hr.flags_keep
   have hst' := hr.sameTurn
@@ -2178,8 +2252,8 @@ theorem TInv.bounded_use {S A P Q K R X₀ X₁ X₂ D E C : Nat} {g g₁ g' : G
   have hat' : atkT A g' = atkT A g := atkT_congr (hfk.attacked.trans hfl.attacked)
   have hgx : gxT A g' = gxT A g :=
     gxT_congr (hfk.gxCur.trans hfl.gxCur) (hfk.gxOpp.trans hfl.gxOpp)
-  have hturn := hi.turn hat
-  have hpg := hi.pot hat
+  have hturn := hi.turn hat hn
+  have hpg := hi.pot hat hn
   have hs' : ∀ s, g'.slotAmt s ≤ g.slotAmt s + e.amtAt s := fun s => by
     rw [← hsl s]; exact hsl' s
   have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now; have h4 := hs' .always
@@ -2199,7 +2273,8 @@ theorem TInv.bounded_use {S A P Q K R X₀ X₁ X₂ D E C : Nat} {g g₁ g' : G
       have := Card.wAmt_le_P (g := g) hP
       omega
   have hR2 : R * g'.stPot = R * g₁.stPot := by rw [hst2]
-  exact ⟨by omega, hi.x1, hi.x2, hi.e, fun _ => by omega, fun _ => by omega, by omega, by omega,
+  exact ⟨by omega, hi.x1, hi.x2, hi.e, fun _ hw => by have := hp2 hw; omega,
+    fun _ hw => by have := Nat.mul_le_mul_left Q (hp2 hw); omega, by omega, by omega,
     by omega, by omega⟩
 
 /-- **Every move preserves the per-turn invariant**, for cards satisfying the five clauses
@@ -2211,7 +2286,8 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
     (hAb : g.AbilitySafe) (hSS : g.StadiumSafe) (hA : ∀ x ∈ g.allCards, x.atkAmt ≤ A)
     (hP : cardsAmt g.allCards ≤ P)
     (hQ : ∀ c ∈ g.allCards, ∀ ab ∈ c.abilities, ab.q P ≤ Q)
-    (hRq : ∀ x ∈ g.allCards, x.stQ P ≤ R) (hK : potBound g.allCards.length ≤ K) :
+    (hRq : ∀ x ∈ g.allCards, x.stQ P ≤ R) (hK : potBound g.allCards.length ≤ K)
+    (hwn : g.winner = none) :
     ∃ Y₀ Y₁ Y₂ E' F, TInv S A P Q K R g' Y₀ Y₁ Y₂ E' F := by
   have hP' : cardsAmt g'.allCards ≤ P := by rw [cardsAmt_perm hm.perm]; exact hP
   have hWle : g'.discW Card.wAmt ≤ P := Card.wAmt_le_P hP'
@@ -2221,27 +2297,27 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
   have hpot := hm.abPot_le
   have hstp := hm.stPot_le
   cases hm with
-  | playBasic => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | playBasic => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | attach => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | attach => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | evolve => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | evolve => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | attachBench => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | attachBench => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | evolveBench => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | evolveBench => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
   | retreat =>
-      exact ⟨_, _, _, _, _, hi.same (by simp only [GameState.discW, wsum_append]; omega)
+      exact ⟨_, _, _, _, _, hi.same hwn (by simp only [GameState.discW, wsum_append]; omega)
         (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl (fun _ => rfl)
         (hpot rfl) (hstp rfl)⟩
   | stadium =>
-      exact ⟨_, _, _, _, _, hi.same (by simp only [GameState.discW, wsum_append]; omega)
+      exact ⟨_, _, _, _, _, hi.same hwn (by simp only [GameState.discW, wsum_append]; omega)
         (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl (fun _ => rfl)
         (hpot rfl) (hstp rfl)⟩
-  | tool => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | tool => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | toolBench => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | toolBench => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hx : Card.trainer n .item e ∈ g.cur.hand := by
@@ -2269,17 +2345,18 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
         simp only [supT, e2]
       have hat' : atkT A g' = atkT A g := atkT_congr hf.attacked
       have hgx : gxT A g' = gxT A g := gxT_congr hf.gxCur hf.gxOpp
-      have hturn := hi.turn hat
-      have hpg := hi.pot hat
-      have hp := hpot hst'.1
-      have hQp := Nat.mul_le_mul_left Q hp
+      have hturn := hi.turn hat hwn
+      have hpg := hi.pot hat hwn
+      have hp := fun hw' => hpot hst'.1 hw'
       have hRp := Nat.mul_le_mul_left R (hstp hst'.1)
       have h1 := hsl .after; have h2 := hsl .next; have h3 := hsl .now; have h4 := hsl .always
       have w1 := e.amtAt_le_amt .after; have w2 := e.amtAt_le_amt .next
       have w3 := e.amtAt_le_amt .now
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
       exact ⟨X₀ + e.amt, X₁, X₂, D, E, by omega, hi.x1, hi.x2, hi.e,
-        fun _ => Nat.le_trans hp hpg, fun _ => by omega, by omega, by omega, by omega, by omega⟩
+        fun _ hw' => Nat.le_trans (hp hw') hpg,
+        fun _ hw' => by have := Nat.mul_le_mul_left Q (hp hw'); omega, by omega, by omega,
+        by omega, by omega⟩
   | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd hbh =>
       have hx : Card.trainer n .supporter e ∈ g.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -2309,17 +2386,18 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       have hamt : e.amt ≤ P := Nat.le_trans (amt_le_cardsAmt hxC) hP
       have hat' : atkT A g' = atkT A g := atkT_congr hfk.attacked
       have hgx : gxT A g' = gxT A g := gxT_congr hfk.gxCur hfk.gxOpp
-      have hturn := hi.turn hat
-      have hpg := hi.pot hat
-      have hp := hpot hst'.1
-      have hQp := Nat.mul_le_mul_left Q hp
+      have hturn := hi.turn hat hwn
+      have hpg := hi.pot hat hwn
+      have hp := fun hw' => hpot hst'.1 hw'
       have hRp := Nat.mul_le_mul_left R (hstp hst'.1)
       have h1 := hsl .after; have h2 := hsl .next; have h3 := hsl .now; have h4 := hsl .always
       have w1 := e.amtAt_le_amt .after; have w2 := e.amtAt_le_amt .next
       have w3 := e.amtAt_le_amt .now
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
       exact ⟨X₀ + e.amt, X₁, X₂, D, E, by omega, hi.x1, hi.x2, hi.e,
-        fun _ => Nat.le_trans hp hpg, fun _ => by omega, by omega, by omega, by omega, by omega⟩
+        fun _ hw' => Nat.le_trans (hp hw') hpg,
+        fun _ hw' => by have := Nat.mul_le_mul_left Q (hp hw'); omega, by omega, by omega,
+        by omega, by omega⟩
   | @stadiumUse g' o n e ss hs hu hbt hst hat hr hnd hbh =>
       have hxC := GameState.mem_allCards_of_stadium hs
       have hpay : Q * ({ g with stadiumUsed := true } : GameState).abPot +
@@ -2331,7 +2409,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
           rw [← e1, Nat.mul_add, Nat.mul_one]
         have e3 : Q * ({ g with stadiumUsed := true } : GameState).abPot = Q * g.abPot := rfl
         omega
-      exact ⟨_, _, _, _, _, hi.bounded_use (g₁ := { g with stadiumUsed := true }) hat
+      exact ⟨_, _, _, _, _, hi.bounded_use (g₁ := { g with stadiumUsed := true }) hat hwn
         (Nat.le_refl _) hpay (fun _ => rfl) rfl rfl
         ⟨rfl, rfl, rfl⟩ rfl (List.Perm.refl _) hr (hL _ hxC) (hSS.get hxC) (hRq _ hxC)
         (fun f hf y hy hfy => hR.2 _ hxC f hf y hy hfy) hP⟩
@@ -2357,7 +2435,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
             have := Nat.mul_le_mul_left Q hpu'
             rw [Nat.mul_add, Nat.mul_one] at this
             rw [hs₁]; omega
-          exact ⟨_, _, _, _, _, hi.bounded_use hat (by omega) hpay hu.slotAmt (hu.discW _)
+          exact ⟨_, _, _, _, _, hi.bounded_use hat hwn (by omega) hpay hu.slotAmt (hu.discW _)
             (hu.discW _) hu.flags hu.supporterPlayed hu.perm hr hlf hsafe.2
             (Nat.le_trans (Ability.q_script he) (hQ _ hxC ab hmc)) hrec hP⟩
       | unlimited =>
@@ -2377,8 +2455,8 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
           have hat' : atkT A g' = atkT A g := atkT_congr (hfk.attacked.trans hfu.attacked)
           have hgx : gxT A g' = gxT A g := gxT_congr (hfk.gxCur.trans hfu.gxCur)
             (hfk.gxOpp.trans hfu.gxOpp)
-          have hturn := hi.turn hat
-          have hpg := hi.pot hat
+          have hturn := hi.turn hat hwn
+          have hpg := hi.pot hat hwn
           have hs' : ∀ s, g'.slotAmt s ≤ g.slotAmt s + (ab.script (some sp)).amtAt s := fun s => by
             rw [← hu.slotAmt s]; exact hsl s
           have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now
@@ -2393,13 +2471,15 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
             (fun f hf y hy hfy => hR.1 _ hxC f (Card.freeRec_of_unlimited hmc hab he hf) y hy hfy)
             fun y hy => hp₁.mem_iff.1 hy
           have hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt := by rw [← hu.discW]; exact hW₀
-          have hp : g'.abPot ≤ g.abPot := Nat.le_trans hp2 (by omega)
-          have hQp := Nat.mul_le_mul_left Q hp
+          have hp : g'.winner = none → g'.abPot ≤ g.abPot := fun hw' =>
+            Nat.le_trans (hp2 hw') (by omega)
           have hsq : g'.stPot = g.stPot :=
             (GameState.stPot_congr hr.stFlags.1 hr.stFlags.2).trans hs₁
           have hRp : R * g'.stPot = R * g.stPot := by rw [hsq]
-          exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun _ => Nat.le_trans hp hpg,
-            fun _ => by omega, by omega, by omega, by omega, by omega⟩
+          exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e,
+            fun _ hw' => Nat.le_trans (hp hw') hpg,
+            fun _ hw' => by have := Nat.mul_le_mul_left Q (hp hw'); omega, by omega, by omega,
+            by omega, by omega⟩
   | @onPlay g₁ g' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
       have hxC := hp.top_mem
       have he := ab.script_mem none
@@ -2409,7 +2489,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
         have := Nat.mul_le_mul_left Q hp.abPot
         rw [Nat.mul_add, Nat.mul_one] at this
         rw [hs₁]; omega
-      exact ⟨_, _, _, _, _, hi.bounded_use hp.attacked (by have := hp.abPot; omega) hpay
+      exact ⟨_, _, _, _, _, hi.bounded_use hp.attacked hwn (by have := hp.abPot; omega) hpay
         hp.slotAmt (hp.discW _) (hp.discW _) hp.flags hp.supporterPlayed hp.perm hr
         (Card.loopFree_ability (hL _ hxC) hm he) hsafe.2
         (Nat.le_trans (Ability.q_script he) (hQ _ hxC ab hm))
@@ -2458,47 +2538,23 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
             omega
       have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
-      exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun h => absurd h (by simp [atkRes]),
-        fun h => absurd h (by simp [atkRes]), by omega, by omega, by omega, by omega⟩
+      exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun h _ => absurd h (by simp [atkRes]),
+        fun h _ => absurd h (by simp [atkRes]), by omega, by omega, by omega, by omega⟩
   | attackConfused =>
-      exact ⟨_, _, _, _, _, hi.frame (fun _ => Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
-        (atkT_le A g) (fun h => absurd h (by simp)) (Nat.le_refl _)⟩
-  | knockOut =>
-      exact ⟨_, _, _, _, _, hi.same
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | promote => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | noPokemon => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | knockOutOwn =>
-      exact ⟨_, _, _, _, _, hi.same
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | knockOutBench =>
-      exact ⟨_, _, _, _, _, hi.same
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | knockOutBenchOwn =>
-      exact ⟨_, _, _, _, _, hi.same
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | promoteOwn => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | noPokemonOwn => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
+      exact ⟨_, _, _, _, _, hi.frame hwn (fun _ => Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
+        (atkT_le A g) (fun h _ => absurd h (by simp)) (Nat.le_refl _)⟩
+  | knockOuts h =>
+      have hf := h.flags_keep
+      exact ⟨_, _, _, _, _, hi.same hwn (KOBatch.disc_mono _ h) (KOBatch.disc_mono _ h) hf.attacked
+        h.sides.2.2.2.2.2.2.2.2.1 hf.gxCur hf.gxOpp h.keeps.2 (hpot h.same.1) (hstp h.same.1)⟩
   | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨_, _, _, _, _, hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) (Nat.add_comm _ _) rfl (Nat.add_comm _ _) ?_⟩
       have hperm := (Move.endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc).perm
       exact Nat.le_trans (GameState.abPot_le_bound _) (by rw [hperm.length_eq]; exact hK)
-  | startTurn => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | startTurn => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
-  | deckOut => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+  | deckOut => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
 
 /-- The bound on the stores of every state reachable from `g₀` (milestone MV; milestone M8a
@@ -2522,7 +2578,7 @@ theorem reach_tinv {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach g₀ g) 
       (cardsStQ (cardsAmt g₀.allCards) g₀.allCards) g X₀ X₁ X₂ D E := by
   induction h with
   | refl => exact ⟨_, _, _, _, _, TInv.start _ _ _ _ _ _ (GameState.abPot_le_bound _)⟩
-  | step hr _ hm ih =>
+  | step hr hn hm ih =>
       obtain ⟨X₀, X₁, X₂, D, E, hi⟩ := ih
       have hp := hr.perm
       exact hi.move hm (hF.1.of_perm hp) (hF.2.1.of_perm hp) (hF.2.2.1.of_perm hp)
@@ -2531,7 +2587,7 @@ theorem reach_tinv {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach g₀ g) 
         (Nat.le_of_eq (cardsAmt_perm hp))
         (fun p hx ab hab => Ability.q_le (hp.mem_iff.1 hx) hab)
         (fun x hx => stQ_le_cardsStQ (hp.mem_iff.1 hx))
-        (by rw [hp.length_eq]; exact Nat.le_refl _)
+        (by rw [hp.length_eq]; exact Nat.le_refl _) hn
 
 /-- **For a faithful deck the stores stay bounded.** From a start state `g₀` satisfying
 `Faithful` (clauses 1–5), every reachable state has, in both players' stores, every slot's damage

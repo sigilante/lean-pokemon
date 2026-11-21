@@ -33,4 +33,5 @@ import Pokemon.Tools
 import Pokemon.LoopFreeNeeded
 import Pokemon.StaticWitness
 import Pokemon.NoStatics
+import Pokemon.Terminate
 import Pokemon.Audit

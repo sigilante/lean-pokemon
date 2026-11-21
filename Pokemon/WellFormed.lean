@@ -8,13 +8,15 @@ winner, and that every Benched Pokémon has no Special Condition (since mileston
 Pokémon may be at or above its HP: that is a pending Knock Out, excluded by `Settled`).
 
 * `Move.wellFormed`, `Reach.wellFormed`: legal play preserves it.
-* `Move.progress`, `Reach.progress`: from a well-formed state with no winner some move is
-  legal. In particular a pending Knock Out can always be taken: the player who takes the Prize
-  has one, and the Pokémon that must be promoted afterwards is on the Bench or the game is won.
+* `Move.exists_move`: every state has a legal move (no hypothesis); `Move.progress`,
+  `Reach.progress`: from a well-formed state with no winner some move is legal. In particular a
+  pending Knock Out can always be taken: the batch step exists from every state that is not
+  `Settled` (`KOBatch.exists_of`).
 * `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`: with no winner and a pending Knock
-  Out (as after Checkup or an attack), a move is legal that Knocks Out a Pokémon in play (Active
-  or Benched, of either player) at or above its HP, and the taker's Prize list shrinks by exactly
-  that Pokémon's Prize count, or by all that are left.
+  Out (as after Checkup or an attack), the batch Knock Out step is legal: it Knocks Out every
+  Pokémon in play (Active or Benched, of either player) at or above its HP, and each player's
+  Prize list loses its top cards, as many as the Prize value of the opponent's Knocked Out
+  Pokémon (or all that are left).
 -/
 
 namespace Pokemon
@@ -273,48 +275,108 @@ theorem prizes_of_not_out {n : Nat} {s : PlayerState} (h : s.prizesOut n = false
   simp only [PlayerState.prizesOut, PlayerState.takePrizes] at h ⊢
   intro e; rw [e] at h; cases h
 
-/-- A Knock Out move preserves well-formedness. -/
-theorem KOMove.wellFormed {g g' : GameState} (h : KOMove g g') (hw : WellFormed g) :
-    WellFormed g' := by
+/-! ## The batch Knock Out step: outcome, well-formedness, existence -/
+
+/-- No outcome only when neither player wins in any way. -/
+theorem Outcome.ofWays_eq_none {b : Bool} {wc wo : Nat} (h : Outcome.ofWays b wc wo = none) :
+    wc = 0 ∧ wo = 0 := by
+  unfold Outcome.ofWays at h
+  split at h
+  · next e =>
+      split at h
+      · next e0 => exact ⟨e0, e ▸ e0⟩
+      · cases h
+  · split at h <;> cases h
+
+/-- No way of winning: no last Prize card taken, and the opponent has a Pokémon in play. -/
+theorem winWays_eq_zero {n : Nat} {taker other : PlayerState} (h : winWays n taker other = 0) :
+    taker.prizeWin n = false ∧ other.noPokemon = false := by
+  unfold winWays at h
+  refine ⟨?_, ?_⟩
+  · cases e : taker.prizeWin n
+    · rfl
+    · simp [e] at h
+  · cases e : other.noPokemon
+    · rfl
+    · simp [e] at h
+
+/-- The check of a game that is over leaves it over, with the same outcome. -/
+theorem GameState.koStep_winner_of_some {g : GameState} {o : Outcome} (h : g.winner = some o) :
+    g.koStep.winner = some o := by
+  simp only [GameState.koStep, h]
+
+/-- A check with no outcome: neither player wins in any way. -/
+theorem GameState.koStep_winner_none {g : GameState} (h : g.koStep.winner = none) :
+    g.winner = none ∧ winWays (g.koVal .opp) g.cur (g.koOf .opp) = 0 ∧
+      winWays (g.koVal .own) g.opp (g.koOf .own) = 0 := by
+  cases hn : g.winner with
+  | some o => rw [g.koStep_winner_of_some hn] at h; cases h
+  | none =>
+      simp only [GameState.koStep, hn] at h
+      exact ⟨rfl, Outcome.ofWays_eq_none h⟩
+
+/-- A player who still has Prize cards and has not taken their last one has Prize cards left. -/
+theorem prizes_of_not_prizeWin {n : Nat} {s : PlayerState} (hp : s.prizes ≠ [])
+    (h : s.prizeWin n = false) : (s.takePrizes n).prizes ≠ [] := by
+  cases n with
+  | zero => simpa [PlayerState.takePrizes] using hp
+  | succ n =>
+      have ho : s.prizesOut (n + 1) = false := by
+        simpa [PlayerState.prizeWin] using h
+      exact prizes_of_not_out ho
+
+/-- A promotion keeps every Benched Pokémon `Benched`. -/
+theorem Promote.benchOk {a a' : Option InPlay} {b b' : List InPlay} (h : Promote a b a' b')
+    (hb : BenchOk b) : BenchOk b' := by
   cases h with
-  | @knockOut p c ps ha hk hp =>
-      refine ⟨fun hn => ?_, hw.2.1, hw.2.2⟩
-      cases ho : g.cur.prizesOut p.top.prizeCount with
-      | true => simp [ho] at hn
-      | false =>
-          simp only [ho, Bool.false_eq_true, ite_false] at hn
-          exact ⟨prizes_of_not_out ho, (hw.1 hn).2⟩
-  | promote ha hb =>
-      refine ⟨hw.1, hw.2.1, fun p hp => hw.2.2 p ?_⟩
-      rw [hb]; exact mem_append_cons_of_mem _ hp
-  | noPokemon ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
-  | @knockOutOwn p c ps ha hk hp =>
-      refine ⟨fun hn => ?_, hw.2.1, hw.2.2⟩
-      cases ho : g.opp.prizesOut p.top.prizeCount with
-      | true => simp [ho] at hn
-      | false =>
-          simp only [ho, Bool.false_eq_true, ite_false] at hn
-          exact ⟨(hw.1 hn).1, prizes_of_not_out ho⟩
-  | @knockOutBench p b₁ b₂ c ps hb hk hp =>
-      refine ⟨fun hn => ?_, hw.2.1, fun q hq => hw.2.2 q ?_⟩
-      · cases ho : g.cur.prizesOut p.top.prizeCount with
-        | true => simp [ho] at hn
-        | false =>
-            simp only [ho, Bool.false_eq_true, ite_false] at hn
-            exact ⟨prizes_of_not_out ho, (hw.1 hn).2⟩
-      · rw [hb]; exact mem_append_cons_of_mem _ hq
-  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
-      refine ⟨fun hn => ?_, fun q hq => hw.2.1 q ?_, hw.2.2⟩
-      · cases ho : g.opp.prizesOut p.top.prizeCount with
-        | true => simp [ho] at hn
-        | false =>
-            simp only [ho, Bool.false_eq_true, ite_false] at hn
-            exact ⟨(hw.1 hn).1, prizes_of_not_out ho⟩
-      · rw [hb]; exact mem_append_cons_of_mem _ hq
-  | promoteOwn ha hb =>
-      refine ⟨hw.1, fun p hp => hw.2.1 p ?_, hw.2.2⟩
-      rw [hb]; exact mem_append_cons_of_mem _ hp
-  | noPokemonOwn ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
+  | keep => exact hb
+  | pick => exact fun p hp => hb p (mem_append_cons_of_mem _ hp)
+
+/-- The check keeps every Benched Pokémon `Benched`: the Bench only loses Pokémon. -/
+theorem PlayerState.koOut_benchOk {ta tb : InPlay → Bool} {s : PlayerState} (hb : BenchOk s.bench) :
+    BenchOk (s.koOut ta tb).bench :=
+  fun p hp => hb p (List.mem_filter.1 hp).1
+
+/-- **The batch Knock Out step preserves well-formedness**: a player who has not won still has
+Prize cards, and the Benches only lose Pokémon. -/
+theorem KOBatch.wellFormed {g g' : GameState} (h : KOBatch g g') (hw : WellFormed g) :
+    WellFormed g' := by
+  have hbc : BenchOk g.koStep.cur.bench :=
+    PlayerState.koOut_benchOk (ta := g.koT .own .active) (tb := g.koT .own .bench) hw.2.1
+  have hbo : BenchOk g.koStep.opp.bench :=
+    PlayerState.koOut_benchOk (ta := g.koT .opp .active) (tb := g.koT .opp .bench) hw.2.2
+  cases h with
+  | won _ hk => exact ⟨fun hn => absurd hn hk, hbc, hbo⟩
+  | go _ hk hc ho =>
+      obtain ⟨hn, h1, h2⟩ := GameState.koStep_winner_none hk
+      have hp := hw.1 hn
+      refine ⟨fun _ => ⟨?_, ?_⟩, hc.benchOk hbc, ho.benchOk hbo⟩
+      · exact prizes_of_not_prizeWin (s := g.koOf .own) hp.1 (winWays_eq_zero h1).1
+      · exact prizes_of_not_prizeWin (s := g.koOf .opp) hp.2 (winWays_eq_zero h2).1
+
+/-- A player with a Pokémon in play can fill their Active Spot. -/
+theorem Promote.exists_of {a : Option InPlay} {b : List InPlay}
+    (h : (a.isNone && b.isEmpty) = false) : ∃ a' b', Promote a b a' b' := by
+  cases a with
+  | some p => exact ⟨_, _, .keep⟩
+  | none =>
+      cases b with
+      | nil => simp at h
+      | cons q qs => exact ⟨_, _, .pick (b₁ := [])⟩
+
+/-- **A batch Knock Out step exists** from every state that is not `Settled`: the check, and, if
+nobody wins, a promotion for each player with an empty Active Spot (who has a Benched Pokémon,
+since otherwise the opponent would win). -/
+theorem KOBatch.exists_of {g : GameState} (hu : ¬ Settled g) : ∃ g', KOBatch g g' := by
+  cases hw : g.koStep.winner with
+  | some o => exact ⟨_, .won hu (by rw [hw]; exact fun h => nomatch h)⟩
+  | none =>
+      obtain ⟨_, h1, h2⟩ := GameState.koStep_winner_none hw
+      obtain ⟨ac, bc, hc⟩ := Promote.exists_of (a := g.koStep.cur.active) (b := g.koStep.cur.bench)
+        (winWays_eq_zero h2).2
+      obtain ⟨ao, bo, ho⟩ := Promote.exists_of (a := g.koStep.opp.active) (b := g.koStep.opp.bench)
+        (winWays_eq_zero h1).2
+      exact ⟨_, .go hu hw hc ho⟩
 
 theorem Resolve.wellFormed {g g' : GameState} (h : Resolve g g') (hw : WellFormed g) :
     WellFormed g' := by
@@ -455,44 +517,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
   | onPlay hp _ _ _ _ _ hr => exact hr.wellFormed (hp.wellFormed hw)
   | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame
   | attackConfused ha hm hc hs hn hf => exact hw
-  | @knockOut p c ps ha hk hp =>
-      refine ⟨fun hn => ?_, hw.2.1, hw.2.2⟩
-      cases ho : g.cur.prizesOut p.top.prizeCount with
-      | true => simp [ho] at hn
-      | false =>
-          simp only [ho, Bool.false_eq_true, ite_false] at hn
-          exact ⟨prizes_of_not_out ho, (hw.1 hn).2⟩
-  | promote ha hb =>
-      refine ⟨hw.1, hw.2.1, fun p hp => hw.2.2 p ?_⟩
-      rw [hb]; exact mem_append_cons_of_mem _ hp
-  | noPokemon ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
-  | @knockOutOwn p c ps ha hk hp =>
-      refine ⟨fun hn => ?_, hw.2.1, hw.2.2⟩
-      cases ho : g.opp.prizesOut p.top.prizeCount with
-      | true => simp [ho] at hn
-      | false =>
-          simp only [ho, Bool.false_eq_true, ite_false] at hn
-          exact ⟨(hw.1 hn).1, prizes_of_not_out ho⟩
-  | @knockOutBench p b₁ b₂ c ps hb hk hp =>
-      refine ⟨fun hn => ?_, hw.2.1, fun q hq => hw.2.2 q ?_⟩
-      · cases ho : g.cur.prizesOut p.top.prizeCount with
-        | true => simp [ho] at hn
-        | false =>
-            simp only [ho, Bool.false_eq_true, ite_false] at hn
-            exact ⟨prizes_of_not_out ho, (hw.1 hn).2⟩
-      · rw [hb]; exact mem_append_cons_of_mem _ hq
-  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
-      refine ⟨fun hn => ?_, fun q hq => hw.2.1 q ?_, hw.2.2⟩
-      · cases ho : g.opp.prizesOut p.top.prizeCount with
-        | true => simp [ho] at hn
-        | false =>
-            simp only [ho, Bool.false_eq_true, ite_false] at hn
-            exact ⟨(hw.1 hn).1, prizes_of_not_out ho⟩
-      · rw [hb]; exact mem_append_cons_of_mem _ hq
-  | promoteOwn ha hb =>
-      refine ⟨hw.1, fun p hp => hw.2.1 p ?_, hw.2.2⟩
-      rw [hb]; exact mem_append_cons_of_mem _ hp
-  | noPokemonOwn ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
+  | knockOuts h => exact h.wellFormed hw
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2, hcc.benched ?_⟩
       intro p hp
@@ -557,70 +582,179 @@ theorem WellFormed.oppPrizes {g : GameState} (hw : WellFormed g) (hn : g.winner 
   | nil => exact absurd e (hw.1 hn).2
   | cons c ps => exact ⟨c, ps, rfl⟩
 
-/-- **A pending Knock Out can be taken.** In a well-formed state with no winner and a pending
-Knock Out (for instance between turns, after Checkup, or after an attack that damaged a Benched
-Pokémon), some Knock Out move is legal. It Knocks Out a Pokémon `x` in play whose damage is at
-least its HP: the opponent's Active or Benched Pokémon, and then the player to move takes Prize
-cards, or the player's own, and then the opponent does. The taker's Prize list shrinks by exactly
-`min x.top.prizeCount` (its length): the Knocked Out Pokémon's Prize count (1, 2 or 3), or all
-that are left; the other player's Prize list is unchanged. Since the taker has a Prize card
-(`WellFormed`) and every Prize count is at least 1, at least one Prize card is taken.
+theorem optFilter_eq_some {t : InPlay → Bool} {o : Option InPlay} {x : InPlay}
+    (h : optFilter t o = some x) : o = some x ∧ t x = true := by
+  cases o with
+  | none => cases h
+  | some p =>
+      simp only [optFilter] at h
+      split at h
+      · next ht => cases h; exact ⟨rfl, ht⟩
+      · cases h
 
-Milestone M3 changed the statement. Before it, every Knock Out gave exactly one Prize card and the
-conclusion was that the total of both Prize lists drops by exactly one; that is the case
-`x.top.prizeCount = 1` of this statement. The Knock Out move may now be one of a Benched Pokémon
-(`Move.knockOutBench`, `Move.knockOutBenchOwn`), and it is also a `KOMove`. Milestone M6 changed
-"at or above its HP" from the printed HP (`x.top.hp ≤ x.damage`) to the derived HP of the place
-`x` is at (`g.hpOf w sp x ≤ x.damage`). -/
-theorem Move.knockOut_of_pending {g : GameState} (hw : WellFormed g) (hn : g.winner = none)
-    (hk : ¬ DamageBounded g) :
-    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧
-      (∃ w sp, g.In w sp x ∧ g.hpOf w sp x ≤ x.damage) ∧
-      (((g.opp.active = some x ∨ x ∈ g.opp.bench) ∧
-          g'.cur.prizes.length + min x.top.prizeCount g.cur.prizes.length =
-            g.cur.prizes.length ∧ g'.opp.prizes = g.opp.prizes) ∨
-        ((g.cur.active = some x ∨ x ∈ g.cur.bench) ∧
-          g'.opp.prizes.length + min x.top.prizeCount g.opp.prizes.length =
-            g.opp.prizes.length ∧ g'.cur.prizes = g.cur.prizes)) := by
-  rcases active_split (g.hpOf .opp .active) g.opp.active with ⟨a, ho, hka⟩ | hoa
-  · obtain ⟨c, ps, hp⟩ := hw.curPrizes hn
-    exact ⟨_, a, .knockOut ho hka hp, .knockOut ho hka hp, ⟨.opp, .active, ho, hka⟩,
-      .inl ⟨.inl ho, takePrizes_length _ _, rfl⟩⟩
-  rcases active_split (g.hpOf .own .active) g.cur.active with ⟨b, hc, hkb⟩ | hca
-  · obtain ⟨c, ps, hp⟩ := hw.oppPrizes hn
-    exact ⟨_, b, .knockOutOwn hc hkb hp, .knockOutOwn hc hkb hp, ⟨.own, .active, hc, hkb⟩,
-      .inr ⟨.inl hc, takePrizes_length _ _, rfl⟩⟩
-  rcases bench_split (g.hpOf .opp .bench) g.opp.bench with ⟨b₁, q, b₂, e, hkq⟩ | hob
-  · have hm : q ∈ g.opp.bench := by rw [e]; exact List.mem_append_right _ (.head _)
-    obtain ⟨c, ps, hp⟩ := hw.curPrizes hn
-    exact ⟨_, q, .knockOutBench e hkq hp, .knockOutBench e hkq hp, ⟨.opp, .bench, hm, hkq⟩,
-      .inl ⟨.inr hm, takePrizes_length _ _, rfl⟩⟩
-  rcases bench_split (g.hpOf .own .bench) g.cur.bench with ⟨b₁, q, b₂, e, hkq⟩ | hcb
-  · have hm : q ∈ g.cur.bench := by rw [e]; exact List.mem_append_right _ (.head _)
-    obtain ⟨c, ps, hp⟩ := hw.oppPrizes hn
-    exact ⟨_, q, .knockOutBenchOwn e hkq hp, .knockOutBenchOwn e hkq hp, ⟨.own, .bench, hm, hkq⟩,
-      .inr ⟨.inr hm, takePrizes_length _ _, rfl⟩⟩
-  refine absurd (fun w sp p hp => ?_) hk
+/-- **What survives the check**: a Pokémon in play after the check was in play at the same place
+before it, below its HP there. -/
+theorem GameState.koStep_survivor {g : GameState} {w : Whose} {sp : Spot} {x : InPlay}
+    (h : g.koStep.In w sp x) : g.In w sp x ∧ x.damage < g.hpOf w sp x := by
+  have key : ∀ (s : PlayerState) (sp : Spot) (ta tb : InPlay → Bool),
+      (match sp with
+        | .active => (s.koOut ta tb).active = some x
+        | .bench => x ∈ (s.koOut ta tb).bench) →
+      (match sp with
+        | .active => s.active = some x ∧ ta x = false
+        | .bench => x ∈ s.bench ∧ tb x = false) := by
+    intro s sp ta tb hx
+    cases sp with
+    | active =>
+        obtain ⟨h1, h2⟩ := optFilter_eq_some hx
+        exact ⟨h1, by simpa using h2⟩
+    | bench =>
+        obtain ⟨h1, h2⟩ := List.mem_filter.1 hx
+        exact ⟨h1, by simpa using h2⟩
+  have hlt : ∀ {w sp}, g.koT w sp x = false → x.damage < g.hpOf w sp x := fun e => by
+    simp only [GameState.koT, decide_eq_false_iff_not, Nat.not_le] at e; exact e
   cases w <;> cases sp
-  · exact hca p hp
-  · exact hcb p hp
-  · exact hoa p hp
-  · exact hob p hp
+  · obtain ⟨h1, h2⟩ := key g.cur .active (g.koT .own .active) (g.koT .own .bench) h
+    exact ⟨h1, hlt h2⟩
+  · obtain ⟨h1, h2⟩ := key g.cur .bench (g.koT .own .active) (g.koT .own .bench) h
+    exact ⟨h1, hlt h2⟩
+  · obtain ⟨h1, h2⟩ := key g.opp .active (g.koT .opp .active) (g.koT .opp .bench) h
+    exact ⟨h1, hlt h2⟩
+  · obtain ⟨h1, h2⟩ := key g.opp .bench (g.koT .opp .active) (g.koT .opp .bench) h
+    exact ⟨h1, hlt h2⟩
 
-/-- **A pending Knock Out can be taken**, for play: from a well-formed start, every reachable
-state with no winner and a pending Knock Out has a Knock Out move of a Pokémon in play at or
-above its HP, whose taker's Prize list shrinks by exactly that Pokémon's Prize count or all that
-are left, as in `Move.knockOut_of_pending` (statement changed by milestone M3, see there). -/
+/-- A promotion takes the new Active Pokémon from the Bench, and the Bench only loses Pokémon. -/
+theorem Promote.mem {a a' : Option InPlay} {b b' : List InPlay} (h : Promote a b a' b') :
+    (∀ x, a' = some x → a = some x ∨ x ∈ b) ∧ ∀ x ∈ b', x ∈ b := by
+  cases h with
+  | keep => exact ⟨fun x hx => .inl hx, fun x hx => hx⟩
+  | pick =>
+      refine ⟨fun x hx => .inr ?_, fun x hx => mem_append_cons_of_mem _ hx⟩
+      cases hx; exact List.mem_append_right _ (.head _)
+
+/-- **What survives a batch Knock Out step**: every Pokémon in play afterwards was in play before
+it, below its HP at some place it then held (its own place, or the Bench for a promoted Pokémon).
+No Pokémon at or above its HP at its place survives the check, and in particular none is rescued by
+a promotion. -/
+theorem KOBatch.survivor {g g' : GameState} (h : KOBatch g g') {w : Whose} {sp : Spot} {x : InPlay}
+    (hx : g'.In w sp x) : ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x := by
+  cases h with
+  | won => exact ⟨sp, g.koStep_survivor hx⟩
+  | @go ac ao bc bo _ _ hc ho =>
+      have to : ∀ sp₀, g.koStep.In w sp₀ x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x :=
+        fun sp₀ h => ⟨sp₀, g.koStep_survivor h⟩
+      cases w <;> cases sp
+      · rcases hc.mem.1 x hx with e | e
+        · exact to .active e
+        · exact to .bench e
+      · exact to .bench (hc.mem.2 x hx)
+      · rcases ho.mem.1 x hx with e | e
+        · exact to .active e
+        · exact to .bench e
+      · exact to .bench (ho.mem.2 x hx)
+
+/-- The Prize cards and discard piles after a batch Knock Out step are those of the check. -/
+theorem KOBatch.piles {g g' : GameState} (h : KOBatch g g') :
+    g'.cur.prizes = g.koStep.cur.prizes ∧ g'.opp.prizes = g.koStep.opp.prizes ∧
+      g'.cur.discard = g.koStep.cur.discard ∧ g'.opp.discard = g.koStep.opp.discard ∧
+      g'.winner = g.koStep.winner := by
+  cases h <;> exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+
+theorem optPrizes_filter_eq_zero {t : InPlay → Bool} {o : Option InPlay}
+    (h : optPrizes (optFilter t o) = 0) : ∀ p, o = some p → t p = false := by
+  intro p hp
+  subst hp
+  cases e : t p
+  · rfl
+  · have := p.top.prizeCount_pos
+    simp [optFilter, e, optPrizes] at h; omega
+
+theorem benchPrizes_filter_eq_zero {t : InPlay → Bool} :
+    ∀ {b : List InPlay}, benchPrizes (b.filter t) = 0 → ∀ p ∈ b, t p = false
+  | [], _ => fun _ h => nomatch h
+  | q :: qs, h => by
+      have hq := q.top.prizeCount_pos
+      cases e : t q
+      · simp only [List.filter_cons, e, Bool.false_eq_true, ite_false] at h
+        intro p hp
+        cases hp with
+        | head => exact e
+        | tail _ hp => exact benchPrizes_filter_eq_zero h p hp
+      · simp only [List.filter_cons, e, ite_true, benchPrizes] at h
+        omega
+
+/-- With nothing to Knock Out on a side, its Prize value is 0, and conversely a side with Prize
+value 0 has no Pokémon at or above its HP. -/
+theorem GameState.koVal_eq_zero {g : GameState} {w : Whose} (h : g.koVal w = 0) :
+    ∀ sp p, g.In w sp p → p.damage < g.hpOf w sp p := by
+  have h1 : optPrizes (optFilter (g.koT w .active) (g.side w).active) = 0 := by
+    simp only [GameState.koVal, PlayerState.koValue] at h; omega
+  have h2 : benchPrizes ((g.side w).bench.filter (g.koT w .bench)) = 0 := by
+    simp only [GameState.koVal, PlayerState.koValue] at h; omega
+  intro sp p hp
+  have e : g.koT w sp p = false := by
+    cases sp
+    · exact optPrizes_filter_eq_zero h1 p hp
+    · exact benchPrizes_filter_eq_zero h2 p hp
+  simpa [GameState.koT] using e
+
+/-- **A pending Knock Out is taken by the batch step.** In a well-formed state with no winner and
+a pending Knock Out (for instance between turns, after Checkup, or after an attack that damaged a
+Benched Pokémon), the batch Knock Out step is legal. It Knocks Out every Pokémon in play at or
+above its HP, of both players, at least one Prize card's worth (`0 < koVal .own + koVal .opp`);
+each player's Prize list loses its top cards, as many as the Prize value of the opponent's Knocked
+Out Pokémon (`koVal`: 1 for each, 2 for a Pokémon ex, 3 for a Mega Evolution Pokémon ex, added up),
+or all that are left (`List.drop`; so its length shrinks by exactly that value, or to 0,
+`takePrizes_length`); each player's discard pile is the check's (`koOf`: the Knocked Out Pokémon
+with every card attached on top of the old pile); and every Pokémon in play afterwards was below
+its HP in the state before the step (at the place it then held). It need not be below its HP
+afterwards: a removal or a promotion can lower derived HP, and the check then repeats
+(`KOBatch`).
+
+Milestone M3 changed the statement (exact Prize count of one Pokémon instead of one Prize card).
+Milestone batch-KO changed it again. Before it the move Knocked Out one Pokémon `x` at or above
+its HP, which the statement named; the taker's Prize list shrank by `min x.top.prizeCount` cards (a
+statement about lengths) and the other player's Prize list was unchanged (an equality of lists).
+The step now Knocks Out every pending Pokémon at once, and the statement names none of them; it
+gives both players' Prize lists, each the old list with its top `koVal` cards dropped. When exactly
+one Pokémon is pending, one `koVal` is its Prize value and the other is 0 (`drop 0`: that list is
+unchanged), which gives the old Prize conclusions, but not the old statement, which named the
+Pokémon. The hypotheses `WellFormed g` and `g.winner = none` are
+no longer used (the old moves needed the taker to have a Prize card left); the statement keeps
+them. -/
+theorem Move.knockOut_of_pending {g : GameState} (_hw : WellFormed g) (_hn : g.winner = none)
+    (hk : ¬ DamageBounded g) :
+    ∃ g', Move g g' ∧ KOBatch g g' ∧ 0 < g.koVal .own + g.koVal .opp ∧
+      g'.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
+      g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
+      g'.cur.discard = (g.koOf .own).discard ∧ g'.opp.discard = (g.koOf .opp).discard ∧
+      (∀ w sp x, g'.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) := by
+  obtain ⟨g', hb⟩ := KOBatch.exists_of (fun hs => hk hs.1)
+  obtain ⟨p1, p2, d1, d2, -⟩ := hb.piles
+  refine ⟨g', .knockOuts hb, hb, ?_, ?_, ?_, d1, d2, fun w sp x hx => hb.survivor hx⟩
+  · apply Nat.pos_of_ne_zero
+    intro h0
+    have h1 : g.koVal .own = 0 := by omega
+    have h2 : g.koVal .opp = 0 := by omega
+    apply hk
+    intro w sp p hp
+    cases w
+    · exact g.koVal_eq_zero h1 sp p hp
+    · exact g.koVal_eq_zero h2 sp p hp
+  · rw [p1]; rfl
+  · rw [p2]; rfl
+
+/-- **A pending Knock Out is taken by the batch step**, for play: from a well-formed start, every
+reachable state with no winner and a pending Knock Out has the batch Knock Out step, with the Prize
+lists, discard piles and survivors of `Move.knockOut_of_pending` (statement changed by milestones
+M3 and batch-KO, see there). -/
 theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g)
     (hn : g.winner = none) (hk : ¬ DamageBounded g) :
-    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧
-      (∃ w sp, g.In w sp x ∧ g.hpOf w sp x ≤ x.damage) ∧
-      (((g.opp.active = some x ∨ x ∈ g.opp.bench) ∧
-          g'.cur.prizes.length + min x.top.prizeCount g.cur.prizes.length =
-            g.cur.prizes.length ∧ g'.opp.prizes = g.opp.prizes) ∨
-        ((g.cur.active = some x ∨ x ∈ g.cur.bench) ∧
-          g'.opp.prizes.length + min x.top.prizeCount g.opp.prizes.length =
-            g.opp.prizes.length ∧ g'.cur.prizes = g.cur.prizes)) :=
+    ∃ g', Move g g' ∧ KOBatch g g' ∧ 0 < g.koVal .own + g.koVal .opp ∧
+      g'.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
+      g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
+      g'.cur.discard = (g.koOf .own).discard ∧ g'.opp.discard = (g.koOf .opp).discard ∧
+      (∀ w sp x, g'.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) :=
   Move.knockOut_of_pending (h.wellFormed h₀) hn hk
 
 /-- Whether a Knock Out is pending is decided by looking at the Pokémon in play (no choice
@@ -643,33 +777,37 @@ theorem damageBounded_or_pending (g : GameState) : DamageBounded g ∨ ¬ Damage
   · exact hoa p hp
   · exact hob p hp
 
-/-- **No deadlock.** In a well-formed state with no winner, some move is legal: a promotion or
-a loss if an Active Spot is empty; a Knock Out (of an Active or a Benched Pokémon) if one is
-pending; otherwise the end of the turn, or between turns the draw (or a loss by decking out). -/
-theorem Move.progress {g : GameState} (hw : WellFormed g) (hn : g.winner = none) :
-    ∃ g', Move g g' := by
-  match ho : g.opp.active with
-  | none =>
-      match hb : g.opp.bench with
-      | [] => exact ⟨_, .noPokemon ho hb⟩
-      | q :: qs => exact ⟨_, .promote (b₁ := []) ho hb⟩
-  | some a =>
-  match hc : g.cur.active with
-  | none =>
-      match hb : g.cur.bench with
-      | [] => exact ⟨_, .noPokemonOwn hc hb⟩
-      | q :: qs => exact ⟨_, .promoteOwn (b₁ := []) hc hb⟩
-  | some b =>
-  rcases damageBounded_or_pending g with hk | hk
-  · match hbt : g.between with
-    | false => exact ⟨_, .endTurn false false false false false false ho hc hk hbt
-        (BenchChar.refl _) (BenchChar.refl _)⟩
-    | true =>
-        match hd : g.cur.deck with
-        | [] => exact ⟨_, .deckOut hbt ho hc hk hd⟩
-        | c :: d => exact ⟨_, .startTurn hbt ho hc hk hd⟩
-  · obtain ⟨g', _, hm, -⟩ := Move.knockOut_of_pending hw hn hk
-    exact ⟨g', hm⟩
+/-- **No deadlock, in every state.** Every state has a legal move: the batch Knock Out step if the
+state is not `Settled` (a Pokémon in play at or above its HP, or an empty Active Spot; the step
+exists in every such state, `KOBatch.exists_of`: if a player takes more Prize cards than remain
+they win, a player with no Pokémon to promote loses, both at once give the rulebook's simultaneous
+outcome, and otherwise every empty Active Spot is filled); otherwise the end of the turn, or
+between turns the draw (or a loss by decking out). No hypothesis is needed (milestone batch-KO);
+`Reach` makes no move once the game is over, so for play the statement that matters is
+`Reach.progress`. -/
+theorem Move.exists_move (g : GameState) : ∃ g', Move g g' := by
+  by_cases hs : Settled g
+  · obtain ⟨hk, hc, ho⟩ := hs
+    match ha : g.opp.active, hb : g.cur.active with
+    | none, _ => exact absurd ha ho
+    | some _, none => exact absurd hb hc
+    | some a, some b =>
+        match hbt : g.between with
+        | false => exact ⟨_, .endTurn false false false false false false ha hb hk hbt
+            (BenchChar.refl _) (BenchChar.refl _)⟩
+        | true =>
+            match hd : g.cur.deck with
+            | [] => exact ⟨_, .deckOut hbt ha hb hk hd⟩
+            | c :: d => exact ⟨_, .startTurn hbt ha hb hk hd⟩
+  · obtain ⟨g', hm⟩ := KOBatch.exists_of hs
+    exact ⟨g', .knockOuts hm⟩
+
+/-- **No deadlock.** In a well-formed state with no winner, some move is legal (`Move.exists_move`,
+which needs neither hypothesis). Since milestone batch-KO the proof uses neither hypothesis; the
+statement keeps them. -/
+theorem Move.progress {g : GameState} (_hw : WellFormed g) (_hn : g.winner = none) :
+    ∃ g', Move g g' :=
+  Move.exists_move g
 
 /-- **No deadlock**, for play: from a well-formed start, every reachable state with no winner
 has a legal move. -/

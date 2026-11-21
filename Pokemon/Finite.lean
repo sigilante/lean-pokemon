@@ -112,12 +112,14 @@ theorem mem_markss (k : Marks) : k ∈ markss := by
   exact ⟨a, mem_bools _, b, mem_bools _, c, mem_bools _, d, mem_bools _, e,
     mem_opts fun t _ => mem_etypes t, rfl⟩
 
-def winners : List (Option Bool) := [none, some false, some true]
+def winners : List (Option Outcome) :=
+  [none, some (.win false), some (.win true), some .suddenDeath]
 
-theorem mem_winners : ∀ w : Option Bool, w ∈ winners
+theorem mem_winners : ∀ w : Option Outcome, w ∈ winners
   | none => .head _
-  | some false => .tail _ (.head _)
-  | some true => .tail _ (.tail _ (.head _))
+  | some (.win false) => .tail _ (.head _)
+  | some (.win true) => .tail _ (.tail _ (.head _))
+  | some .suddenDeath => .tail _ (.tail _ (.tail _ (.head _)))
 
 /-- `l` is no longer than `C` and has all its entries in `C`. -/
 def Within (C l : List Card) : Prop := l.length ≤ C.length ∧ ∀ x ∈ l, x ∈ C

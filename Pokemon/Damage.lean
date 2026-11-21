@@ -24,8 +24,8 @@ or reduction is added up without limit (`Effect.linger` inside `iter`).
   inside an attack's effect (`Pokemon/Sim`), where the player's own damage (Active and Bench) is
   read exactly and the opponent's above `k` is not. The stores are capped at twice the damage cap because Resistance
   is subtracted after the bonus (`dealtBy_cap`; milestone M4).
-* `KOMove.clamp_sim`, `Resolve.clamp_sim`: the kernel of `clamp k` is a simulation for Knock
-  Outs. The effect and move simulations are in `Pokemon/Sim.lean`.
+* `KOBatch.clamp_sim`, `Resolve.clamp_sim`: the kernel of `clamp k` is a simulation for the
+  batch Knock Out step (the check commutes with the clamp, `GameState.koStep_clamp`). The effect and move simulations are in `Pokemon/Sim.lean`.
 * `Move.damageBounded_of_startTurn`: the turn proper starts with no pending Knock Out.
   `Move.endTurn_pending_ko`: the earlier `Move.damageBounded_of_turn` is false with Checkup.
 -/
@@ -118,6 +118,7 @@ theorem Move.damageBounded_of_startTurn {g g' : GameState} (h : Move g g')
   cases h with
   | startTurn hbt ha hb hk hd => exact hk.congr rfl rfl rfl rfl rfl rfl
   | onPlay hp => exact absurd (hb.symm.trans hp.between) (by decide)
+  | knockOuts h => exact absurd (hb.symm.trans (h.same.2.2.2.1.symm.trans hb')) (by decide)
   | _ =>
       first
       | exact absurd (hb.symm.trans hb') (by decide)
@@ -943,82 +944,191 @@ theorem length_of_map {α β : Type} {f : α → β} {b e : List α} (h : e.map 
 
 /-! ## Knock Outs -/
 
-/-- The kernel of `clamp k` is a simulation for Knock Out moves. -/
-theorem KOMove.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (h : KOMove g₁ g₁')
-    (hc : g₁.clamp k = g₂.clamp k) (hH : g₁.HpBelow k) :
-    ∃ g₂', KOMove g₂ g₂' ∧ g₁'.clamp k = g₂'.clamp k := by
-  have hsf := GameState.sameField_of_clampAt hc
-  obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, hg, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
-  subst hg
+/-! ## The batch Knock Out step under the clamps
+
+Both clamps update every Pokémon in play by one map (`InPlay.clampWith K .hp`), which keeps its
+cards and its view, and caps damage at `K`; with every derived HP at most `K` the check's threshold
+test is the same before and after (`hpOf ≤ min d K ↔ hpOf ≤ d`). So the check commutes with the
+clamp (`GameState.koStep_clamp`), and promotions are matched place by place. -/
+
+/-- Update the Pokémon in play of a player by `f` and their stores by `m`. -/
+def PlayerState.mapPlay (f : InPlay → InPlay) (m : Store → Store) (s : PlayerState) :
+    PlayerState :=
+  { s with active := s.active.map f, bench := s.bench.map f, mods := m s.mods }
+
+theorem optFilter_map {f : InPlay → InPlay} {t t' : InPlay → Bool} {o : Option InPlay}
+    (h : ∀ p, o = some p → t' (f p) = t p) : optFilter t' (o.map f) = (optFilter t o).map f := by
+  cases o with
+  | none => rfl
+  | some p =>
+      have hp := h p rfl
+      simp only [Option.map_some, optFilter, hp]
+      split <;> rfl
+
+theorem filter_map_of {f : InPlay → InPlay} {t t' : InPlay → Bool} :
+    ∀ {b : List InPlay}, (∀ p ∈ b, t' (f p) = t p) → (b.map f).filter t' = (b.filter t).map f
+  | [], _ => rfl
+  | p :: ps, h => by
+      have hp := h p (.head _)
+      have ih := filter_map_of (b := ps) fun q hq => h q (.tail _ hq)
+      simp only [List.map_cons, List.filter_cons, hp]
+      split <;> simp only [ih, List.map_cons]
+
+theorem optCardList_map {f : InPlay → InPlay} (hf : ∀ p, (f p).cardList = p.cardList) :
+    ∀ o : Option InPlay, optCardList (o.map f) = optCardList o
+  | none => rfl
+  | some p => hf p
+
+theorem benchCardList_map {f : InPlay → InPlay} (hf : ∀ p, (f p).cardList = p.cardList) :
+    ∀ b : List InPlay, benchCardList (b.map f) = benchCardList b
+  | [] => rfl
+  | p :: ps => by simp only [List.map_cons, benchCardList, hf p, benchCardList_map hf ps]
+
+theorem optPrizes_map {f : InPlay → InPlay} (hf : ∀ p, (f p).top = p.top) :
+    ∀ o : Option InPlay, optPrizes (o.map f) = optPrizes o
+  | none => rfl
+  | some p => by simp only [Option.map_some, optPrizes, hf p]
+
+theorem benchPrizes_map {f : InPlay → InPlay} (hf : ∀ p, (f p).top = p.top) :
+    ∀ b : List InPlay, benchPrizes (b.map f) = benchPrizes b
+  | [] => rfl
+  | p :: ps => by simp only [List.map_cons, benchPrizes, hf p, benchPrizes_map hf ps]
+
+/-- The check's removal commutes with a map of the Pokémon in play that keeps their cards and the
+test. -/
+theorem PlayerState.koOut_mapPlay {f : InPlay → InPlay} {m : Store → Store} {s : PlayerState}
+    {ta tb ta' tb' : InPlay → Bool} (hc : ∀ p, (f p).cardList = p.cardList)
+    (ha : ∀ p, s.active = some p → ta' (f p) = ta p) (hb : ∀ p ∈ s.bench, tb' (f p) = tb p) :
+    (s.mapPlay f m).koOut ta' tb' = (s.koOut ta tb).mapPlay f m := by
+  have ha' : ∀ p, s.active = some p → (fun p => !ta' p) (f p) = (fun p => !ta p) p :=
+    fun p hp => by simp only [ha p hp]
+  have hb' : ∀ p ∈ s.bench, (fun p => !tb' p) (f p) = (fun p => !tb p) p :=
+    fun p hp => by simp only [hb p hp]
+  simp only [PlayerState.koOut, PlayerState.mapPlay, optFilter_map ha,
+    optFilter_map (t := fun p => !ta p) (t' := fun p => !ta' p) ha',
+    filter_map_of hb, filter_map_of (t := fun p => !tb p) (t' := fun p => !tb' p) hb',
+    optCardList_map hc, benchCardList_map hc]
+
+theorem PlayerState.koValue_mapPlay {f : InPlay → InPlay} {m : Store → Store} {s : PlayerState}
+    {ta tb ta' tb' : InPlay → Bool} (ht : ∀ p, (f p).top = p.top)
+    (ha : ∀ p, s.active = some p → ta' (f p) = ta p) (hb : ∀ p ∈ s.bench, tb' (f p) = tb p) :
+    (s.mapPlay f m).koValue ta' tb' = s.koValue ta tb := by
+  simp only [PlayerState.koValue, PlayerState.mapPlay, optFilter_map ha, filter_map_of hb,
+    optPrizes_map ht, benchPrizes_map ht]
+
+theorem PlayerState.noPokemon_mapPlay (f : InPlay → InPlay) (m : Store → Store)
+    (s : PlayerState) : (s.mapPlay f m).noPokemon = s.noPokemon := by
+  cases ha : s.active <;> cases hb : s.bench <;>
+    simp [PlayerState.noPokemon, PlayerState.mapPlay, ha, hb]
+
+theorem winWays_mapPlay (f : InPlay → InPlay) (m : Store → Store) (n : Nat)
+    (s o : PlayerState) : winWays n (s.mapPlay f m) (o.mapPlay f m) = winWays n s o := by
+  simp only [winWays, PlayerState.noPokemon_mapPlay]
+  rfl
+
+/-- **The check commutes with a map of the Pokémon in play** that keeps each Pokémon's view and
+cards and, at every Pokémon in play, the threshold test against its derived HP. -/
+theorem GameState.koStep_mapPlay {f : InPlay → InPlay} {m : Store → Store} {g : GameState}
+    (hsv : ∀ p, (f p).sv = p.sv) (hc : ∀ p, (f p).cardList = p.cardList)
+    (ht : ∀ w sp p, g.In w sp p →
+      decide (g.hpOf w sp p ≤ (f p).damage) = decide (g.hpOf w sp p ≤ p.damage)) :
+    ({ g with cur := g.cur.mapPlay f m, opp := g.opp.mapPlay f m } : GameState).koStep =
+      { g.koStep with cur := g.koStep.cur.mapPlay f m, opp := g.koStep.opp.mapPlay f m } := by
+  have htop : ∀ p, (f p).top = p.top := fun p => congrArg SView.top (hsv p)
+  have hsf : GameState.SameField g
+      ({ g with cur := g.cur.mapPlay f m, opp := g.opp.mapPlay f m } : GameState) :=
+    ⟨by simp only [PlayerState.field, PlayerState.mapPlay, fieldOf_map hsv hsv],
+      by simp only [PlayerState.field, PlayerState.mapPlay, fieldOf_map hsv hsv], rfl, rfl⟩
+  have hk : ∀ w sp p, g.In w sp p →
+      ({ g with cur := g.cur.mapPlay f m, opp := g.opp.mapPlay f m } : GameState).koT w sp (f p) =
+        g.koT w sp p := fun w sp p hp => by
+    simp only [GameState.koT]
+    rw [hsf.hpOf w sp (hsv p)]
+    exact ht w sp p hp
+  have hO : ∀ w, ({ g with cur := g.cur.mapPlay f m, opp := g.opp.mapPlay f m } :
+      GameState).koOf w = (g.koOf w).mapPlay f m := fun w => by
+    cases w
+    · exact PlayerState.koOut_mapPlay hc (fun p hp => hk .own .active p hp)
+        (fun p hp => hk .own .bench p hp)
+    · exact PlayerState.koOut_mapPlay hc (fun p hp => hk .opp .active p hp)
+        (fun p hp => hk .opp .bench p hp)
+  have hV : ∀ w, ({ g with cur := g.cur.mapPlay f m, opp := g.opp.mapPlay f m } :
+      GameState).koVal w = g.koVal w := fun w => by
+    cases w
+    · exact PlayerState.koValue_mapPlay htop (fun p hp => hk .own .active p hp)
+        (fun p hp => hk .own .bench p hp)
+    · exact PlayerState.koValue_mapPlay htop (fun p hp => hk .opp .active p hp)
+        (fun p hp => hk .opp .bench p hp)
+  have e1 := winWays_mapPlay f m (g.koVal .opp) g.cur (g.koOf .opp)
+  have e2 := winWays_mapPlay f m (g.koVal .own) g.opp (g.koOf .own)
+  simp only [GameState.koStep, hO, hV]
+  simp only [e1, e2]
+  rfl
+
+theorem decide_le_min {H d K : Nat} (h : H ≤ K) : decide (H ≤ min d K) = decide (H ≤ d) := by
+  apply decide_eq_decide.2
+  constructor
+  · intro h'; exact Nat.le_trans h' (Nat.min_le_left _ _)
+  · intro h'; exact Nat.le_min.2 ⟨h', h⟩
+
+/-- **The check commutes with the clamp**, when every derived HP is at most the cap. -/
+theorem GameState.koStep_clamp {k : Nat} {g : GameState} (hH : g.HpBelow k) :
+    (g.clamp k).koStep = g.koStep.clamp k :=
+  GameState.koStep_mapPlay (f := InPlay.clampWith k .hp) (m := Store.cap (2 * k)) (g := g)
+    (fun _ => rfl) (fun _ => rfl) (fun w sp p hp => decide_le_min (hH w sp p hp))
+
+/-- Every derived HP at most `k` carries over to a state with the same clamp. -/
+theorem GameState.hpBelow_of_clamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.clamp k = g₂.clamp k)
+    (hH : g₁.HpBelow k) : g₂.HpBelow k := by
+  have hsf := GameState.sameField_of_clampAt h
+  intro w sp p hp
+  obtain ⟨q, hq, ha⟩ := GameState.in_of_clamp h hp
+  rw [hsf.hpOf w sp ha.sv]
+  exact hH w sp q hq
+
+/-- A promotion is matched, place by place, in a position with the same image under `f`. -/
+theorem Promote.sim {f : InPlay → InPlay} {a₁ a₂ a₁' : Option InPlay} {b₁ b₂ b₁' : List InPlay}
+    (h : Promote a₁ b₁ a₁' b₁') (ha : a₂.map f = a₁.map f) (hb : b₂.map f = b₁.map f) :
+    ∃ a₂' b₂', Promote a₂ b₂ a₂' b₂' ∧ a₂'.map f = a₁'.map f ∧ b₂'.map f = b₁'.map f := by
   cases h with
-  | @knockOut p c ps ha hk hp =>
-      rw [ha] at ha₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-      exact ⟨_, .knockOut rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, Option.map_none, hc₂, hm₁, hm₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promote ha hb =>
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      exact ⟨_, .promote rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, hc₂, hm₁, hm₂, he₁, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemon ha hb =>
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₂
-      subst he₂
-      exact ⟨_, .noPokemon rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, hc₂, hm₁, hm₂, he₁, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutOwn p c ps ha hk hp =>
-      rw [ha] at hc₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .knockOutOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, Option.map_none, ha₂, hm₁, hm₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promoteOwn ha hb =>
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      exact ⟨_, .promoteOwn rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₂, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemonOwn ha hb =>
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₁
-      subst he₁
-      exact ⟨_, .noPokemonOwn rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₂, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutBench p b₁ b₂ c ps hb hk hp =>
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.opp.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBench rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.cur.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBenchOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
+  | @keep a b =>
+      cases a₂ with
+      | none => simp at ha
+      | some a' => exact ⟨_, _, .keep, ha, hb⟩
+  | @pick q c₁ c₂ =>
+      cases a₂ with
+      | some a' => simp at ha
+      | none =>
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split hb
+          exact ⟨_, _, .pick, by simp only [Option.map_some, h2],
+            by simp only [List.map_append, h1, h3]⟩
+
+/-- **The kernel of `clamp k` is a simulation for the batch Knock Out step**, when every derived
+HP is at most `k`. -/
+theorem KOBatch.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (h : KOBatch g₁ g₁')
+    (hc : g₁.clamp k = g₂.clamp k) (hH : g₁.HpBelow k) :
+    ∃ g₂', KOBatch g₂ g₂' ∧ g₁'.clamp k = g₂'.clamp k := by
+  have hH₂ := GameState.hpBelow_of_clamp hc hH
+  have hks : g₁.koStep.clamp k = g₂.koStep.clamp k := by
+    rw [← GameState.koStep_clamp hH, hc, GameState.koStep_clamp hH₂]
+  have hwk := GameState.winner_of_clamp hks
+  cases h with
+  | won hu hw =>
+      exact ⟨_, .won (fun hs => hu (GameState.settled_of_clamp hc.symm hs hH₂))
+        (by rw [hwk]; exact hw), hks⟩
+  | @go ac ao bc bo hu hw hpc hpo =>
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, hg, hc₂, ha₂, -, -, he₁, he₂⟩ := GameState.clamp_inv hks
+      obtain ⟨ac', bc', hpc', hac, hbc⟩ := hpc.sim (a₂ := g₂.koStep.cur.active)
+        (b₂ := g₂.koStep.cur.bench) (by rw [hg]; exact hc₂) (by rw [hg]; exact he₁)
+      obtain ⟨ao', bo', hpo', hao, hbo⟩ := hpo.sim (a₂ := g₂.koStep.opp.active)
+        (b₂ := g₂.koStep.opp.bench) (by rw [hg]; exact ha₂) (by rw [hg]; exact he₂)
+      refine ⟨_, .go (fun hs => hu (GameState.settled_of_clamp hc.symm hs hH₂))
+        (by rw [hwk]; exact hw) hpc' hpo', ?_⟩
+      have e : ∀ X : GameState, ∀ a b c d, (X.withPlay a b c d).clamp k =
+          (X.clamp k).withPlay (a.map (InPlay.clampWith k .hp)) (b.map (InPlay.clampWith k .hp))
+            (c.map (InPlay.clampWith k .hp)) (d.map (InPlay.clampWith k .hp)) :=
+        fun _ _ _ _ _ => rfl
+      rw [e, e, hks, hac, hbc, hao, hbo]
 
 /-- The kernel of `clamp k` is a simulation for taking the Knock Outs, when `hpBound` of the cards
 is at most `k` (milestone M6 added the hypothesis: derived HP must be at most the cap). -/
@@ -1035,7 +1145,7 @@ theorem Resolve.clamp_sim {k : Nat} {g₁ g₁' : GameState} (h : Resolve g₁ g
   | step hn hm _ ih =>
       intro g₂ hH hc
       obtain ⟨m₂, hm₂, hcm⟩ := hm.clamp_sim hc (GameState.hpBelow_of_hpBound hH)
-      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm hm.move.perm]; exact hH) hcm
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm hm.perm]; exact hH) hcm
       exact ⟨g₂', .step (by rw [GameState.winner_of_clamp hc]; exact hn) hm₂ hr₂, hc'⟩
 
 /-! ## Bounds from the cards -/
@@ -1086,7 +1196,7 @@ def cxState : GameState :=
 /-- `Move.damageBounded_of_turn` (every move that passes the turn yields a state with no
 pending Knock Out) is false in the model with Checkup: ending the turn from a state with no
 pending Knock Out Poisons the opponent's 10-HP Active Pokémon to its HP. The Knock Out is then
-taken between turns (`knockOutOwn`), before `startTurn`.
+taken between turns (by the batch Knock Out step), before `startTurn`.
 
 The witness `cxState` is not well formed (both Prize lists are empty and there is no winner)
 and is not shown reachable; this theorem refutes only the statement about single moves.

@@ -59,7 +59,7 @@ theorem tool_discarded_with_pokemon :
       (T_settled rfl rfl (fun p hp => by
         simp only [List.nil_append, List.mem_singleton] at hp; subst hp; decide) rfl)
       (.prim rfl rfl (.benchCounters (b₁ := []) (b₂ := []) .own 1 rfl)
-        (.step rfl (.knockOutBenchOwn (b₁ := []) (b₂ := []) rfl (by decide) rfl)
+        (.step rfl (.go (by decide) rfl .keep .keep)
           (.done (.inl (T_settled rfl rfl (fun p hp => by cases hp) rfl)))))
       rfl rfl rfl rfl), rfl, rfl, rfl⟩
 
@@ -119,23 +119,11 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
       simp only [R, T, tpl, Option.some.injEq] at ha; subst ha
       simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard, helmet,
         Card.grantAttacks, ToolGrant.none] at hm
-  | knockOut ha hk =>
-      simp only [R, T, wpl, Option.some.injEq] at ha; subst ha
-      exact absurd hk (by decide)
-  | promote ha => simp [R, T, wpl] at ha
-  | noPokemon ha => simp [R, T, wpl] at ha
-  | knockOutOwn ha hk =>
-      simp only [R, T, tpl, Option.some.injEq] at ha; subst ha
-      exact absurd hk (by decide)
-  | promoteOwn ha => simp [R, T, tpl] at ha
-  | noPokemonOwn ha => simp [R, T, tpl] at ha
-  | knockOutBench hb => simp [R, T, wpl] at hb
-  | knockOutBenchOwn hb hk =>
-      simp only [R, T, tpl] at hb
-      rcases List.cons_eq_append_iff.1 hb with ⟨rfl, h⟩ | ⟨_, rfl, h⟩
-      · simp only [List.cons.injEq] at h; obtain ⟨rfl, -⟩ := h
-        exact absurd hk (by decide)
-      · simp at h
+  | knockOuts h =>
+      have hs : Settled R := by decide
+      cases h with
+      | won hu => exact absurd hs hu
+      | go hu => exact absurd hs hu
   | endTurn => simp [R, T] at hc
   | startTurn hbt => simp [R, T] at hbt
   | deckOut hbt => simp [R, T] at hbt

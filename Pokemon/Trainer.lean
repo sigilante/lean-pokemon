@@ -199,8 +199,7 @@ def after1 : GameState :=
 theorem move_after1 : Move start1 after1 := by
   refine .item (l₁ := []) (l₂ := []) (n := "SelfHarm") rfl rfl start1_settled
     (.seq (.prim rfl rfl (.selfDamage 5 rfl)
-      (.step rfl (.knockOutOwn rfl (by decide) rfl)
-        (.step rfl (.promoteOwn (b₁ := []) rfl rfl) (.done (.inl ?_)))))
+      (.step rfl (.go (by decide) rfl (.pick (b₁ := [])) .keep) (.done (.inl ?_))))
       (.prim rfl rfl (.heal 5 rfl) (.done (.inl ?_)))) rfl rfl rfl rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
@@ -258,8 +257,7 @@ def after2 : GameState :=
 theorem move_after2 : Move start2 after2 := by
   refine .item (l₁ := []) (l₂ := []) (n := "Hit") rfl rfl start2_settled
     (.iterCons (.prim rfl rfl (.counters 5 rfl)
-      (.step rfl (.knockOut rfl (by decide) rfl)
-        (.step rfl (.promote (b₁ := []) rfl rfl) (.done (.inl ?_)))))
+      (.step rfl (.go (by decide) rfl .keep (.pick (b₁ := []))) (.done (.inl ?_))))
       (.iterCons (.prim rfl rfl (.counters 5 rfl) (.done (.inl ?_))) (.iterNil _ _))) rfl rfl rfl rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
@@ -308,11 +306,11 @@ def after3 : GameState :=
       [], false, false, false, false, false, Store.empty, true⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [], none, [InPlay.ofBasic big],
       false, false, false, false, false, Store.empty, true⟩,
-    true, false, false, false, some true, none, false, false⟩
+    true, false, false, false, some (.win true), none, false, false⟩
 
 theorem move_after3 : Move start3 after3 :=
   .item (l₁ := []) (l₂ := []) (n := "Win") rfl rfl start3_settled
-    (.seq (.prim rfl rfl (.counters 5 rfl) (.step rfl (.knockOut rfl (by decide) rfl)
+    (.seq (.prim rfl rfl (.counters 5 rfl) (.step rfl (.won (by decide) (by decide))
       (.done (.inr (by decide))))) (.stop (by decide))) rfl rfl rfl rfl
 
 /-- **Witness: the win condition fires inside an Item's effect.** From a well-formed, `Settled`
@@ -321,7 +319,7 @@ player takes their last Prize card and wins, and the draw is not made (the deck 
 by `TRun.of_won` no resolution makes it). -/
 theorem winMidEffect_reachable :
     ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ g₀.winner = none ∧
-      ∃ g, Move g₀ g ∧ Reach g₀ g ∧ g.winner = some g₀.curIsFirst ∧
+      ∃ g, Move g₀ g ∧ Reach g₀ g ∧ g.winner = some (.win g₀.curIsFirst) ∧
         g.cur.deck = g₀.cur.deck :=
   ⟨start3, start3_wellFormed, start3_settled, rfl, after3, move_after3,
     .step (.refl _) rfl move_after3, rfl, rfl⟩

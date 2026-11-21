@@ -275,18 +275,11 @@ theorem levincia_refused : ∀ g', Move W2 g' → g'.curIsFirst = true →
   | attackConfused ha hm =>
       simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
       simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
-  | knockOut ha hk =>
-      simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
-      exact absurd hk (by decide)
-  | promote ha => simp [W2, W, wpl] at ha
-  | noPokemon ha => simp [W2, W, wpl] at ha
-  | knockOutOwn ha hk =>
-      simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
-      exact absurd hk (by decide)
-  | promoteOwn ha => simp [W2, W, wpl] at ha
-  | noPokemonOwn ha => simp [W2, W, wpl] at ha
-  | knockOutBench hb => simp [W2, W, wpl] at hb
-  | knockOutBenchOwn hb => simp [W2, W, wpl] at hb
+  | knockOuts h =>
+      have hs : Settled W2 := W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl
+      cases h with
+      | won hu => exact absurd hs hu
+      | go hu => exact absurd hs hu
   | endTurn => simp [W2, W] at hc
   | startTurn hbt => simp [W2, W] at hbt
   | deckOut hbt => simp [W2, W] at hbt
@@ -367,18 +360,11 @@ theorem same_name_refused : ∀ g', Move (X levincia) g' → g'.curIsFirst = tru
   | attackConfused ha hm =>
       simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
       simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
-  | knockOut ha hk =>
-      simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
-      exact absurd hk (by decide)
-  | promote ha => simp [X, W, wpl] at ha
-  | noPokemon ha => simp [X, W, wpl] at ha
-  | knockOutOwn ha hk =>
-      simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
-      exact absurd hk (by decide)
-  | promoteOwn ha => simp [X, W, wpl] at ha
-  | noPokemonOwn ha => simp [X, W, wpl] at ha
-  | knockOutBench hb => simp [X, W, wpl] at hb
-  | knockOutBenchOwn hb => simp [X, W, wpl] at hb
+  | knockOuts h =>
+      have hs : Settled (X levincia) := W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl
+      cases h with
+      | won hu => exact absurd hs hu
+      | go hu => exact absurd hs hu
   | endTurn => simp [X, W] at hc
   | startTurn hbt => simp [X, W] at hbt
   | deckOut hbt => simp [X, W] at hbt

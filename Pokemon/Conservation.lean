@@ -218,21 +218,76 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | iterNil => exact .refl _
   | iterCons _ _ ih₁ ih₂ => exact ih₂.trans ih₁
 
-/-- A Knock Out move permutes the cards in the game. -/
-theorem KOMove.perm {g g' : GameState} (h : KOMove g g') : g'.allCards.Perm g.allCards := by
+/-- The cards of an optional Pokémon are those of its part that passes `t` and of its part that
+does not. -/
+theorem count_optFilter (t : InPlay → Bool) (o : Option InPlay) (x : Card) :
+    List.count x (optCardList o) = List.count x (optCardList (optFilter t o)) +
+      List.count x (optCardList (optFilter (fun p => !t p) o)) := by
+  cases o with
+  | none => rfl
+  | some p => cases h : t p <;> simp [optFilter, h, optCardList]
+
+/-- The cards of a Bench are those of its Pokémon that pass `t` and of those that do not. -/
+theorem count_benchFilter (t : InPlay → Bool) (b : List InPlay) (x : Card) :
+    List.count x (benchCardList b) = List.count x (benchCardList (b.filter t)) +
+      List.count x (benchCardList (b.filter fun p => !t p)) := by
+  induction b with
+  | nil => rfl
+  | cons p ps ih =>
+      cases h : t p <;>
+        simp only [List.filter_cons, h, Bool.not_false, Bool.not_true, ite_true,
+          Bool.false_eq_true, ite_false, benchCardList, List.count_append, ih] <;> omega
+
+/-- The check's removal moves cards only from play to the discard pile. -/
+theorem PlayerState.koOut_count (ta tb : InPlay → Bool) (s : PlayerState) (x : Card) :
+    List.count x (s.koOut ta tb).allCards = List.count x s.allCards := by
+  have h1 := count_optFilter ta s.active x
+  have h2 := count_benchFilter tb s.bench x
+  simp only [PlayerState.allCards, PlayerState.koOut, List.count_append] at h1 h2 ⊢
+  omega
+
+/-- Taking Prize cards moves cards only from the Prize cards to the hand. -/
+theorem PlayerState.takePrizes_count (n : Nat) (s : PlayerState) (x : Card) :
+    List.count x (s.takePrizes n).allCards = List.count x s.allCards := by
+  have := count_prizes n s.prizes x
+  simp only [PlayerState.allCards, PlayerState.takePrizes, List.count_append] at this ⊢
+  omega
+
+/-- A promotion moves a Pokémon from the Bench to the Active Spot. -/
+theorem Promote.count_eq {a a' : Option InPlay} {b b' : List InPlay} (h : Promote a b a' b')
+    (x : Card) :
+    List.count x (optCardList a') + List.count x (benchCardList b') =
+      List.count x (optCardList a) + List.count x (benchCardList b) := by
   cases h with
-  | @knockOut p _ _ ha hk hp =>
-      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
-  | promote ha hb => perm_count [ha, hb]
-  | noPokemon ha hb => exact .refl _
-  | @knockOutOwn p _ _ ha hk hp =>
-      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
-  | promoteOwn ha hb => perm_count [ha, hb]
-  | noPokemonOwn ha hb => exact .refl _
-  | @knockOutBench p _ _ _ _ hb hk hp =>
-      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
-  | @knockOutBenchOwn p _ _ _ _ hb hk hp =>
-      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
+  | keep => rfl
+  | pick =>
+      simp only [optCardList, benchCardList_append, benchCardList, List.count_append,
+        List.count_nil]
+      omega
+
+/-- **The batch Knock Out step permutes the cards in the game**: every Knocked Out Pokémon's cards,
+attached cards included, go to its owner's discard pile, the Prize cards taken go to the takers'
+hands, and the promoted Pokémon move from the Bench to the Active Spot. -/
+theorem KOBatch.perm {g g' : GameState} (h : KOBatch g g') : g'.allCards.Perm g.allCards := by
+  have hk : g.koStep.allCards.Perm g.allCards := by
+    refine ListPerm.perm_of_count fun x => ?_
+    have c1 := PlayerState.takePrizes_count (g.koVal .opp) (g.koOf .own) x
+    have c2 := PlayerState.takePrizes_count (g.koVal .own) (g.koOf .opp) x
+    have c3 := PlayerState.koOut_count (g.koT .own .active) (g.koT .own .bench) g.cur x
+    have c4 := PlayerState.koOut_count (g.koT .opp .active) (g.koT .opp .bench) g.opp x
+    simp only [GameState.koOf, GameState.side] at c1 c2
+    simp only [GameState.allCards, GameState.koStep, List.count_append, GameState.koOf,
+      GameState.side] at c3 c4 ⊢
+    omega
+  cases h with
+  | won => exact hk
+  | go _ _ hc ho =>
+      refine (ListPerm.perm_of_count fun x => ?_).trans hk
+      have := hc.count_eq x
+      have := ho.count_eq x
+      simp only [GameState.allCards, GameState.withPlay, PlayerState.allCards,
+        List.count_append] at *
+      omega
 
 /-- Taking the Knock Outs permutes the cards in the game. -/
 theorem Resolve.perm {g g' : GameState} (h : Resolve g g') : g'.allCards.Perm g.allCards := by
@@ -299,18 +354,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | onPlay hp _ _ _ _ _ hr => exact hr.perm.trans hp.perm
   | attack ha hm hc hs hn hf hbt hst hr => exact hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
-  | @knockOut p _ _ ha hk hp =>
-      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
-  | promote ha hb => perm_count [ha, hb]
-  | noPokemon ha hb => exact .refl _
-  | @knockOutOwn p _ _ ha hk hp =>
-      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
-  | promoteOwn ha hb => perm_count [ha, hb]
-  | noPokemonOwn ha hb => exact .refl _
-  | @knockOutBench p _ _ _ _ hb hk hp =>
-      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
-  | @knockOutBenchOwn p _ _ _ _ hb hk hp =>
-      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
+  | knockOuts h => exact h.perm
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh, hco.cardList,
         hcc.cardList, benchCardList_unfresh]

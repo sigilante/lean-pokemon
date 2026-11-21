@@ -8,7 +8,7 @@ import Pokemon.Effect
 
 A turn has two phases, told apart by `GameState.between`. `endTurn` applies Pokémon Checkup
 to both Active Pokémon and hands the move to the opponent with `between = true`; in that
-phase only Knock Outs, promotions, and the draw that starts the turn proper (`startTurn`, or
+phase only the batch Knock Out step and the draw that starts the turn proper (`startTurn`, or
 `deckOut` if the deck is empty) are legal. Checkup is the only place where damage arrives
 without a player's action; the Knock Outs it causes are therefore taken before anything else
 can happen, as the rulebook requires.
@@ -18,25 +18,31 @@ Then, end your turn.", p. 9). `attack` and `attackConfused` (a Confused Pokémon
 attempt, which is still the turn's attack) set `GameState.attacked`, and every action of the
 turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `attack`,
 `attackConfused`, since milestone M8a `ability` and `onPlay`, and since milestone M5 `stadium`,
-`stadiumUse`, `tool` and `toolBench`) requires `attacked = false`; so after an attack only its Knock Outs (and
-promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
+`stadiumUse`, `tool` and `toolBench`) requires `attacked = false`; so after an attack only its Knock Outs (the batch
+step: Prize cards, the outcome, promotions) and `endTurn` are legal, and `endTurn` resets the flag. A player who
 does not attack ends the turn by `endTurn` at any point of the turn proper.
 
 Knock Out timing. The rulebook checks for Knock Outs at the end of every attack ("check to see
 if any Pokémon were Knocked Out by the attack", 2023 p. 14) and at the end of every Pokémon
 Checkup ("After both players have gone through these checks", p. 15). The model also takes a
 Knock Out at once whenever damage reaches HP at any other time; that third clause is not in the
-English rulebook (see the Known gaps for its source). The model follows these in two ways. Between moves: every move that is not part of resolving a Knock Out
-(the eight moves `knockOut`, `knockOutBench`, `promote`, `noPokemon` and their `Own` versions)
-requires the state
-to be `Settled`: no Pokémon in play is at or above its HP, and both Active Spots are filled.
-So once a move leaves a Pokémon at or above its HP, the next moves must Knock it Out (and
-promote a replacement) before anything else happens; nothing can read, heal or otherwise use
-an over-HP Pokémon between moves. Inside a move: an attack's effect is resolved as a whole by
-`Run`, so damage may exceed HP and the effect can read it, and the Knock Outs come after the
-attack, as the rulebook says; an Item or Supporter's effect is resolved by `TRun`, which takes
-every Knock Out at once after each primitive step (`Resolve`) and stops if the game is over, so
-no step of a Trainer effect runs while a Pokémon is at or above its HP (`TRun.guarded`).
+English rulebook (see the Known gaps for its source). Every Knock Out is taken by the batch
+Knock Out step (`KOBatch`, milestone batch-KO), the rulebook's single check: every Pokémon in play
+of both players is tested against its derived HP once, in the state before any removal; all those
+at or above their HP leave play together; both players take their Prize cards; the game is decided
+(`Outcome`: a win, or Sudden Death when both players win in as many ways); then each player with an
+empty Active Spot promotes. If the removals or promotions leave another Pokémon at or above its HP
+(derived HP can change), the check repeats. The model follows the timing in two ways. Between
+moves: every move other than the batch step (`Move.knockOuts`) requires the state to be `Settled`:
+no Pokémon in play is at or above its HP, and both Active Spots are filled; from any other state
+the batch step is the only move (`Move.batch_of_not_settled`). So once a move leaves a Pokémon at
+or above its HP, the next move Knocks it Out, with every other pending one, before anything else
+happens; nothing can read, heal or otherwise use an over-HP Pokémon between moves. Inside a move:
+an attack's effect is resolved as a whole by `Run`, so damage may exceed HP and the effect can read
+it, and the Knock Outs come after the attack, as the rulebook says; an Item or Supporter's effect
+is resolved by `TRun`, which takes the batch steps after each primitive step (`Resolve`) and stops
+if the game is over, so no step of a Trainer effect runs while a Pokémon is at or above its HP
+(`TRun.guarded`).
 
 Sources of the turn rules (milestone M1). The rulebook quoted is the *Scarlet & Violet—151*
 rulebook (©2023, `data/mew_rulebook_en.pdf`, survey S9); survey S8 read the *Surging Sparks*
@@ -62,8 +68,10 @@ follows the latest source; for the rules below the three agree except where note
   card text says otherwise") are, in today's Standard, one Tool (Technical Machine: Fluorite
   sv8-188) whose text says "discard it at the end of your turn" (survey S9 C10); the model has no
   end-of-turn discard.
-* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21); the 2026 post replaced it with
-  tiebreaker games (S8 J4, unverified against a rulebook); the model has neither (gaps).
+* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21), and "if you win in both ways and
+  your opponent wins in only one way, you are the victor!"; the model ends the game with the
+  outcome `Outcome.suddenDeath` (milestone batch-KO) and does not play the new game; the 2026 post
+  replaced Sudden Death with tiebreaker games (S8 J4, unverified against a rulebook; gaps).
 * Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
   model's rule comes from another source (gaps).
 
@@ -110,45 +118,62 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   two Weaknesses or two Resistances on one card (dual-type Pokémon, S8 C6; a Pokémon has one
   type here), and effects that change or ignore Weakness or Resistance (S8 E2); Weakness and
   Resistance never apply to the Bench (milestone M3: attack damage to Benched Pokémon skips them);
-* Knock Outs are separate moves, forced by `Settled` (above) before any other move. Any
-  Pokémon in play whose damage reaches its HP is Knocked Out (milestone M3): an Active Pokémon
-  (`knockOut`, `knockOutOwn`, followed by a promotion) or a Benched one (`knockOutBench`,
-  `knockOutBenchOwn`: "If a player's Pokémon is Knocked Out, that player puts it and all cards
-  attached to it in the discard pile", rulebook 2023 p. 14; no promotion follows). Several
-  pending Knock Outs are taken one at a time, in any order, and all of them before any other
-  move. The order is nondeterministic because no rule fixes it: the 2023 rulebook says only
-  "check every Pokémon that was affected by the attack" (p. 14) and is silent on the order and
-  on who takes Prize cards first (survey S9); the 2026 rule changes were read by survey S8 only
-  through a summary and are unverified. So when both players take their last Prize card from
-  the same attack or Checkup the first Knock Out taken decides the game: there is no Sudden
-  Death (2023 rulebook p. 21), no tiebreaker game (2026, S8 J4), and no "if you win in both ways
-  and your opponent wins in only one way, you are the victor" (p. 21). A promotion may also be
-  made while a Benched Pokémon's Knock Out is pending, and may promote that Pokémon.
-  DEPARTURE (since milestone M6): with derived HP the order of Knock Outs and promotions changes
-  the outcome, and the model's one-at-a-time Knock Outs depart from the rulebook's single check
-  ("check to see if any Pokémon were Knocked Out by the attack … check every Pokémon that was
-  affected", and only then is a new Active Pokémon chosen; 2023 rulebook p. 14) in both
-  directions. (i) A Pokémon the rule Knocks Out can survive in the model: a Benched Pokémon with
-  printed HP 3 and a static "+3 HP while in the Active Spot" takes 3 counters from the attack that
-  Knocks Out its owner's Active Pokémon; the model takes the Active Pokémon's Knock Out first and
-  promotes the Benched Pokémon while its own Knock Out is pending, and in the Active Spot its HP
-  is 6, so it is no longer pending (`StaticWitness.promotion_rescues`). (ii) A double Knock Out
-  the rule takes is unreachable in the model: two Pokémon of one player each carry a static "your
-  Pokémon get −1 HP" (own selector) and are at HP 2 with 2 counters; whichever Knock Out is taken
-  first raises the other's HP to 3, so it is never Knocked Out by that attack
-  (`StaticWitness.double_knockOut_lost`, proved for both orders; that no other move intervenes is
-  read off the state, not proved). So in this respect the model is neither a
-  superset nor a subset of rulebook play. The finiteness and bisimulation theorems
-  (`Reach.finite`, `Faithful.xfinite`, `Reach.xclamp_bisim` and the rest) are statements about the
-  model's moves and are unaffected; what they do not cover is play the model lacks, and they
-  include play the rulebook lacks. The planned repair is a batch Knock Out step: compute the set
-  of pending Knock Outs once, remove those Pokémon together, and promote only afterwards. A
-  player with no Pokémon to promote loses at once. A Knock Out gives the
-  Prize cards of the Knocked Out Pokémon's rule box (`PokemonCard.prizeCount`: 1, 2 for
-  Pokémon ex, 3 for Mega Evolution Pokémon ex), the top ones of the Prize list
-  (`PlayerState.takePrizes`); with fewer left, all are taken and the taker wins
-  (`PlayerState.prizesOut`). Effects that change the number taken (Shedinja, "take 1 more Prize
-  card", S8 I5) are absent;
+* Knock Outs (milestone batch-KO; before it, separate moves taken one at a time in any order, a
+  DEPARTURE from the rulebook since milestone M6 that is now removed, see below): every Knock Out
+  is taken by the batch Knock Out step (`KOBatch`, the move `Move.knockOuts`, and the steps of
+  `Resolve` inside Trainer effects), forced by `Settled` before any other move. Any Pokémon in play
+  whose damage reaches its derived HP is Knocked Out (milestone M3): the check (`GameState.koStep`)
+  tests every Pokémon in play of both players once, in the state before any removal, and removes
+  all those at or above their HP together, each with every card attached to its owner's discard
+  pile ("If a player's Pokémon is Knocked Out, that player puts it and all cards attached to it in
+  the discard pile", rulebook 2023 p. 14); each player takes the Prize cards of the opponent's
+  Knocked Out Pokémon, added up by rule box (`PokemonCard.prizeCount`: 1, 2 for Pokémon ex, 3 for
+  Mega Evolution Pokémon ex; with fewer left, all are taken); the game is decided by counting each
+  player's ways of winning (the last Prize card taken; the opponent left with no Pokémon in play):
+  more ways win, equal nonzero ways are Sudden Death (`Outcome.ofWays`; "if you win in both ways
+  and your opponent wins in only one way, you are the victor!", p. 21); then each player with an
+  empty Active Spot promotes a Benched Pokémon (`Promote`). The departures the old order allowed
+  are gone and their statements are now false (`StaticWitness.promotion_rescues_false`,
+  `StaticWitness.double_knockOut_lost_false`); the same starts give the rulebook's outcome on every
+  move (`StaticWitness.guard_knocked_out`, `StaticWitness.double_knockOut_taken`), and when both
+  players take their last Prize card the outcome no longer depends on an order
+  (`Bench.suddenDeath_forced`, `Bench.bothWays_wins`). What remains of the gap:
+  - the Prize cards taken are the top ones of the Prize list (`PlayerState.takePrizes`), whereas
+    the rulebook lets the player choose which ones (a finite choice; item below);
+  - who promotes first when both players must: no rule was found (the 2023 rulebook says only "The
+    player whose Pokémon was Knocked Out chooses a new Active Pokémon from their Bench", p. 14);
+    the model makes both choices in one step, a nondeterministic choice that covers both orders,
+    and checks nothing between them, so every order gives the same states;
+  - the check repeats: after a batch, removals (a static Ability leaving play) and promotions (a
+    Pokémon whose static effect depends on its place) can change derived HP and leave another
+    Pokémon at or above its HP; the state is then not `Settled` and the next move is another batch
+    (`StaticWitness.chain_knock_out`), until the state is `Settled` or the game is over. The 2023
+    rulebook describes one check after an attack and one after Checkup and is silent on this case;
+    the repetition is the model's reading of the rule it uses for Knock Outs at other times (the
+    Asia rule, next item), and it ends: a batch that does not end the game lowers twice the number
+    of Pokémon in play plus the number of empty Active Spots (`KOBatch.koMeasure_lt`), so every
+    chain of batches is finite (`KOBatch.acc`), every state has a `Resolve` result, `Settled` or
+    with an outcome (`Resolve.exists`), and `Resolve` takes at most that measure plus one batches
+    (`Resolve.chain_le`; all in `Pokemon/Terminate.lean`);
+  - the outcome is decided at the end of each round of the repeated check, from that round's
+    Knock Outs, so a Pokémon that is doomed only because another leaves play (its HP falls after
+    the removal) is not counted in the round that ends the game. Example: player B has an Active
+    Pokémon whose static effect gives B's Benched Pokémon +30 HP, and a Benched Pokémon with 4
+    damage counters and 60 HP with the bonus (30 without); both Active Pokémon are Knocked Out and
+    both players take their last Prize card. The model ends the game in Sudden Death at the end of
+    round 1 (B still has the Benched Pokémon), whereas a reading that re-checked after the removals
+    before deciding would Knock it Out too and give A a second way to win, so A would win. The
+    rulebook is silent on this case; deciding per round is the model's reading
+    (`StaticWitness.outcome_per_round`, a machine-checked witness);
+  - Sudden Death is a new game, which the model does not play: `Outcome.suddenDeath` is a terminal
+    outcome of the model's game. The 2026 rules (Professor Program post, survey S8 J4) replaced
+    Sudden Death by a tiebreaker game; that was read only through a secondary summary and is
+    unverified against a rulebook. For the model it changes only the name of the outcome;
+  - the outcome counts the two ways of winning the rulebook names at a Knock Out (p. 21); a third
+    way, an opponent who cannot draw at the start of their turn (`deckOut`), never coincides with a
+    Knock Out check in the model (the draw is a separate move);
+  - effects that change the number of Prize cards taken (Shedinja, "take 1 more Prize card", S8
+    I5) and Knock Out triggers (milestone M8b) are absent;
 * the source of the Knock Out timing outside attacks and Checkup: survey S9 found no rule in
   the 2023 English rulebook (*Scarlet & Violet—151*) that Knock Outs are checked at once at
   other times, and survey S8 quotes none from the 2024 rulebook; the model's immediate Knock
@@ -169,21 +194,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   owner's choice, but outcomes in which later steps of the effect find an empty Active Spot
   are absent from the model); when a Prize ends the game, or its owner has no Pokémon to promote, the
   game ends and the rest of the effect is not resolved. Several Knock Outs after one step are
-  taken by `Resolve` in any order, as after an attack (with the same departure from a single
-  check);
+  taken together, by the batch Knock Out step, as after an attack (`Bench.doubleKO_reachable`);
 * a Knock Out takes the top Prize cards of the Prize list, whereas the rulebook lets the player
-  choose which Prize cards to take (a finite choice);
+  choose which Prize cards to take (a finite choice; since milestone batch-KO a player takes the
+  Prize cards of all the opponent's Pokémon Knocked Out by one check at once);
 * HP is derived (milestone M6; the survey's loophole L1): `GameState.hpOf` is the printed HP plus
   every `hpPlus` and less every `hpMinus` of the static effects in force (`Static`, from static
   Abilities, Tools and the Stadium in play), computed from the state and never stored, and every
-  Knock Out premise (`DamageBounded`, `Settled`, the Knock Out moves, `moveCounter`'s "without
+  Knock Out premise (`DamageBounded`, `Settled`, the batch Knock Out check, `moveCounter`'s "without
   Knocking it Out") reads it. When a source leaves play (a Tool discarded, a Stadium replaced,
   Energy removed, a Pokémon with a static Ability Knocked Out, a Pokémon moved out of the place its
   bonus needs) HP can drop below the damage; no card text or rule found says what then happens to
   the damage (survey S7 §A), and the model keeps the counters and takes the Knock Out by its
   ordinary timing (between moves, `Settled`; in mid-effect, `Resolve` inside `TRun`; after an
-  attack or Checkup), a reading recorded here as a modelling decision. Chains are taken in turn
-  (`StaticWitness.chain_knock_out`). Not expressible, and open: HP defined by copying another
+  attack or Checkup), a reading recorded here as a modelling decision. Chains are taken by
+  repeated batches (`StaticWitness.chain_knock_out`; item on Knock Outs above). Not expressible, and open: HP defined by copying another
   Pokémon's HP (Ditto dp6-27, base3-3: circular between two Dittos), an HP bonus keyed to the
   Retreat Cost combined with a Retreat Cost keyed to the remaining HP (Heavy Boots with Rescue
   Board: no condition of `Static` reads HP or the Retreat Cost, so HP is never defined in terms of
@@ -549,8 +574,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
-  state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
-  an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
+  state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
+  is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that
+  is not `Settled`, `KOBatch.exists_of`); before it, from other starts (e.g. no winner and an
+  empty Prize list) a pending Knock Out could be impossible to take. Start states are not required to
   be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`; `attacked`
   with `between`): from a start with `firstTurn` true and the player's `hadTurn` already true,
   that player could evolve on the game's first turn. Consistency is `GameState.FlagsOk`
@@ -596,7 +623,7 @@ namespace Pokemon
 
 /-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP, its
 derived HP (`GameState.hpOf`, milestone M6: printed HP changed by the static effects in force in
-`g`). Every move except the Knock Out moves requires it (through `Settled`, or directly). It is NOT
+`g`). Every move except the batch Knock Out step requires it (through `Settled`, or directly). It is NOT
 an invariant of all reachable states: an attack or Trainer card can leave a Pokémon at or above
 its HP (then the Knock Out must be taken next), and so can Checkup
 (`Infinite.endTurn_pending_ko_reachable`), and since milestone M6 so can any move that removes a
@@ -637,7 +664,7 @@ or moves to the Bench, it recovers from all Special Conditions", rulebook 2023 p
 no Poison strength. Before milestone M3 this also asked that the Pokémon be below its HP; once
 Benched Pokémon can be damaged and Knocked Out, a Benched Pokémon at or above its HP is a pending
 Knock Out, which `DamageBounded` (and so `Settled`) excludes before every move other than the
-Knock Out moves, as for the Active Pokémon. -/
+batch Knock Out step, as for the Active Pokémon. -/
 def Benched (p : InPlay) : Prop :=
   p.rot = .none ∧ p.poisoned = false ∧ p.burned = false ∧ p.poisonUp = 0
 
@@ -651,9 +678,9 @@ def WellFormed (g : GameState) : Prop :=
     (∀ p ∈ g.cur.bench, Benched p) ∧ ∀ p ∈ g.opp.bench, Benched p
 
 /-- No Knock Out is pending (no Pokémon in play, Active or Benched, is at or above its HP) and
-both Active Spots are filled. Every move except the eight that resolve Knock Outs (`knockOut`,
-`knockOutBench`, `promote`, `noPokemon` and their `Own` versions) requires it, so every pending
-Knock Out is taken, and the Active Pokémon replaced, before any other move. -/
+both Active Spots are filled. Every move except the batch Knock Out step (`Move.knockOuts`)
+requires it, so every pending Knock Out is taken, and the Active Pokémon replaced, before any other
+move (`Move.batch_of_not_settled`). -/
 def Settled (g : GameState) : Prop :=
   DamageBounded g ∧ g.cur.active ≠ none ∧ g.opp.active ≠ none
 
@@ -664,58 +691,199 @@ theorem Settled.congr {g g' : GameState} (h : Settled g)
     (hs : g'.stadium = g.stadium) (hf : g'.curIsFirst = g.curIsFirst) : Settled g' :=
   ⟨h.1.congr hc hcb ho hob hs hf, by rw [hc]; exact h.2.1, by rw [ho]; exact h.2.2⟩
 
-/-- The eight moves that resolve a Knock Out, as a relation of their own: they are the moves
-`Move.knockOut`, `Move.knockOutBench`, `Move.promote`, `Move.noPokemon` and their `Own` versions,
-with the same premises and results (`KOMove.move`). `Resolve` uses them to take Knock Outs in
-the middle of a Trainer card's effect. -/
-inductive KOMove : GameState → GameState → Prop where
-  | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.opp.active = some p) (hk : g.hpOf .opp .active p ≤ p.damage)
-      (hp : g.cur.prizes = c :: ps) :
-      KOMove g { g with
-        opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
-        cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
-  | promote {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
-      (ha : g.opp.active = none) (hb : g.opp.bench = b₁ ++ q :: b₂) :
-      KOMove g { g with opp := { g.opp with active := some q, bench := b₁ ++ b₂ } }
-  | noPokemon {g : GameState} (ha : g.opp.active = none) (hb : g.opp.bench = []) :
-      KOMove g { g with winner := some g.curIsFirst }
-  | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.cur.active = some p) (hk : g.hpOf .own .active p ≤ p.damage)
-      (hp : g.opp.prizes = c :: ps) :
-      KOMove g { g with
-        cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
-        opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
-  | promoteOwn {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
-      (ha : g.cur.active = none) (hb : g.cur.bench = b₁ ++ q :: b₂) :
-      KOMove g { g with cur := { g.cur with active := some q, bench := b₁ ++ b₂ } }
-  | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
-      KOMove g { g with winner := some (!g.curIsFirst) }
-  | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
-      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : g.hpOf .opp .bench p ≤ p.damage)
-      (hp : g.cur.prizes = c :: ps) :
-      KOMove g { g with
-        opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
-        cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
-  | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
-      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
-      (hp : g.opp.prizes = c :: ps) :
-      KOMove g { g with
-        cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
-        opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
+/-! ## The batch Knock Out check
 
-/-- `Resolve g g'`: take every pending Knock Out now. Knock Out moves (`KOMove`: a Prize to the
-other player, which may win the game; promotion of a Benched Pokémon chosen by its owner, a
-nondeterministic choice; or a loss if no Pokémon is left) are made one after another until the
-state is `Settled` or the game has a winner. Stopping earlier is not allowed: `done` requires
-one of the two, and no `KOMove` exists from a `Settled` state. -/
+The rulebook checks every Pokémon for a Knock Out at once, takes the Prize cards, decides the
+game, and only then has new Active Pokémon chosen. After an attack (2023 p. 14): "Your attack is
+complete, so check to see if any Pokémon were Knocked Out by the attack. Some attacks can damage
+more than one Pokémon, and sometimes they can even damage the Attacking Pokémon! So, make sure to
+check every Pokémon that was affected by the attack. If a Pokémon has total damage at least equal
+to its HP (for example, 5 or more damage counters on a Pokémon with 50 HP), it is Knocked Out. If
+a player's Pokémon is Knocked Out, that player puts it and all cards attached to it in the discard
+pile. That player's opponent takes 1 of their own Prize cards and puts it into their hand. The
+player whose Pokémon was Knocked Out chooses a new Active Pokémon from their Bench. If your
+opponent can't do this because their Bench is empty (or for any other reason), you win the game!
+If your opponent still has Pokémon in play, but you just took your last Prize card, you also win
+the game!" After Pokémon Checkup (p. 15): "After both players have gone through these checks, any
+Pokémon that has no HP remaining is Knocked Out. (The player moves a new Pokémon into the Active
+Spot, and the opponent takes a Prize card.)" Both players at once (p. 21): "You win if you take
+your last Prize card or if your opponent has no Benched Pokémon to replace their Active Pokémon if
+it is Knocked Out (or otherwise removed from play). This makes it possible for both players to win
+at the same time. If this happens, play Sudden Death. However, if you win in both ways and your
+opponent wins in only one way, you are the victor!"
+
+`GameState.koStep` is that check: the test `koT` (damage at least the derived HP of the place) is
+evaluated once for every Pokémon in play of both players, in the state before any removal; all the
+Pokémon it holds for leave play together, each to its owner's discard pile with every card
+attached (`PlayerState.koOut`); each player takes as many Prize cards as the Prize values of the
+opponent's Knocked Out Pokémon add up to (`PlayerState.koValue`; the top ones, `takePrizes`); and
+the outcome is decided by counting each player's ways of winning (`winWays`: the last Prize card
+taken, and the opponent left with no Pokémon in play), more ways winning, equal nonzero ways
+giving Sudden Death (`Outcome.ofWays`). `KOBatch` then has each player with an empty Active Spot
+promote a Benched Pokémon (`Promote`), unless the game is over. -/
+
+/-- The Knock Out test of the check: the Pokémon `p` of the `w` player at `sp` has damage at least
+its derived HP in `g`. -/
+def GameState.koT (g : GameState) (w : Whose) (sp : Spot) (p : InPlay) : Bool :=
+  decide (g.hpOf w sp p ≤ p.damage)
+
+theorem GameState.koT_iff {g : GameState} {w : Whose} {sp : Spot} {p : InPlay} :
+    g.koT w sp p = true ↔ g.hpOf w sp p ≤ p.damage :=
+  decide_eq_true_iff
+
+/-- Keep an optional Pokémon if it passes `t`. -/
+def optFilter (t : InPlay → Bool) : Option InPlay → Option InPlay
+  | none => none
+  | some p => if t p then some p else none
+
+/-- `t` holds for the optional Pokémon, if there is one. -/
+def optAll (t : InPlay → Bool) : Option InPlay → Bool
+  | none => true
+  | some p => t p
+
+/-- The Prize value of an optional Pokémon (0 if there is none). -/
+def optPrizes : Option InPlay → Nat
+  | none => 0
+  | some p => p.top.prizeCount
+
+/-- The Prize values of the Pokémon of a list, added up. -/
+def benchPrizes : List InPlay → Nat
+  | [] => 0
+  | p :: ps => p.top.prizeCount + benchPrizes ps
+
+/-- The Pokémon of a player that the check Knocks Out (the Active Pokémon if it passes `ta`, the
+Benched ones that pass `tb`) leave play together, each with every card attached, to the player's
+discard pile; the others stay where they are. -/
+def PlayerState.koOut (ta tb : InPlay → Bool) (s : PlayerState) : PlayerState :=
+  { s with
+    active := optFilter (fun p => !ta p) s.active,
+    bench := s.bench.filter (fun p => !tb p),
+    discard := optCardList (optFilter ta s.active) ++ benchCardList (s.bench.filter tb) ++
+      s.discard }
+
+/-- The Prize cards the opponent takes for the Pokémon the check Knocks Out: their Prize values
+added up. -/
+def PlayerState.koValue (ta tb : InPlay → Bool) (s : PlayerState) : Nat :=
+  optPrizes (optFilter ta s.active) + benchPrizes (s.bench.filter tb)
+
+/-- The player has no Pokémon in play. -/
+def PlayerState.noPokemon (s : PlayerState) : Bool := s.active.isNone && s.bench.isEmpty
+
+/-- Taking `n` Prize cards takes the player's last one (and `n` is not 0). -/
+def PlayerState.prizeWin (n : Nat) (s : PlayerState) : Bool := (n != 0) && s.prizesOut n
+
+/-- The ways in which a player wins the check (rulebook 2023 p. 21): taking their last Prize card
+(`taker` is the player before taking `n`), and leaving the opponent no Pokémon to promote (`other`
+is the opponent after the check). 0, 1 or 2. -/
+def winWays (n : Nat) (taker other : PlayerState) : Nat :=
+  (if taker.prizeWin n then 1 else 0) + (if other.noPokemon then 1 else 0)
+
+/-- The outcome of a check in which the player to move wins in `wc` ways and the opponent in `wo`:
+no outcome if neither wins; otherwise the player with more ways wins ("if you win in both ways and
+your opponent wins in only one way, you are the victor!"), and equal ways are Sudden Death. -/
+def Outcome.ofWays (curIsFirst : Bool) (wc wo : Nat) : Option Outcome :=
+  if wc = wo then (if wc = 0 then none else some .suddenDeath)
+  else if wo < wc then some (.win curIsFirst) else some (.win !curIsFirst)
+
+/-- The player `w`'s side after the check removes their Knocked Out Pokémon. -/
+def GameState.koOf (g : GameState) (w : Whose) : PlayerState :=
+  (g.side w).koOut (g.koT w .active) (g.koT w .bench)
+
+/-- The Prize cards the opponent of `w` takes for `w`'s Knocked Out Pokémon. -/
+def GameState.koVal (g : GameState) (w : Whose) : Nat :=
+  (g.side w).koValue (g.koT w .active) (g.koT w .bench)
+
+/-- **The Knock Out check** (rulebook 2023 pp. 14, 15, 21; quoted above): every Pokémon in play
+whose damage is at least its derived HP in `g` is Knocked Out, all together; the player to move
+takes `g.koVal .opp` Prize cards and the opponent `g.koVal .own`, the top ones; the game ends if
+either player wins (`Outcome.ofWays`; a game already over stays over). Nobody is promoted yet
+(`KOBatch`). Before milestone
+batch-KO the model took Knock Outs one at a time, in any order, with promotions in between. -/
+def GameState.koStep (g : GameState) : GameState :=
+  { g with
+    cur := (g.koOf .own).takePrizes (g.koVal .opp),
+    opp := (g.koOf .opp).takePrizes (g.koVal .own),
+    winner := match g.winner with
+      | none => Outcome.ofWays g.curIsFirst (winWays (g.koVal .opp) g.cur (g.koOf .opp))
+          (winWays (g.koVal .own) g.opp (g.koOf .own))
+      | some o => some o }
+
+/-- A player with an empty Active Spot promotes one of their Benched Pokémon; a player whose Active
+Spot is filled keeps it. `Promote a b a' b'`: the Active Spot and Bench `a`, `b` become `a'`, `b'`. -/
+inductive Promote : Option InPlay → List InPlay → Option InPlay → List InPlay → Prop where
+  | keep {a : InPlay} {b : List InPlay} : Promote (some a) b (some a) b
+  | pick {q : InPlay} {b₁ b₂ : List InPlay} : Promote none (b₁ ++ q :: b₂) (some q) (b₁ ++ b₂)
+
+/-- The state `g` with the Active Spots and Benches replaced. -/
+def GameState.withPlay (g : GameState) (ac : Option InPlay) (bc : List InPlay)
+    (ao : Option InPlay) (bo : List InPlay) : GameState :=
+  { g with cur := { g.cur with active := ac, bench := bc },
+           opp := { g.opp with active := ao, bench := bo } }
+
+/-- **The batch Knock Out step.** From a state that is not `Settled` (a Pokémon in play has damage
+at least its HP, or an Active Spot is empty), the check `GameState.koStep`; then, if nobody has
+won, every player with an empty Active Spot promotes a Benched Pokémon (the result's Active Spots
+are filled: a player with no Pokémon left has lost, so the game is over). The promoted Pokémon is
+a nondeterministic choice, which covers its owner's. When both players promote, the two choices
+are made together: no rule found says who chooses first (the 2023 rulebook says only "The player
+whose Pokémon was Knocked Out chooses a new Active Pokémon from their Bench", p. 14), and since
+nothing is checked between them every order gives the same states.
+
+The promotions can change derived HP (a Pokémon whose static bonus needs the Bench, or the Active
+Spot, has moved), and the check removes Pokémon whose static effects gave HP to others; so after a
+batch another Pokémon may be at or above its HP. Then the state is not `Settled`, and another batch
+follows, until the state is `Settled` or the game is over: the check repeats. The 2023 rulebook is
+silent on this case (it describes one check after the attack and one after Checkup); the repetition
+is the model's reading of the rule it already uses for Knock Outs at other times, "Anytime a
+Pokémon's remaining HP becomes zero" (Pokémon Asia *Advanced Player's Rulebook*, survey S2; see the
+Known gaps). The repetition ends: a batch from a state with a pending Knock Out removes at least
+one Pokémon, and a batch from a state with none fills an empty Active Spot, so a batch that does
+not end the game lowers twice the number of Pokémon in play plus the number of empty Active Spots
+(`KOBatch.koMeasure_lt`); every chain of batches is finite (`KOBatch.acc`) and every state has a
+`Resolve` result (`Resolve.exists`), in `Pokemon/Terminate.lean`. -/
+inductive KOBatch : GameState → GameState → Prop where
+  | won {g : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none) : KOBatch g g.koStep
+  | go {g : GameState} {ac ao : Option InPlay} {bc bo : List InPlay} (hu : ¬ Settled g)
+      (hw : g.koStep.winner = none)
+      (hc : Promote g.koStep.cur.active g.koStep.cur.bench ac bc)
+      (ho : Promote g.koStep.opp.active g.koStep.opp.bench ao bo) :
+      KOBatch g (g.koStep.withPlay ac bc ao bo)
+
+/-- `Settled`, decided. -/
+def GameState.settledB (g : GameState) : Bool :=
+  g.cur.active.isSome && g.opp.active.isSome &&
+    optAll (fun p => !g.koT .own .active p) g.cur.active &&
+    g.cur.bench.all (fun p => !g.koT .own .bench p) &&
+    optAll (fun p => !g.koT .opp .active p) g.opp.active &&
+    g.opp.bench.all (fun p => !g.koT .opp .bench p)
+
+theorem optAll_iff {t : InPlay → Bool} {o : Option InPlay} :
+    optAll t o = true ↔ ∀ p, o = some p → t p = true := by
+  cases o with
+  | none => simp [optAll]
+  | some p => simp [optAll]
+
+theorem GameState.settled_iff (g : GameState) : Settled g ↔ g.settledB = true := by
+  simp only [settledB, Bool.and_eq_true, List.all_eq_true, optAll_iff, Bool.not_eq_true',
+    koT, decide_eq_false_iff_not, Nat.not_le, Option.isSome_iff_ne_none]
+  constructor
+  · rintro ⟨hk, hc, ho⟩
+    exact ⟨⟨⟨⟨⟨hc, ho⟩, fun p hp => hk .own .active p hp⟩, fun p hp => hk .own .bench p hp⟩,
+      fun p hp => hk .opp .active p hp⟩, fun p hp => hk .opp .bench p hp⟩
+  · rintro ⟨⟨⟨⟨⟨hc, ho⟩, h1⟩, h2⟩, h3⟩, h4⟩
+    exact ⟨DamageBounded.intro' h1 h2 h3 h4, hc, ho⟩
+
+instance (g : GameState) : Decidable (Settled g) :=
+  decidable_of_iff _ (GameState.settled_iff g).symm
+
+/-- `Resolve g g'`: take every pending Knock Out now. Batch Knock Out steps (`KOBatch`: the check
+of every Pokémon in play at once, the Prize cards, the outcome, then the promotions) are made one
+after another until the state is `Settled` or the game is over. Stopping earlier is not allowed:
+`done` requires one of the two, and no `KOBatch` exists from a `Settled` state. Before milestone
+batch-KO the steps were single Knock Outs and promotions (`KOMove`), in any order. -/
 inductive Resolve : GameState → GameState → Prop where
   | done {g : GameState} (h : Settled g ∨ g.winner ≠ none) : Resolve g g
-  | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOMove g g₁)
+  | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOBatch g g₁)
       (hr : Resolve g₁ g') : Resolve g g'
 
 /-- **Resolution of a Trainer card's effect**, with the rulebook's Knock Out timing: a Pokémon
@@ -737,8 +905,8 @@ resolution starts in a `Settled` state, so no step of a Trainer effect is execut
 Active Pokémon is at or above its HP.
 
 Several Pokémon can reach their HP in one step (`spreadCounters` damages every Benched Pokémon of
-a player, milestone M3); `Resolve` takes all of their Knock Outs, in any order, before the next
-step (`Bench.doubleKO_reachable`). -/
+a player, milestone M3); `Resolve` takes all of their Knock Outs together, by the batch Knock Out
+step, before the next step (`Bench.doubleKO_reachable`). -/
 inductive TRun : Effect → GameState → GameState → Prop where
   | prim {e : Effect} {g g₁ g₂ : GameState} (he : e.isPrim = true) (hn : g.winner = none)
       (hr : Run e g g₁) (hk : Resolve g₁ g₂) : TRun e g g₂
@@ -1060,56 +1228,13 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with
         cur := { g.cur with active := some { a with damage := a.damage + 3 } },
         attacked := true }
-  /-- Knock Out the opponent's Active Pokémon and take a Prize card (during the turn or
-  between turns) -/
-  | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.opp.active = some p) (hk : g.hpOf .opp .active p ≤ p.damage)
-      (hp : g.cur.prizes = c :: ps) :
-      Move g { g with
-        opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
-        cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
-  /-- the opponent promotes a Benched Pokémon to the empty Active spot -/
-  | promote {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
-      (ha : g.opp.active = none) (hb : g.opp.bench = b₁ ++ q :: b₂) :
-      Move g { g with opp := { g.opp with active := some q, bench := b₁ ++ b₂ } }
-  /-- the opponent has no Pokémon left to promote -/
-  | noPokemon {g : GameState} (ha : g.opp.active = none) (hb : g.opp.bench = []) :
-      Move g { g with winner := some g.curIsFirst }
-  /-- Knock Out the player's own Active Pokémon (after evolving into a card with less HP,
-  after Confusion, after an effect that damages it, or after Checkup); the opponent takes a
-  Prize card -/
-  | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.cur.active = some p) (hk : g.hpOf .own .active p ≤ p.damage)
-      (hp : g.opp.prizes = c :: ps) :
-      Move g { g with
-        cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
-        opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
-  /-- the player promotes a Benched Pokémon to their own empty Active spot -/
-  | promoteOwn {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
-      (ha : g.cur.active = none) (hb : g.cur.bench = b₁ ++ q :: b₂) :
-      Move g { g with cur := { g.cur with active := some q, bench := b₁ ++ b₂ } }
-  /-- the player has no Pokémon left to promote -/
-  | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
-      Move g { g with winner := some (!g.curIsFirst) }
-  /-- Knock Out one of the opponent's Benched Pokémon and take its Prize cards; no promotion
-  follows (milestone M3) -/
-  | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
-      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : g.hpOf .opp .bench p ≤ p.damage)
-      (hp : g.cur.prizes = c :: ps) :
-      Move g { g with
-        opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
-        cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
-  /-- Knock Out one of the player's own Benched Pokémon; the opponent takes its Prize cards -/
-  | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
-      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
-      (hp : g.opp.prizes = c :: ps) :
-      Move g { g with
-        cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
-        opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
+  /-- the batch Knock Out step (`KOBatch`; during the turn or between turns): from a state that
+  is not `Settled`, every Pokémon in play at or above its HP is Knocked Out at once, both players
+  take their Prize cards, the game ends if either player wins (Sudden Death if both win in as many
+  ways), and otherwise each player with an empty Active Spot promotes a Benched Pokémon. Before
+  milestone batch-KO this was eight moves (`knockOut`, `knockOutBench`, `promote`, `noPokemon` and
+  their `Own` versions), taken one at a time in any order. -/
+  | knockOuts {g g' : GameState} (h : KOBatch g g') : Move g g'
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
   (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
   counters of both Benches, one coin flip per Pokémon (`BenchChar`: the opponent's Bench becomes
@@ -1141,24 +1266,42 @@ inductive Move : GameState → GameState → Prop where
   | deckOut {g : GameState} {a b : InPlay}
       (hbt : g.between = true) (ha : g.opp.active = some a) (hb : g.cur.active = some b)
       (hk : DamageBounded g) (hd : g.cur.deck = []) :
-      Move g { g with winner := some (!g.curIsFirst) }
+      Move g { g with winner := some (.win !g.curIsFirst) }
 
 /-- Reachability by legal play. No move is made once the game has a winner. -/
 inductive Reach : GameState → GameState → Prop where
   | refl (g : GameState) : Reach g g
   | step {g₀ g g' : GameState} : Reach g₀ g → g.winner = none → Move g g' → Reach g₀ g'
 
-/-- A Knock Out move is a move. -/
-theorem KOMove.move {g g' : GameState} (h : KOMove g g') : Move g g' := by
+/-- The batch Knock Out step is taken only from a state that is not `Settled`. -/
+theorem KOBatch.not_settled {g g' : GameState} (h : KOBatch g g') : ¬ Settled g := by
+  cases h <;> assumption
+
+/-- When the check ends the game, the batch Knock Out step is the check alone. -/
+theorem KOBatch.eq_of_won {g g' : GameState} (h : KOBatch g g') (hw : g.koStep.winner ≠ none) :
+    g' = g.koStep := by
   cases h with
-  | knockOut ha hk hp => exact .knockOut ha hk hp
-  | promote ha hb => exact .promote ha hb
-  | noPokemon ha hb => exact .noPokemon ha hb
-  | knockOutOwn ha hk hp => exact .knockOutOwn ha hk hp
-  | promoteOwn ha hb => exact .promoteOwn ha hb
-  | noPokemonOwn ha hb => exact .noPokemonOwn ha hb
-  | knockOutBench hb hk hp => exact .knockOutBench hb hk hp
-  | knockOutBenchOwn hb hk hp => exact .knockOutBenchOwn hb hk hp
+  | won => rfl
+  | go _ hk => exact absurd hk hw
+
+/-- The batch Knock Out step changes no turn flag, no Stadium and no flag of the Stadium. -/
+theorem KOBatch.same {g g' : GameState} (h : KOBatch g g') :
+    g'.curIsFirst = g.curIsFirst ∧ g'.firstTurn = g.firstTurn ∧ g'.attacked = g.attacked ∧
+      g'.between = g.between ∧ g'.stadium = g.stadium ∧ g'.stadiumPlayed = g.stadiumPlayed ∧
+      g'.stadiumUsed = g.stadiumUsed := by
+  cases h <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- The batch Knock Out step changes, of each player, only the Pokémon in play, the discard pile,
+the Prize cards and the hand. -/
+theorem KOBatch.sides {g g' : GameState} (h : KOBatch g g') :
+    g'.cur.deck = g.cur.deck ∧ g'.opp.deck = g.opp.deck ∧ g'.cur.lost = g.cur.lost ∧
+      g'.opp.lost = g.opp.lost ∧ g'.cur.mods = g.cur.mods ∧ g'.opp.mods = g.opp.mods ∧
+      g'.cur.hadTurn = g.cur.hadTurn ∧ g'.opp.hadTurn = g.opp.hadTurn ∧
+      g'.cur.supporterPlayed = g.cur.supporterPlayed ∧
+      g'.opp.supporterPlayed = g.opp.supporterPlayed ∧
+      g'.cur.energyAttached = g.cur.energyAttached ∧ g'.cur.retreated = g.cur.retreated ∧
+      g'.cur.gxUsed = g.cur.gxUsed ∧ g'.opp.gxUsed = g.opp.gxUsed := by
+  cases h <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- A play from the hand is the plain move (`Move.playBasic`, `Move.evolve`,
 `Move.evolveBench`). -/
@@ -1188,5 +1331,21 @@ theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
   | basic hh => exact ⟨_, _, hh⟩
   | evolve hh => exact ⟨_, _, hh⟩
   | evolveBench hh => exact ⟨_, _, hh⟩
+
+/-- **From a state that is not `Settled` the only move is the batch Knock Out step**: every other
+move needs `Settled` (`endTurn`, `startTurn` and `deckOut` need both Active Pokémon and no pending
+Knock Out, which is the same). -/
+theorem Move.batch_of_not_settled {g g' : GameState} (hm : Move g g') (hu : ¬ Settled g) :
+    KOBatch g g' := by
+  have of : ∀ {a b : InPlay}, DamageBounded g → g.opp.active = some a → g.cur.active = some b →
+      Settled g := fun hk ha hb =>
+    ⟨hk, ⟨by rw [hb]; exact Option.some_ne_none _, by rw [ha]; exact Option.some_ne_none _⟩⟩
+  cases hm with
+  | knockOuts h => exact h
+  | endTurn _ _ _ _ _ _ ha hb hk => exact absurd (of hk ha hb) hu
+  | startTurn _ ha hb hk => exact absurd (of hk ha hb) hu
+  | deckOut _ ha hb hk => exact absurd (of hk ha hb) hu
+  | onPlay hp => exact absurd hp.settled hu
+  | _ => exact absurd ‹Settled g› hu
 
 end Pokemon

@@ -7,8 +7,8 @@ The rules of `Pokemon/Rules.lean` that make a turn in the model what a turn is i
 stated as theorems.
 
 * `Move.after_attack`: an attack ends the turn. Once the player to move has attacked (or
-  failed a Confused attempt), every legal move is a Knock Out move (a Knock Out, a promotion, or
-  a loss for want of a Pokémon to promote) or `endTurn`, which passes the turn;
+  failed a Confused attempt), every legal move is the batch Knock Out step (`KOBatch`: the Knock
+  Outs, the Prize cards, the outcome, the promotions) or `endTurn`, which passes the turn;
   `Move.after_attack_passTurn` says more: the second kind of move gives exactly the state
   `GameState.passTurn` describes (Checkup on both Active Pokémon, the stores shifted, the
   opponent to move between turns).
@@ -31,13 +31,14 @@ stated as theorems.
 namespace Pokemon
 
 /-- **An attack ends the turn.** From a state of the turn proper in which the player to move
-has attacked, every move is a Knock Out move (`KOMove`: the Knock Outs the attack caused, the
-promotions, or a loss) or the end of the turn, after which the opponent is to move, between
+has attacked, every move is the batch Knock Out step (`KOBatch`: the Knock Outs the attack
+caused, the Prize cards, the outcome and the promotions) or the end of the turn, after which the opponent is to move, between
 turns, and has not attacked. No other action (playing a card, attaching Energy, evolving,
-retreating, attacking again) is legal. -/
+retreating, attacking again) is legal. (Milestone batch-KO replaced `KOMove`, the eight Knock Out
+moves, by `KOBatch` in the statement.) -/
 theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
-    KOMove g g' ∨ (g'.curIsFirst = !g.curIsFirst ∧ g'.between = true ∧ g'.attacked = false) := by
+    KOBatch g g' ∨ (g'.curIsFirst = !g.curIsFirst ∧ g'.between = true ∧ g'.attacked = false) := by
   cases hm with
   | playBasic _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | attach _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
@@ -55,14 +56,7 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | onPlay hp => exact absurd (ha.symm.trans hp.attacked) (by decide)
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | attackConfused _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
-  | knockOut h₁ h₂ h₃ => exact .inl (.knockOut h₁ h₂ h₃)
-  | promote h₁ h₂ => exact .inl (.promote h₁ h₂)
-  | noPokemon h₁ h₂ => exact .inl (.noPokemon h₁ h₂)
-  | knockOutOwn h₁ h₂ h₃ => exact .inl (.knockOutOwn h₁ h₂ h₃)
-  | promoteOwn h₁ h₂ => exact .inl (.promoteOwn h₁ h₂)
-  | noPokemonOwn h₁ h₂ => exact .inl (.noPokemonOwn h₁ h₂)
-  | knockOutBench h₁ h₂ h₃ => exact .inl (.knockOutBench h₁ h₂ h₃)
-  | knockOutBenchOwn h₁ h₂ h₃ => exact .inl (.knockOutBenchOwn h₁ h₂ h₃)
+  | knockOuts h => exact .inl h
   | endTurn => exact .inr ⟨rfl, rfl, rfl⟩
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
@@ -103,15 +97,16 @@ theorem BenchChar.eq_of_noChar {b b' : List InPlay} (h : BenchChar b b')
       | burn h => exact absurd (h.symm.trans (hc _ (.head _))) (by decide)
 
 /-- **An attack ends the turn, exactly.** After an attack (or a failed Confused attempt), a move
-is a Knock Out move, or it ends the turn: both Active Pokémon are present, no Knock Out is
+is the batch Knock Out step, or it ends the turn: both Active Pokémon are present, no Knock Out is
 pending, and the result is `GameState.passTurn` for some Checkup coin flips and Char flips on
 the Benches. (Milestone M3 added the Benches' Char flips `bo`, `bc` to the statement; with no
 Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is
 (`BenchChar.eq_of_noChar`: `bo = g.opp.bench` and `bc = g.cur.bench.map InPlay.unfresh`), which
-is the old statement.) -/
+is the old statement. Milestone batch-KO replaced the first alternative, the eight Knock Out moves
+(`KOMove`), by the batch Knock Out step `KOBatch`, which takes them all at once.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
-    KOMove g g' ∨ ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),
+    KOBatch g g' ∨ ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),
       g.opp.active = some a ∧ g.cur.active = some b ∧ DamageBounded g ∧
       BenchChar g.opp.bench bo ∧ BenchChar (g.cur.bench.map InPlay.unfresh) bc ∧
       g' = g.passTurn fa sa ca fb sb cb a b bo bc := by
@@ -132,14 +127,7 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | onPlay hp => exact absurd (ha.symm.trans hp.attacked) (by decide)
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | attackConfused _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
-  | knockOut h₁ h₂ h₃ => exact .inl (.knockOut h₁ h₂ h₃)
-  | promote h₁ h₂ => exact .inl (.promote h₁ h₂)
-  | noPokemon h₁ h₂ => exact .inl (.noPokemon h₁ h₂)
-  | knockOutOwn h₁ h₂ h₃ => exact .inl (.knockOutOwn h₁ h₂ h₃)
-  | promoteOwn h₁ h₂ => exact .inl (.promoteOwn h₁ h₂)
-  | noPokemonOwn h₁ h₂ => exact .inl (.noPokemonOwn h₁ h₂)
-  | knockOutBench h₁ h₂ h₃ => exact .inl (.knockOutBench h₁ h₂ h₃)
-  | knockOutBenchOwn h₁ h₂ h₃ => exact .inl (.knockOutBenchOwn h₁ h₂ h₃)
+  | knockOuts h => exact .inl h
   | endTurn fa sa ca fb sb cb ha' hb' hk _ hco hcc =>
       exact .inr ⟨_, _, fa, sa, ca, fb, sb, cb, _, _, ha', hb', hk, hco, hcc, rfl⟩
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
@@ -193,7 +181,7 @@ theorem Run.sameTurn {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameTu
   | @zone e w g s' hw hz => cases w <;> exact .refl _
   | _ => exact .refl _
 
-theorem KOMove.sameTurn {g g' : GameState} (h : KOMove g g') : g.SameTurn g' := by
+theorem KOBatch.sameTurn {g g' : GameState} (h : KOBatch g g') : g.SameTurn g' := by
   cases h <;> exact .refl _
 
 theorem Resolve.sameTurn {g g' : GameState} (h : Resolve g g') : g.SameTurn g' := by
@@ -246,7 +234,7 @@ theorem Run.stFlags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @zone e w g s' hw hz => cases w <;> exact ⟨rfl, rfl⟩
   | _ => exact ⟨rfl, rfl⟩
 
-theorem KOMove.stFlags {g g' : GameState} (h : KOMove g g') :
+theorem KOBatch.stFlags {g g' : GameState} (h : KOBatch g g') :
     g'.stadiumPlayed = g.stadiumPlayed ∧ g'.stadiumUsed = g.stadiumUsed := by
   cases h <;> exact ⟨rfl, rfl⟩
 
@@ -314,6 +302,7 @@ theorem Move.flagsOk {g g' : GameState} (hm : Move g g') (hc : g.FlagsOk) : g'.F
       · rw [hbt] at hb'; cases hb'
   | endTurn => exact ⟨fun hf => (by cases hf), fun _ => rfl⟩
   | startTurn => exact ⟨hc.1, fun hb => by cases hb⟩
+  | knockOuts h => exact hc.of_sameTurn h.sameTurn
   | _ => exact hc
 
 theorem Reach.flagsOk {g₀ g : GameState} (h : Reach g₀ g) (hc : g₀.FlagsOk) : g.FlagsOk := by
@@ -335,6 +324,7 @@ theorem Move.firstTurn_no_attack {g g' : GameState} (hc : g.FlagsOk) (hf : g.fir
   | supporter hh hs hbt hst hr _ hf' => exact absurd (hf.symm.trans hf') (by decide)
   | attack _ _ _ _ _ hf' => exact absurd (hf.symm.trans hf') (by decide)
   | attackConfused _ _ _ _ _ hf' => exact absurd (hf.symm.trans hf') (by decide)
+  | knockOuts h => exact h.sameTurn.2.2.1.trans ha
   | _ => first | exact ha | rfl
 
 /-- **The starting player cannot play a Supporter on the first turn of the game**: no move made
@@ -352,6 +342,7 @@ theorem Move.firstTurn_no_supporter {g g' : GameState} (hf : g.firstTurn = true)
   | attack _ _ _ _ _ hf₀ => exact absurd (hf.symm.trans hf₀) (by decide)
   | attackConfused _ _ _ _ _ hf₀ => exact absurd (hf.symm.trans hf₀) (by decide)
   | endTurn => cases hf'
+  | knockOuts h => exact h.sameTurn.2.2.2.2.2.2
   | _ => rfl
 
 /-- **On the first turn of the game the player to move is the starting player**, with
