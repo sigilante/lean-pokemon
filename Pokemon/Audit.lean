@@ -38,6 +38,8 @@ import Pokemon.StaticWitness
 import Pokemon.NoStatics
 import Pokemon.Terminate
 import Pokemon.Trigger
+import Pokemon.TriggerWitness
+import Pokemon.NoTriggers
 
 /-! Axiom audit. `#audit_namespace` checks every theorem declared in the `Pokemon` modules
 (private and generated ones included) and fails the build unless each depends only on
