@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -37,15 +37,20 @@ CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special E
 # Blocking mechanisms for the not-imported cards, by keyword (an approximate classification of the
 # refusal reason and sentence, first match wins; card-level kinds come first).
 MECHS = [
-    ('Ability', r'^Ability$|^Ancient Trait$'),
+    ('static or passive Ability', r'^Ability: static'),
+    ("triggered Ability (Knock Out, damage, Checkup, opponent's action, move between spots)", r'^Ability: triggered'),
+    ('Ability with a first-turn rule ("once during your first turn", "can\'t use … during your first turn")',
+     r'^Ability: (?:once during your first turn|first-turn limit)'),
+    ('Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms)',
+     r'^Ability: (?!returns|condition on the history)|^Ability$|^Ancient Trait$'),
     ('Pokémon Tool (card or text)', r'^Pokémon Tool$|Pokémon Tool|\bTools?\b'),
     ('Stadium (card or text)', r'^Stadium$|Stadium'),
     ('Special Energy (card or text)', r'^Special Energy$|Special Energy'),
     ('Trainer played as a Pokémon', r'^Trainer played as a Pokémon$'),
     ('first-turn rules in text', r'first turn|go first|go second'),
-    ('history (this turn, last turn, Knock Outs)', r'last turn|this turn|during this game|Knocked Out|was healed|moved from your Bench'),
+    ('history (this turn, last turn, Knock Outs)', r'^Ability: condition on the history|last turn|this turn|during this game|Knocked Out|was healed|moved from your Bench'),
     ('evolution or devolution by effect', r'evolve|devolve'),
-    ('return from play to hand or deck', r'(this|that|those) Pokémon and all attached cards|all attached cards into'),
+    ('return from play to hand or deck', r'^Ability: returns|(this|that|those) Pokémon and all attached cards|all attached cards into'),
     ('copy an attack', r'use it as this attack|as this attack'),
     ('Weakness/Resistance or effects ignored', r"isn't affected by|Weakness|Resistance"),
     ('test on a card in play (ex, Evolution, Basic, name, Tool, attack)', r"is a Pokémon ex|is an Evolution Pokémon|is a Basic Pokémon|is a Stage|has the .* attack|has a Pokémon Tool|in its name|Tera"),
@@ -122,6 +127,7 @@ def header(commit, what):
 
 def run(data, out, survey=None):
     _, cards = pool.load(data)
+    TR.set_names(cards)
     P = pool.standard_pool(cards)
     G = pool.group(P)
     commit = pool.dataset_commit(data)
@@ -220,6 +226,17 @@ def run(data, out, survey=None):
            '/-- The imported Trainers that write a rest-of-game bonus or reduction (`Card.alAmt`), by name. -/',
            'theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = '
            + T.lean([t[1] for t in [r['term'] for _, r in imported] if al_amt(t)]) + ' := by decide +kernel\n',
+           '/-- The imported Pokémon with an "as often as you like" Ability (`AbilityUse.unlimited`), by name. -/',
+           'theorem unlimitedAbilities : (all.filter Card.hasUnlimited).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if has_unlimited(r['term'])]) + ' := by decide +kernel\n',
+           '/-- The imported Pokémon with an Ability that can return a card from a discard pile, by name. -/',
+           'theorem abilityRecyclers : (all.filter Card.abilityRecycles).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if ability_recycles(r['term'])]) + ' := by decide +kernel\n',
+           '/-- The imported cards whose effects a player can resolve again and again in one turn and that can\n'
+           'return a card from a discard pile (`Card.freeRec`: Trainers and "as often as you like" Abilities), by\n'
+           'name: the recyclers clause 3 (a) of `Faithful` constrains. -/',
+           'theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if free_rec(r['term'])]) + ' := by decide +kernel\n',
            '/-- Clause 3 of `Faithful` over the whole imported pool, decided. -/',
            'theorem recSafe : recSafeB all = ' + ('true' if not rs_pairs else 'false') + ' := by decide +kernel\n',
            ]
@@ -242,7 +259,14 @@ def run(data, out, survey=None):
             '`Move.supporter`). -/',
             'theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e, c = .trainer n k e →\n'
             '    e.hitFree = true ∧ e.benchHitFree = true :=\n  trainers_of all_ok\n',
-            '/-- Every imported card satisfies clause 1 of `Faithful` (`Card.loopFree`). -/',
+            '/-- Every script of every imported Ability has no attack damage step and no attack damage to the\n'
+            'Bench (premises of `Move.ability` and `Move.onPlay`). -/',
+            'theorem abilities_hitFree : ∀ p, Card.pokemon p ∈ all → ∀ ab ∈ p.abilities, ∀ e ∈ ab.scripts,\n'
+            '    e.hitFree = true ∧ e.benchHitFree = true :=\n  abilities_of all_ok\n',
+            '/-- Every imported card satisfies clause 4 of `Faithful` (`Card.abilitySafe`): no imported "as often\n'
+            'as you like" Ability writes a damage bonus or reduction, and no imported Ability a rest-of-game one. -/',
+            'theorem abilitySafe : ∀ c ∈ all, c.abilitySafe = true := abilitySafe_of all_ok\n',
+            '/-- Every imported card satisfies clause 1 of `Faithful` (`Card.loopFree`, Ability scripts included). -/',
             'theorem loopFree : ∀ c ∈ all, c.loopFree = true := loopFree_of all_ok\n',
             '/-- `GXOnly` over the imported pool: no imported attack that is not a GX attack writes a\n'
             'rest-of-game bonus or reduction (no imported attack is a GX attack). -/',
@@ -270,6 +294,60 @@ def run(data, out, survey=None):
     return files
 
 
+def ability_status(recs, r):
+    """For a Pokémon with an Ability: 'imported ...', or the first reason its Ability was refused, or
+    'Ability translated; card blocked elsewhere'."""
+    if r['ok']:
+        return status_of(r)
+    texts = [TR.norm(a.get('text')) for a in recs[0].get('abilities') or []]
+    for a, b in r['blockers']:
+        if a.startswith('Ability') or (b and any(b in t for t in texts)):
+            if a.startswith('Ability'):
+                return ':'.join(a.split(':')[:2])
+            if a == 'unhandled sentence':
+                return 'Ability effect: a sentence has no rule'
+            return 'Ability effect: ' + a.split(':')[0]
+    return 'Ability translated; card blocked elsewhere'
+
+
+def ability_section(results):
+    L = []
+    ab = [(recs, r) for recs, r in results if recs[0]['supertype'] == 'Pokémon' and recs[0].get('abilities')]
+    c = collections.Counter(ability_status(recs, r) for recs, r in ab)
+    L.append('Pokémon with an Ability (%d cards): imported exactly %d, imported with caveats %d, not imported %d. '
+             'Not imported, by the first reason the Ability was refused (or "translated; card blocked elsewhere"):'
+             % (len(ab), c['imported exactly'], c['imported with caveats'],
+                len(ab) - c['imported exactly'] - c['imported with caveats']))
+    L.append('')
+    L.append('| status or reason | cards |')
+    L.append('|---|---|')
+    for k, v in sorted(c.items(), key=lambda kv: (not kv[0].startswith('imported'), -kv[1], kv[0])):
+        L.append('| %s | %d |' % (k, v))
+    L.append('')
+    use = collections.Counter()
+    for recs, r in ab:
+        if r['ok']:
+            for x in r['term'][1]['abilities']:
+                use[x['use'][0] + ('-' + x['use'][1][0] if x['use'][0] == 'onPlay' else '')] += 1
+    L.append('Imported Abilities by use limit: %s.' % ', '.join('%s %d' % kv for kv in sorted(use.items())))
+    L.append('')
+    one = [(recs, r) for recs, r in ab if any(TR.ONE_PER_NAME.match(s) for a in recs[0]['abilities']
+                                              for s in TR.split_sentences(TR.norm(a.get('text'))))]
+    L.append('Cards whose Ability says "You can\'t use more than 1 … Ability each turn" (%d): %s. Imported with the '
+             'caveat `onePerName` (allows more): %s.' % (
+                 len(one), ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in one),
+                 ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, r in one if r['ok']) or 'none'))
+    L.append('')
+    unl = [(recs, r) for recs, r in ab if r['ok'] and has_unlimited(r['term'])]
+    L.append('Imported "as often as you like" Abilities (%d):' % len(unl))
+    L.append('')
+    for recs, r in unl:
+        for x in r['term'][1]['abilities']:
+            L.append('- %s (%s), %s: `%s`' % (recs[0]['name'], recs[0]['id'], x['name'], T.lean(x['effect'])))
+    L.append('')
+    return L
+
+
 def first_reason(r):
     a, b = r['blockers'][0]
     return a + (': ' + b if b and a != 'unhandled sentence' else (': ' + b if b else ''))
@@ -283,6 +361,14 @@ def card_effects(term):
     if term[0] == 'trainer':
         return [term[3]]
     return []
+
+
+def has_unlimited(term):
+    return term[0] == 'pokemon' and any(ab['use'] == ('unlimited',) for ab in term[1]['abilities'])
+
+
+def ability_recycles(term):
+    return term[0] == 'pokemon' and any(T.rec_filters(e) for ab in term[1]['abilities'] for e in T.ability_scripts(ab))
 
 
 def term_writes(term):
@@ -437,13 +523,7 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
     for m, _ in sorted(anyc.items(), key=lambda kv: (-alone[kv[0]], -kv[1])):
         L.append('| %s | %d | %d |' % (m, alone[m], anyc[m]))
     L.append('')
-    # attacks-only hypothetical
-    ab = [r for recs, r in results if recs[0]['supertype'] == 'Pokémon' and recs[0].get('abilities')]
-    ab_ok = sum(1 for r in ab if {a for a, _ in r['blockers']} == {'Ability'})
-    L.append('Hypothetical, NOT an import: of the %d Pokémon with an Ability, %d have no other blocker '
-             '(static fields and every attack sentence translate); with Abilities in the model they would be '
-             'candidates, subject to translating the Ability.' % (len(ab), ab_ok))
-    L.append('')
+    L += ability_section(results)
     # unhandled templates
     sc = collections.Counter()
     exs = {}

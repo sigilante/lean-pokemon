@@ -7,6 +7,12 @@ semantics (Pokemon/Effect.lean, Pokemon/Rules.lean). A rule that knowingly loses
 the model's Known gaps attaches a caveat code (`CAVEATS`); such cards are counted apart. Anything
 else blocks the card, and every blocker is recorded (not only the first), so that the coverage report
 can rank the mechanisms by how many cards each blocks alone.
+
+Abilities (milestone M8a, `translate_ability`): activated ("Once during your turn", "As often as you
+like during your turn") and on-play ("When you play this Pokémon from your hand …") Abilities whose
+conditions are a place or one test of the model and whose every sentence matches a rule; static,
+passive and triggered Abilities, first-turn rules, self Knock Outs, uses from the hand, returns from
+play and conditions the model cannot test are refused with a reason that starts with 'Ability: '.
 """
 import re
 
@@ -22,9 +28,11 @@ CAVEATS = {
               "no Weakness, Resistance or modifier applies to it (Known gaps)",
     'benchMods': "attack damage to Benched Pokémon takes no bonus, reduction or prevention in the model "
                  "(Known gaps, milestone M3)",
-    'mayFail': "an attach or Bench placement from a public zone (discard pile) may do nothing in the model, "
-               "a superset of the printed 'if you can' (Known gaps)",
-    'upTo0': "'up to N' in a Trainer allows 0 in the model; today's rule asks for at least 1 (Known gaps, S8 PP26)",
+    'mayFail': "an attach or Bench placement may do nothing in the model (`attach` and `putBench` always allow "
+               "nothing), a superset of the printed 'attach a …' from the hand or discard pile, and of 'if you can' "
+               "(Known gaps)",
+    'upTo0': "'up to N' in a Trainer or an Ability allows 0 in the model; today's rule asks for at least 1 outside "
+             "attacks (Known gaps, S8 PP26)",
     'hiddenInfo': "a sentence that only reveals or looks at cards is a no-op (hidden information is not "
                   "modelled, Known gaps)",
     'aceSpec': "the ACE SPEC deck-building limit is not modelled (no deck construction in the model)",
@@ -37,8 +45,18 @@ CAVEATS = {
                 "undamaged Pokémon, cure a Pokémon with no Special Condition) can be played to no effect; "
                 "a Trainer cannot be played when its effect cannot happen (taken from rulings, not in the "
                 "2023 rulebook on hand)",
-    'koBetweenSteps': "a Trainer sentence written as several primitives gets a Knock Out check between "
-                      "them (Known gaps, TRun)",
+    'koBetweenSteps': "a Trainer or Ability sentence written as several primitives gets a Knock Out check between "
+                      "them, and after a Knock Out later steps act on the replacement (Known gaps, TRun, M8a)",
+    'noopUse': "an Ability whose effect may do nothing in the model (a switch with an empty Bench, a heal of an "
+               "undamaged Pokémon, a move of Energy that moves none, a take when there is nothing to take, a "
+               "condition tested when the effect resolves) can be used to no effect, marking its Pokémon as used; "
+               "whether the printed game allows such a use was not checked",
+    'selfBench': "'this Pokémon' on the Bench is one Benched Pokémon chosen when the effect resolves, and for an "
+                 "on-play Ability the Active Pokémon or a Benched one (Known gaps, M8a: SelfOp.at)",
+    'moveAnyPair': "a move of Energy printed between particular Pokémon ('to this Pokémon', 'from 1 of your Benched "
+                   "Pokémon to your Active Pokémon') is a move between any two of the player's Pokémon (moveEnergy)",
+    'onePerName': "'You can't use more than 1 X Ability each turn' is not modelled: the use flag is per Pokémon, so "
+                  "each of several Pokémon with that Ability can use it in the same turn",
 }
 
 
@@ -60,6 +78,10 @@ CAVEAT_DIRECTION = {
     'searchAny': 'allows more',
     'koBetweenSteps': 'both',      # a Knock Out check, with its replacement, falls between two steps
     'noopPlay': 'allows more',
+    'noopUse': 'allows more',
+    'selfBench': 'allows more',
+    'moveAnyPair': 'allows more',
+    'onePerName': 'allows more',     # more uses per turn; still bounded by the model's potential (abPot)
 }
 
 
@@ -82,7 +104,11 @@ def noop(ctx):
     """The `noopPlay` caveat, for a mandatory Trainer primitive that the model lets do nothing
     (`switchNone`, `heal` of an undamaged Pokémon, `benchHealNone`, `cure` with no condition). In an
     attack doing nothing is what the card does when it cannot, so no caveat."""
-    return {'noopPlay'} if ctx['kind'] == 'trainer' else set()
+    if ctx['kind'] == 'trainer':
+        return {'noopPlay'}
+    if ctx['kind'] == 'ability':
+        return {'noopUse'}
+    return set()
 
 
 def num(s):
@@ -158,9 +184,38 @@ def parse_filter(np, ctx):
         if m.group(1) in ('Dragon', 'Colorless'):
             raise Refuse('no Basic Energy of that type')
         return ('energyOf', etype(m.group(1)))
+    m = re.match(r'^Evolution ' + TYPE_RE + r' Pokémon$', s)
+    if m:
+        return ('and', ('and', ('pokemon',), ('not', ('basic',))), ('ptype', etype(m.group(1))))
     if s in ('SELF', ctx.get('name')):
         return ('named', ctx['name'])
+    if s in KNOWN_NAMES:
+        # a card name ("Shedinja", "Arven's Sandwich"): `Filter.named`, exact for Pokémon, Items and
+        # Supporters; names of kinds the model lacks are refused with that kind as the reason
+        kinds = KNOWN_NAMES[s]
+        bad = sorted(kinds & {'Pokémon Tool', 'Stadium', 'Special Energy', 'Trainer (other)'})
+        if bad:
+            raise Refuse('card named in text is a ' + ' / '.join(bad) + ': ' + s)
+        return ('named', s)
     raise Refuse('card kind with no filter: ' + s)
+
+
+# Card names in the whole dataset (all regulation marks), name -> set of kinds ('Pokémon', 'Item',
+# 'Supporter', 'Pokémon Tool', 'Stadium', 'Basic Energy', 'Special Energy'); filled by `set_names`.
+KNOWN_NAMES = {}
+
+
+def set_names(cards):
+    KNOWN_NAMES.clear()
+    for c in cards:
+        sub = c['_sub']
+        if c['supertype'] == 'Pokémon':
+            k = 'Pokémon'
+        elif c['supertype'] == 'Energy':
+            k = 'Basic Energy' if 'Basic' in sub else 'Special Energy'
+        else:
+            k = next((x for x in ('Item', 'Supporter', 'Pokémon Tool', 'Stadium') if x in sub), 'Trainer (other)')
+        KNOWN_NAMES.setdefault(norm(c['name']), set()).add(k)
 
 
 def parse_qty_np(q):
@@ -181,7 +236,13 @@ def min_take(count, n, make, ctx):
     from rulings; not in the 2023 rulebook on hand), so in a Trainer the case with nothing to take
     has no resolution: `exactly 1` of none, the model's convention for an unpayable cost
     (Pokemon/Rules.lean, `Move.item`), and a Trainer that can take some but fewer than `n` takes all
-    of them."""
+    of them.
+
+    An Ability follows the attack convention (it does what it can, nothing when nothing can be
+    taken) and is marked `noopUse`: whether the printed game lets an Ability be used when its effect
+    cannot happen was not checked, so the model allows such a use (allows more)."""
+    if ctx['kind'] == 'ability':
+        ctx['_cavs'].add('noopUse')
     if ctx['kind'] == 'trainer':
         if n == 1:
             return make(('exactly', 1))
@@ -347,6 +408,27 @@ class Nothing:
 
 class Drain:
     """'Heal from this Pokémon the same amount of damage you did to your opponent's Active Pokémon.'"""
+
+
+class AbItem:
+    """An Ability's effect that acts on "this Pokémon" (an `AbEff`, Pokemon/Card.lean)."""
+    def __init__(self, a, cavs=()):
+        self.a, self.cavs = a, set(cavs)
+
+
+def abseq(*xs):
+    """Right-nested `AbEff.seq`, adjacent `fx` parts merged into one `fx` of their `seq`."""
+    out = []
+    for x in xs:
+        if out and out[-1][0] == 'fx' and x[0] == 'fx':
+            out[-1] = ('fx', seq(out[-1][1], x[1]))
+        else:
+            out.append(x)
+    out = [x for x in out if x != ('fx', SKIP)] or [('fx', SKIP)]
+    r = out[-1]
+    for x in reversed(out[:-1]):
+        r = ('seq', x, r)
+    return r
 
 
 class Cost:
@@ -540,6 +622,8 @@ def _(m, ctx):
 def _(m, ctx):
     if ctx['kind'] == 'attack' and m.group(1) != 'This Pokémon':
         raise Refuse('wording')
+    if ctx['kind'] == 'ability' and m.group(1) == 'This Pokémon' and ctx.get('spot') != ('active',):
+        raise Refuse('this Pokémon (an Ability usable on the Bench) recovers: not expressible')
     return Eff(('cure',), noop(ctx))
 
 
@@ -622,7 +706,7 @@ def _(m, ctx):
 
 def search_cavs(f, upto, ctx):
     cv = set()
-    if upto and ctx['kind'] == 'trainer':
+    if upto and ctx['kind'] != 'attack':
         cv.add('upTo0')
     if f == ('any',):
         cv.add('searchAny')
@@ -642,8 +726,17 @@ def _(m, ctx):
 def _(m, ctx):
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
-    cv = {'upTo0'} if upto and ctx['kind'] == 'trainer' else set()
+    cv = {'upTo0'} if upto and ctx['kind'] != 'attack' else set()
     return Eff(seq(*[('putBench', OWN, ('deck',), f)] * n), cv)
+
+
+def attach_item(parts, cv):
+    """The attachments of one sentence as an item: an `Eff`, or, when they attach to "this Pokémon"
+    in an Ability, an `AbItem` of `SelfOp.attach`s."""
+    if any(x[0] == 'SELF' for x in parts):
+        assert all(x[0] == 'SELF' for x in parts)
+        return AbItem(abseq(*[('self', x[1]) for x in parts]), cv)
+    return Eff(seq(*parts), cv)
 
 
 ATTACH_TGT = (r'(this Pokémon|1 of your Pokémon|1 of your Benched Pokémon|your Pokémon in any way you like|'
@@ -652,6 +745,8 @@ ATTACH_TGT = (r'(this Pokémon|1 of your Pokémon|1 of your Benched Pokémon|you
 
 def attach_one(src, f, tgt, ctx):
     if tgt == 'this Pokémon':
+        if ctx['kind'] == 'ability':
+            return ('SELF', ('attach', src, f))
         if ctx['kind'] != 'attack':
             raise Refuse('this Pokémon outside an attack')
         return ('attach', OWN, src, f, ('active',), ('any',))
@@ -669,8 +764,8 @@ def _(m, ctx):
         raise Refuse('attach a non-Energy card')
     if n > 1 and m.group(3) in ('1 of your Pokémon', '1 of your Benched Pokémon'):
         raise Refuse('several cards to one chosen Pokémon')
-    cv = {'upTo0'} if upto and ctx['kind'] == 'trainer' else set()
-    return Eff(seq(*[attach_one(('deck',), f, m.group(3), ctx)] * n), cv)
+    cv = {'upTo0'} if upto and ctx['kind'] != 'attack' else set()
+    return attach_item([attach_one(('deck',), f, m.group(3), ctx)] * n, cv)
 
 
 @rule('attach-from-discard', r'Attach (up to \d+|an?|\d+) (.+?) from your discard pile to ' + ATTACH_TGT + r'\.',
@@ -685,9 +780,9 @@ def _(m, ctx):
     cv = set()
     if not upto:
         cv.add('mayFail')
-    elif ctx['kind'] == 'trainer':
+    elif ctx['kind'] != 'attack':
         cv.add('upTo0')
-    return Eff(seq(*[attach_one(('discard',), f, m.group(3), ctx)] * n), cv)
+    return attach_item([attach_one(('discard',), f, m.group(3), ctx)] * n, cv)
 
 
 @rule('recycle-to-hand', r'Put (up to \d+|an?|\d+) (.+?) from your discard pile into your hand\.', 'B',
@@ -697,7 +792,7 @@ def _(m, ctx):
     f = parse_filter(m.group(2), ctx)
     mk = lambda q: ('move', OWN, ('discard',), ('hand',), f, q)
     if upto:
-        return Eff(mk(('upTo', n)), {'upTo0'} if ctx['kind'] == 'trainer' else set())
+        return Eff(mk(('upTo', n)), {'upTo0'} if ctx['kind'] != 'attack' else set())
     return Eff(min_take(('pile', OWN, ('discard',), f), n, mk, ctx))
 
 
@@ -708,7 +803,7 @@ def _(m, ctx):
     f = parse_filter(m.group(2), ctx)
     mk = lambda q: ('move', OWN, ('discard',), ('shuffle',), f, q)
     if upto:
-        return Eff(mk(('upTo', n)), {'upTo0'} if ctx['kind'] == 'trainer' else set())
+        return Eff(mk(('upTo', n)), {'upTo0'} if ctx['kind'] != 'attack' else set())
     return Eff(min_take(('pile', OWN, ('discard',), f), n, mk, ctx))
 
 
@@ -720,7 +815,7 @@ def _(m, ctx):
     cv = set()
     if not upto:
         cv.add('mayFail')
-    elif ctx['kind'] == 'trainer':
+    elif ctx['kind'] != 'attack':
         cv.add('upTo0')
     return Eff(seq(*[('putBench', OWN, ('discard',), f)] * n), cv)
 
@@ -870,6 +965,119 @@ def _(m, ctx):
     return Eff(('poisonUp', n - 1), {'poisonStrength', '_needsPoison'})
 
 
+# ------------------------------------------------------------------ Ability sentences (milestone M8a)
+#
+# Rules marked 'Ab' apply only in an Ability's effect. An Ability also uses the Trainer ('T') and
+# shared ('B') rules: its effect resolves as a Trainer card's does (`TRun`, Pokemon/Rules.lean).
+
+@rule('ab-inflict', r"Make your opponent's Active Pokémon (" + COND_RE + r')\.', 'Ab', 'inflict c')
+def _(m, ctx):
+    return Eff(('inflict', (CONDS[m.group(1)],)))
+
+
+@rule('ab-each-draws', r'Have each player draw (a card|\d+ cards)\.', 'Ab',
+      'move own (top n) hand any all; move opp (top n) hand any all')
+def _(m, ctx):
+    n = 1 if m.group(1) == 'a card' else num(m.group(1).split()[0])
+    return Eff(seq(draw(OWN, n), draw(OPP, n)))
+
+
+@rule('ab-opp-hand-into-deck-draw', r'Have your opponent shuffle their hand into their deck and draw (\d+) cards\.', 'Ab',
+      'move opp hand shuffle any all; move opp (top n) hand any all')
+def _(m, ctx):
+    return Eff(seq(('move', OPP, ('hand',), ('shuffle',), ('any',), ('all',)), draw(OPP, num(m.group(1)))))
+
+
+@rule('ab-may-hand-to-bottom', r'You may put a card from your hand on the bottom of your deck\.', 'Ab',
+      'choice (move own hand bottom any (exactly 1)) skip')
+def _(m, ctx):
+    return Eff(choice(('move', OWN, ('hand',), ('bottom',), ('any',), ('exactly', 1)), SKIP))
+
+
+@rule('ab-gust-confuse', r"Switch in 1 of your opponent's Benched Pokémon to the Active Spot, and the new Active Pokémon is now ("
+      + COND_RE + r')\.', 'Ab',
+      'ite (countGe (bench opp pokemon) 1) (seq (switch opp) (inflict c)) skip')
+def _(m, ctx):
+    return Eff(ite(('countGe', ('bench', OPP, ('pokemon',)), 1),
+                   seq(('switch', OPP), ('inflict', (CONDS[m.group(1)],))), SKIP), noop(ctx))
+
+
+@rule('ab-search-discard', r'Search your deck for (up to \d+|an?|\d+) (.+?) and discard (?:it|them)\.', 'Ab',
+      'move own deck discard F (upTo n)')
+def _(m, ctx):
+    n, upto = parse_qty_np(m.group(1))
+    f = parse_filter(m.group(2), ctx)
+    if not upto:
+        raise Refuse('exact search and discard')
+    return Eff(('move', OWN, ('deck',), ('discard',), f, ('upTo', n)), search_cavs(f, upto, ctx))
+
+
+@rule('ab-heal-self', r'Heal (\d+) damage from this Pokémon\.', 'Ab', 'self (heal n)')
+def _(m, ctx):
+    return AbItem(('self', ('heal', counters(m.group(1)))), noop(ctx))
+
+
+@rule('ab-counters-self', r'(?:Put|Place) (\d+) damage counters? on this Pokémon\.', 'Ab', 'self (counters n)')
+def _(m, ctx):
+    return AbItem(('self', ('counters', num(m.group(1)))))
+
+
+@rule('ab-switch-in-self', r'Switch (?:this Pokémon|it) with your Active Pokémon\.', 'Ab', 'self switchIn')
+def _(m, ctx):
+    if ctx.get('spot') != ('bench',):
+        raise Refuse('switch this Pokémon in, not restricted to the Bench')
+    return AbItem(('self', ('switchIn',)))
+
+
+@rule('ab-energy-to-self', r'Move (an|a) (?:(Basic )?' + TYPE_RE + r' )?Energy from 1 of your other Pokémon to this Pokémon\.', 'Ab',
+      'self (energyTo F)')
+def _(m, ctx):
+    return AbItem(('self', ('energyTo', energy_filter(m.group(2), m.group(3)))), {'moveAnyPair', 'noopUse'})
+
+
+def energy_filter(basic, t):
+    if t in ('Dragon', 'Colorless'):
+        raise Refuse('Energy of a type with no Basic Energy')
+    return ('energyOf', etype(t)) if t else ENERGY_F
+
+
+@rule('ab-move-energy', r'Move (an|a) (?:(Basic )?' + TYPE_RE + r' )?Energy from 1 of your (Pokémon to another of your Pokémon|'
+      r'Benched Pokémon to your Active Pokémon)\.', 'Ab', 'moveEnergy own F')
+def _(m, ctx):
+    cv = {'noopUse'}
+    if m.group(4) != 'Pokémon to another of your Pokémon':
+        cv.add('moveAnyPair')
+    return Eff(('moveEnergy', OWN, energy_filter(m.group(2), m.group(3))), cv)
+
+
+@rule('ab-attach-from-hand', r'Attach (up to \d+|an?|\d+) (.+?) from your hand to (this Pokémon|your Active Pokémon|'
+      r'1 of your (?:(Benched) )?(?:(.+?) )?Pokémon)\.', 'Ab',
+      'attach own hand F spot TF (n times); "this Pokémon": self (attach hand F)')
+def _(m, ctx):
+    n, upto = parse_qty_np(m.group(1))
+    f = parse_filter(m.group(2), ctx)
+    if f != ENERGY_F and f[0] != 'energyOf':
+        raise Refuse('attach a non-Energy card')
+    cv = {'upTo0'} if upto else {'mayFail'}
+    tgt = m.group(3)
+    if tgt == 'this Pokémon':
+        return AbItem(abseq(*[('self', ('attach', ('hand',), f))] * n), cv)
+    if n > 1 and tgt != 'your Active Pokémon':
+        raise Refuse('several cards to one chosen Pokémon')
+    if tgt == 'your Active Pokémon':
+        return Eff(seq(*[('attach', OWN, ('hand',), f, ('active',), ('any',))] * n), cv)
+    tf = ('any',) if not m.group(5) else parse_filter(m.group(5) + ' Pokémon', ctx)
+    if m.group(4):
+        return Eff(('attach', OWN, ('hand',), f, ('bench',), tf), cv)
+    return Eff(choice(('attach', OWN, ('hand',), f, ('active',), tf), ('attach', OWN, ('hand',), f, ('bench',), tf)), cv)
+
+
+@rule('ab-bonus-self-turn', r"During this turn, attacks used by this Pokémon do (\d+) more damage to your opponent's Active Pokémon "
+      r'\(before applying Weakness and Resistance\)\.', 'Ab', 'linger own now (bonus n)')
+def _(m, ctx):
+    return Eff(('linger', OWN, ('now',), ('bonus', counters(m.group(1)))), {'perPokemon'})
+
+
 # ------------------------------------------------------------------ the parser
 
 def split_sentences(t):
@@ -909,9 +1117,9 @@ def normal(s, name=None):
 
 def match_rule(s, ctx):
     """(rule name, item) for the first rule matching the sentence, or raise Refuse."""
-    kind = 'A' if ctx['kind'] == 'attack' else 'T'
+    kinds = {'attack': ('A', 'B'), 'trainer': ('T', 'B'), 'ability': ('T', 'B', 'Ab')}[ctx['kind']]
     for name, rx, where, _, fn in RULES:
-        if where not in ('B', kind):
+        if where not in kinds:
             continue
         m = rx.match(s)
         if m:
@@ -979,6 +1187,10 @@ class Parser:
             self.used.append(('reminder', s))
             return i + 1
         nxt = S[i + 1] if i + 1 < len(S) else ''
+        if ctx['kind'] == 'ability':
+            j = self.ability_step(S, i, nxt)
+            if j is not None:
+                return j
         # one coin: "Flip a coin. If heads, X. [If tails, Y.]"
         if s == 'Flip a coin.':
             heads = tails = None
@@ -1075,7 +1287,7 @@ class Parser:
                 raise Refuse('exact take from the top of the deck', s)
             self.used.append(('look-top-take', s + ' ' + nxt))
             self.items.append((i, Eff(seq(('move', OWN, ('top', k), ('hand',), ('any',), ('upTo', c)), ('shuffle',)),
-                                      {'upTo0'} if ctx['kind'] == 'trainer' else set())))
+                                      {'upTo0'} if ctx['kind'] != 'attack' else set())))
             return i + 2
         # "Discard all Energy from this Pokémon, and this attack [also] does ...": two sentences. The
         # discard and the damage commute in the model (the damage step reads no Energy of the attacker),
@@ -1091,6 +1303,35 @@ class Parser:
         it = self.one(s)
         self.items.append((i, it))
         return i + 1
+
+    def ability_step(self, S, i, nxt):
+        """Multi-sentence forms of Abilities; None if none applies."""
+        s = S[i]
+        if s.startswith('If you do, '):
+            X = self.clause(s[len('If you do, '):])
+            self.used.append(('ab-if-you-do', s))
+            self.items.append((i, ('ifYouDo', X)))
+            return i + 1
+        if s == 'Look at the top card of your deck.' and nxt == 'You may discard that card.':
+            self.used.append(('ab-look-top-may-discard', s + ' ' + nxt))
+            self.items.append((i, Eff(choice(('move', OWN, ('top', 1), ('discard',), ('any',), ('all',)), SKIP))))
+            return i + 2
+        if (s == 'Look at the top 2 cards of your deck and put 1 of them into your hand.'
+                and nxt == 'Put the other card on the bottom of your deck.'):
+            self.used.append(('ab-look-2-take-1', s + ' ' + nxt))
+            two = seq(('move', OWN, ('top', 2), ('hand',), ('any',), ('exactly', 1)),
+                      ('move', OWN, ('top', 1), ('bottom',), ('any',), ('all',)))
+            self.items.append((i, Eff(ite(('countGe', ('pile', OWN, ('deck',), ('any',)), 2), two,
+                                          ('move', OWN, ('top', 1), ('hand',), ('any',), ('all',))))))
+            return i + 2
+        m = re.match(r'^Look at the top (\d+) cards of your deck, reveal (an?) (.+?) you find there, and put it into your hand\.$', s)
+        if m and nxt == 'Shuffle the other cards back into your deck.':
+            k = num(m.group(1))
+            f = parse_filter(m.group(3), self.ctx)
+            self.used.append(('ab-look-top-reveal-take', s + ' ' + nxt))
+            self.items.append((i, Eff(seq(('move', OWN, ('top', k), ('hand',), f, ('upTo', 1)), ('shuffle',)))))
+            return i + 2
+        return None
 
     def clause(self, c):
         """The consequent of a flip or a condition, as an item."""
@@ -1487,6 +1728,281 @@ def reads_own_discard(e, term):
     return bool(found)
 
 
+# ------------------------------------------------------------------ Abilities (milestone M8a)
+#
+# An Ability is translated only if it is activated ("Once during your turn, you may …", "As often as
+# you like during your turn, you may …") or an on-play trigger ("When you play this Pokémon from your
+# hand onto your Bench / to evolve 1 of your Pokémon during your turn, you may …"), its conditions are
+# a place ("if this Pokémon is in the Active Spot / on your Bench") or a test the model has, and every
+# sentence of its effect is matched by a rule. Everything else is refused with a reason that starts
+# with 'Ability: ' (static, triggered, first-turn, from the hand, self Knock Out, return from play,
+# conditions the model cannot test), or by the sentence that failed.
+
+AB_HEADS = [
+    (r"Once during your turn, when you play this Pokémon from your hand onto your Bench", ('onPlay', ('bench',))),
+    (r"Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon", ('onPlay', ('evolve',))),
+    (r"When you play this Pokémon from your hand onto your Bench during your turn", ('onPlay', ('bench',))),
+    (r"When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn", ('onPlay', ('evolve',))),
+    (r"Once during your turn", ('once',)),
+    (r"As often as you like during your turn", ('unlimited',)),
+]
+
+ONE_PER_NAME = re.compile(r"^You can't use more than 1 (?:.+ Ability|Ability that has .+ in its name) (?:each|during your) turn\.$")
+
+
+def ability_refusal(t):
+    """A specific reason for an Ability the model has no form for, or None."""
+    act = re.match(r'^(?:You must .+ in order to use this Ability\. )?(Once during your turn|As often as you like during your turn|'
+                   r'When you play this Pokémon from your hand)', t)
+    if re.search(r'[Oo]nce during your first turn', t):
+        return 'Ability: once during your first turn'
+    if not act:
+        if re.search(r'Knocked Out|is damaged|damage is done|[Ww]henever|^When |^If .* (?:would|is) |[Dd]uring Pokémon Checkup|'
+                     r'moves (?:from|to)|is discarded', t):
+            return 'Ability: triggered (Knock Out, damage, Checkup, an opponent\'s action or a move between spots)'
+        if re.search(r'first turn|go first', t):
+            return 'Ability: static (first-turn rule)'
+        return 'Ability: static or passive'
+    if re.search(r'when (?:this Pokémon|your .+) moves (?:from|to)', t):
+        return 'Ability: triggered (Knock Out, damage, Checkup, an opponent\'s action or a move between spots)'
+    if re.search(r'Knocked Out', t) and re.search(r'this Pokémon is Knocked Out|You may also use this Ability if', t):
+        return 'Ability: Knocks Out its own Pokémon, or is also triggered by a Knock Out'
+    if re.search(r'your turn ends', t):
+        return 'Ability: ends the turn'
+    if re.search(r'is in your hand', t):
+        return 'Ability: used from the hand'
+    if re.search(r'all attached cards|put this Pokémon on top of your deck|shuffle (?:it|this Pokémon) and all', t):
+        return 'Ability: returns its Pokémon from play'
+    if re.search(r"can't be", t):
+        return "Ability: an effect that can't be stopped"
+    if re.search(r"You can't use this Ability during your first turn", t):
+        return 'Ability: first-turn limit'
+    if re.search(r'if you played .+ this turn|last turn', t):
+        return 'Ability: condition on the history of the turn (this turn, last turn)'
+    return None
+
+
+def ab_condition(c, spot, ctx):
+    """One printed condition of an Ability: ('spot', s), ('cond', test) or ('wrap', tests, neg)."""
+    if c == 'this Pokémon is in the Active Spot':
+        return ('spot', ('active',))
+    if c == 'this Pokémon is on your Bench':
+        return ('spot', ('bench',))
+    m = re.match(r'^this Pokémon has any (?:(Basic )?' + TYPE_RE + r' )?Energy attached(?: to it)?$', c)
+    if m:
+        if spot != ('active',):
+            raise Refuse('Ability: condition on this Pokémon, which may be on the Bench: ' + c)
+        return ('cond', ('countGe', ('energy', OWN, energy_filter(m.group(1), m.group(2))), 1))
+    if 'this Pokémon' in c and spot != ('active',):
+        raise Refuse('Ability: condition on this Pokémon, which may be on the Bench: ' + c)
+    try:
+        tests, neg = parse_test(c, ctx)
+    except Refuse as r:
+        raise Refuse('Ability: ' + r.reason)
+    if len(tests) == 1 and not neg:
+        return ('cond', tests[0])
+    return ('wrap', tests, neg)
+
+
+def ab_cost(c, ctx):
+    """'… in order to use this Ability': an exact cost, paid first (no resolution if it cannot be)."""
+    m = re.match(r'^[Dd]iscard (a card|\d+ cards) from your hand$', c)
+    if m:
+        n = 1 if m.group(1) == 'a card' else num(m.group(1).split()[0])
+        return ('move', OWN, ('hand',), ('discard',), ('any',), ('exactly', n))
+    m = re.match(r'^[Dd]iscard (an?) (.+?) from your hand$', c)
+    if m:
+        return ('move', OWN, ('hand',), ('discard',), parse_filter(m.group(2), ctx), ('exactly', 1))
+    if re.match(r'^[Pp]ut a card from your hand on the bottom of your deck$', c):
+        return ('move', OWN, ('hand',), ('bottom',), ('any',), ('exactly', 1))
+    raise Refuse('Ability: cost not expressible: ' + c)
+
+
+def cap(s):
+    return s[0].upper() + s[1:] if s else s
+
+
+def self_places(a, p, out):
+    """Where each `SelfOp` of an `AbEff` is compiled, with "this Pokémon" at p (None: not tracked)."""
+    h = a[0]
+    if h == 'self':
+        out.append((a[1], p))
+        return T.selfop_after(p, a[1])
+    if h == 'fx':
+        return T.abeff_after(p, a)
+    if h == 'seq':
+        return self_places(a[2], self_places(a[1], p, out), out)
+    if h == 'choice':
+        x = self_places(a[1], p, out)
+        y = self_places(a[2], p, out)
+        return x if x == y else None
+    raise AssertionError(a)
+
+
+def translate_ability(c, a, res):
+    """Translate one printed Ability; append blockers to res and return None if it is refused."""
+    B = res['blockers']
+    t = norm(a.get('text'))
+    name = a.get('name') or ''
+    if (a.get('type') or 'Ability') != 'Ability':
+        B.append(('Ability: kind not modelled: ' + str(a.get('type')), t))
+        return None
+    why = ability_refusal(t)
+    if why:
+        B.append((why, t))
+        return None
+    sents = split_sentences(t)
+    cavs = set()
+    cost = None
+    ctx = {'kind': 'ability', 'name': c['name'], 'base': None, 'cost': None, '_cavs': cavs, 'spot': None}
+    try:
+        m = re.match(r'^You must (.+) in order to use this Ability\.$', sents[0])
+        if m:
+            cost = ab_cost(m.group(1), ctx)
+            sents = sents[1:]
+        s0 = sents[0]
+        use = None
+        for rx, u in AB_HEADS:
+            if re.match('^' + rx + ', ', s0):
+                use, rest = u, s0[len(re.match('^' + rx, s0).group(0)):]
+                break
+        if use is None:
+            raise Refuse('Ability: opening not recognised', s0)
+        conds = []
+        while True:
+            m = re.match(r'^, (?:and )?if (.+?)(?=, (?:and )?if |, you may )', rest)
+            if not m:
+                break
+            conds.append(m.group(1))
+            rest = rest[m.end():]
+        m = re.match(r'^, you may (.+)$', rest)
+        if not m:
+            raise Refuse('Ability: opening not recognised', s0)
+        tail = m.group(1)
+        body = sents[1:]
+        if tail == 'use this Ability.':
+            pass
+        else:
+            m = re.match(r'^(.+) in order to use this Ability\.$', tail)
+            if m:
+                if cost is not None:
+                    raise Refuse('Ability: two costs', s0)
+                cost = ab_cost(m.group(1), ctx)
+            else:
+                body = [cap(tail)] + body
+        if use[0] == 'onPlay' and conds:
+            # the model reads an on-play condition after the play and does not track "this Pokémon"
+            if any('this Pokémon' in x for x in conds):
+                raise Refuse('Ability: on-play condition on this Pokémon: ' + '; '.join(conds))
+        # place first (a condition on this Pokémon needs it)
+        spot = None
+        for x in conds:
+            if x in ('this Pokémon is in the Active Spot', 'this Pokémon is on your Bench'):
+                spot = ab_condition(x, None, ctx)[1]
+        if use[0] == 'onPlay':
+            spot = None
+        ctx['spot'] = spot
+        cond = None
+        wraps = []
+        for x in conds:
+            k = ab_condition(x, spot, ctx)
+            if k[0] == 'spot':
+                continue
+            if k[0] == 'cond' and cond is None:
+                cond = k[1]
+            else:
+                wraps.append(k if k[0] == 'wrap' else ('wrap', [k[1]], False))
+        # "You can't use more than 1 X Ability each turn": not modelled (one use flag per Pokémon)
+        if body and ONE_PER_NAME.match(body[-1]):
+            res['used'].append(('ab-one-per-name', body[-1]))
+            cavs.add('onePerName')
+            body = body[:-1]
+    except Refuse as r:
+        B.append((r.reason, r.sentence or t))
+        return None
+    if not body:
+        B.append(('Ability: no effect text', t))
+        return None
+    p = Parser(ctx).run(body)
+    res['used'] += p.used
+    if p.blockers:
+        B += p.blockers
+        return None
+    parts = []
+    try:
+        for _, it in p.items:
+            if isinstance(it, Eff):
+                cavs |= it.cavs
+                parts.append(('fx', it.e))
+            elif isinstance(it, AbItem):
+                cavs |= it.cavs
+                parts.append(it.a)
+            elif isinstance(it, tuple) and it[0] == 'ifYouDo':
+                X = it[1]
+                cavs |= X.cavs
+                if not parts:
+                    raise Refuse("Ability: 'If you do' with nothing before it")
+                prev = parts.pop()
+                if prev[0] == 'fx' and prev[1] == ('switch', OWN):
+                    parts.append(('fx', ite(('countGe', ('bench', OWN, ('pokemon',)), 1), seq(prev[1], X.e), SKIP)))
+                elif prev[0] == 'fx' and prev[1][0] == 'move' and prev[1][1] == OWN and prev[1][2][0] == 'top' \
+                        and prev[1][3:] == (('hand',), ('any',), ('all',)):
+                    # "Draw N cards. If you do, X": X happens when the deck had a card to draw
+                    parts.append(('fx', ite(('countGe', ('pile', OWN, ('deck',), ('any',)), 1), seq(prev[1], X.e), SKIP)))
+                elif prev[0] == 'self' and prev[1][0] == 'counters':
+                    # placing damage counters on this Pokémon always happens
+                    parts.append(abseq(prev, ('fx', X.e)))
+                else:
+                    raise Refuse("Ability: 'If you do' after an effect the model cannot test")
+            else:
+                raise Refuse('Ability: item not expressible in an Ability')
+    except Refuse as r:
+        B.append((r.reason, t))
+        return None
+    eff = abseq(*parts)
+    for _, tests, neg in wraps:
+        # a condition that is not one positive test: tested when the effect resolves, doing nothing
+        # when it fails (a use to no effect, which the printed card forbids: allows more)
+        if eff[0] != 'fx':
+            B.append(('Ability: condition not one test, around an effect on this Pokémon', t))
+            return None
+        eff = ('fx', branch(tests, neg, eff[1], SKIP))
+        cavs.add('noopUse')
+    if cost is not None:
+        eff = abseq(('fx', cost), eff)
+    ab = {'name': name, 'use': use, 'spot': ('some', spot) if spot else None,
+          'cond': ('some', cond) if cond else None, 'effect': eff}
+    # where "this Pokémon" is compiled
+    places = []
+    if use[0] == 'onPlay':
+        self_places(eff, None, places)
+    elif spot is not None:
+        self_places(eff, spot, places)
+    else:
+        self_places(eff, ('active',), places)
+        self_places(eff, ('bench',), places)
+    for op, pl in places:
+        if op[0] == 'energyTo':
+            # `moveEnergy .own f` in every place: between any two of the player's Pokémon
+            cavs.add('moveAnyPair')
+        elif pl != ('active',):
+            # on the Bench (or not tracked) "this Pokémon" is any Benched Pokémon (or either place)
+            cavs.add('selfBench')
+    scripts = T.ability_scripts(ab)
+    for e in scripts:
+        if not (T.hit_free(e) and T.bench_hit_free(e)):
+            B.append(('Ability effect with attack damage', t))
+            return None
+        if counters_then_more(e):
+            cavs.add('koBetweenSteps')
+    if not T.ability_safe(ab):
+        B.append(('Ability: writes a modifier the model forbids an Ability to write (AbilitySafe)', t))
+        return None
+    cavs.discard('_needsPoison')
+    res['caveats'] |= cavs
+    return ab
+
+
 STAGES = {'Basic': ('basic',), 'Stage 1': ('stage1',), 'Stage 2': ('stage2',)}
 
 
@@ -1494,8 +2010,11 @@ def translate_pokemon(c, res):
     B = res['blockers']
     sub = c['_sub']
     name = c['name']
-    if c.get('abilities'):
-        B.append(('Ability', ''))
+    abilities = []
+    for a in c.get('abilities') or []:
+        ab = translate_ability(c, a, res)
+        if ab is not None:
+            abilities.append(ab)
     if c.get('ancientTrait'):
         B.append(('Ancient Trait', ''))
     st = [STAGES[s] for s in STAGES if s in sub]
@@ -1572,7 +2091,7 @@ def translate_pokemon(c, res):
         return res
     fields = {'name': name, 'stage': stage, 'evolvesFrom': ('some', c['evolvesFrom']) if c.get('evolvesFrom') else None,
               'hp': hp, 'type': ptype, 'attacks': attacks, 'retreat': retreat, 'weakness': weak,
-              'resistance': res_, 'ruleBox': (rb,), 'tera': tera, 'abilities': []}
+              'resistance': res_, 'ruleBox': (rb,), 'tera': tera, 'abilities': abilities}
     res['term'] = ('pokemon', fields)
     res['ok'] = True
     return res

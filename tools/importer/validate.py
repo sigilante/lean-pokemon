@@ -36,6 +36,7 @@ def main(argv):
     seed = int(flags.get('seed', 11))
     per = int(flags.get('per', 13))
     _, cards = pool.load(args[0])
+    TR.set_names(cards)
     G = pool.group(pool.standard_pool(cards))
     by = {}
     for recs in G:

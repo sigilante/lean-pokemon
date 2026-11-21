@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 1 of 7 (150 cards).
+Imported Standard cards, part 1 of 8 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.2.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.3.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -166,6 +166,20 @@ def svp_113 : Card := .pokemon
 /-- Picnicker (svp-114). Records: svp-114. -/
 def svp_114 : Card := .trainer "Picnicker" .supporter
     (.choice (.move .own (.top 4) .hand .any .all) (.move .own (.top 2) .hand .any .all))
+
+/-- Tatsugiri (svp-118). Records: svp-118, sv6-131, sv6-186. -/
+def svp_118 : Card := .pokemon
+  { name := "Tatsugiri", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .dragon, retreat := 1, weakness := none,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Attract Customers", use := .once,
+        spot := some .active, cond := none,
+        effect := .fx (.seq (.move .own (.top 6) .hand (.kind .supporter) (.upTo 1)) .shuffle) }],
+    attacks := [
+      { name := "Surf", cost := [.fire, .water], damage := 5,
+        effect := .skip,
+        gx := false }] }
 
 /-- Snorlax (svp-122). Records: svp-122. -/
 def svp_122 : Card := .pokemon
@@ -865,6 +879,20 @@ def sv5_83 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Drilbur (sv5-85). Records: sv5-85. Caveats: upTo0. -/
+def sv5_85 : Card := .pokemon
+  { name := "Drilbur", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Dig Dig Dig", use := .onPlay .bench,
+        spot := none, cond := none,
+        effect := .fx (.seq (.move .own .deck .discard (.energyOf .fighting) (.upTo 3)) .shuffle) }],
+    attacks := [
+      { name := "Sand Spray", cost := [.fighting, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
 /-- Excadrill (sv5-86). Records: sv5-86, sv5-174. Caveats: recoil. -/
 def sv5_86 : Card := .pokemon
   { name := "Excadrill", stage := .stage1, evolvesFrom := some "Drilbur",
@@ -1458,6 +1486,20 @@ def sv6_37 : Card := .pokemon
         effect := .discardEnergy .own .active .energy .all,
         gx := false }] }
 
+/-- Chandelure (sv6-38). Records: sv6-38. -/
+def sv6_38 : Card := .pokemon
+  { name := "Chandelure", stage := .stage2, evolvesFrom := some "Lampent",
+    hp := 13, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Alluring Light", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.seq (.move .own (.top 1) .hand .any .all) (.move .opp (.top 1) .hand .any .all)) }],
+    attacks := [
+      { name := "Mind Ruler", cost := [.fire], damage := 0,
+        effect := .damage (.count (.pile .opp .hand .any) 3),
+        gx := false }] }
+
 /-- Poliwag (sv6-41). Records: sv6-41. -/
 def sv6_41 : Card := .pokemon
   { name := "Poliwag", stage := .basic, evolvesFrom := none,
@@ -1675,6 +1717,20 @@ def sv6_71 : Card := .pokemon
         effect := .selfDamage 2,
         gx := false }] }
 
+/-- Morpeko (sv6-72). Records: sv6-72. -/
+def sv6_72 : Card := .pokemon
+  { name := "Morpeko", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Snack Seek", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.choice (.move .own (.top 1) .discard .any .all) .skip) }],
+    attacks := [
+      { name := "Pick and Stick", cost := [.lightning], damage := 0,
+        effect := .seq (.choice (.attach .own .discard .energy .active .any) (.attach .own .discard .energy .bench .any)) (.choice (.attach .own .discard .energy .active .any) (.attach .own .discard .energy .bench .any)),
+        gx := false }] }
+
 /-- Tadbulb (sv6-73). Records: sv6-73. -/
 def sv6_73 : Card := .pokemon
   { name := "Tadbulb", stage := .basic, evolvesFrom := none,
@@ -1761,62 +1817,6 @@ def sv6_83 : Card := .pokemon
         effect := .benchDamage .own 1,
         gx := false }] }
 
-/-- Flabébé (sv6-86). Records: sv6-86. -/
-def sv6_86 : Card := .pokemon
-  { name := "Flabébé", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .psychic, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bind Wound", cost := [.colorless], damage := 0,
-        effect := .ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3),
-        gx := false },
-      { name := "Fairy Wind", cost := [.psychic], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Floette (sv6-87). Records: sv6-87. -/
-def sv6_87 : Card := .pokemon
-  { name := "Floette", stage := .stage1, evolvesFrom := some "Flabébé",
-    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Minor Errand-Running", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 3)) .shuffle,
-        gx := false },
-      { name := "Spinning Attack", cost := [.psychic, .colorless], damage := 4,
-        effect := .skip,
-        gx := false }] }
-
-/-- Sandshrew (sv6-97). Records: sv6-97. -/
-def sv6_97 : Card := .pokemon
-  { name := "Sandshrew", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rollout", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Double Scratch", cost := [.fighting, .colorless], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 2)) (.damage (.const 4))),
-        gx := false }] }
-
-/-- Sandslash (sv6-98). Records: sv6-98. Caveats: benchMods. -/
-def sv6_98 : Card := .pokemon
-  { name := "Sandslash", stage := .stage1, evolvesFrom := some "Sandshrew",
-    hp := 12, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Dig Claws", cost := [.colorless], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Earthquake", cost := [.fighting, .colorless], damage := 12,
-        effect := .spreadDamage .own 1,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1839,6 +1839,7 @@ def cards : List Card := [
   svp_112,
   svp_113,
   svp_114,
+  svp_118,
   svp_122,
   svp_123,
   svp_131,
@@ -1894,6 +1895,7 @@ def cards : List Card := [
   sv5_75,
   sv5_82,
   sv5_83,
+  sv5_85,
   sv5_86,
   sv5_87,
   sv5_89,
@@ -1941,6 +1943,7 @@ def cards : List Card := [
   sv6_35,
   sv6_36,
   sv6_37,
+  sv6_38,
   sv6_41,
   sv6_42,
   sv6_47,
@@ -1958,17 +1961,14 @@ def cards : List Card := [
   sv6_69,
   sv6_70,
   sv6_71,
+  sv6_72,
   sv6_73,
   sv6_74,
   sv6_75,
   sv6_76,
   sv6_78,
   sv6_81,
-  sv6_83,
-  sv6_86,
-  sv6_87,
-  sv6_97,
-  sv6_98]
+  sv6_83]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
