@@ -260,7 +260,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`Test.hasTool`), and counts read the Pokémon in play passing a filter (`Count.inPlay`), all
   exact under both clamps (`Pokemon/InPlayTests.lean`); absent: name-prefix filters ("has
   \"Nidoking\" in its name", 8 refused cards in survey S13 §C), reads of the defender's Retreat
-  Cost or remaining HP, and Special Energy;
+  Cost or remaining HP, and Special Energy; two filters read less than print does:
+  `Filter.ptype` reads the printed type and ignores a Coloring counter, and `Filter.hasAbility`
+  reads the printed Abilities and ignores one a Tool gives (the first cannot arise among the
+  imported Standard cards, none of which places a Coloring counter; the second can: one imported
+  attack counts the opponent's Pokémon that have Abilities, and imported Tools give triggered
+  ones — whether print counts a Tool's effect as the Pokémon's Ability is not settled here);
   there are no other reads of the damage on Benched Pokémon (no tests or counts of it), none of
   Poison strength, of HP ("if it has full
   HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history beyond
