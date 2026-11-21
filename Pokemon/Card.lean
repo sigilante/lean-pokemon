@@ -1098,9 +1098,13 @@ me6-100) and activated Abilities, both only while the Pokémon's top card passes
 Zygarde ex this card is attached to can use the attack on this card", Core Memory me3-70), and
 (milestone M6) static effects in force while it is attached (`statics`: HP, damage and Retreat Cost
 changes, "The Pokémon this card is attached to gets +100 HP", Hero's Cape), for the same holders;
-`Sel.self` in them means the holder. Triggered Tool text ("If the Pokémon this card is attached to
-is Knocked Out…") is not modelled: a Tool with only such text is a Tool with an empty grant
-(`ToolGrant.none`), which can be attached and does nothing (Known gaps in `Pokemon/Rules.lean`). -/
+`Sel.self` in them means the holder. Since milestone M8b triggered Tool text of the two
+implemented shapes ("If the Pokémon this card is attached to is in the Active Spot and is damaged by
+an attack …", "… is Knocked Out by damage from an attack …": Lucky Helmet, Punk Helmet, Deluxe Bomb,
+Amulet of Hope) is a triggered Ability in `abilities` (`AbilityUse.triggered`), which the holder has
+(`InPlay.abilities`); other triggered Tool text (Berries, Survival Brace, Powerglass, Prize changes)
+is not modelled: a Tool with only such text is a Tool with an empty grant (`ToolGrant.none`), which
+can be attached and does nothing (Known gaps in `Pokemon/Rules.lean`). -/
 structure ToolGrant where
   holder : Filter
   attacks : List Attack
@@ -1201,10 +1205,11 @@ theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
 effect is `skip` and that has no static effect, or a Tool that gives nothing (no attack, no
 Ability, no static effect). Such a card occupies the Stadium slot or a Pokémon's Tool place and
 does nothing. An importer writes these terms for Stadiums and Tools whose printed text the model
-does not express (triggered text, and static text outside the language of `Static`), so
-`Card.inert` tells "playable, effect not modelled" (an under-model of the printed card) from
-"playable, effect expressed" (a Stadium with an activated or, since milestone M6, a static effect;
-a Tool that gives an attack, an Ability or a static effect). -/
+does not express (triggered text outside the two shapes of milestone M8b, and static text outside
+the language of `Static`), so `Card.inert` tells "playable, effect not modelled" (an under-model of
+the printed card) from "playable, effect expressed" (a Stadium with an activated or, since milestone
+M6, a static effect; a Tool that gives an attack, an Ability or a static effect, and since milestone
+M8b a triggered Ability: a Tool whose triggered text is expressed is not inert). -/
 def Card.inert : Card → Bool
   | .trainer _ .stadium e ss => e == .skip && ss.isEmpty
   | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty && gr.statics.isEmpty

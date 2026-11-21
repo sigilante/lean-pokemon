@@ -786,9 +786,12 @@ theorem GameState.discW_le {w : Card → Nat} (hw : ∀ c, w c ≤ c.amt) (g : G
   simp only [GameState.discAmt, cardsAmt_eq] at h3
   simp only [GameState.discW, cardsAmt_eq]; omega
 
-/-- **Clause 3** (`RecycleSafe`, milestone MV; revised in milestones M8a and M5):
+/-- **Clause 3** (`RecycleSafe`, milestone MV; revised in milestones M8a, M5 and M8b):
 (a) no free recycler (`Card.freeRec`: the effect of an Item or Supporter card, or an "as often as
-you like" Ability of a Pokémon card or given by a Tool; not an attack, a "once during your turn"
+you like" Ability of a Pokémon card or given by a Tool, or since milestone M8b a triggered Ability
+(`AbilityUse.freeUse`): its firings are bounded by Knock Outs and attacks, not by the potential,
+and the per-turn invariant does not pay for them; for a deck without triggered Abilities the clause
+is unchanged, `AbilityUse.freeUse_iff`; not an attack, a "once during your turn"
 or on-play Ability, or a Stadium's effect) can return from a discard pile to a hand or deck an
 Item card of the game that writes a damage bonus or reduction (`Card.wAmt` is nonzero only for
 Item cards: a Supporter is played at most once a turn, and Stadium and Tool cards write nothing

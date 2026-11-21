@@ -173,7 +173,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
     way, an opponent who cannot draw at the start of their turn (`deckOut`), never coincides with a
     Knock Out check in the model (the draw is a separate move);
   - effects that change the number of Prize cards taken (Shedinja, "take 1 more Prize card", S8
-    I5) and Knock Out triggers (milestone M8b) are absent;
+    I5) are absent; Knock Out triggers came with milestone M8b, for one shape ("this Pokémon is
+    Knocked Out by damage from an attack from your opponent's Pokémon", `TrigEvent.koByAttack`;
+    the triggers section above `Move`), and every trigger that changes the Prize cards taken
+    (Shedinja, Lillie's Pearl, Munkidori ex, Mega Gengar ex, Legendary Summit, Togekiss,
+    Hydreigon ex; survey S12) is absent: the termination of trigger chains rests on every Knock
+    Out giving a Prize card (`KOMove.acc`);
 * the source of the Knock Out timing outside attacks and Checkup: survey S9 found no rule in
   the 2023 English rulebook (*Scarlet & Violet—151*) that Knock Outs are checked at once at
   other times, and survey S8 quotes none from the 2024 rulebook; the model's immediate Knock
@@ -400,7 +405,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   otherwise use;
 * Pokémon Checkup (`InPlay.checkup`, and `BenchChar` on the Benches) covers the five Special
   Conditions (Active Pokémon only, the only ones that can have them) and the Char counter
-  only: no Ability (Checkup Abilities are milestone M8b),
+  only: no Ability (Checkup Abilities, 5 Standard cards in survey S12, are not modelled; milestone
+  M8b implemented the two commonest trigger shapes instead),
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
   choice of order between Special Conditions and those effects does not arise); Burn uses the
   current rule (2 counters, then heads cures); Paralysis ends at the Checkup after its
@@ -524,7 +530,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Trench, Risky Ruins; Tools 18: "If the Pokémon this card is attached to is Knocked Out / is
   damaged by an attack / at the end of your turn …": Adversity Policy, Amulet of Hope, the six
   type Berries, Deluxe Bomb, Handheld Fan, Heavy Baton, Lillie's Pearl, Lucky Helmet, Powerglass,
-  Punk Helmet, Survival Brace, Team Rocket's Hypnotizer, Tremendous Bomb). Activated effects the
+  Punk Helmet, Survival Brace, Team Rocket's Hypnotizer, Tremendous Bomb). Since milestone M8b
+  the Tools of the two implemented trigger shapes are expressible as a triggered Ability given by
+  the Tool (6 of the 18: Amulet of Hope, Deluxe Bomb, Handheld Fan as a superset, Lucky Helmet,
+  Punk Helmet; Heavy Baton's Retreat Cost condition is not; survey S12 §3); the Berries and
+  Survival Brace are replacement effects, Powerglass is an end-of-turn trigger, Lillie's Pearl
+  changes Prize cards, Adversity Policy, Tremendous Bomb and Team Rocket's Hypnotizer have
+  conditions or filters the model lacks, and the three Stadiums are not modelled either. Activated effects the
   model cannot express exactly: Stadiums 9 (Lumiose City ends the turn; Surfing Beach ×2 and
   Spikemuth Gym need a filter on the Bench or a name prefix; Fossil Quarry benches Items; Grand Tree
   evolves by effect; Mystery Garden draws to a count of Pokémon in play; Community Center and Team
@@ -563,9 +575,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   about 5 HP, 13 bonus, 17 reduction and 11 Retreat Cost Abilities, of which those with conditions
   beyond a top-card filter, a place or an Energy count are not expressible); it is never used.
   Absent: other static (passive) Abilities (immunities, locks, cost changes and the like, about 57
-  in today's Standard by the same count) and triggered Abilities other than on-play ones, Checkup
-  and Knock Out triggers (milestone M8b; survey S9: 124 static, 33 damage-reaction or Knock Out, 16
-  other triggers; triggered effects stay out of scope after M6), Ability locks
+  in today's Standard by the same count), triggered Abilities other than on-play ones and the two
+  shapes of milestone M8b (survey S12: Checkup 5, moving between spots 8, attaching Energy 2, the
+  opponent's plays 6, end of turn 1, replacement effects 14, Knock Outs of other Pokémon or with
+  Prize changes; 44 cards of the 67 after-event triggers are of other shapes), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
   (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
@@ -573,6 +586,27 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `Reach.finite` with tame, low-constant Ability effects, `Faithful.xfinite` under clause 4
   (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
+* triggered Abilities (milestone M8b; survey S12): two shapes, `TrigEvent.damaged` ("if this
+  Pokémon is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if
+  this Pokémon is Knocked Out)") and `TrigEvent.koByAttack` ("if this Pokémon is Knocked Out by
+  damage from an attack from your opponent's Pokémon"), on a Pokémon card or given by a Tool,
+  mandatory or optional, with an effect in the trigger fragment (`Effect.trigOk`: draw, damage
+  counters and a Special Condition on the Attacking Pokémon, zone moves that cannot fail, Tool
+  discard). Resolution (see the triggers section above `Move`): from the owner's side on the
+  exchanged state (`GameState.swap`), by `Run`, each trigger as a whole, several in any order
+  (`List.Perm`: the order of simultaneous triggers is not in the 2023 rulebook, and the 2026 rule
+  on who orders them is unverified, S8); `damaged` at the end of the attack, before the Knock Out
+  check; `koByAttack` in the batch move, after the batch step. Departures: a trigger's steps get no
+  Knock Out check between them (`TRun` checks after each step of a Trainer effect); "the
+  Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves (for a
+  `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check its
+  replacement is hit); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
+  while the turn's attack has been made" (Knock Outs by the attack's damage counters and by later
+  rounds of the check included); "is damaged" is exact for attacks whose script is
+  `Effect.oppClean` and a free choice on a rise of damage for others (`HitTrig`); a trigger with a
+  printed condition (`cond`) or an effect outside the fragment never fires. The trigger chains end
+  (`KOMove.acc`, `Move.unsettled_acc`): every Knock Out takes a Prize card, and nothing returns
+  one; with Prize-changing triggers (absent) that argument fails;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
   is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that

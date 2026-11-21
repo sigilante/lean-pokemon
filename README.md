@@ -113,8 +113,31 @@ Pokémon" (`SelfOp`: heal it, put damage counters on it, attach Energy to it, sw
 Energy to it): exact in the Active Spot, on the Bench a chosen Benched Pokémon (a superset); and a
 new primitive moves a damage counter between the player's own Pokémon (`Effect.moveCounter`, Team
 Rocket's Orbeetle), which both clamps keep exact (`CMove.sim`). Triggered Abilities (other than
-on-play), Ability locks and per-Pokémon modifiers are not modelled (Known gaps); static Abilities
-came with milestone M6 (below). Milestone M5 added Stadiums
+on-play and the two shapes of milestone M8b), Ability locks and per-Pokémon modifiers are not
+modelled (Known gaps); static Abilities came with milestone M6 (below). Milestone M8b added
+triggered Abilities of the two commonest shapes of today's Standard (survey S12: 24 and 11 of the 67
+after-event triggers): "if this Pokémon is in the Active Spot and is damaged by an attack from your
+opponent's Pokémon (even if this Pokémon is Knocked Out), …" (`TrigEvent.damaged`) and "if this
+Pokémon is Knocked Out by damage from an attack from your opponent's Pokémon, …"
+(`TrigEvent.koByAttack`), on a Pokémon card or given by a Tool (`AbilityUse.triggered ev opt`,
+`opt` for "you may"), with effects in a fragment that always resolves and reads no damage
+(`Effect.trigOk`). They belong to the player whose turn it is not and resolve on the state with the
+players exchanged (`GameState.swap`, `Fire`), each as a whole and several in any order: `damaged`
+triggers at the end of the attack, before its Knock Out check (`Move.attack`, `HitTrig`; exact for
+attacks with no other writer of the Defending Pokémon's damage, `Effect.oppClean`), `koByAttack`
+triggers in the batch move after the attack (`Move.knockOuts`, `GameState.batchTrigs`), with the
+Pokémon already in the discard pile. Every earlier theorem was re-proved; the statements that
+named the batch step's result were restated (`Move.batch_of_not_settled`, `Move.after_attack`,
+`Move.after_attack_passTurn`, `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`,
+`Move.pending_knockedOut`: the batch step is followed by its triggers), and for games with no
+triggered Ability nothing changed (`Pokemon/NoTriggers.lean`). A chain of triggers and Knock Outs
+ends (`KOMove.acc`, `Move.unsettled_acc`): every batch that Knocks Out a Pokémon takes Prize cards,
+which nothing returns, and a batch that Knocks Out none fires no trigger and fills an Active Spot;
+the Prize-changing triggers of the card pool, which would break this, are not modelled. The store
+bound counts triggered Abilities as free recyclers in clause 3 (a) of `Faithful`; they write no
+store (the fragment has no `linger`). Witnesses (`Pokemon/TriggerWitness.lean`): a `damaged`
+trigger that Knocks Out the attacker with the defender, the batch that follows with a `koByAttack`
+trigger that draws (forced when mandatory, declined when optional), and the simultaneous win. Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
 Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and
@@ -206,6 +229,9 @@ HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and
   at or above its HP is the batch step, which Knocks it Out (`Move.pending_knockedOut`, formerly
   `Move.pending_untouched`; restated by batch-KO: the same move may now fill the Active Spot again
   by a promotion);
+* the repeated check with its triggers ends (milestone M8b, `KOMove.acc`, `Move.unsettled_acc`: no
+  infinite sequence of moves through states that are not `Settled`, by the Prize cards left and
+  then the measure below);
 * the repeated check ends (`Pokemon/Terminate.lean`): a batch that does not end the game lowers
   twice the number of Pokémon in play plus the number of empty Active Spots
   (`KOBatch.koMeasure_lt`), so every chain of batches is finite (`KOBatch.acc`), every state has a
@@ -239,7 +265,7 @@ HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and
   machine-checked, the appeal to Minsky's theorem is not), and nothing follows for the printed
   card pool. The start `start M a b` uses cards in the existing effect language; neither of its
   attacks is a GX attack, so the once-per-game GX rule (next item) does not restrict them; every configuration `M` reaches is encoded by a reachable state
-  (`Counter.simulate`, whose proof uses six fixed moves per machine step), and the converse
+  (`Counter.simulate`, whose proof uses six fixed moves per machine step) (since milestone M8b `Encodes` also asks that no card of the game have a triggered Ability, which the start satisfies, since an attached Tool could otherwise fire a mandatory trigger), and the converse
   direction (`Counter.halts_of_haltMarked`) covers every line of play, not only the intended
   one (a player who declines to attack, or attaches the Energy, decks out at their next draw,
   and the game ends without the mark). The construction relies on: (1) rest-of-game damage
