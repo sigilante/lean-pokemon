@@ -5,7 +5,9 @@ import Pokemon.Card
 
 The state inventory follows `survey/S2-rules-state-space.md`. Every component is either a
 list of cards, a number of damage counters, or a flag. There is deliberately no turn
-counter: card text reads the turn number only as "first turn".
+counter: card text reads the turn number only as "first turn", which two flags record (the
+first turn of the game, `GameState.firstTurn`, and each player's first turn,
+`PlayerState.hadTurn`).
 -/
 
 namespace Pokemon

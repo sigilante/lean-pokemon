@@ -4,8 +4,11 @@ import Pokemon.Infinite
 /-!
 # Knock Out timing inside Trainer effects
 
-The rulebook checks for Knock Outs at the end of every attack, at the end of every Pokémon
-Checkup, and at once at any other time a Pokémon's damage reaches its HP. An Item or Supporter
+The model checks for Knock Outs at the end of every attack, at the end of every Pokémon
+Checkup (both as the English rulebook says, 2023 pp. 14–15), and at once at any other time a
+Pokémon's damage reaches its HP. The third clause is not in the English rulebook: it comes from
+the Pokémon Asia *Advanced Player's Rulebook* (Ver. 3.4, 2025; survey S2), and survey S9 found
+no English rule for it (see the Known gaps of `Pokemon/Rules.lean`). An Item or Supporter
 card's effect is such an "other time": a Pokémon whose damage reaches its HP in the middle of
 the effect is Knocked Out at once (its owner's opponent takes a Prize card, a Benched Pokémon
 is promoted, or the game ends), and the rest of the effect acts on the new board. The model

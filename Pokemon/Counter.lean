@@ -1114,7 +1114,8 @@ def onPlay (top : PokemonCard) : InPlay :=
 the main phase of a turn after the draw) has the Clock Active, one Energy in hand, an empty
 deck and one Prize card; the second player has the Tape Active, one Energy in its deck, an empty
 hand and one Prize card. Neither has a Bench. The inputs are rest-of-game damage reductions:
-`b` on the first player, `a` on the second. -/
+`b` on the first player, `a` on the second. The state is in the middle of a game: not its
+first turn, both players have had a turn (`hadTurn`), and the Stadium slot is empty. -/
 def start (M : Machine) (a b : Nat) : GameState where
   cur := ⟨[], [.energy .grass], [], [.energy .grass], [], some (onPlay (clock M)), [],
     false, false, false, false, false, storeOf 0 b, true⟩

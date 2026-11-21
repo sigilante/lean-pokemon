@@ -21,9 +21,11 @@ turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `a
 promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
 does not attack ends the turn by `endTurn` at any point of the turn proper.
 
-Knock Out timing. The rulebook checks for Knock Outs at the end of every attack, at the end of
-every Pokémon Checkup, and at once whenever damage reaches HP at any other time. The model
-follows it in two ways. Between moves: every move that is not part of resolving a Knock Out
+Knock Out timing. The rulebook checks for Knock Outs at the end of every attack ("check to see
+if any Pokémon were Knocked Out by the attack", 2023 p. 14) and at the end of every Pokémon
+Checkup ("After both players have gone through these checks", p. 15). The model also takes a
+Knock Out at once whenever damage reaches HP at any other time; that third clause is not in the
+English rulebook (see the Known gaps for its source). The model follows these in two ways. Between moves: every move that is not part of resolving a Knock Out
 (the six moves `knockOut`, `promote`, `noPokemon` and their `Own` versions) requires the state
 to be `Settled`: no Pokémon in play is at or above its HP, and both Active Spots are filled.
 So once a move leaves a Pokémon at or above its HP, the next moves must Knock it Out (and
@@ -34,6 +36,28 @@ attack, as the rulebook says; an Item or Supporter's effect is resolved by `TRun
 every Knock Out at once after each primitive step (`Resolve`) and stops if the game is over, so
 no step of a Trainer effect runs while a Pokémon is at or above its HP (`TRun.guarded`).
 
+Sources of the turn rules (milestone M1). The rulebook quoted is the *Scarlet & Violet—151*
+rulebook (©2023, `data/mew_rulebook_en.pdf`, survey S9); survey S8 read the *Surging Sparks*
+rulebook (©2024) and a Professor Program post on the rule changes of February 2026. The model
+follows the latest source; for the rules below the three agree except where noted.
+* An attack ends the turn (2023 pp. 9, 13; 2024 the same, S8 B13). The failed Confused attempt
+  also ends the turn: the rulebook says only that "the attack doesn't happen" (p. 16); the model
+  reads the Confusion check as step C of using the attack (p. 20).
+* First-turn bans (2023 pp. 11–13; 2024 the same, S8 B4, B8, B14): no attack and no Supporter
+  for the starting player on the first turn of the game, no evolving on either player's own
+  first turn. Card text that lifts them is absent from the model.
+* Damage calculation stops at base damage 0 (2023 p. 20; 2024 the same, S8 F2). The model
+  applies the rule to each `damage` primitive, not to the attack's total (see the gaps).
+* A new Poison replaces the old one (2023 p. 16; 2024 the same, S8 G7). That Croagunk's
+  stacked increase ends with the replaced Poison is the model's reading; no ruling was found.
+* Nine Basic Energy types (2023 glossary p. 39; S8 D1); `BasicEnergy`.
+* One Stadium in play at a time (2023 p. 12; 2024 the same, S8 B9): one shared slot, state
+  only.
+* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21); the 2026 post replaced it with
+  tiebreaker games (S8 J4, unverified against a rulebook); the model has neither (gaps).
+* Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
+  model's rule comes from another source (gaps).
+
 Known gaps (each is a place where this model is simpler than the rulebook):
 * setup, mulligans and the opening coin flip are not modelled; start from a set-up state;
 * Energy is attached to, and evolution applied to, the Active Pokémon only;
@@ -41,9 +65,19 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Knock Outs are separate moves, forced by `Settled` (above) before any other move; they are
   taken one at a time, in either order when several are pending, so when both players take
   their last Prize from the same attack or Checkup the first Knock Out taken decides the game
-  (no Sudden Death); a player with no Pokémon to promote loses at once; only Active Pokémon
+  (no Sudden Death, which the 2023 rulebook has, nor the tiebreaker game that replaced it in
+  2026, survey S8 J4); a player with no Pokémon to promote loses at once; only Active Pokémon
   can be Knocked Out, which suffices while no effect damages the Bench; a Knock Out always
   gives exactly one Prize;
+* the source of the Knock Out timing outside attacks and Checkup: survey S9 found no rule in
+  the 2023 English rulebook (*Scarlet & Violet—151*) that Knock Outs are checked at once at
+  other times, and survey S8 quotes none from the 2024 rulebook; the model's immediate Knock
+  Outs in mid-effect (`TRun`) and its `Settled` premise on every other move rest on the Pokémon
+  Asia *Advanced Player's Rulebook* (Ver. 3.4, 2025), quoted by survey S2 ("When to check for a
+  Knock Out: At the end of an attack, At the end of Pokémon checkup, Anytime a Pokémon's
+  remaining HP becomes zero, in addition to the above"), a document of another region's rules
+  text. This milestone does not change the timing; it is a modelling decision until an English
+  source confirms it;
 * Knock Outs in mid-effect (Item and Supporter cards, `TRun`): they are checked after each
   primitive step of the model's effect language, so a printed sentence that the model writes
   as several primitives gets a check between them, and the outcome in which the whole
@@ -108,8 +142,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the model applies the modifiers to each `damage` primitive of the attack, so an effect with
   several `damage` steps (written for "flip N coins, 20 damage for each heads", say) adds the
   bonus once per step and stops at 0 per step rather than once for the attack's total (an
-  over-approximation for attacks whose text computes their damage in several parts). `damage` and `drain` are also usable in Trainer effects,
-  where the printed game has no attack damage (an over-approximation). Absent: threshold
+  over-approximation for attacks whose text computes their damage in several parts). `damage`
+  and `drain` are also usable in Trainer effects, where the printed game has no attack damage
+  (an over-approximation). Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, Weakness and type changes, "attack
   twice" and "take another turn", and "that much more damage" (damage taken last turn).
@@ -143,9 +178,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending
-  Pokémon", Jynx base1-31) is written with base damage 0 and the counters in the effect
-  (`seq (scale opp 1) (counters 2)`); the rulebook computes an attack's damage and then places
-  it all at once, so the order of the model's primitives is a representation choice;
+  Pokémon", Jynx base1-31) is written with base damage 0 and the damage in the effect
+  (`seq (scale opp 1) (damage 2)`, so that the damage bonus applies to its 20 damage, as the
+  stop at base damage 0 requires of a printed base of 20; `counters 2` would take no bonus);
+  the rulebook computes an attack's damage and then places it all at once, so the order of the
+  model's primitives is a representation choice;
 * `ite`, `scale`, `selfDamage` and `healAll` are general primitives, usable in any effect,
   any number of times and inside `iter`, whereas printed cards use them once, in fixed forms;
   the model over-approximates the printed texts;

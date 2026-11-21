@@ -17,22 +17,35 @@ type; placed on any Pokémon in play, removed from all of a player's Pokémon, C
 Active Pokémon at Checkup), lingering modifiers (per player, for this turn, the next turn, the
 turn after, or the rest of the game, shifted at the end of every turn: a damage bonus, a damage
 reduction, damage prevention, and locks on attacking, retreating and playing Items; bonuses and
-reductions add up without limit; attack damage is done by `damage`, which applies them, and
-`drain` heals by the damage done), and effects that read the state: a test on either
+reductions add up without limit; attack damage is done by `damage`, which applies them unless
+the base damage is 0, when the rulebook stops the calculation and the attack does no damage,
+and `drain` heals by the damage done), and effects that read the state: a test on either
 Active Pokémon (at least `n` damage counters, exactly `n`, a Special Condition, a marker, a
 type), placing `k`
 counters on the opponent's Active Pokémon for each damage counter on either Active Pokémon
 (Lunala's doubling is the case `k = 1` on the opponent's), damage to the player's own Active
 Pokémon, and healing all of its damage; a move relation in which an Asleep or Paralyzed
 Pokémon can neither attack nor retreat and a Confused Pokémon's attack can fail (tails: no
-attack, and 3 damage counters on itself); the rulebook's Knock Out timing: once a move
+attack, and 3 damage counters on itself); the rulebook's turn (milestone M1): an attack, or a
+failed Confused attempt, ends the turn, so only its Knock Outs and the end of the turn follow
+(`Move.after_attack`); the starting player cannot attack or play a Supporter on the first turn
+of the game, and neither player can evolve on their own first turn (`PlayerState.hadTurn`) or
+evolve a Pokémon put into play or evolved that turn; one Energy attachment, one Supporter and
+one retreat per turn; a new Poison replaces the old one, resetting its strength; Basic Energy
+cards of the nine Basic types; one Stadium slot shared by both players (state only: no move
+plays a Stadium yet); the Knock Out timing: once a move
 leaves a Pokémon at or above its HP, it must be Knocked Out and replaced before any other
 move (`Settled`); inside an attack's effect damage may exceed HP and be read, and the Knock
 Out comes after the attack; inside an Item or Supporter card's effect (`TRun`) every Knock
 Out is taken at once after the step that causes it (a Prize card, which may win the game;
 promotion of a Benched Pokémon; or a loss), the rest of the effect acts on the new board,
-and a finished game stops the effect; and Pokémon Checkup between turns (Poison, Burn,
-Sleep, Paralysis, then Knock Outs). For that model it proves:
+and a finished game stops the effect (Knock Outs after an attack and after Checkup are the
+English rulebook's; the immediate Knock Outs at other times come from the Pokémon Asia
+*Advanced Player's Rulebook*, and survey S9 found no English rule for them, a provenance
+problem recorded in the Known gaps); and Pokémon Checkup between turns (Poison, Burn,
+Sleep, Paralysis, then Knock Outs). The sources of the turn rules, and where the 2023
+rulebook, the later sources and the model differ, are listed at the top of
+`Pokemon/Rules.lean`. For that model it proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects
   included (`TRun.perm`);
@@ -92,7 +105,10 @@ Sleep, Paralysis, then Knock Outs). For that model it proves:
   hand-built start (an Active Pokémon and one Energy each, one Prize, no set-up), not shown
   reachable from a legal set-up, with padding to legal deck size not proved harmless; and (6)
   `ite`, `healAll`, `selfDamage`, `counters`, `mark` and `handToBottom` as general primitives
-  combined in one attack. It does not rely on an attack not ending the turn, on attack costs
+  combined in one attack. It does not rely on an attack not ending the turn (each player
+  attacks once and the turn ends; re-checked under the rule that an attack ends the turn), on a
+  bonus being added to base damage 0 (both attacks have base damage 0, which does no damage
+  under the rulebook's stop at base 0; the zero test is `damage 1`), on attack costs
   being counted rather than typed (costs are empty), on modifiers being per player rather than
   per Pokémon (one Pokémon each, no Bench), or on the absence of Weakness and Resistance.
   Separately, `Counter.not_finite_up_to` shows that for one witness deck the reachable states
@@ -113,9 +129,10 @@ Lingering modifiers change the statements: the clamp takes a cap `k`, and the bi
 a hypothesis on the deck (tameness, `GameState.Fit`). An unbounded damage bonus can be capped because it is read only through
 the damage it adds to the opponent's Active Pokémon, which is read only by tests against card
 constants and by the Knock Out test at HP; a bonus of `bound` or more acts as `bound` does. A
-damage reduction breaks this: damage done is `n + bonus - reduction`, and a bonus above any cap
-matters when an equally large reduction offsets it (`Lingering.reduce_breaks_clamp`, for every
-cap `k ≥ 3`). So does `drain` after in-attack
+damage reduction breaks this: damage done by base damage `n ≥ 1` is `n + bonus - reduction`,
+and a bonus above any cap matters when an equally large reduction offsets it
+(`Lingering.reduce_breaks_clamp`, for every cap `k ≥ 3`; its witness attack has base damage 1,
+since base damage 0 does no damage). So does `drain` after in-attack
 self-damage, which reads the bonus exactly through the heal (`Lingering.drain_breaks_clamp`, for
 every `k ≥ 2`). Expiry follows the turn structure:
 `endTurn` shifts both stores, and `Store.add_now_shift` .. `Store.add_always_shift` state when
@@ -245,7 +262,8 @@ written as several primitives gets a check between them); the replacement is pro
 before the next step (no ruling on its timing was found); the Prize card is the top one; and
 an effect that damages several Pokémon at once is not expressible, so the order of
 simultaneous Knock Outs does not arise inside a Trainer effect. Up to these, the model's
-Trainer timing is the rulebook's (an earlier version resolved a Trainer effect as a whole and
+Trainer timing is that of the Advanced Player's Rulebook (Pokémon Asia, 2025; the English
+rulebook states no rule for it, see above) (an earlier version resolved a Trainer effect as a whole and
 could read and heal damage above HP; that defect is gone). Two of these simplifications can
 still lose printed outcomes, so transfer to the printed game by inclusion needs them as named
 caveats: where a printed sentence is atomic but is written as several primitives, the check
