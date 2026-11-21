@@ -23,6 +23,11 @@ Since milestone MV effects also move cards between a player's zones (`Run.zone`,
 semantics `ZStep` on one player's state): search, draw, mill, discard from the hand, recycling
 from the discard pile, attaching Energy from a zone, putting a Basic Pokémon onto the Bench, and
 discarding or moving attached Energy; and amounts and tests read counts (`Count.val`).
+
+Since milestone M8a an effect also moves a damage counter between the player's own Pokémon in play
+(`Run.moveCounter`, with the relation `CMove`); it reads and writes only the player's own damage,
+which both clamps keep exact inside an effect (`CMove.sim`). Abilities' effects are compiled to this
+language (`AbEff.compile`), so `Run` has no other new case.
 -/
 
 namespace Pokemon
@@ -242,6 +247,28 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       ZStep (.moveEnergy w f) s { s with bench := c₁ ++ q'.addEnergy x :: c₂ }
   | moveNone (w : Whose) (f : Filter) (s : PlayerState) : ZStep (.moveEnergy w f) s s
 
+/-- `CMove f noKO a b a' b'` (milestone M8a): one damage counter moves from one of the player's
+Pokémon in play (Active Pokémon `a`, Bench `b`) whose card passes `f` to another of them, giving
+`a'` and `b'`: from the Active Pokémon to a Benched one (`ab`), from a Benched one to the Active
+Pokémon (`ba`), or from a Benched one to another Benched one (`bb`; the counter is taken off
+first, and the target is at another place of the Bench). With `noKO` the target stays below its
+HP. -/
+inductive CMove (f : Filter) (noKO : Bool) :
+    Option InPlay → List InPlay → Option InPlay → List InPlay → Prop where
+  | ab {x q : InPlay} {b₁ b₂ : List InPlay} (hx : f.eval (.pokemon x.top) = true)
+      (hd : 0 < x.damage) (hk : noKO = true → q.damage + 1 < q.top.hp) :
+      CMove f noKO (some x) (b₁ ++ q :: b₂) (some { x with damage := x.damage - 1 })
+        (b₁ ++ q.addDamage 1 :: b₂)
+  | ba {x q : InPlay} {b₁ b₂ : List InPlay} (hq : f.eval (.pokemon q.top) = true)
+      (hd : 0 < q.damage) (hk : noKO = true → x.damage + 1 < x.top.hp) :
+      CMove f noKO (some x) (b₁ ++ q :: b₂) (some (x.addDamage 1))
+        (b₁ ++ { q with damage := q.damage - 1 } :: b₂)
+  | bb {a : Option InPlay} {q r : InPlay} {b₁ b₂ c₁ c₂ : List InPlay}
+      (hq : f.eval (.pokemon q.top) = true) (hd : 0 < q.damage)
+      (hc : b₁ ++ { q with damage := q.damage - 1 } :: b₂ = c₁ ++ r :: c₂)
+      (hne : c₁.length ≠ b₁.length) (hk : noKO = true → r.damage + 1 < r.top.hp) :
+      CMove f noKO a (b₁ ++ q :: b₂) a (c₁ ++ r.addDamage 1 :: c₂)
+
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g
   | draw {g : GameState} {c : Card} {d : List Card} (h : g.cur.deck = c :: d) :
@@ -347,6 +374,10 @@ inductive Run : Effect → GameState → GameState → Prop where
   /-- a zone-move primitive (milestone MV) on the `w` player's zones -/
   | zone {e : Effect} {w : Whose} {g : GameState} {s' : PlayerState} (hw : e.zSide = some w)
       (h : ZStep e (g.side w) s') : Run e g (g.updSide w fun s => s.setZones s')
+  /-- move a damage counter between the player's own Pokémon (milestone M8a) -/
+  | moveCounter {g : GameState} {f : Filter} {noKO : Bool} {a' : Option InPlay}
+      {b' : List InPlay} (h : CMove f noKO g.cur.active g.cur.bench a' b') :
+      Run (.moveCounter f noKO) g { g with cur := { g.cur with active := a', bench := b' } }
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

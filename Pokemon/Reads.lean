@@ -68,6 +68,8 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
   | retreat _ _ _ _ _ _ _ hst => exact bounded hst.1 _ _
   | item _ _ hst _ => exact bounded hst.1 _ _
   | supporter _ _ _ hst _ => exact bounded hst.1 _ _
+  | ability _ _ _ _ _ _ _ hst _ => exact bounded hst.1 _ _
+  | onPlay hp => exact bounded hp.settled.1 _ _
   | attack _ _ _ _ _ _ _ hst _ => exact bounded hst.1 _ _
   | attackConfused _ _ _ _ _ _ _ hst => exact bounded hst.1 _ _
   | endTurn _ _ _ _ _ _ _ _ hk _ => exact bounded hk _ _
@@ -133,7 +135,7 @@ theorem run_clamp_not_sim (k : Nat) :
 /-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
 on itself. -/
 def hurter : PokemonCard :=
-  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9, false⟩], 1, none, none, .none, false⟩
+  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9, false⟩], 1, none, none, .none, false, []⟩
 
 def start2 : GameState :=
   ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),

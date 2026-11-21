@@ -12,25 +12,31 @@ further hypothesis.
 
 **The deck condition** (`GameState.Faithful`, on the cards of the start state; play only
 permutes cards, so it holds all game):
-* `LoopFree` (clause 1): no effect, of an attack or of a Trainer card, contains a damage bonus
-  or damage reduction (`linger … (bonus n)`, `linger … (reduce n)`) under `iter`. Locks and
-  prevention may appear anywhere; they are flags.
+* `LoopFree` (clause 1): no effect, of an attack, a Trainer card or (milestone M8a) an Ability,
+  contains a damage bonus or damage reduction (`linger … (bonus n)`, `linger … (reduce n)`) under
+  `iter`. Locks and prevention may appear anywhere; they are flags.
 * `GXOnly` (clause 2): every attack whose effect can write a rest-of-game damage bonus or
   reduction (`Slot.always`) is a GX attack (`Attack.gx`).
-* `RecycleSafe` (clause 3, milestone MV): (a) no Trainer card's effect (in the model, the only
-  effects that are not attacks) can return from a discard pile to a hand or deck a card of the game
-  that is not a Supporter and writes a damage bonus or reduction; (b) no effect at all, attacks
-  included, can return a Trainer card that writes a rest-of-game bonus or reduction. "Can return":
+* `RecycleSafe` (clause 3, milestone MV): (a) no Trainer card's effect and (milestone M8a) no
+  "as often as you like" Ability (`Card.freeRec`) can return from a discard pile to a hand or deck
+  a card of the game that is not a Supporter and writes a damage bonus or reduction; (b) no effect
+  at all, attacks and Abilities included, can return a Trainer card that writes a rest-of-game
+  bonus or reduction. "Can return":
   the filter of one of its zone moves out of a discard pile admits the card. Attacks may recycle
   every other card (an attack ends the turn), and Energy and Pokémon cards may be recycled by any
   effect (they write nothing when played). Decidable. A deck with no recycling satisfies it
   (`GameState.NoRecycle.recycleSafe`), so for such decks `Faithful` means what it meant before
   milestone MV. Survey S10 §5 proposes property P ("no in-turn effect may return a non-Supporter
   modifier writer from the discard pile or from play to hand or deck; no Stadium of either deck
-  either"); in the model's vocabulary (no Abilities, no Stadium play, no return from play)
-  clause 3 (a) is P, quantified over the cards of both decks together, and clause 3 (b), which P
-  lacks, is vacuous for every deck with no rest-of-game Trainer writer (all of today's Standard,
-  survey S9 N3).
+  either"); in the model's vocabulary (no Stadium play, no return from play) clause 3 (a) is P
+  for Trainer effects, quantified over the cards of both decks together, extended to
+  "as often as you like" Abilities but not to once-per-turn or on-play ones, which P covers and
+  which the potential `abPot` bounds per turn instead (clause 4 only forbids their rest-of-game
+  writes); clause 3 (b), which P lacks, is vacuous for every deck with no
+  rest-of-game Trainer writer (all of today's Standard, survey S9 N3).
+* `AbilitySafe` (clause 4, milestone M8a): no "as often as you like" Ability writes a damage bonus
+  or reduction, and no Ability writes a rest-of-game one. Decidable; every deck without Abilities
+  satisfies it.
 
 **Why it bounds the stores** (milestone MV: a per-turn count). Each resolution of a loop-free
 effect `e` adds at most `e.amtAt s` to the amounts in slot `s` (`Run.slot_le`, `TRun.slot_le`).
@@ -43,6 +49,15 @@ The writers are:
   three turn boundaries (`Store.shift`), so at most three turns' Trainer writes are live. The
   rest-of-game slot holds only amounts of writers in the discard piles, which no effect recycles
   (clause 3 (b)), and of GX attacks.
+* Abilities (milestone M8a). An "as often as you like" Ability writes nothing (clause 4) and
+  recycles no writer (clause 3 (a)), so it is a step that keeps the count. Each use of a "once
+  during your turn" Ability by a Pokémon that has not used one, and each on-play trigger, spends at
+  least one unit of a potential of the player to move (`GameState.abPot`: their Pokémon in play
+  not yet used, still able to evolve, the free places in play, and the opponent's Prize cards),
+  which no move of the turn raises and which is at most `potBound` of the number of cards; each
+  such use writes and recycles at most `Q` (`Ability.q`, `cardsAbQ`). The bound rests on there
+  being no effect that returns a Pokémon in play to the hand or deck: a Pokémon leaves play only
+  by a Knock Out, which costs a Prize card.
 * Attacks. At most one attack per turn (`GameState.attacked`, reset only by `endTurn`), each
   writing at most `A = cardsAtkAmt` (the largest attack amount among the cards); three attacks'
   carried amounts at once; rest-of-game amounts only from GX attacks (clause 2), once per player per
@@ -54,17 +69,19 @@ that recycle nothing (`reach_boundedStores_noRecycle`). With recycling the per-g
 `Recycle.recycling_breaks_bound` gives a deck satisfying clauses 1 and 2, violating clause 3, with
 unbounded stores and infinitely many `xclamp` classes.
 
-The per-turn invariant (`Faithful.TInv`) has as witnesses the Trainer amounts written this turn,
-last turn and the turn before, and the writer weight of the discard piles at the start of the turn.
-`Faithful.reach_boundedStores` concludes `BoundedStores (storeBound g₀)` for every reachable state,
-with `storeBound g₀ = storeTotal g₀ + 6 · cardsAmt C + 3 · cardsAtkAmt C` (`C` the cards of `g₀`).
+The per-turn invariant (`Faithful.TInv`) has as witnesses the Trainer and Ability amounts written
+this turn, last turn and the turn before, the writer weight of the discard piles at the start of the
+turn, and (milestone M8a) the potential at the start of the turn. `Faithful.reach_boundedStores`
+concludes `BoundedStores (storeBound g₀)` for every reachable state, with `storeBound g₀ =
+storeTotal g₀ + 6 · cardsAmt C + 3 · (Q · potBound |C|) + 3 · cardsAtkAmt C` (`C` the cards of
+`g₀`, `Q = cardsAbQ (cardsAmt C) C`, which is 0 for a deck without Abilities).
 
 **Results.**
 * `Faithful.reach_boundedStores`: for a start satisfying `Faithful`, every reachable state has
   stores bounded by `storeBound g₀`.
 * `Faithful.reach_boundedStores_noRecycle`: for a start satisfying clauses 1 and 2 whose cards
-  recycle nothing, the bound of master, `storeBoundNR g₀ = storeTotal g₀ + cardsAmt C + 3 ·
-  cardsAtkAmt C`.
+  recycle nothing and (milestone M8a) whose Abilities write nothing (`AbilityQuiet`), the bound of
+  master, `storeBoundNR g₀ = storeTotal g₀ + cardsAmt C + 3 · cardsAtkAmt C`.
 * `Faithful.xfinite`: from any `Faithful` start (well-formed or not), the `xclamp`s of all reachable states
   lie in one finite list, and the kernel of `xclamp` is a two-way bisimulation along reachable
   states. No tameness: damage reduction (Iron Defender), `drain`, carried bonuses and
@@ -73,6 +90,10 @@ with `storeBound g₀ = storeTotal g₀ + 6 · cardsAmt C + 3 · cardsAtkAmt C` 
   and 3 and, when the machine's first instruction is not `halt`, violate clause 2
   (`Faithful.counter_loopFree`, `Faithful.counter_recycleSafe`, `Faithful.counter_not_gxOnly`).
 * `Pokemon/Recycle.lean`: clause 3 cannot be dropped (`Recycle.recycling_breaks_bound`).
+* `Pokemon/Abilities.lean` (milestone M8a): clause 4 cannot be dropped, nor clause 3 (a) for
+  Abilities (`Abilities.unlimited_writer_breaks_bound`, `Abilities.unlimited_recycler_breaks_bound`);
+  a once-per-turn recycler of a writer is faithful (`Abilities.once_recycler_faithful`), and so is
+  a deck with Feraligatr's once-per-turn bonus (`Abilities.feraligatr_faithful`).
 
 **Which theorem applies.** `Reach.finite` (`Pokemon/Finite.lean`) needs tame cards (no damage
 reduction, no `drain`) and no reduction in effect at the start; it allows bonus writes under
@@ -91,11 +112,12 @@ read or written. Every theorem that mentions attacks was re-proved; `Counter.uni
 unchanged in statement (its attacks have `gx = false`).
 
 **What the condition does not cover.** Printed behaviours outside it, or outside the model:
-* Abilities (none in the model): an "as often as you like" Ability that writes a modifier, or an
-  Ability that recycles a writer, would need clause 3 extended to Abilities; Stadium effects (no
-  Stadium is played in the model; survey S10 names Levincia, usable by both players);
-* returning a card from play to the hand or deck (Scoop Up Cyclone) and devolution are not in the
-  model;
+* static and triggered Abilities other than on-play ones (milestone M8b), and Stadium effects
+  (no Stadium is played in the model; survey S10 names Levincia, usable by both players);
+* returning a card from play to the hand or deck (Scoop Up Cyclone, and the Abilities of Abra,
+  Dudunsparce and Misty's Psyduck) and devolution are not in the model; with them a Pokémon card
+  could re-enter play within a turn, and the potential that bounds Ability uses would need
+  another argument;
 * the model lets a played Item or Supporter recycle itself (it is in the discard pile while its
   effect resolves; the rulebook discards it afterwards); clause 3 (a) covers that case, since it
   constrains every return from the discard pile;
@@ -105,17 +127,18 @@ unchanged in statement (its attacks have `gx = false`).
   modifier together) is excluded inside one effect by clause 1 and across effects by the per-turn
   count: within a turn each non-Supporter writer is played at most once and one Supporter at most;
   survey S10 §0 found no printed card that writes modifiers of two durations together;
-* rest-of-game modifiers from VSTAR Powers, Abilities or Stadiums are not modelled (`vstarUsed`
-  is unused);
+* rest-of-game modifiers from VSTAR Powers or Stadiums are not modelled (`vstarUsed` is unused);
+  from Abilities they are outside clause 4;
 * copy attacks are not modelled; the once-per-game rule and clause 2 are stated for the attacks
   printed on the attacker;
-* static modifiers, and modifiers from Pokémon Tools, Abilities or Special Energy, are not
+* static modifiers, and modifiers from Pokémon Tools, static Abilities or Special Energy, are not
   modelled: every modifier here is written by an effect when it resolves;
 * reductions restricted by type are not modelled: printed Iron Defender protects Metal Pokémon
   only, whereas the model's reduction protects all of a player's Pokémon;
 * effects that lock GX attacks are not modelled.
 
-The store bound rests on: at most one attack per turn, no extra turns, and clause 3 for recycling.
+The store bound rests on: at most one attack per turn, no extra turns, clause 3 for recycling,
+clause 4 for "as often as you like" Abilities, and the absence of returns from play.
 -/
 
 namespace Pokemon
@@ -287,14 +310,16 @@ theorem atkAmt_le_cardsAtkAmt {x : Card} : ∀ {cs : List Card}, x ∈ cs → x.
 
 /-! ## The deck condition -/
 
-/-- Clause 1 for one card: every effect on it is loop-free. -/
+/-- Clause 1 for one card: every effect on it is loop-free (since milestone M8a, its Abilities'
+effects included). -/
 def Card.loopFree : Card → Bool
-  | .pokemon p => p.attacks.all fun a => a.effect.loopFree
+  | .pokemon p => (p.attacks.all fun a => a.effect.loopFree) &&
+      p.abilities.all fun a => a.scripts.all fun e => e.loopFree
   | .energy _ => true
   | .trainer _ _ e => e.loopFree
 
-/-- **Clause 1** (`LoopFree`): no effect of any card in the game has a damage bonus or
-reduction under `iter`. -/
+/-- **Clause 1** (`LoopFree`): no effect of any card in the game (attacks, Trainer cards and,
+since milestone M8a, Abilities) has a damage bonus or reduction under `iter`. -/
 def GameState.LoopFree (g : GameState) : Prop := ∀ x ∈ g.allCards, x.loopFree = true
 
 /-- **Clause 2** (`GXOnly`): an attack that is not a GX attack writes no rest-of-game damage
@@ -302,6 +327,17 @@ bonus or reduction. -/
 def GameState.GXOnly (g : GameState) : Prop :=
   ∀ p : PokemonCard, Card.pokemon p ∈ g.allCards → ∀ atk ∈ p.attacks, atk.gx = false →
     atk.effect.amtAt .always = 0
+
+theorem Card.loopFree_attack {p : PokemonCard} (h : (Card.pokemon p).loopFree = true)
+    {atk : Attack} (hm : atk ∈ p.attacks) : atk.effect.loopFree = true := by
+  simp only [Card.loopFree, Bool.and_eq_true] at h
+  exact List.all_eq_true.1 h.1 atk hm
+
+theorem Card.loopFree_ability {p : PokemonCard} (h : (Card.pokemon p).loopFree = true)
+    {ab : Ability} (hm : ab ∈ p.abilities) {e : Effect} (he : e ∈ ab.scripts) :
+    e.loopFree = true := by
+  simp only [Card.loopFree, Bool.and_eq_true] at h
+  exact List.all_eq_true.1 (List.all_eq_true.1 h.2 ab hm) e he
 
 theorem GameState.LoopFree.of_perm {g g' : GameState} (h : g.LoopFree)
     (hp : g'.allCards.Perm g.allCards) : g'.LoopFree :=
@@ -768,15 +804,55 @@ theorem Attack.script_recFilters (atk : Attack) :
   · rfl
   · simp only [Effect.recFilters, List.nil_append]
 
-/-- The recycling filters of a card's effects that are not attacks: in the model, a Trainer
-card's effect (there are no Abilities, and no move plays a Stadium). -/
-def Card.trainerRec : Card → List Filter
+/-- The recycling filters of a list of Abilities (milestone M8a). -/
+def abilitiesRec : List Ability → List Filter
+  | [] => []
+  | a :: as => a.scripts.flatMap Effect.recFilters ++ abilitiesRec as
+
+/-- The recycling filters of the "as often as you like" Abilities of a list (milestone M8a). -/
+def unlimitedRec : List Ability → List Filter
+  | [] => []
+  | a :: as => (if a.use = .unlimited then a.scripts.flatMap Effect.recFilters else []) ++
+      unlimitedRec as
+
+theorem abilitiesRec_mem {ab : Ability} {e : Effect} {f : Filter} :
+    ∀ {as : List Ability}, ab ∈ as → e ∈ ab.scripts → f ∈ e.recFilters → f ∈ abilitiesRec as
+  | _ :: _, .head _, he, hf => List.mem_append_left _ (List.mem_flatMap.2 ⟨e, he, hf⟩)
+  | _ :: _, .tail _ h, he, hf => List.mem_append_right _ (abilitiesRec_mem h he hf)
+
+theorem unlimitedRec_mem {ab : Ability} {e : Effect} {f : Filter} :
+    ∀ {as : List Ability}, ab ∈ as → ab.use = .unlimited → e ∈ ab.scripts → f ∈ e.recFilters →
+      f ∈ unlimitedRec as
+  | _ :: _, .head _, hu, he, hf =>
+      List.mem_append_left _ (by simp only [hu, ite_true]; exact List.mem_flatMap.2 ⟨e, he, hf⟩)
+  | _ :: _, .tail _ h, hu, he, hf => List.mem_append_right _ (unlimitedRec_mem h hu he hf)
+
+theorem unlimitedRec_sub {f : Filter} : ∀ {as : List Ability}, f ∈ unlimitedRec as →
+    f ∈ abilitiesRec as
+  | [], h => h
+  | a :: as, h => by
+      simp only [unlimitedRec, abilitiesRec, List.mem_append] at h ⊢
+      rcases h with h | h
+      · split at h
+        · exact .inl h
+        · nomatch h
+      · exact .inr (unlimitedRec_sub h)
+
+/-- The recycling filters of a card's effects that a player can resolve again and again within
+one turn before attacking, with no per-turn limit: a Trainer card's effect (each play spends the
+card, but recycling can return it), and, since milestone M8a, a Pokémon card's "as often as you
+like" Abilities. Attacks end the turn; "once during your turn" and on-play Abilities are bounded
+per turn by the Pokémon in play and entering play (`GameState.abPot`). (Before milestone M8a this
+was `Card.trainerRec`, the Trainer part.) -/
+def Card.freeRec : Card → List Filter
   | .trainer _ _ e => e.recFilters
+  | .pokemon p => unlimitedRec p.abilities
   | _ => []
 
-/-- The recycling filters of all of a card's effects, attacks included. -/
+/-- The recycling filters of all of a card's effects, attacks and (milestone M8a) Abilities
+included. -/
 def Card.allRec : Card → List Filter
-  | .pokemon p => attacksRec p.attacks
+  | .pokemon p => attacksRec p.attacks ++ abilitiesRec p.abilities
   | .trainer _ _ e => e.recFilters
   | _ => []
 
@@ -812,15 +888,18 @@ theorem GameState.discW_le {w : Card → Nat} (hw : ∀ c, w c ≤ c.amt) (g : G
   simp only [GameState.discAmt, cardsAmt_eq] at h3
   simp only [GameState.discW, cardsAmt_eq]; omega
 
-/-- **Clause 3** (`RecycleSafe`, milestone MV): (a) no effect that is not an attack (a Trainer
-card's effect) can return from a discard pile to a hand or deck a card of the game that writes a
-damage bonus or reduction, unless that card is a Supporter; and (b) no effect at all, attacks
-included, can return a card that writes a rest-of-game bonus or reduction. "Can return": the
-filter of one of its zone moves out of a discard pile admits the card (`Effect.recFilters`).
-Attacks may recycle every other card: an attack ends the turn. Decidable (a finite check over
-pairs of a recycling filter and a card of the game). -/
+/-- **Clause 3** (`RecycleSafe`, milestone MV): (a) no Trainer card's effect and (milestone M8a)
+no "as often as you like" Ability (`Card.freeRec`) can return from a discard pile to a hand or
+deck a card of the game that writes a damage bonus or reduction, unless that card is a Supporter;
+and (b) no effect at all, attacks and Abilities included, can return a card that writes a
+rest-of-game bonus or reduction. "Can return": the filter of one of its zone moves out of a
+discard pile admits the card (`Effect.recFilters`). Attacks may recycle every other card: an
+attack ends the turn; so may "once during your turn" and on-play Abilities, which are used
+boundedly often in a turn (`GameState.abPot`). Decidable (a finite check over pairs of a
+recycling filter and a card of the game). For a deck without Abilities it is the clause of
+milestone MV. -/
 def GameState.RecycleSafe (g : GameState) : Prop :=
-  (∀ x ∈ g.allCards, ∀ f ∈ x.trainerRec, ∀ y ∈ g.allCards, f.eval y = true → y.wAmt = 0) ∧
+  (∀ x ∈ g.allCards, ∀ f ∈ x.freeRec, ∀ y ∈ g.allCards, f.eval y = true → y.wAmt = 0) ∧
   (∀ x ∈ g.allCards, ∀ f ∈ x.allRec, ∀ y ∈ g.allCards, f.eval y = true → y.alAmt = 0)
 
 instance (g : GameState) : Decidable g.RecycleSafe := by
@@ -831,11 +910,12 @@ def GameState.NoRecycle (g : GameState) : Prop := ∀ x ∈ g.allCards, x.allRec
 
 theorem GameState.NoRecycle.recycleSafe {g : GameState} (h : g.NoRecycle) : g.RecycleSafe := by
   refine ⟨fun x hx f hf => ?_, fun x hx f hf => ?_⟩
-  · have e : x.trainerRec = [] := by
+  · have e : f ∈ x.allRec := by
       cases x with
-      | trainer n k e => exact h _ hx
-      | _ => rfl
-    rw [e] at hf; nomatch hf
+      | trainer n k e => exact hf
+      | pokemon p => exact List.mem_append_right _ (unlimitedRec_sub hf)
+      | energy _ => nomatch hf
+    rw [h x hx] at e; nomatch e
   · rw [h x hx] at hf; nomatch hf
 
 theorem GameState.RecycleSafe.of_perm {g g' : GameState} (h : g.RecycleSafe)
@@ -847,10 +927,111 @@ theorem GameState.NoRecycle.of_perm {g g' : GameState} (h : g.NoRecycle)
     (hp : g'.allCards.Perm g.allCards) : g'.NoRecycle :=
   fun x hx => h x (hp.mem_iff.1 hx)
 
-/-- **Faithful decks** (milestone MV: three clauses). For a deck with no recycling (every deck
-before milestone MV) clause 3 holds (`GameState.NoRecycle.recycleSafe`), and `Faithful` means what
-it meant before: `LoopFree ∧ GXOnly`. -/
-def GameState.Faithful (g : GameState) : Prop := g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe
+/-- The amount one use of an Ability can add to what is written in a turn, against the per-turn
+count (milestone M8a): what its effect writes, plus `P` if it recycles (it may then return
+Trainer writers of total amount at most `P`, the Trainer amounts of all the cards, to be played
+again). For an Ability, the largest over its scripts. -/
+def Effect.q (P : Nat) (e : Effect) : Nat :=
+  e.amt + (if e.recFilters = [] then 0 else P)
+
+def effectsQ (P : Nat) : List Effect → Nat
+  | [] => 0
+  | e :: es => max (e.q P) (effectsQ P es)
+
+theorem effectsQ_mem {P : Nat} {e : Effect} : ∀ {es : List Effect}, e ∈ es → e.q P ≤ effectsQ P es
+  | a :: as, hm => by
+      simp only [effectsQ]
+      cases hm with
+      | head => omega
+      | tail _ hm => have := effectsQ_mem (P := P) hm; omega
+
+@[inherit_doc Effect.q]
+def Ability.q (P : Nat) (ab : Ability) : Nat := effectsQ P ab.scripts
+
+def abilitiesQ (P : Nat) : List Ability → Nat
+  | [] => 0
+  | a :: as => max (a.q P) (abilitiesQ P as)
+
+def Card.abQ (P : Nat) : Card → Nat
+  | .pokemon p => abilitiesQ P p.abilities
+  | _ => 0
+
+/-- The largest `Ability.q P` among the cards `C` (0 for a deck without Abilities). -/
+def cardsAbQ (P : Nat) : List Card → Nat
+  | [] => 0
+  | c :: cs => max (c.abQ P) (cardsAbQ P cs)
+
+theorem abilitiesQ_mem {P : Nat} {ab : Ability} : ∀ {as : List Ability}, ab ∈ as →
+    ab.q P ≤ abilitiesQ P as
+  | a :: as, hm => by
+      simp only [abilitiesQ]
+      cases hm with
+      | head => omega
+      | tail _ hm => have := abilitiesQ_mem (P := P) hm; omega
+
+theorem abQ_le_cardsAbQ {P : Nat} {x : Card} : ∀ {cs : List Card}, x ∈ cs →
+    x.abQ P ≤ cardsAbQ P cs
+  | [], h => nomatch h
+  | c :: cs, h => by
+      cases h with
+      | head => simp only [cardsAbQ]; omega
+      | tail _ h =>
+          have := abQ_le_cardsAbQ (P := P) h
+          simp only [cardsAbQ]; omega
+
+theorem Ability.q_script {P : Nat} {ab : Ability} {e : Effect} (he : e ∈ ab.scripts) :
+    e.q P ≤ ab.q P := effectsQ_mem he
+
+theorem Ability.q_le {P : Nat} {C : List Card} {p : PokemonCard} (hp : Card.pokemon p ∈ C)
+    {ab : Ability} (hm : ab ∈ p.abilities) : ab.q P ≤ cardsAbQ P C :=
+  Nat.le_trans (abilitiesQ_mem hm) (abQ_le_cardsAbQ (x := .pokemon p) hp)
+
+/-- **Clause 4** (`AbilitySafe`, milestone M8a), for one card: no "as often as you like" Ability writes a damage
+bonus or reduction, and no Ability writes a rest-of-game one. "Once during your turn" and on-play
+Abilities may write modifiers and recycle (within clause 3 (b)): they are used at most
+`GameState.abPot` times in a turn. Decidable. Every deck without Abilities satisfies it. -/
+def Card.abilitySafe : Card → Bool
+  | .pokemon p => p.abilities.all fun ab => ab.scripts.all fun e =>
+      (ab.use != .unlimited || e.amt == 0) && e.amtAt .always == 0
+  | _ => true
+
+@[inherit_doc Card.abilitySafe]
+def GameState.AbilitySafe (g : GameState) : Prop := ∀ x ∈ g.allCards, x.abilitySafe = true
+
+instance (g : GameState) : Decidable g.AbilitySafe := by
+  unfold GameState.AbilitySafe; infer_instance
+
+theorem GameState.AbilitySafe.get {g : GameState} (h : g.AbilitySafe) {p : PokemonCard}
+    (hp : Card.pokemon p ∈ g.allCards) {ab : Ability} (hm : ab ∈ p.abilities) {e : Effect}
+    (he : e ∈ ab.scripts) : (ab.use = .unlimited → e.amt = 0) ∧ e.amtAt .always = 0 := by
+  have := List.all_eq_true.1 (List.all_eq_true.1 (h _ hp) ab hm) e he
+  rw [Bool.and_eq_true] at this
+  obtain ⟨h1, h2⟩ := this
+  refine ⟨fun hu => ?_, Nat.eq_of_beq_eq_true h2⟩
+  rw [hu] at h1
+  exact Nat.eq_of_beq_eq_true h1
+
+theorem GameState.AbilitySafe.of_perm {g g' : GameState} (h : g.AbilitySafe)
+    (hp : g'.allCards.Perm g.allCards) : g'.AbilitySafe :=
+  fun x hx => h x (hp.mem_iff.1 hx)
+
+/-- No Ability writes a damage bonus or reduction (milestone M8a): the hypothesis under which the
+per-game bound of decks that recycle nothing (`reach_boundedStores_noRecycle`) survives
+Abilities. Every deck without Abilities satisfies it. -/
+def GameState.AbilityQuiet (g : GameState) : Prop :=
+  ∀ p : PokemonCard, Card.pokemon p ∈ g.allCards → ∀ ab ∈ p.abilities, ∀ e ∈ ab.scripts,
+    e.amt = 0
+
+theorem GameState.AbilityQuiet.of_perm {g g' : GameState} (h : g.AbilityQuiet)
+    (hp : g'.allCards.Perm g.allCards) : g'.AbilityQuiet :=
+  fun p hx => h p (hp.mem_iff.1 hx)
+
+/-- **Faithful decks** (milestone MV: three clauses; milestone M8a: four). For a deck with no
+recycling (every deck before milestone MV) clause 3 holds (`GameState.NoRecycle.recycleSafe`), and
+for a deck without Abilities clause 4 holds and clauses 1 and 3 say what they said before, so for
+a deck with neither `Faithful` means what it meant before milestone MV: `LoopFree ∧ GXOnly`. -/
+def GameState.Faithful (g : GameState) : Prop :=
+  g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe ∧ g.AbilitySafe
 
 theorem attacksRec_nil {p : PokemonCard} (h : (Card.pokemon p).allRec = []) {atk : Attack}
     (hm : atk ∈ p.attacks) : atk.effect.recFilters = [] := by
@@ -858,8 +1039,438 @@ theorem attacksRec_nil {p : PokemonCard} (h : (Card.pokemon p).allRec = []) {atk
   | nil => rfl
   | cons f fs =>
       have := attacksRec_mem (f := f) hm (by rw [e]; exact .head _)
-      simp only [Card.allRec] at h
-      rw [h] at this; nomatch this
+      have h' : f ∈ (Card.pokemon p).allRec := List.mem_append_left _ this
+      rw [h] at h'; nomatch h'
+
+theorem abilitiesRec_nil {p : PokemonCard} (h : (Card.pokemon p).allRec = []) {ab : Ability}
+    (hm : ab ∈ p.abilities) {e' : Effect} (he : e' ∈ ab.scripts) : e'.recFilters = [] := by
+  cases e : e'.recFilters with
+  | nil => rfl
+  | cons f fs =>
+      have := abilitiesRec_mem (f := f) hm he (by rw [e]; exact .head _)
+      have h' : f ∈ (Card.pokemon p).allRec := List.mem_append_right _ this
+      rw [h] at h'; nomatch h'
+
+/-! ## Using an Ability (milestone M8a): what the marking keeps -/
+
+theorem UseAt.slotAmt {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
+    (s : Slot) : g₁.slotAmt s = g.slotAmt s := by
+  cases h <;> rfl
+
+theorem UseAt.discW {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
+    (w : Card → Nat) : g₁.discW w = g.discW w := by
+  cases h <;> rfl
+
+theorem UseAt.discAmt {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁) :
+    g₁.discAmt = g.discAmt := by
+  cases h <;> rfl
+
+theorem UseAt.flags {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁) :
+    Flags g g₁ := by
+  cases h <;> exact ⟨rfl, rfl, rfl⟩
+
+theorem UseAt.supporterPlayed {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁) :
+    g₁.cur.supporterPlayed = g.cur.supporterPlayed := by
+  cases h <;> rfl
+
+theorem PlayFromHand.slotAmt {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) (s : Slot) : g₁.slotAmt s = g.slotAmt s := by
+  cases h <;> rfl
+
+theorem PlayFromHand.discW {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) (wt : Card → Nat) : g₁.discW wt = g.discW wt := by
+  cases h <;> rfl
+
+theorem PlayFromHand.discAmt {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.discAmt = g.discAmt := by
+  cases h <;> rfl
+
+theorem PlayFromHand.flags {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : Flags g g₁ := by
+  cases h <;> exact ⟨rfl, rfl, rfl⟩
+
+theorem PlayFromHand.supporterPlayed {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.cur.supporterPlayed = g.cur.supporterPlayed := by
+  cases h <;> rfl
+
+/-! ## Counting Ability uses within a turn (milestone M8a)
+
+A "once during your turn" Ability can be used once per turn by each Pokémon in play that has it,
+and an on-play Ability once each time a Pokémon is played from the hand. Neither count is bounded
+by the Bench alone: a Pokémon can enter play, be Knocked Out, and be replaced within the turn, and
+an evolved Pokémon may use its new Ability. What bounds them is a potential, `GameState.abPot`, of
+the player to move: one unit for each of their Pokémon in play that has not used an Ability this
+turn, two for each that can still evolve this turn (`fresh = false`), two for each free place in
+play (at most `benchLimit + 1`), and two for each Prize card the opponent has left. Within a turn
+no move raises it; using an Ability on an unused Pokémon lowers it by one; playing a Basic Pokémon
+or evolving lowers it by at least one (a new place is filled, or an evolution spent, and the new
+Pokémon is unused); Knocking Out one of the player's own Pokémon frees a place but gives the
+opponent at least one Prize card. So the uses of these Abilities in one turn are at most the
+potential at the start of the turn, which is at most `potBound` of the number of cards. The bound
+rests on the model having no effect that returns a Pokémon in play to the hand or deck (a Pokémon
+leaves play only by a Knock Out, which costs a Prize card); with such an effect (Scoop Up Cyclone)
+the same Pokémon card could re-enter play and use or trigger its Ability again. -/
+
+/-- The weight of a Pokémon in play in the potential: 1 if it has not used an Ability this turn,
+2 more if it can still evolve this turn. -/
+def InPlay.abW (p : InPlay) : Nat := (if p.used then 0 else 1) + (if p.fresh then 0 else 2)
+
+theorem InPlay.abW_le (p : InPlay) : p.abW ≤ 3 := by
+  unfold InPlay.abW; split <;> split <;> omega
+
+def abWs : List InPlay → Nat
+  | [] => 0
+  | p :: ps => p.abW + abWs ps
+
+def abWo : Option InPlay → Nat
+  | none => 0
+  | some p => p.abW
+
+def optN : Option InPlay → Nat
+  | none => 0
+  | some _ => 1
+
+theorem optN_le (o : Option InPlay) : optN o ≤ 1 := by cases o <;> simp [optN]
+
+/-- The potential of one player's Pokémon in play. -/
+def PlayerState.abPot (s : PlayerState) : Nat :=
+  abWo s.active + abWs s.bench + 2 * (benchLimit + 1 - (optN s.active + s.bench.length))
+
+/-- **The potential of the player to move**: their Pokémon in play, and two units for each Prize
+card the opponent has left. -/
+def GameState.abPot (g : GameState) : Nat := g.cur.abPot + 2 * g.opp.prizes.length
+
+theorem abWs_append (a b : List InPlay) : abWs (a ++ b) = abWs a + abWs b := by
+  induction a with
+  | nil => simp only [List.nil_append, abWs, Nat.zero_add]
+  | cons p ps ih => simp only [List.cons_append, abWs, ih]; omega
+
+theorem abWs_split {b₁ b₂ : List InPlay} {q q' : InPlay} (h : q'.abW = q.abW) :
+    abWs (b₁ ++ q' :: b₂) = abWs (b₁ ++ q :: b₂) := by
+  simp only [abWs_append, abWs, h]
+
+theorem abWs_map {f : InPlay → InPlay} (hf : ∀ p, (f p).abW = p.abW) :
+    ∀ b : List InPlay, abWs (b.map f) = abWs b
+  | [] => rfl
+  | p :: ps => by simp only [List.map_cons, abWs, hf p, abWs_map hf ps]
+
+theorem abWo_map {f : InPlay → InPlay} (hf : ∀ p, (f p).abW = p.abW) :
+    ∀ o : Option InPlay, abWo (o.map f) = abWo o
+  | none => rfl
+  | some p => hf p
+
+theorem optN_map (f : InPlay → InPlay) : ∀ o : Option InPlay, optN (o.map f) = optN o
+  | none => rfl
+  | some _ => rfl
+
+theorem abWs_le : ∀ b : List InPlay, abWs b ≤ 3 * b.length
+  | [] => Nat.le_refl _
+  | p :: ps => by
+      have := p.abW_le; have := abWs_le ps
+      simp only [abWs, List.length_cons]; omega
+
+theorem abWo_le : ∀ o : Option InPlay, abWo o ≤ 3 * optN o
+  | none => Nat.le_refl _
+  | some p => by have := p.abW_le; simp only [abWo, optN]; omega
+
+theorem InPlay.abW_hitBench (n : Nat) (p : InPlay) : (p.hitBench n).abW = p.abW := by
+  unfold InPlay.hitBench; split <;> rfl
+
+/-- A player state whose Pokémon in play have the same weights and number has the same potential. -/
+theorem PlayerState.abPot_congr {s s' : PlayerState}
+    (h₁ : abWo s'.active + abWs s'.bench = abWo s.active + abWs s.bench)
+    (h₂ : optN s'.active + s'.bench.length = optN s.active + s.bench.length) :
+    s'.abPot = s.abPot := by
+  simp only [PlayerState.abPot]; omega
+
+/-- **A zone step never raises its player's potential**; putting a Basic Pokémon onto the Bench
+fills a place with an unused Pokémon. -/
+theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
+    s'.abPot ≤ s.abPot := by
+  cases h with
+  | @move w src dst f q s s' t r hs hq hp =>
+      obtain ⟨_, ha, hb⟩ := hp.fields
+      exact Nat.le_of_eq (PlayerState.abPot_congr (by rw [ha, hb, Src.set_active, Src.set_bench])
+        (by rw [ha, hb, Src.set_active, Src.set_bench]))
+  | drawTo => exact Nat.le_refl _
+  | @attachActive w src f tf s r t a hs ha ht =>
+      have e : (a.addEnergy (.energy t)).abW = a.abW := rfl
+      exact Nat.le_of_eq (PlayerState.abPot_congr (by simp only [Src.set_bench, ha, abWo, e])
+        (by simp [ha, optN]))
+  | @attachBench w src f tf s r t q b₁ b₂ hs hb ht =>
+      exact Nat.le_of_eq (PlayerState.abPot_congr
+        (by simp only [Src.set_active, hb, abWs_split (b₁ := b₁) (b₂ := b₂)
+              (q := q) (q' := q.addEnergy (.energy t)) rfl])
+        (by simp [hb]))
+  | attachNone => exact Nat.le_refl _
+  | @putBench w src f s r p hs hst hhp hb =>
+      have h1 := optN_le s.active
+      simp only [benchLimit] at hb
+      simp only [PlayerState.abPot, Src.set_active, abWs_append, abWs,
+        List.length_append, List.length_cons, List.length_nil, benchLimit]
+      have : (InPlay.ofBasic p).abW = 1 := rfl
+      omega
+  | putBenchNone => exact Nat.le_refl _
+  | @discardActive w f q s a t r ha hs hq =>
+      have e : InPlay.abW { a with energy := r } = a.abW := rfl
+      exact Nat.le_of_eq (PlayerState.abPot_congr (by simp only [ha, abWo, e])
+        (by simp [ha, optN]))
+  | @discardBench w f q s p b₁ b₂ t r hb hs hq =>
+      exact Nat.le_of_eq (PlayerState.abPot_congr
+        (by simp only [hb, abWs_split (b₁ := b₁) (b₂ := b₂) (q := p) (q' := { p with energy := r })
+              rfl])
+        (by simp [hb]))
+  | discardNone => exact Nat.le_refl _
+  | @moveAB w f s a q b₁ b₂ e₁ e₂ y ha he hx hb =>
+      exact Nat.le_of_eq (PlayerState.abPot_congr
+        (by simp only [ha, hb, abWo, abWs_split (b₁ := b₁) (b₂ := b₂) (q := q)
+              (q' := q.addEnergy y) rfl]; rfl)
+        (by simp [ha, hb, optN]))
+  | @moveBA w f s a q b₁ b₂ e₁ e₂ y ha hb he hx =>
+      exact Nat.le_of_eq (PlayerState.abPot_congr
+        (by simp only [ha, hb, abWo, abWs_split (b₁ := b₁) (b₂ := b₂) (q := q)
+              (q' := { q with energy := e₁ ++ e₂ }) rfl]; rfl)
+        (by simp [ha, hb, optN]))
+  | @moveBB w f s q q' b₁ b₂ c₁ c₂ e₁ e₂ y hb he hx hc =>
+      have h3 := congrArg abWs hc
+      have h4 := congrArg List.length hc
+      rw [abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := { q with energy := e₁ ++ e₂ }) rfl] at h3
+      exact Nat.le_of_eq (PlayerState.abPot_congr
+        (by simp only [hb, abWs_split (b₁ := c₁) (b₂ := c₂) (q := q') (q' := q'.addEnergy y) rfl,
+              ← h3])
+        (by simp only [hb, List.length_append, List.length_cons] at h4 ⊢; omega))
+  | moveNone => exact Nat.le_refl _
+
+/-- Moving a damage counter keeps the weights and the number of Pokémon in play. -/
+theorem CMove.abPot {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
+    (h : CMove f noKO a b a' b') :
+    abWo a' + abWs b' = abWo a + abWs b ∧ optN a' + b'.length = optN a + b.length := by
+  cases h with
+  | @ab x q b₁ b₂ =>
+      have e1 : InPlay.abW { x with damage := x.damage - 1 } = x.abW := rfl
+      have e2 : (q.addDamage 1).abW = q.abW := rfl
+      simp only [abWo, optN, abWs_append, abWs, e1, e2, List.length_append, List.length_cons,
+        and_self]
+  | @ba x q b₁ b₂ =>
+      have e1 : (x.addDamage 1).abW = x.abW := rfl
+      have e2 : InPlay.abW { q with damage := q.damage - 1 } = q.abW := rfl
+      simp only [abWo, optN, abWs_append, abWs, e1, e2, List.length_append, List.length_cons,
+        and_self]
+  | @bb a q r b₁ b₂ c₁ c₂ hq hd hc =>
+      have e3 := congrArg abWs hc
+      have e4 := congrArg List.length hc
+      have e1 : InPlay.abW { q with damage := q.damage - 1 } = q.abW := rfl
+      have e2 : (r.addDamage 1).abW = r.abW := rfl
+      simp only [abWs_append, abWs, e1, List.length_append, List.length_cons] at e3 e4
+      simp only [abWs_append, abWs, e2, List.length_append, List.length_cons]
+      exact ⟨by omega, by omega⟩
+
+/-- **No step of an effect raises the potential.** -/
+theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot ≤ g.abPot := by
+  induction h with
+  | iteT _ _ _ ih => exact ih
+  | iteF _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact Nat.le_refl _
+  | iterCons _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
+  | @zone e w g s' hw hz =>
+      cases w with
+      | own =>
+          have := hz.abPot_le
+          simp only [GameState.side] at this
+          simp only [GameState.abPot, GameState.updSide]
+          have e2 : (g.cur.setZones s').abPot = s'.abPot := rfl
+          omega
+      | opp => exact Nat.le_refl _
+  | @heal g p n h =>
+      have e : ({ p with damage := p.damage - n } : InPlay).abW = p.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, h, abWo, optN, e]; omega
+  | @cure g p h =>
+      have e : p.cure.abW = p.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, h, abWo, optN, e]; omega
+  | @selfDamage g p n h =>
+      have e : ({ p with damage := p.damage + n } : InPlay).abW = p.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, h, abWo, optN, e]; omega
+  | @healAll g p h =>
+      have e : ({ p with damage := 0 } : InPlay).abW = p.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, h, abWo, optN, e]; omega
+  | @drain g p q a n hv h hq =>
+      have e : ({ q with damage := q.damage - g.dealt n } : InPlay).abW = q.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, hq, abWo, optN, e]; omega
+  | linger w s m g => cases w <;> exact Nat.le_refl _
+  | @touchActive e w f g p he h =>
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          have e : (p.setMarks f).abW = p.abW := rfl
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, h, abWo, optN, e]; omega
+      | opp => exact Nat.le_refl _
+  | @touchBench e w f g q b₁ b₂ he h =>
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, h,
+            abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := q.setMarks f) rfl,
+            List.length_append, List.length_cons]; omega
+      | opp => exact Nat.le_refl _
+  | unmark w m g =>
+      cases w with
+      | own =>
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, PlayerState.unmark,
+            abWo_map (f := InPlay.setMarks (Marks.set m false)) (fun _ => rfl),
+            abWs_map (f := InPlay.setMarks (Marks.set m false)) (fun _ => rfl), optN_map,
+            List.length_map]; omega
+      | opp => exact Nat.le_refl _
+  | @benchCounters g q b₁ b₂ w n h =>
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, h,
+            abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := { q with damage := q.damage + n }) rfl,
+            List.length_append, List.length_cons]; omega
+      | opp => exact Nat.le_refl _
+  | spreadCounters w n g =>
+      cases w with
+      | own =>
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot,
+            abWs_map (f := InPlay.addDamage n) (fun _ => rfl), List.length_map]; omega
+      | opp => exact Nat.le_refl _
+  | @benchHeal g q b₁ b₂ n h =>
+      simp only [GameState.abPot, PlayerState.abPot, h,
+        abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := { q with damage := q.damage - n }) rfl,
+        List.length_append, List.length_cons]; omega
+  | @switch g a q b₁ b₂ w ha hb =>
+      cases w with
+      | own =>
+          simp only [GameState.side] at ha hb
+          have e1 : a.cure.abW = a.abW := rfl
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, ha, hb, abWo, optN,
+            abWs_append, abWs, e1, List.length_append, List.length_cons]; omega
+      | opp => exact Nat.le_refl _
+  | @benchDamage g q b₁ b₂ w n h =>
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, h,
+            abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (InPlay.abW_hitBench n q),
+            List.length_append, List.length_cons]; omega
+      | opp => exact Nat.le_refl _
+  | spreadDamage w n g =>
+      cases w with
+      | own =>
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot,
+            abWs_map (InPlay.abW_hitBench n), List.length_map]; omega
+      | opp => exact Nat.le_refl _
+  | moveCounter h =>
+      obtain ⟨h1, h2⟩ := h.abPot
+      simp only [GameState.abPot, PlayerState.abPot]
+      omega
+  | _ => exact Nat.le_refl _
+
+theorem prizes_takePrizes_le {n : Nat} {s : PlayerState} {c : Card} {ps : List Card}
+    (hp : s.prizes = c :: ps) (hn : 0 < n) :
+    (s.takePrizes n).prizes.length + 1 ≤ s.prizes.length := by
+  simp only [PlayerState.takePrizes, List.length_drop, hp, List.length_cons]; omega
+
+/-- **No Knock Out move raises the potential**: Knocking Out one of the player's own Pokémon
+frees a place (two units) and gives the opponent at least one Prize card (two units). -/
+theorem KOMove.abPot_le {g g' : GameState} (h : KOMove g g') : g'.abPot ≤ g.abPot := by
+  cases h with
+  | knockOut => exact Nat.le_refl _
+  | promote => exact Nat.le_refl _
+  | noPokemon => exact Nat.le_refl _
+  | @knockOutOwn p c ps ha hk hp =>
+      have := prizes_takePrizes_le (n := p.top.prizeCount) hp p.top.ruleBox.prizes_pos
+      have := p.abW_le
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN]
+      omega
+  | @promoteOwn q b₁ b₂ ha hb =>
+      simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs,
+        List.length_append, List.length_cons]; omega
+  | noPokemonOwn => exact Nat.le_refl _
+  | knockOutBench => exact Nat.le_refl _
+  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
+      have := prizes_takePrizes_le (n := p.top.prizeCount) hp p.top.ruleBox.prizes_pos
+      have := p.abW_le
+      simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs,
+        List.length_append, List.length_cons]
+      omega
+
+theorem Resolve.abPot_le {g g' : GameState} (h : Resolve g g') : g'.abPot ≤ g.abPot := by
+  induction h with
+  | done => exact Nat.le_refl _
+  | step _ hm _ ih => exact Nat.le_trans ih hm.abPot_le
+
+theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') : g'.abPot ≤ g.abPot := by
+  induction h with
+  | prim _ _ hr hk => exact Nat.le_trans hk.abPot_le hr.abPot_le
+  | stop => exact Nat.le_refl _
+  | iteT _ _ _ _ ih => exact ih
+  | iteF _ _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact Nat.le_refl _
+  | iterCons _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
+
+/-- **A play from the hand lowers the potential by at least one**: a Basic Pokémon fills a place
+(two units) and is unused (one unit); an evolution spends the Pokémon's evolution for the turn
+(two units) and resets its use of an Ability (at most one unit). -/
+theorem PlayFromHand.abPot {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.abPot + 1 ≤ g.abPot := by
+  cases h with
+  | @basic l₁ l₂ p hh hs hhp hb =>
+      have := optN_le g.cur.active
+      simp only [benchLimit] at hb
+      have e : (InPlay.ofBasic p).abW = 1 := rfl
+      simp only [GameState.abPot, PlayerState.abPot, abWs_append, abWs, e, List.length_append,
+        List.length_cons, List.length_nil, benchLimit]
+      omega
+  | @evolve l₁ l₂ p a hh ha he hfr =>
+      have : a.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
+      have e : InPlay.abW { a with
+          top := p, under := Card.pokemon a.top :: a.under, rot := .none,
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+        rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
+  | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr =>
+      have : q.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
+      have e : InPlay.abW { q with
+          top := p, under := Card.pokemon q.top :: q.under, rot := .none,
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+        rfl
+      simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs, e,
+        List.length_append, List.length_cons]; omega
+
+/-- **Using an Ability never raises the potential, and lowers it by one** when the Pokémon had
+not used an Ability this turn. -/
+theorem UseAt.abPot {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁) :
+    g₁.abPot + (if x.used then 0 else 1) = g.abPot := by
+  have e : x.markUsed.abW + (if x.used then 0 else 1) = x.abW := by
+    unfold InPlay.abW InPlay.markUsed; cases x.used <;> simp <;> omega
+  cases h with
+  | active ha =>
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN]; omega
+  | bench hb =>
+      simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs, List.length_append,
+        List.length_cons]; omega
+
+/-- The potential is at most `potBound` of the number of cards in the game. -/
+def potBound (L : Nat) : Nat := 5 * L + 2 * (benchLimit + 1)
+
+theorem GameState.abPot_le_bound (g : GameState) : g.abPot ≤ potBound g.allCards.length := by
+  have h1 := abWo_le g.cur.active
+  have h2 := abWs_le g.cur.bench
+  have h3 : optN g.cur.active + g.cur.bench.length ≤ g.allCards.length := by
+    have := Enum.length_le_benchCardList g.cur.bench
+    have : optN g.cur.active ≤ (optCardList g.cur.active).length := by
+      cases g.cur.active <;> simp [optN, optCardList, InPlay.cardList]
+    simp only [GameState.allCards, PlayerState.allCards, List.length_append]; omega
+  have h4 : g.opp.prizes.length ≤ g.allCards.length := by
+    simp only [GameState.allCards, PlayerState.allCards, List.length_append]; omega
+  simp only [GameState.abPot, PlayerState.abPot, potBound]; omega
 
 /-! ## The invariant -/
 
@@ -966,10 +1577,10 @@ theorem atkRes_gxT_true {A : Nat} {atk : Attack} {g g'' : GameState} (hgv : atk.
   omega
 
 /-- **Every move preserves the invariant**, for cards satisfying clauses 1 and 2 that recycle
-nothing (`NoRecycle`) and whose attacks
-write at most `A`. -/
+nothing (`NoRecycle`), whose Abilities write nothing (`AbilityQuiet`, milestone M8a) and whose
+attacks write at most `A`. -/
 theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g)
-    (hL : g.LoopFree) (hG : g.GXOnly) (hN : g.NoRecycle)
+    (hL : g.LoopFree) (hG : g.GXOnly) (hN : g.NoRecycle) (hQ : g.AbilityQuiet)
     (hA : ∀ x ∈ g.allCards, x.atkAmt ≤ A) : Inv S A g' := by
   cases hm with
   | playBasic => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
@@ -998,10 +1609,31 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         e.amtAt (hr.slot_le hlf) e.amtAt_le_amt (Nat.le_trans ?_ hk.disc)
       · simp only [GameState.discAmt, cardsAmt]; omega
       · simp only [GameState.discAmt, cardsAmt, Card.amt]; omega
+  | @onPlay g₁ g'' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
+      have hxC := hp.top_mem
+      have he := ab.script_mem none
+      have hlf := Card.loopFree_ability (hL _ hxC) hm he
+      have hk' := hr.keeps (abilitiesRec_nil (hN _ hxC) hm he)
+      have h0 := hQ _ hxC ab hm _ he
+      have hsl := hr.slot_le hlf
+      refine hi.keeps ⟨by rw [← hp.discAmt]; exact hk'.disc, hk'.attacked.trans hp.flags.attacked,
+        hk'.gxCur.trans hp.flags.gxCur, hk'.gxOpp.trans hp.flags.gxOpp⟩ fun s => ?_
+      have h1 := hsl s; have h2 := (ab.script none).amtAt_le_amt s; rw [hp.slotAmt] at h1; omega
+  | @ability g₁ g'' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
+      have hxC := hu.top_mem
+      have he := ab.script_mem (some sp)
+      have hlf := Card.loopFree_ability (hL _ hxC) hm he
+      have hk' := hr.keeps (abilitiesRec_nil (hN _ hxC) hm he)
+      have h0 := hQ _ hxC ab hm _ he
+      have hsl := hr.slot_le hlf
+      refine hi.keeps ⟨by rw [← hu.discAmt]; exact hk'.disc, hk'.attacked.trans hu.flags.attacked,
+        hk'.gxCur.trans hu.flags.gxCur, hk'.gxOpp.trans hu.flags.gxOpp⟩ fun s => ?_
+      have h1 := hsl s; have h2 := (ab.script (some sp)).amtAt_le_amt s; rw [hu.slotAmt] at h1
+      omega
   | @attack g'' a atk ha hm hc hs hn hf hbt hst hr hl hgx =>
       show Inv S A (atkRes atk g'')
       have hmem := GameState.top_mem_cur_active ha
-      have hlf : atk.effect.loopFree = true := List.all_eq_true.1 (hL _ hmem) atk hm
+      have hlf : atk.effect.loopFree = true := Card.loopFree_attack (hL _ hmem) hm
       have hamt : atk.effect.amt ≤ A := by
         have h1 := attacksAmt_mem hm
         have h2 := hA _ hmem
@@ -1061,13 +1693,13 @@ def storeBoundNR (g₀ : GameState) : Nat :=
   g₀.storeTotal + cardsAmt g₀.allCards + 3 * cardsAtkAmt g₀.allCards
 
 theorem reach_inv {g₀ g : GameState} (hL : g₀.LoopFree) (hG : g₀.GXOnly) (hN : g₀.NoRecycle)
-    (h : Reach g₀ g) :
+    (hQ : g₀.AbilityQuiet) (h : Reach g₀ g) :
     Inv g₀.storeTotal (cardsAtkAmt g₀.allCards) g := by
   induction h with
   | refl => exact Inv.start _ _
   | step hr _ hm ih =>
       have hp := hr.perm
-      exact ih.move hm (hL.of_perm hp) (hG.of_perm hp) (hN.of_perm hp)
+      exact ih.move hm (hL.of_perm hp) (hG.of_perm hp) (hN.of_perm hp) (hQ.of_perm hp)
         (fun x hx => atkAmt_le_cardsAtkAmt (hp.mem_iff.1 hx))
 
 theorem modsLe_of {B : Nat} {m : Mods} (h : m.amt ≤ B) : Enum.ModsLe B m := by
@@ -1076,12 +1708,15 @@ theorem modsLe_of {B : Nat} {m : Mods} (h : m.amt ≤ B) : Enum.ModsLe B m := by
 
 /-- **Without recycling, the bound of master.** From a start state `g₀` satisfying clauses 1 and
 2 whose cards recycle nothing (`NoRecycle`: no effect moves a card out of a discard pile to a hand
-or deck; every deck before milestone MV), every reachable state has every slot's bonus and
-reduction at most `storeBoundNR g₀`: each Trainer card is then played at most once per game. This
-is the statement `reach_boundedStores` had before milestone MV, with its bound. -/
+or deck; every deck before milestone MV) and whose Abilities write nothing (`AbilityQuiet`, added
+by milestone M8a: an Ability writes every turn, so its amounts are not counted once per game),
+every reachable state has every slot's bonus and reduction at most `storeBoundNR g₀`: each Trainer
+card is then played at most once per game. This is the statement `reach_boundedStores` had before
+milestone MV, with its bound; for decks without Abilities the added hypothesis holds. -/
 theorem reach_boundedStores_noRecycle {g₀ g : GameState} (hL : g₀.LoopFree) (hG : g₀.GXOnly)
-    (hN : g₀.NoRecycle) (h : Reach g₀ g) : g.BoundedStores (storeBoundNR g₀) := by
-  have hi := reach_inv hL hG hN h
+    (hN : g₀.NoRecycle) (hQ : g₀.AbilityQuiet) (h : Reach g₀ g) :
+    g.BoundedStores (storeBoundNR g₀) := by
+  have hi := reach_inv hL hG hN hQ h
   have hd : g.discAmt ≤ cardsAmt g₀.allCards :=
     Nat.le_trans g.discAmt_le (Nat.le_of_eq (cardsAmt_perm h.perm))
   have ha := atkT_le (cardsAtkAmt g₀.allCards) g
@@ -1101,13 +1736,17 @@ theorem reach_boundedStores_noRecycle {g₀ g : GameState} (hL : g₀.LoopFree) 
 
 With recycling a Trainer card can be played more than once per game, so the amounts in the
 discard piles no longer bound what Trainers have written. They still bound what Trainers write in
-one turn, under clause 3: before the turn's attack no effect returns a non-Supporter writer from a
-discard pile, so each such card is played at most once in the turn, and at most one Supporter is.
-The invariant tracks, as witnesses, the amount `X₀` Trainers wrote this turn, `X₁` last turn and
-`X₂` the turn before (each at most `2 P`, `P` the Trainer amounts of all cards), and the weight
-`D` of the non-Supporter writers in the discard piles when the turn began; carried amounts expire
-within three turn boundaries, as for attacks. The rest-of-game slot is bounded as before, by the
-rest-of-game Trainer amounts in the discard piles, which no effect recycles (clause 3 (b)). -/
+one turn, under clause 3: before the turn's attack no Trainer effect and no "as often as you like"
+Ability returns a non-Supporter writer from a discard pile, so each such card is played at most
+once in the turn, except after a once-per-turn or on-play Ability has returned it, and at most one
+Supporter is. The invariant tracks, as witnesses, the amount `X₀` Trainers and Abilities wrote this
+turn, `X₁` last turn and `X₂` the turn before (each at most `2 P + Q · K`, `P` the Trainer amounts
+of all cards, `Q` what one bounded Ability use can write and recycle, `K` a bound on the
+potential), the weight `D` of the non-Supporter writers in the discard piles when the turn began,
+and the potential `E` when the turn began (milestone M8a); carried amounts expire within three turn
+boundaries, as for attacks. The rest-of-game slot is bounded as before, by the rest-of-game
+Trainer amounts in the discard piles, which no effect recycles (clause 3 (b)); no Ability writes
+it (clause 4). -/
 
 /-- `P` once the player to move has played a Supporter this turn, else 0. -/
 def supT (P : Nat) (g : GameState) : Nat := if g.cur.supporterPlayed then P else 0
@@ -1115,78 +1754,235 @@ def supT (P : Nat) (g : GameState) : Nat := if g.cur.supporterPlayed then P else
 theorem supT_le (P : Nat) (g : GameState) : supT P g ≤ P := by
   unfold supT; split <;> omega
 
-/-- **The per-turn invariant.** -/
-structure TInv (S A P : Nat) (g : GameState) (X₀ X₁ X₂ D : Nat) : Prop where
-  x0 : X₀ ≤ P + P
-  x1 : X₁ ≤ P + P
-  x2 : X₂ ≤ P + P
-  turn : g.attacked = false → D + X₀ ≤ g.discW Card.wAmt + supT P g
+/-- **No move but the end of the turn raises the potential** (milestone M8a). -/
+theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
+    (hc : g'.curIsFirst = g.curIsFirst) : g'.abPot ≤ g.abPot := by
+  cases hm with
+  | @playBasic l₁ l₂ p hh hs hhp hb hbt hst hat =>
+      have := optN_le g.cur.active
+      simp only [benchLimit] at hb
+      have e : (InPlay.ofBasic p).abW = 1 := rfl
+      simp only [GameState.abPot, PlayerState.abPot, abWs_append, abWs, e, List.length_append,
+        List.length_cons, List.length_nil, benchLimit]
+      omega
+  | @attach l₁ l₂ t a hh hf ha =>
+      have e : ({ a with energy := Card.energy t :: a.energy } : InPlay).abW = a.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
+  | @evolve l₁ l₂ p a hh ha he hfr =>
+      have : a.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
+      have e : InPlay.abW { a with
+          top := p, under := Card.pokemon a.top :: a.under, rot := .none,
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+        rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
+  | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb =>
+      simp only [GameState.abPot, PlayerState.abPot, hb,
+        abWs_split (b₁ := b₁) (b₂ := b₂) (q := q)
+          (q' := { q with energy := Card.energy t :: q.energy }) rfl,
+        List.length_append, List.length_cons]; omega
+  | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr =>
+      have : q.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
+      have e : InPlay.abW { q with
+          top := p, under := Card.pokemon q.top :: q.under, rot := .none,
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+        rfl
+      simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs, e,
+        List.length_append, List.length_cons]; omega
+  | @retreat a q b₁ b₂ paid rest ha hb =>
+      have e : InPlay.abW { a with
+          energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } =
+          a.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs, e,
+        List.length_append, List.length_cons]; omega
+  | item _ _ _ hr => exact hr.abPot_le
+  | supporter _ _ _ _ hr => exact hr.abPot_le
+  | ability hu _ _ _ _ _ _ _ _ hr =>
+      have := hu.abPot
+      exact Nat.le_trans hr.abPot_le (by omega)
+  | onPlay hp _ _ _ _ _ hr =>
+      have := hp.abPot
+      exact Nat.le_trans hr.abPot_le (by omega)
+  | attack _ _ _ _ _ _ _ _ hr => exact hr.abPot_le
+  | @attackConfused a atk ha =>
+      have e : ({ a with damage := a.damage + 3 } : InPlay).abW = a.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
+  | knockOut ha hk hp => exact (KOMove.knockOut ha hk hp).abPot_le
+  | promote ha hb => exact (KOMove.promote ha hb).abPot_le
+  | noPokemon ha hb => exact (KOMove.noPokemon ha hb).abPot_le
+  | knockOutOwn ha hk hp => exact (KOMove.knockOutOwn ha hk hp).abPot_le
+  | promoteOwn ha hb => exact (KOMove.promoteOwn ha hb).abPot_le
+  | noPokemonOwn ha hb => exact (KOMove.noPokemonOwn ha hb).abPot_le
+  | knockOutBench hb hk hp => exact (KOMove.knockOutBench hb hk hp).abPot_le
+  | knockOutBenchOwn hb hk hp => exact (KOMove.knockOutBenchOwn hb hk hp).abPot_le
+  | endTurn => simp at hc
+  | startTurn => exact Nat.le_refl _
+  | deckOut => exact Nat.le_refl _
+
+/-- **The per-turn invariant.** The witnesses: `X₀`, `X₁`, `X₂` the amounts that Trainer cards
+and Abilities wrote this turn, last turn and the turn before; `D` the weight of the
+non-Supporter writers in the discard piles when the turn began; and (milestone M8a) `E` the
+potential `GameState.abPot` when the turn began. Within the turn, before its attack, the potential
+does not rise (`pot`), and `turn` says what has been written so far is paid for: by the
+non-Supporter writers that went to the discard piles (each such card played this turn), by the
+Supporter, and by `Q` for each unit of potential spent (each "once during your turn" or on-play
+Ability used; `Q` bounds what one use writes, plus what it can recycle). -/
+structure TInv (S A P Q K : Nat) (g : GameState) (X₀ X₁ X₂ D E : Nat) : Prop where
+  x0 : X₀ ≤ P + P + Q * K
+  x1 : X₁ ≤ P + P + Q * K
+  x2 : X₂ ≤ P + P + Q * K
+  e : E ≤ K
+  pot : g.attacked = false → g.abPot ≤ E
+  turn : g.attacked = false → D + X₀ + Q * g.abPot ≤ g.discW Card.wAmt + supT P g + Q * E
   after : g.slotAmt .after ≤ S + X₀ + atkT A g
   next : g.slotAmt .next ≤ S + X₀ + X₁ + A + atkT A g
   now : g.slotAmt .now ≤ S + X₀ + X₁ + X₂ + A + A + atkT A g
   always : g.slotAmt .always ≤ S + g.discW Card.alAmt + gxT A g
 
-theorem TInv.start (g : GameState) (A P : Nat) :
-    TInv g.storeTotal A P g 0 0 0 (g.discW Card.wAmt) := by
-  refine ⟨Nat.zero_le _, Nat.zero_le _, Nat.zero_le _, fun _ => by omega, ?_, ?_, ?_, ?_⟩ <;>
+theorem TInv.start (g : GameState) (A P Q K : Nat) (hK : g.abPot ≤ K) :
+    TInv g.storeTotal A P Q K g 0 0 0 (g.discW Card.wAmt) g.abPot := by
+  refine ⟨Nat.zero_le _, Nat.zero_le _, Nat.zero_le _, hK, fun _ => Nat.le_refl _,
+    fun _ => by omega, ?_, ?_, ?_, ?_⟩ <;>
     simp only [GameState.storeTotal] <;> omega
 
 /-- A step that writes nothing and recycles no weighted card. -/
-theorem TInv.frame {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hi : TInv S A P g X₀ X₁ X₂ D)
+theorem TInv.frame {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+    (hi : TInv S A P Q K g X₀ X₁ X₂ D E)
     (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s) (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt)
     (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt) (ha : atkT A g ≤ atkT A g')
-    (ht : g'.attacked = false → g.attacked = false ∧ supT P g ≤ supT P g')
-    (hx : gxT A g ≤ gxT A g') : TInv S A P g' X₀ X₁ X₂ D := by
+    (ht : g'.attacked = false → g.attacked = false ∧ supT P g ≤ supT P g' ∧ g'.abPot ≤ g.abPot)
+    (hx : gxT A g ≤ gxT A g') : TInv S A P Q K g' X₀ X₁ X₂ D E := by
   have h1 := hs .after; have h2 := hs .next; have h3 := hs .now; have h4 := hs .always
   have := hi.after; have := hi.next; have := hi.now; have := hi.always
-  refine ⟨hi.x0, hi.x1, hi.x2, fun hf => ?_, by omega, by omega, by omega, by omega⟩
-  obtain ⟨hg, hsup⟩ := ht hf
-  have := hi.turn hg
-  omega
+  refine ⟨hi.x0, hi.x1, hi.x2, hi.e, fun hf => ?_, fun hf => ?_, by omega, by omega, by omega,
+    by omega⟩
+  · obtain ⟨hg, -, hp⟩ := ht hf
+    exact Nat.le_trans hp (hi.pot hg)
+  · obtain ⟨hg, hsup, hp⟩ := ht hf
+    have := hi.turn hg
+    have := Nat.mul_le_mul_left Q hp
+    omega
 
 /-- A step that changes no flag, store or discard pile weight of interest. -/
-theorem TInv.same {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hi : TInv S A P g X₀ X₁ X₂ D)
+theorem TInv.same {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+    (hi : TInv S A P Q K g X₀ X₁ X₂ D E)
     (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt) (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt)
     (ha : g'.attacked = g.attacked) (hsp : g'.cur.supporterPlayed = g.cur.supporterPlayed)
     (hgc : g'.cur.gxUsed = g.cur.gxUsed) (hgo : g'.opp.gxUsed = g.opp.gxUsed)
-    (hs : ∀ s, g'.slotAmt s = g.slotAmt s) : TInv S A P g' X₀ X₁ X₂ D :=
+    (hs : ∀ s, g'.slotAmt s = g.slotAmt s) (hp : g'.abPot ≤ g.abPot) :
+    TInv S A P Q K g' X₀ X₁ X₂ D E :=
   hi.frame (fun s => Nat.le_of_eq (hs s)) hW hAl (Nat.le_of_eq (atkT_congr ha).symm)
-    (fun hf => ⟨ha ▸ hf, by simp only [supT, hsp]; exact Nat.le_refl _⟩)
+    (fun hf => ⟨ha ▸ hf, by simp only [supT, hsp]; exact Nat.le_refl _, hp⟩)
     (Nat.le_of_eq (gxT_congr hgc hgo).symm)
 
-/-- The end of the turn: the witnesses move one turn back. -/
-theorem TInv.endTurn {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hi : TInv S A P g X₀ X₁ X₂ D)
+/-- The end of the turn: the witnesses move one turn back, and the potential is counted afresh
+for the new player to move. -/
+theorem TInv.endTurn {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+    (hi : TInv S A P Q K g X₀ X₁ X₂ D E)
     (h0 : g'.slotAmt .after = 0) (h1 : g'.slotAmt .next = g.slotAmt .after)
     (h2 : g'.slotAmt .now = g.slotAmt .next) (h3 : g'.slotAmt .always = g.slotAmt .always)
     (hd : g'.discW Card.alAmt = g.discW Card.alAmt) (ha : atkT A g' = 0)
-    (hx : gxT A g' = gxT A g) : TInv S A P g' 0 X₀ X₁ (g'.discW Card.wAmt) := by
+    (hx : gxT A g' = gxT A g) (hK : g'.abPot ≤ K) :
+    TInv S A P Q K g' 0 X₀ X₁ (g'.discW Card.wAmt) g'.abPot := by
   have := atkT_le A g
   have := hi.after; have := hi.next; have := hi.now; have := hi.always
-  exact ⟨Nat.zero_le _, hi.x0, hi.x1, fun _ => by omega, by omega, by omega, by omega, by omega⟩
+  exact ⟨Nat.zero_le _, hi.x0, hi.x1, hK, fun _ => Nat.le_refl _, fun _ => by omega, by omega,
+    by omega, by omega, by omega⟩
 
-/-- **Every move preserves the per-turn invariant**, for cards satisfying the three clauses
-whose attacks write at most `A` and whose Trainer amounts add up to at most `P`. -/
-theorem TInv.move {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hm : Move g g')
-    (hi : TInv S A P g X₀ X₁ X₂ D) (hL : g.LoopFree) (hG : g.GXOnly) (hR : g.RecycleSafe)
-    (hA : ∀ x ∈ g.allCards, x.atkAmt ≤ A) (hP : cardsAmt g.allCards ≤ P) :
-    ∃ Y₀ Y₁ Y₂ E, TInv S A P g' Y₀ Y₁ Y₂ E := by
-  have hP' : cardsAmt g'.allCards ≤ P := by rw [cardsAmt_perm hm.perm]; exact hP
-  have hWle : g'.discW Card.wAmt ≤ P := Nat.le_trans (GameState.discW_le Card.wAmt_le g') hP'
+theorem Card.wAmt_le_P {g : GameState} {P : Nat} (hP : cardsAmt g.allCards ≤ P) :
+    g.discW Card.wAmt ≤ P :=
+  Nat.le_trans (GameState.discW_le Card.wAmt_le g) hP
+
+/-- **One bounded use** (milestone M8a): a step `g → g₁` that spends at least one unit of the
+potential and changes no store, discard pile or flag, followed by the resolution of a loop-free
+effect `e` that writes no rest-of-game amount, recycles no rest-of-game writer, and has
+`e.amt + (P if it recycles)` at most `Q`, keeps the per-turn invariant, with `e.amt` added to
+this turn's writes. This is the case of a "once during your turn" Ability used by a Pokémon that
+had not used one, and of an on-play Ability. -/
+theorem TInv.bounded_use {S A P Q K X₀ X₁ X₂ D E : Nat} {g g₁ g' : GameState} {e : Effect}
+    (hi : TInv S A P Q K g X₀ X₁ X₂ D E) (hat : g.attacked = false)
+    (hpot : g₁.abPot + 1 ≤ g.abPot) (hsl : ∀ s, g₁.slotAmt s = g.slotAmt s)
+    (hW₁ : g₁.discW Card.wAmt = g.discW Card.wAmt)
+    (hAl₁ : g₁.discW Card.alAmt = g.discW Card.alAmt)
+    (hfl : Flags g g₁) (hsp : g₁.cur.supporterPlayed = g.cur.supporterPlayed)
+    (hp₁ : g₁.allCards.Perm g.allCards)
+    (hr : TRun e g₁ g') (hlf : e.loopFree = true) (hal : e.amtAt .always = 0)
+    (hq : e.q P ≤ Q)
+    (hrec : ∀ f ∈ e.recFilters, ∀ y ∈ g.allCards, f.eval y = true → y.alAmt = 0)
+    (hP : cardsAmt g.allCards ≤ P) :
+    TInv S A P Q K g' (X₀ + e.amt) X₁ X₂ D E := by
+  have hP' : cardsAmt g'.allCards ≤ P := by rw [cardsAmt_perm (hr.perm.trans hp₁)]; exact hP
+  have hWle : g'.discW Card.wAmt ≤ P := Card.wAmt_le_P hP'
   have hsP := supT_le P g'
+  have hEK := Nat.mul_le_mul_left Q hi.e
+  have hAl₀ := hr.disc_mono Card.alAmt_tw (C := g.allCards) hrec fun y hy => hp₁.mem_iff.1 hy
+  have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt := by rw [← hAl₁]; exact hAl₀
+  have hsl' := hr.slot_le hlf
+  have hp2 := hr.abPot_le
+  have hfk := hr.flags_keep
+  have hst' := hr.sameTurn
+  have hsup : supT P g' = supT P g := by
+    simp only [supT, show g'.cur.supporterPlayed = g.cur.supporterPlayed from
+      hst'.2.2.2.2.2.2.trans hsp]
+  have hat' : atkT A g' = atkT A g := atkT_congr (hfk.attacked.trans hfl.attacked)
+  have hgx : gxT A g' = gxT A g :=
+    gxT_congr (hfk.gxCur.trans hfl.gxCur) (hfk.gxOpp.trans hfl.gxOpp)
+  have hturn := hi.turn hat
+  have hpg := hi.pot hat
+  have hs' : ∀ s, g'.slotAmt s ≤ g.slotAmt s + e.amtAt s := fun s => by
+    rw [← hsl s]; exact hsl' s
+  have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now; have h4 := hs' .always
+  have w1 := e.amtAt_le_amt .after; have w2 := e.amtAt_le_amt .next
+  have w3 := e.amtAt_le_amt .now
+  have := hi.after; have := hi.next; have := hi.now; have := hi.always
+  rw [hal] at h4
+  have hp : g'.abPot + 1 ≤ g.abPot := by omega
+  have hQp : Q * g'.abPot + Q ≤ Q * g.abPot := by
+    have := Nat.mul_le_mul_left Q hp
+    rw [Nat.mul_add, Nat.mul_one] at this; exact this
+  unfold Effect.q at hq
+  have hW : g.discW Card.wAmt + e.amt ≤ g'.discW Card.wAmt + Q := by
+    by_cases hrf : e.recFilters = []
+    · simp only [hrf, ite_true] at hq
+      have hW₀ := hr.disc_mono Card.wAmt_tw (C := g.allCards) (Effect.recOk_nil hrf)
+        fun y hy => hp₁.mem_iff.1 hy
+      rw [hW₁] at hW₀
+      omega
+    · simp only [hrf, ite_false] at hq
+      have := Card.wAmt_le_P (g := g) hP
+      omega
+  exact ⟨by omega, hi.x1, hi.x2, hi.e, fun _ => by omega, fun _ => by omega, by omega, by omega,
+    by omega, by omega⟩
+
+/-- **Every move preserves the per-turn invariant**, for cards satisfying the four clauses
+whose attacks write at most `A`, whose Trainer amounts add up to at most `P`, whose Abilities
+have `Ability.q P` at most `Q` (milestone M8a), and whose number bounds the potential by `K`. -/
+theorem TInv.move {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm : Move g g')
+    (hi : TInv S A P Q K g X₀ X₁ X₂ D E) (hL : g.LoopFree) (hG : g.GXOnly) (hR : g.RecycleSafe)
+    (hAb : g.AbilitySafe) (hA : ∀ x ∈ g.allCards, x.atkAmt ≤ A) (hP : cardsAmt g.allCards ≤ P)
+    (hQ : ∀ p : PokemonCard, Card.pokemon p ∈ g.allCards → ∀ ab ∈ p.abilities, ab.q P ≤ Q)
+    (hK : potBound g.allCards.length ≤ K) :
+    ∃ Y₀ Y₁ Y₂ E' F, TInv S A P Q K g' Y₀ Y₁ Y₂ E' F := by
+  have hP' : cardsAmt g'.allCards ≤ P := by rw [cardsAmt_perm hm.perm]; exact hP
+  have hWle : g'.discW Card.wAmt ≤ P := Card.wAmt_le_P hP'
+  have hWle₀ : g.discW Card.wAmt ≤ P := Card.wAmt_le_P hP
+  have hsP := supT_le P g'
+  have hEK := Nat.mul_le_mul_left Q hi.e
+  have hpot := hm.abPot_le
   cases hm with
-  | playBasic => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | attach => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | evolve => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | attachBench => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | evolveBench => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
+  | playBasic => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | attach => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | evolve => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | attachBench => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | evolveBench => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
   | retreat =>
-      exact ⟨_, _, _, _, hi.same (by simp only [GameState.discW, wsum_append]; omega)
-        (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl fun _ => rfl⟩
+      exact ⟨_, _, _, _, _, hi.same (by simp only [GameState.discW, wsum_append]; omega)
+        (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl (fun _ => rfl)
+        (hpot rfl)⟩
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hx : Card.trainer n .item e ∈ g.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -1214,12 +2010,15 @@ theorem TInv.move {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hm : Move g
       have hat' : atkT A g' = atkT A g := atkT_congr hf.attacked
       have hgx : gxT A g' = gxT A g := gxT_congr hf.gxCur hf.gxOpp
       have hturn := hi.turn hat
+      have hpg := hi.pot hat
+      have hp := hpot hst'.1
+      have hQp := Nat.mul_le_mul_left Q hp
       have h1 := hsl .after; have h2 := hsl .next; have h3 := hsl .now; have h4 := hsl .always
       have w1 := e.amtAt_le_amt .after; have w2 := e.amtAt_le_amt .next
       have w3 := e.amtAt_le_amt .now
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
-      exact ⟨X₀ + e.amt, X₁, X₂, D, by omega, hi.x1, hi.x2, fun _ => by omega, by omega, by omega,
-        by omega, by omega⟩
+      exact ⟨X₀ + e.amt, X₁, X₂, D, E, by omega, hi.x1, hi.x2, hi.e,
+        fun _ => Nat.le_trans hp hpg, fun _ => by omega, by omega, by omega, by omega, by omega⟩
   | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd hbh =>
       have hx : Card.trainer n .supporter e ∈ g.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -1250,16 +2049,82 @@ theorem TInv.move {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hm : Move g
       have hat' : atkT A g' = atkT A g := atkT_congr hfk.attacked
       have hgx : gxT A g' = gxT A g := gxT_congr hfk.gxCur hfk.gxOpp
       have hturn := hi.turn hat
+      have hpg := hi.pot hat
+      have hp := hpot hst'.1
+      have hQp := Nat.mul_le_mul_left Q hp
       have h1 := hsl .after; have h2 := hsl .next; have h3 := hsl .now; have h4 := hsl .always
       have w1 := e.amtAt_le_amt .after; have w2 := e.amtAt_le_amt .next
       have w3 := e.amtAt_le_amt .now
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
-      exact ⟨X₀ + e.amt, X₁, X₂, D, by omega, hi.x1, hi.x2, fun _ => by omega, by omega, by omega,
-        by omega, by omega⟩
+      exact ⟨X₀ + e.amt, X₁, X₂, D, E, by omega, hi.x1, hi.x2, hi.e,
+        fun _ => Nat.le_trans hp hpg, fun _ => by omega, by omega, by omega, by omega, by omega⟩
+  | @ability g₁ g' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
+      have hxC := hu.top_mem
+      have he := ab.script_mem (some sp)
+      have hlf := Card.loopFree_ability (hL _ hxC) hm he
+      have hsafe := hAb.get hxC hm he
+      have hrec : ∀ f ∈ (ab.script (some sp)).recFilters, ∀ y ∈ g.allCards, f.eval y = true →
+          y.alAmt = 0 := fun f hf y hy hfy =>
+        hR.2 _ hxC f (List.mem_append_right _ (abilitiesRec_mem hm he hf)) y hy hfy
+      cases hab : ab.use with
+      | onPlay w => rw [hab] at hk; cases hk
+      | once =>
+          have hu0 : x.used = false := hn hab
+          have hpu := hu.abPot
+          rw [hu0] at hpu
+          exact ⟨_, _, _, _, _, hi.bounded_use hat (by simp at hpu; omega) hu.slotAmt (hu.discW _)
+            (hu.discW _) hu.flags hu.supporterPlayed hu.perm hr hlf hsafe.2
+            (Nat.le_trans (Ability.q_script he) (hQ _ hxC ab hm)) hrec hP⟩
+      | unlimited =>
+          have hp₁ := hu.perm
+          have hAl₀ := hr.disc_mono Card.alAmt_tw (C := g.allCards) hrec
+            fun y hy => hp₁.mem_iff.1 hy
+          have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt := by rw [← hu.discW]; exact hAl₀
+          have hsl := hr.slot_le hlf
+          have hpu := hu.abPot
+          have hp2 := hr.abPot_le
+          have hfk := hr.flags_keep
+          have hfu := hu.flags
+          have hst' := hr.sameTurn
+          have hsup : supT P g' = supT P g := by
+            simp only [supT, show g'.cur.supporterPlayed = g.cur.supporterPlayed from
+              hst'.2.2.2.2.2.2.trans hu.supporterPlayed]
+          have hat' : atkT A g' = atkT A g := atkT_congr (hfk.attacked.trans hfu.attacked)
+          have hgx : gxT A g' = gxT A g := gxT_congr (hfk.gxCur.trans hfu.gxCur)
+            (hfk.gxOpp.trans hfu.gxOpp)
+          have hturn := hi.turn hat
+          have hpg := hi.pot hat
+          have hs' : ∀ s, g'.slotAmt s ≤ g.slotAmt s + (ab.script (some sp)).amtAt s := fun s => by
+            rw [← hu.slotAmt s]; exact hsl s
+          have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now
+          have h4 := hs' .always
+          have w1 := (ab.script (some sp)).amtAt_le_amt .after
+          have w2 := (ab.script (some sp)).amtAt_le_amt .next
+          have w3 := (ab.script (some sp)).amtAt_le_amt .now
+          have := hi.after; have := hi.next; have := hi.now; have := hi.always
+          rw [hsafe.2] at h4
+          have h0 := hsafe.1 hab
+          have hW₀ := hr.disc_mono Card.wAmt_tw (C := g.allCards)
+            (fun f hf y hy hfy => hR.1 _ hxC f (unlimitedRec_mem hm hab he hf) y hy hfy)
+            fun y hy => hp₁.mem_iff.1 hy
+          have hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt := by rw [← hu.discW]; exact hW₀
+          have hp : g'.abPot ≤ g.abPot := Nat.le_trans hp2 (by omega)
+          have hQp := Nat.mul_le_mul_left Q hp
+          exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun _ => Nat.le_trans hp hpg,
+            fun _ => by omega, by omega, by omega, by omega, by omega⟩
+  | @onPlay g₁ g' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
+      have hxC := hp.top_mem
+      have he := ab.script_mem none
+      have hsafe := hAb.get hxC hm he
+      exact ⟨_, _, _, _, _, hi.bounded_use hp.attacked hp.abPot hp.slotAmt (hp.discW _)
+        (hp.discW _) hp.flags hp.supporterPlayed hp.perm hr (Card.loopFree_ability (hL _ hxC) hm he)
+        hsafe.2 (Nat.le_trans (Ability.q_script he) (hQ _ hxC ab hm))
+        (fun f hf y hy hfy => hR.2 _ hxC f (List.mem_append_right _ (abilitiesRec_mem hm he hf)) y
+          hy hfy) hP⟩
   | @attack g'' a atk ha hm hc hs hn hf hbt hst hr hl hgx =>
-      show ∃ Y₀ Y₁ Y₂ E, TInv S A P (atkRes atk g'') Y₀ Y₁ Y₂ E
+      show ∃ Y₀ Y₁ Y₂ E' F, TInv S A P Q K (atkRes atk g'') Y₀ Y₁ Y₂ E' F
       have hmem := GameState.top_mem_cur_active ha
-      have hlf : atk.effect.loopFree = true := List.all_eq_true.1 (hL _ hmem) atk hm
+      have hlf : atk.effect.loopFree = true := Card.loopFree_attack (hL _ hmem) hm
       have hamt : atk.effect.amt ≤ A := by
         have h1 := attacksAmt_mem hm
         have h2 := hA _ hmem
@@ -1269,7 +2134,8 @@ theorem TInv.move {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hm : Move g
       have hAl : g.discW Card.alAmt ≤ (atkRes atk g'').discW Card.alAmt :=
         hr.disc_mono Card.alAmt_tw (C := g.allCards)
           (fun f hf y hy hfy => hR.2 _ hmem f
-            (attacksRec_mem hm (by rw [Attack.script_recFilters] at hf; exact hf)) y hy hfy)
+            (List.mem_append_left _
+              (attacksRec_mem hm (by rw [Attack.script_recFilters] at hf; exact hf))) y hy hfy)
           fun _ hy => hy
       have hsl := hr.slot_le (by rw [Attack.script_loopFree]; exact hlf)
       have hs' : ∀ s, (atkRes atk g'').slotAmt s ≤ g.slotAmt s + A := by
@@ -1298,76 +2164,89 @@ theorem TInv.move {S A P X₀ X₁ X₂ D : Nat} {g g' : GameState} (hm : Move g
             omega
       have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
-      exact ⟨X₀, X₁, X₂, D, hi.x0, hi.x1, hi.x2, fun h => absurd h (by simp [atkRes]),
-        by omega, by omega, by omega, by omega⟩
+      exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun h => absurd h (by simp [atkRes]),
+        fun h => absurd h (by simp [atkRes]), by omega, by omega, by omega, by omega⟩
   | attackConfused =>
-      exact ⟨_, _, _, _, hi.frame (fun _ => Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
+      exact ⟨_, _, _, _, _, hi.frame (fun _ => Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
         (atkT_le A g) (fun h => absurd h (by simp)) (Nat.le_refl _)⟩
   | knockOut =>
-      exact ⟨_, _, _, _, hi.same
+      exact ⟨_, _, _, _, _, hi.same
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl fun _ => rfl⟩
-  | promote => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | noPokemon => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
+        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl)⟩
+  | promote => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | noPokemon => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
   | knockOutOwn =>
-      exact ⟨_, _, _, _, hi.same
+      exact ⟨_, _, _, _, _, hi.same
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl fun _ => rfl⟩
+        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl)⟩
   | knockOutBench =>
-      exact ⟨_, _, _, _, hi.same
+      exact ⟨_, _, _, _, _, hi.same
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl fun _ => rfl⟩
+        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl)⟩
   | knockOutBenchOwn =>
-      exact ⟨_, _, _, _, hi.same
+      exact ⟨_, _, _, _, _, hi.same
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
         (by simp only [GameState.discW, wsum_append, PlayerState.takePrizes]; omega)
-        rfl rfl rfl rfl fun _ => rfl⟩
-  | promoteOwn => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | noPokemonOwn => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | endTurn =>
-      exact ⟨_, _, _, _, hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _) (Nat.add_comm _ _)
-        (Nat.add_comm _ _) rfl (Nat.add_comm _ _)⟩
-  | startTurn => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
-  | deckOut => exact ⟨_, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
-      fun _ => rfl⟩
+        rfl rfl rfl rfl (fun _ => rfl) (hpot rfl)⟩
+  | promoteOwn => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | noPokemonOwn => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc =>
+      refine ⟨_, _, _, _, _, hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _)
+        (Nat.add_comm _ _) (Nat.add_comm _ _) rfl (Nat.add_comm _ _) ?_⟩
+      have hperm := (Move.endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc).perm
+      exact Nat.le_trans (GameState.abPot_le_bound _) (by rw [hperm.length_eq]; exact hK)
+  | startTurn => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | deckOut => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
 
-/-- The bound on the stores of every state reachable from `g₀` (milestone MV): the start stores,
-plus six times the Trainer amounts of the cards (three turns of Trainer writes, each at most twice
-the Trainer amounts), plus three attacks' worth. Before milestone MV the bound was
-`storeBoundNR g₀`, which still holds for decks that recycle nothing
+/-- The bound on the stores of every state reachable from `g₀` (milestone MV; milestone M8a
+added the third term): the start stores, plus three turns of Trainer and Ability writes (each
+turn at most twice the Trainer amounts of the cards, plus `Q` for each unit of the potential,
+which is at most `potBound` of the number of cards), plus three attacks' worth. For a deck without
+Abilities `cardsAbQ` is 0, and the bound is the bound of milestone MV,
+`storeTotal + 6 · cardsAmt + 3 · cardsAtkAmt`. The per-game bound of master is `storeBoundNR g₀`,
+which still holds for decks that recycle nothing and whose Abilities write nothing
 (`reach_boundedStores_noRecycle`). -/
 def storeBound (g₀ : GameState) : Nat :=
-  g₀.storeTotal + 6 * cardsAmt g₀.allCards + 3 * cardsAtkAmt g₀.allCards
+  g₀.storeTotal + 6 * cardsAmt g₀.allCards +
+    3 * (cardsAbQ (cardsAmt g₀.allCards) g₀.allCards * potBound g₀.allCards.length) +
+    3 * cardsAtkAmt g₀.allCards
 
 theorem reach_tinv {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach g₀ g) :
-    ∃ X₀ X₁ X₂ D, TInv g₀.storeTotal (cardsAtkAmt g₀.allCards) (cardsAmt g₀.allCards) g
-      X₀ X₁ X₂ D := by
+    ∃ X₀ X₁ X₂ D E, TInv g₀.storeTotal (cardsAtkAmt g₀.allCards) (cardsAmt g₀.allCards)
+      (cardsAbQ (cardsAmt g₀.allCards) g₀.allCards) (potBound g₀.allCards.length) g
+      X₀ X₁ X₂ D E := by
   induction h with
-  | refl => exact ⟨_, _, _, _, TInv.start _ _ _⟩
+  | refl => exact ⟨_, _, _, _, _, TInv.start _ _ _ _ _ (GameState.abPot_le_bound _)⟩
   | step hr _ hm ih =>
-      obtain ⟨X₀, X₁, X₂, D, hi⟩ := ih
+      obtain ⟨X₀, X₁, X₂, D, E, hi⟩ := ih
       have hp := hr.perm
-      exact hi.move hm (hF.1.of_perm hp) (hF.2.1.of_perm hp) (hF.2.2.of_perm hp)
+      exact hi.move hm (hF.1.of_perm hp) (hF.2.1.of_perm hp) (hF.2.2.1.of_perm hp)
+        (hF.2.2.2.of_perm hp)
         (fun x hx => atkAmt_le_cardsAtkAmt (hp.mem_iff.1 hx))
         (Nat.le_of_eq (cardsAmt_perm hp))
+        (fun p hx ab hab => Ability.q_le (hp.mem_iff.1 hx) hab)
+        (by rw [hp.length_eq]; exact Nat.le_refl _)
 
 /-- **For a faithful deck the stores stay bounded.** From a start state `g₀` satisfying
-`Faithful` (clauses 1–3), every reachable state has, in both players' stores, every slot's damage
+`Faithful` (clauses 1–4), every reachable state has, in both players' stores, every slot's damage
 bonus and damage reduction at most `storeBound g₀`, which is computed from the start state's stores
 and cards. Milestone MV changed the hypothesis (clause 3, `RecycleSafe`, which every deck without
-recycling satisfies) and the bound (`storeBound` now counts six times the Trainer amounts, a
-per-turn count; the per-game bound of master is `reach_boundedStores_noRecycle`). -/
+recycling satisfies) and the bound (`storeBound` counts six times the Trainer amounts, a per-turn
+count; the per-game bound of master is `reach_boundedStores_noRecycle`). Milestone M8a added
+clause 4 (`AbilitySafe`) to the hypothesis and the Ability term to the bound; for a deck without
+Abilities both changes are void. -/
 theorem reach_boundedStores {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach g₀ g) :
     g.BoundedStores (storeBound g₀) := by
-  obtain ⟨X₀, X₁, X₂, D, hi⟩ := reach_tinv hF h
+  obtain ⟨X₀, X₁, X₂, D, E, hi⟩ := reach_tinv hF h
   have hd : g.discW Card.alAmt ≤ cardsAmt g₀.allCards :=
     Nat.le_trans (GameState.discW_le Card.alAmt_le g) (Nat.le_of_eq (cardsAmt_perm h.perm))
   have ha := atkT_le (cardsAtkAmt g₀.allCards) g
@@ -1384,10 +2263,13 @@ theorem reach_boundedStores {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach
       modsLe_of (hc .always)⟩,
     ⟨modsLe_of (ho .now), modsLe_of (ho .next), modsLe_of (ho .after), modsLe_of (ho .always)⟩⟩
 
+
 /-- **Finiteness for faithful decks.** Let `g₀` be any start state (well-formed or not) whose
 cards satisfy `Faithful` (no damage bonus or reduction under `iter`; rest-of-game bonuses and
 reductions only from GX attacks, which the rules make once per player per game; since milestone MV,
-clause 3: no Trainer effect recycles a non-Supporter writer, and no effect a rest-of-game writer).
+clause 3: no Trainer effect recycles a non-Supporter writer, and no effect a rest-of-game writer;
+since milestone M8a, clause 3 (a) for "as often as you like" Abilities too, and clause 4: no such
+Ability writes a bonus or reduction, no Ability a rest-of-game one).
 Then
 
 * the `xclamp`s of all states reachable from `g₀` lie in one finite list `L`; and

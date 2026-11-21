@@ -17,7 +17,7 @@ An attack ends the turn: "Once you attack, your turn is over" (rulebook 2023 p. 
 Then, end your turn.", p. 9). `attack` and `attackConfused` (a Confused Pokémon's failed
 attempt, which is still the turn's attack) set `GameState.attacked`, and every action of the
 turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `attack`,
-`attackConfused`) requires `attacked = false`; so after an attack only its Knock Outs (and
+`attackConfused`, and since milestone M8a `ability` and `onPlay`) requires `attacked = false`; so after an attack only its Knock Outs (and
 promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
 does not attack ends the turn by `endTurn` at any point of the turn proper.
 
@@ -161,7 +161,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage counters on tails after every turn on its Pokémon, Active (`InPlay.checkup`) or, since
   milestone M3, Benched (`BenchChar` in `Move.endTurn`, one flip per Pokémon); "A Char counter
   requires your opponent to flip a coin after every turn. If tails, put 2 damage counters on the
-  Pokémon with that Char counter" (Quilava neo1-47) does not restrict it to the Active Spot. Absent: the readers of Imprison (Poké-Powers and Poké-Bodies; Abilities are absent),
+  Pokémon with that Char counter" (Quilava neo1-47) does not restrict it to the Active Spot. Absent: the readers of Imprison (Poké-Powers and Poké-Bodies; Ability locks are absent),
   tests on Benched Pokémon's markers ("Choose 1 of your opponent's Pokémon that has any
   Shock-wave markers", "any Pokémon with a Lightning Rod marker"), Dark Ivysaur bp-6's
   transient markers allocated by the opponent, and the marker-like states of S7 §3.3 (Poison
@@ -225,7 +225,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   bound is then per turn (each non-Supporter writer played at most once a turn, one Supporter, one
   attack; carried amounts expire within three turns). Without clause 3 the stores are unbounded
   (`Recycle.recycling_breaks_bound`: two Items that return each other and an Iron Defender-like
-  Item); "attack twice" or extra turns would break the bound too. The rest-of-game
+  Item); "attack twice" or extra turns would break the bound too. Since milestone M8a clause 3
+  (a) also covers "as often as you like" Abilities, and a fourth clause, `AbilitySafe`, says that
+  no such Ability writes a bonus or reduction and no Ability a rest-of-game one; once-per-turn and
+  on-play Abilities may write and recycle, and their uses in one turn are bounded by a potential
+  of the player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`). The
+  rest-of-game
   modifiers of non-GX attacks give two unbounded counters with an exact zero test, and the model
   simulates every two-counter machine (`Counter.universal`; this rests on the
   over-approximation of rest-of-game modifiers just described, on `damage` read by a test later
@@ -293,7 +298,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   otherwise use;
 * Pokémon Checkup (`InPlay.checkup`, and `BenchChar` on the Benches) covers the five Special
   Conditions (Active Pokémon only, the only ones that can have them) and the Char counter
-  only: no Ability,
+  only: no Ability (Checkup Abilities are milestone M8b),
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
   choice of order between Special Conditions and those effects does not arise); Burn uses the
   current rule (2 counters, then heads cures); Paralysis ends at the Checkup after its
@@ -355,14 +360,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   more damage", a player's bonus here). `mark .own` and `color .own` stay allowed after a
   switch: they choose any of the player's Pokémon, Bench included. Trainer effects have no
   attacker, and their "your Active Pokémon" is whichever is Active, as in the model;
-* absent after milestone M3: moving damage counters between Pokémon ("move 1 damage counter from
-  1 of your Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an Ability;
-  Gengar-style moves among the opponent's Pokémon), tests and counts on Benched Pokémon ("if any
+* absent after milestone M3: moving damage counters among the opponent's Pokémon (Gengar-style;
+  moving one among the player's own Pokémon, "move 1 damage counter from 1 of your Pokémon to
+  another of your Pokémon", Team Rocket's Orbeetle sv10-89, came with milestone M8a as
+  `Effect.moveCounter`), tests and counts on Benched Pokémon ("if any
   of your Benched Pokémon have damage counters"), healing the opponent's Pokémon, and Bench damage
   whose amount the text computes. (Putting Pokémon onto the Bench from the deck or discard pile,
   moving Energy between Pokémon, and counts of Benched Pokémon came with milestone MV.) Moving counters among the player's own Pokémon would keep both clamps (the player's
-  own damage is exact inside an attack); moving counters off the opponent's Active Pokémon would
-  read damage that the capped clamp `rclamp` knows only up to its cap inside an attack;
+  own damage is exact inside an attack; `CMove.sim`); moving counters off the opponent's Active
+  Pokémon would read damage that the capped clamp `rclamp` knows only up to its cap inside an
+  attack;
 * Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
   Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
   Underdepths, S8 L2) wait for the Stadium milestone (M5);
@@ -370,7 +377,37 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
   as the rulebook has it, but it only holds a card of the start state; so the rules that come
   with playing a Stadium (one per turn, no Stadium of the same name, the old one discarded) and
-  Tools (one per Pokémon) have nothing to act on yet; Abilities are absent;
+  Tools (one per Pokémon) have nothing to act on yet;
+* Abilities (milestone M8a): a Pokémon card has a list of Abilities (`PokemonCard.abilities`;
+  every Standard Pokémon has at most one, survey S9), each with a use limit, a place, an optional
+  printed condition and an effect (`Ability`). Activated Abilities, "once during your turn" (per
+  Pokémon in play) and "as often as you like", are used by `Move.ability` during the turn proper,
+  before attacking (rulebook 2023 pp. 9, 12), with no Knock Out pending, spending no allowance of
+  the turn; on-play Abilities ("When you play this Pokémon from your hand onto your Bench / to
+  evolve …, you may") by `Move.onPlay`, after the play. Effects resolve as Trainer effects do
+  (`TRun`; the Knock Out timing outside attacks, from the source given above). The use flag is per
+  Pokémon (`InPlay.used`), cleared at the end of its owner's turn and by evolution (the evolved
+  Pokémon has the new card's Abilities, unused; an evolution line whose two cards print the same
+  once-per-turn Ability could use it twice in a turn in the model, a reading no ruling was checked
+  for); one flag serves all of a Pokémon's Abilities, exact for cards with one. Departures: "this
+  Pokémon" (`SelfOp`) is exact in the Active Spot, but on the Bench it acts on one Benched Pokémon
+  chosen when the effect resolves (a superset), and the model does not follow it if it is Knocked
+  Out in mid-effect (later steps act on the Pokémon in its place, not a superset) or after a
+  switch-in from the Bench (a choice of both places); an on-play Ability does not track "this
+  Pokémon" at all, and its `spot` is not read; it is offered only when the play leaves no Knock
+  Out pending; per-Pokémon bonuses ("attacks used by this Pokémon do 120 more damage", Feraligatr
+  sv5-41) are the player's (per-Pokémon lingering modifiers are milestone M7); a condition is a
+  `Test` on an Active Pokémon or a count (conditions on the Bench or on rule boxes, such as "if you
+  have any Fire Mega Evolution Pokémon ex in play", are not expressible). Absent: static (passive)
+  and triggered Abilities other than on-play ones, Checkup and Knock Out triggers (milestone
+  M8b; survey S9: 124 static, 33 damage-reaction or Knock Out, 16 other triggers), Ability locks
+  and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
+  limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
+  (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
+  sv9-85 attaches Spiky Energy). The finiteness results cover Abilities: `Reach.finite` with
+  tame, low-constant Ability effects, `Faithful.xfinite` under clause 4 (`AbilitySafe`) with
+  clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
+  `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
   an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
@@ -565,6 +602,74 @@ theorem BenchChar.refl : ∀ b : List InPlay, BenchChar b b
   | [] => .nil
   | p :: ps => .cons (.keep p) (BenchChar.refl ps)
 
+/-- `UseAt g x sp g'` (milestone M8a): the player's Pokémon `x`, at `sp` (the Active Spot, or a
+place on the Bench), uses an Ability; `g'` is `g` with `x` marked as having used an Ability this
+turn (`InPlay.markUsed`), and nothing else changed. -/
+inductive UseAt : GameState → InPlay → Spot → GameState → Prop where
+  | active {g : GameState} {x : InPlay} (ha : g.cur.active = some x) :
+      UseAt g x .active { g with cur := { g.cur with active := some x.markUsed } }
+  | bench {g : GameState} {x : InPlay} {b₁ b₂ : List InPlay} (hb : g.cur.bench = b₁ ++ x :: b₂) :
+      UseAt g x .bench { g with cur := { g.cur with bench := b₁ ++ x.markUsed :: b₂ } }
+
+/-- `PlayFromHand g x w g'` (milestone M8a): the player plays a Pokémon card from the hand, onto
+the Bench as a Basic Pokémon (`w = .bench`) or to evolve the Active Pokémon or a Benched one
+(`w = .evolve`), with exactly the premises and result of `Move.playBasic`, `Move.evolve` and
+`Move.evolveBench` (`PlayFromHand.move`); `x` is the Pokémon in play that the card now tops. The
+on-play trigger of an Ability (`Move.onPlay`) follows such a play. -/
+inductive PlayFromHand : GameState → InPlay → PlayWay → GameState → Prop where
+  | basic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂)
+      (hs : p.stage = .basic) (hhp : 0 < p.hp)
+      (hb : g.cur.bench.length < benchLimit) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      PlayFromHand g (InPlay.ofBasic p) .bench { g with cur := { g.cur with
+        hand := l₁ ++ l₂, bench := g.cur.bench ++ [InPlay.ofBasic p] } }
+  | evolve {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {a : InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (ha : g.cur.active = some a)
+      (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false)
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      PlayFromHand g { a with
+          top := p, under := Card.pokemon a.top :: a.under,
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } .evolve
+        { g with cur := { g.cur with
+          hand := l₁ ++ l₂,
+          active := some { a with
+            top := p, under := Card.pokemon a.top :: a.under,
+            rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+            used := false } } }
+  | evolveBench {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (he : p.evolvesFrom = some q.top.name) (hfr : q.fresh = false)
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      PlayFromHand g { q with
+          top := p, under := Card.pokemon q.top :: q.under,
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } .evolve
+        { g with cur := { g.cur with
+          hand := l₁ ++ l₂,
+          bench := b₁ ++ { q with
+            top := p, under := Card.pokemon q.top :: q.under,
+            rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+            used := false } :: b₂ } }
+
+/-- Does an on-play trigger printed as `w` fire on a play of kind `how`? -/
+def PlayWay.fires : PlayWay → PlayWay → Bool
+  | .either, _ => true
+  | .bench, .bench => true
+  | .evolve, .evolve => true
+  | _, _ => false
+
+/-- The printed condition of an Ability holds (milestone M8a): none, or its test holds on the
+Active Pokémon the test reads (a count test reads the state). -/
+def Ability.CondOk (ab : Ability) (g : GameState) : Prop :=
+  match ab.cond with
+  | none => True
+  | some t => ∃ p, g.activeOf t.whose = some p ∧ t.eval g p = true
+
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
@@ -596,7 +701,8 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂,
         active := some { a with
           top := p, under := Card.pokemon a.top :: a.under,
-          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } } }
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } } }
   /-- attach one Energy card from hand to one of the player's Benched Pokémon; the same
   once-per-turn attachment as `attach` ("Take an Energy card from your hand and put it under your
   Active Pokémon or one of your Benched Pokémon … You can attach Energy just once each turn!",
@@ -622,7 +728,8 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂,
         bench := b₁ ++ { q with
           top := p, under := Card.pokemon q.top :: q.under,
-          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } :: b₂ } }
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } :: b₂ } }
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
@@ -657,6 +764,40 @@ inductive Move : GameState → GameState → Prop where
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
       (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :
+      Move g g'
+  /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, Active or
+  Benched as the Ability allows (`Ability.spotOk`), during the turn proper and before attacking
+  (rulebook 2023 p. 9: "2) … F. Use Abilities (as many as you want). 3) Attack. Then, end your
+  turn."; p. 12: "Many of them can be used before you attack", "You can use Abilities from both
+  your Active and Benched Pokémon"), with no
+  Knock Out pending (`Settled`), and when its printed condition holds (`Ability.CondOk`). A
+  "once during your turn" Ability (`AbilityUse.once`) needs the Pokémon not to have used an
+  Ability this turn (`InPlay.used`); every use marks the Pokémon (`UseAt`). The effect resolves,
+  with "this Pokémon" at `sp` (`Ability.script`), as a Trainer card's does (`TRun`, Knock Outs
+  taken after each step) and, like a Trainer card's, has no attack damage. Using an Ability spends no allowance of the turn: not the Supporter, the
+  Energy attachment or the retreat. -/
+  | ability {g g₁ g' : GameState} {x : InPlay} {sp : Spot} {ab : Ability}
+      (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use.activated = true)
+      (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+      (hr : TRun (ab.script (some sp)) g₁ g') (hnd : (ab.script (some sp)).hitFree = true)
+      (hbh : (ab.script (some sp)).benchHitFree = true) :
+      Move g g'
+  /-- play a Pokémon from the hand (onto the Bench, or to evolve) and resolve an on-play Ability
+  of the card played (milestone M8a: "When you play this Pokémon from your hand onto your Bench
+  during your turn, you may …", "When you play this Pokémon from your hand to evolve 1 of your
+  Pokémon during your turn, you may …"). The play has the premises of `Move.playBasic`,
+  `Move.evolve` or `Move.evolveBench` (`PlayFromHand`); playing without using the Ability ("you
+  may") is that move itself. The effect resolves as a Trainer card's does (`TRun`), from the state
+  after the play, which must have no pending Knock Out (a Pokémon evolved into a card whose HP its
+  damage reaches is Knocked Out first, and the model then offers no trigger); the printed
+  condition is read there. The Ability's `spot` is not read, and "this Pokémon" is not tracked
+  (`Ability.script none`: an effect on it acts on the Active Pokémon or on a Benched one). -/
+  | onPlay {g g₁ g' : GameState} {x : InPlay} {how w : PlayWay} {ab : Ability}
+      (hp : PlayFromHand g x how g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use = .onPlay w)
+      (hw : w.fires how = true) (hst : Settled g₁) (hc : ab.CondOk g₁)
+      (hr : TRun (ab.script none) g₁ g') (hnd : (ab.script none).hitFree = true)
+      (hbh : (ab.script none).benchHitFree = true) :
       Move g g'
   /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage
@@ -787,5 +928,34 @@ theorem KOMove.move {g g' : GameState} (h : KOMove g g') : Move g g' := by
   | noPokemonOwn ha hb => exact .noPokemonOwn ha hb
   | knockOutBench hb hk hp => exact .knockOutBench hb hk hp
   | knockOutBenchOwn hb hk hp => exact .knockOutBenchOwn hb hk hp
+
+/-- A play from the hand is the plain move (`Move.playBasic`, `Move.evolve`,
+`Move.evolveBench`). -/
+theorem PlayFromHand.move {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : Move g g₁ := by
+  cases h with
+  | basic hh hs hhp hb hbt hst hat => exact .playBasic hh hs hhp hb hbt hst hat
+  | evolve hh ha he hfr hf hbt hst hat => exact .evolve hh ha he hfr hf hbt hst hat
+  | evolveBench hh hb he hfr hf hbt hst hat => exact .evolveBench hh hb he hfr hf hbt hst hat
+
+theorem PlayFromHand.attacked {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g.attacked = false := by
+  cases h <;> assumption
+
+theorem PlayFromHand.between {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g.between = false := by
+  cases h <;> assumption
+
+theorem PlayFromHand.settled {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : Settled g := by
+  cases h <;> assumption
+
+/-- The card played is in the hand. -/
+theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : ∃ l₁ l₂, g.cur.hand = l₁ ++ Card.pokemon x.top :: l₂ := by
+  cases h with
+  | basic hh => exact ⟨_, _, hh⟩
+  | evolve hh => exact ⟨_, _, hh⟩
+  | evolveBench hh => exact ⟨_, _, hh⟩
 
 end Pokemon
