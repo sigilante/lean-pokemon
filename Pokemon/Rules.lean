@@ -27,6 +27,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Pokémon Checkup (Poison, Burn, Sleep, Paralysis recovery) is absent, and no effect in the
   language applies a Special Condition yet;
 * Stadium and Tool cards occupy state but have no move; Abilities are absent;
+* start states are not required to be well formed: from a state with no winner and an empty
+  Prize list, a pending Knock Out cannot be taken and the game is stuck with no legal move;
 * the "no evolving on your first turn" rule is applied to the first turn of the game only.
 -/
 
