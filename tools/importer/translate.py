@@ -117,11 +117,16 @@ CAVEATS = {
                     "off step 5 of the damage calculation, which in the model includes the reductions and preventions a "
                     "Stadium gives the defender (Known gaps, Weakness and Resistance item: `Ign`, step 5); whether the "
                     "printed text ignores a Stadium's effect was not checked against a ruling",
-    'anyAmount60': "'discard any amount … for each card you discarded in this way' is `forUpTo` with the bound 60, the "
+    'anyAmount60': "'discard any amount / all … for each card you discarded in this way' is `forUpTo` with the bound 60, the "
                    "cards of a legal deck (2026 rulebook p. 21): exact for every state in which the player has at most 60 "
                    "cards that could be discarded (`Run.forUpTo_complete`, `discardActive_le`); the model does not require "
                    "this of a start state, and beyond it a larger discard is forbidden (Known gaps, zone moves item: "
-                   "'exact once the bound covers the cards that can be taken')",
+                   "'exact once the bound covers the cards that can be taken'); for 'discard all' with more than 60 the attack has "
+                   "no resolution",
+    'abilityByTool': "'Pokémon that have an Ability' is `Filter.hasAbility`, which reads the printed Abilities and ignores an "
+                     "Ability a Tool gives in the model (Known gaps, filters: whether print counts a Tool's effect as the "
+                     "Pokémon's Ability is not settled); if it does, an attacker whose Ability comes from a Tool is not "
+                     "prevented in the model where print prevents its damage",
 }
 
 
@@ -164,6 +169,7 @@ CAVEAT_DIRECTION = {
     'ignFxStadium': 'both',        # if print keeps a Stadium's reduction, the model's damage is larger (and the
                                    # printed smaller damage is absent)
     'anyAmount60': 'forbids some', # more than 60 cards cannot be discarded
+    'abilityByTool': 'allows more',  # damage print may prevent
 }
 
 
@@ -3024,6 +3030,8 @@ def static_caveats(ss):
             cv.add('staticBench')
         if s['eff'][0] == 'prevent' and s['tgt'] != ('some', ('active',)):
             cv.add('staticPreventBench')
+        if s['eff'][0] == 'prevent' and 'hasAbility' in repr(s['eff'][1]):
+            cv.add('abilityByTool')
     return cv
 
 

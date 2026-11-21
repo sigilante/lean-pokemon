@@ -184,7 +184,7 @@ sv6-106	Greninja ex	Pokémon	imported with caveats	benchMods,searchAny	sv6-106 s
 sv6-108	Glimmet	Pokémon	imported exactly		sv6-108	sv6_108	
 sv6-109	Glimmora	Pokémon	imported exactly		sv6-109	sv6_109	
 sv6-111	Okidogi	Pokémon	imported exactly		sv6-111 sv6pt5-74 sv8pt5-57	sv6_111	Hp,Bonus
-sv6-112	Cornerstone Mask Ogerpon ex	Pokémon	imported with caveats	ignFxStadium,staticPreventBench	sv6-112 sv6-199 sv6-215	sv6_112	
+sv6-112	Cornerstone Mask Ogerpon ex	Pokémon	imported with caveats	abilityByTool,ignFxStadium,staticPreventBench	sv6-112 sv6-199 sv6-215	sv6_112	
 sv6-113	Poochyena	Pokémon	imported exactly		sv6-113	sv6_113	
 sv6-115	Venipede	Pokémon	imported exactly		sv6-115	sv6_115	
 sv6-116	Whirlipede	Pokémon	imported with caveats	perPokemon	sv6-116	sv6_116	
@@ -442,7 +442,7 @@ sv8pt5-48	Pupitar	Pokémon	imported exactly		sv8pt5-48	sv8pt5_48
 sv8pt5-50	Riolu	Pokémon	imported exactly		sv8pt5-50	sv8pt5_50	
 sv8pt5-52	Hippopotas	Pokémon	imported exactly		sv8pt5-52	sv8pt5_52	
 sv8pt5-53	Hippowdon	Pokémon	imported exactly		sv8pt5-53	sv8pt5_53	
-sv8pt5-58	Cornerstone Mask Ogerpon ex	Pokémon	imported with caveats	ignFxStadium,staticPreventBench	sv8pt5-58 sv8pt5-160	sv6_112	
+sv8pt5-58	Cornerstone Mask Ogerpon ex	Pokémon	imported with caveats	abilityByTool,ignFxStadium,staticPreventBench	sv8pt5-58 sv8pt5-160	sv6_112	
 sv8pt5-61	Sneasel	Pokémon	imported exactly		sv8pt5-61	sv8pt5_61	
 sv8pt5-62	Houndour	Pokémon	imported exactly		sv8pt5-62	sv8pt5_62	
 sv8pt5-63	Houndoom	Pokémon	imported exactly		sv8pt5-63	sv8pt5_63	

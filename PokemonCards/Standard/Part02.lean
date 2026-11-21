@@ -462,7 +462,7 @@ def sv6_111 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Cornerstone Mask Ogerpon ex (sv6-112). Records: sv6-112, sv6-199, sv6-215. Caveats: ignFxStadium, staticPreventBench. -/
+/-- Cornerstone Mask Ogerpon ex (sv6-112). Records: sv6-112, sv6-199, sv6-215. Caveats: abilityByTool, ignFxStadium, staticPreventBench. -/
 def sv6_112 : Card := .pokemon
   { name := "Cornerstone Mask Ogerpon ex", stage := .basic, evolvesFrom := none,
     hp := 21, type := .fighting, retreat := 1, weakness := some .grass,
