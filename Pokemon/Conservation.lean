@@ -4,8 +4,8 @@ import Pokemon.ListPerm
 /-!
 # Conservation of cards, and where finiteness can fail
 
-`Run.perm`, `TRun.perm`, `Move.perm`, `Reach.perm`: legal play permutes the cards in the game. The list
-`GameState.allCards` of every physical card in every zone of a reachable state is a
+`Run.perm`, `TRun.perm`, `Move.perm`, `Reach.perm`: legal play permutes the cards in the game.
+The list `GameState.allCards` of every physical card in every zone of a reachable state is a
 permutation of that list for the start state, for decks whose text is expressible in
 `Effect`. No card is created, destroyed or altered. `Reach.cards_eq` (the NUMBER of cards is
 constant) is a corollary.

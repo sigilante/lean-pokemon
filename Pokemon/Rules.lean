@@ -15,13 +15,16 @@ can happen, as the rulebook requires.
 
 Knock Out timing. The rulebook checks for Knock Outs at the end of every attack, at the end of
 every Pokémon Checkup, and at once whenever damage reaches HP at any other time. The model
-follows it at the granularity of moves: every move that is not part of resolving a Knock Out
+follows it in two ways. Between moves: every move that is not part of resolving a Knock Out
 (the six moves `knockOut`, `promote`, `noPokemon` and their `Own` versions) requires the state
 to be `Settled`: no Pokémon in play is at or above its HP, and both Active Spots are filled.
 So once a move leaves a Pokémon at or above its HP, the next moves must Knock it Out (and
 promote a replacement) before anything else happens; nothing can read, heal or otherwise use
-an over-HP Pokémon between moves. Inside one move, during the resolution of one effect (one
-`Run`), damage may exceed HP and effects can read it.
+an over-HP Pokémon between moves. Inside a move: an attack's effect is resolved as a whole by
+`Run`, so damage may exceed HP and the effect can read it, and the Knock Outs come after the
+attack, as the rulebook says; an Item or Supporter's effect is resolved by `TRun`, which takes
+every Knock Out at once after each primitive step (`Resolve`) and stops if the game is over, so
+no step of a Trainer effect runs while a Pokémon is at or above its HP (`TRun.guarded`).
 
 Known gaps (each is a place where this model is simpler than the rulebook):
 * setup, mulligans and the opening coin flip are not modelled; start from a set-up state;
@@ -33,16 +36,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (no Sudden Death); a player with no Pokémon to promote loses at once; only Active Pokémon
   can be Knocked Out, which suffices while no effect damages the Bench; a Knock Out always
   gives exactly one Prize;
-* an Item or Supporter's effect is resolved as a whole before any Knock Out is taken, as an
-  attack is: the rulebook would Knock Out at once a Pokémon whose damage reaches its HP in
-  the middle of a Trainer card's effect, so the model lets a Trainer card read (and heal)
-  over-HP damage that the printed game would not. The two timings are INCOMPARABLE, so
-  finiteness of this model does not transfer to the rulebook's Trainer timing by inclusion:
-  the model has behaviours the printed game lacks (reading over-HP damage), and the printed
-  game has behaviours the model lacks (with `seq (selfDamage 5) (heal 5)` on a 5-HP Pokémon
-  the rulebook Knocks it Out after the first step, while the model's only resolution leaves
-  it undamaged; with `iter (counters 5)` the rulebook can Knock Out, promote and hit the new
-  Active within one card);
+* Knock Outs in mid-effect (Item and Supporter cards, `TRun`): they are checked after each
+  primitive step of the model's effect language, so a printed sentence that the model writes
+  as several primitives gets a check between them; the Knocked Out Pokémon's replacement is
+  promoted at once, before the next step (no ruling was found on when the replacement is
+  chosen in mid-effect; the promoted Pokémon is a nondeterministic choice, which covers the
+  owner's choice); when a Prize ends the game, or its owner has no Pokémon to promote, the
+  game ends and the rest of the effect is not resolved. Simultaneous Knock Outs cannot arise
+  inside a Trainer effect here (each primitive step damages at most one Active Pokémon and
+  starts `Settled`), so the order in which they are taken, and Sudden Death, do not arise
+  there; a printed effect that damages several Pokémon at once is not expressible;
 * a Knock Out takes the top card of the Prize list, whereas the rulebook lets the player
   choose any Prize card (a finite choice);
 * HP is the printed value: there are no HP modifiers (the survey's loophole L1);
@@ -160,8 +163,8 @@ state is `Settled` or the game has a winner. Stopping earlier is not allowed: `d
 one of the two, and no `KOMove` exists from a `Settled` state. -/
 inductive Resolve : GameState → GameState → Prop where
   | done {g : GameState} (h : Settled g ∨ g.winner ≠ none) : Resolve g g
-  | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOMove g g₁) (hr : Resolve g₁ g') :
-      Resolve g g'
+  | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOMove g g₁)
+      (hr : Resolve g₁ g') : Resolve g g'
 
 /-- **Resolution of a Trainer card's effect**, with the rulebook's Knock Out timing: a Pokémon
 whose damage reaches its HP at any time other than during an attack or Checkup is Knocked Out

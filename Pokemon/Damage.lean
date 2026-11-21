@@ -4,8 +4,9 @@ import Pokemon.WellFormed
 # Damage and Poison strength: what is bounded, and a clamp that makes the rest bounded
 
 Two numeric components of the state can be made large by legal play: damage on either Active
-Pokémon (inside one effect, `counters_unbounded`; an attack, Trainer card or Checkup can leave
-it far above HP, and the Knock Out is then the next move) and the Poison strength `poisonUp`
+Pokémon (inside an attack's effect, `counters_unbounded`; an attack or Checkup can leave it far
+above HP, and the Knock Out is then the next move; one step of a Trainer card's effect can too,
+and the Knock Out is taken at once, inside the same move) and the Poison strength `poisonUp`
 of a Poisoned Pokémon (`poisonUp_unbounded`). This file shows that the excess carries no
 information at the level of moves.
 
@@ -16,6 +17,9 @@ information at the level of moves.
   equal up to HP) is a bisimulation for `Run`. Effects read damage exactly, so inside an
   effect only Poison strength may be capped; `Reads.run_clamp_not_sim` shows that the HP clamp
   of damage is NOT a simulation for `Run` once effects read damage.
+* `TRun.clamp_sim` (with `KOMove.clamp_sim`, `Resolve.clamp_sim`): the kernel of `clamp` IS a
+  simulation for a Trainer card's effect started in a `Settled` (or finished) state, because
+  every test and primitive step of it starts `Settled` (`TRun.settled_or_won`).
 * `Move.clamp_sim`, `Reach.clamp_sim`: states with the same `clamp` have the same moves, up to
   the same clamp. So the kernel of `clamp` is a (strong) bisimulation for `Move`, and every
   question about legal play that does not read the capped quantities above HP can be asked of
@@ -27,10 +31,11 @@ Why the clamp is sound at the level of moves. Every move that resolves an effect
 other move except the six that resolve Knock Outs, requires the state to be `Settled`: no
 Pokémon in play is at or above its HP. In such a state the two clamps agree: damage below HP is
 not capped, so states with the same `clamp` have the same damage (`map_exact_of_clamp`), and
-`Run.exact_sim` applies to the effect. A Pokémon at or above its HP is read only by the Knock
-Out test `hp ≤ damage` and its negation, a threshold test at HP. Poison strength is read only
-by Checkup, which adds it to damage that is then capped at HP; `min (d + u) h` depends on `u`
-only through `min u h`. No effect reads Poison strength.
+`Run.exact_sim` applies to an attack's effect, and `TRun.clamp_sim` to a Trainer card's. A
+Pokémon at or above its HP is read only by the Knock Out test `hp ≤ damage` and its negation, a
+threshold test at HP. Poison strength is read only by Checkup, which adds it to damage that is
+then capped at HP; `min (d + u) h` depends on `u` only through `min u h`. No effect reads Poison
+strength.
 
 The previous version of this file capped the damage on the player's own Active Pokémon only
 between turns and bounded it during the turn by a separate invariant (`Reach.activeLe`, at most
@@ -542,7 +547,8 @@ theorem GameState.winner_of_clamp {g₁ g₂ : GameState} (h : g₁.clamp = g₂
 
 /-- The kernel of `clamp` is a simulation for taking the Knock Outs. -/
 theorem Resolve.clamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
-    ∀ {g₂ : GameState}, g₁.clamp = g₂.clamp → ∃ g₂', Resolve g₂ g₂' ∧ g₁'.clamp = g₂'.clamp := by
+    ∀ {g₂ : GameState}, g₁.clamp = g₂.clamp →
+      ∃ g₂', Resolve g₂ g₂' ∧ g₁'.clamp = g₂'.clamp := by
   induction h with
   | done h =>
       intro g₂ hc
