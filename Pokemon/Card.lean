@@ -213,8 +213,11 @@ inductive Mod where
 
 /-! ## Card filters and zone moves (milestone MV) -/
 
+/-- The kinds of Trainer card played from the hand and resolved or put into play by `Move.item`,
+`Move.supporter` and (milestone M5) `Move.stadium`. Pokémon Tools are a constructor of their own,
+`Card.tool`, since they carry what they give the Pokémon they are attached to (`ToolGrant`). -/
 inductive TrainerKind where
-  | item | supporter | stadium | tool
+  | item | supporter | stadium
   deriving DecidableEq
 
 /-- A card filter (milestone MV): the kind of card a zone move may pick ("a Basic Pokémon", "a
@@ -243,8 +246,10 @@ inductive Filter where
   | noRuleBox
   /-- a Trainer card of any kind -/
   | trainer
-  /-- a Trainer card of the given kind (Item, Supporter, Stadium, Pokémon Tool) -/
+  /-- a Trainer card of the given kind (Item, Supporter, Stadium) -/
   | kind (k : TrainerKind)
+  /-- a Pokémon Tool card (milestone M5; `Card.tool`) -/
+  | tool
   /-- an Energy card (in the model every Energy card is a Basic Energy card) -/
   | energy
   /-- a Basic Energy card of type `t` ("a Basic Fire Energy card") -/
@@ -900,12 +905,51 @@ theorem PokemonCard.resistTo_le (d : PokemonCard) (t : EType) : d.resistTo t ≤
   · split <;> omega
   · exact Nat.le_refl _
 
+/-- What a Pokémon Tool gives the Pokémon it is attached to (milestone M5): attacks the Pokémon
+can use ("The Pokémon this card is attached to can use the attack on this card. (You still need
+the necessary Energy to use this attack.)", Technical Machine: Fluorite sv8-188, Mega Rayquaza Cap
+me6-100) and activated Abilities, both only while the Pokémon's top card passes `holder` ("The Mega
+Zygarde ex this card is attached to can use the attack on this card", Core Memory me3-70). Static
+and triggered Tool text (HP, damage and Retreat Cost modifiers, "If the Pokémon this card is
+attached to is Knocked Out…") is not modelled: a Tool with such text is a Tool with an empty grant
+(`ToolGrant.none`), which can be attached and does nothing (Known gaps in `Pokemon/Rules.lean`). -/
+structure ToolGrant where
+  holder : Filter
+  attacks : List Attack
+  abilities : List Ability
+  deriving DecidableEq
+
+/-- The empty grant: a Tool whose effect the model does not express, or that has none. -/
+def ToolGrant.none : ToolGrant := ⟨.any, [], []⟩
+
 inductive Card where
   | pokemon (p : PokemonCard)
   /-- a Basic Energy card (`BasicEnergy`: nine types, no Colorless or Dragon) -/
   | energy (t : BasicEnergy)
+  /-- an Item, Supporter or (milestone M5) Stadium card. For an Item or a Supporter, `effect` is
+  what it does when played (`Move.item`, `Move.supporter`); for a Stadium it is what "Once during
+  each player's turn, that player may …" lets the player to move do while the Stadium is in play
+  (`Move.stadiumUse`), and `skip` for a Stadium whose text the model does not express (static
+  effects; Known gaps) -/
   | trainer (name : String) (kind : TrainerKind) (effect : Effect)
+  /-- a Pokémon Tool card (milestone M5), attached to a Pokémon by `Move.tool` and `Move.toolBench`,
+  with what it gives that Pokémon (`ToolGrant`) -/
+  | tool (name : String) (grant : ToolGrant)
   deriving DecidableEq
+
+/-- The attacks a card has (a Pokémon card) or gives the Pokémon it is attached to (a Tool,
+milestone M5; `ToolGrant`). -/
+def Card.attacks : Card → List Attack
+  | .pokemon p => p.attacks
+  | .tool _ gr => gr.attacks
+  | _ => []
+
+/-- The Abilities a card has (a Pokémon card) or gives the Pokémon it is attached to (a Tool,
+milestone M5; `ToolGrant`). -/
+def Card.abilities : Card → List Ability
+  | .pokemon p => p.abilities
+  | .tool _ gr => gr.abilities
+  | _ => []
 
 /-- Does the card pass the filter? -/
 def Filter.eval : Filter → Card → Bool
@@ -916,10 +960,13 @@ def Filter.eval : Filter → Card → Bool
   | .ptype t, .pokemon p => decide (p.type = t)
   | .named n, .pokemon p => decide (p.name = n)
   | .named n, .trainer m _ _ => decide (m = n)
+  | .named n, .tool m _ => decide (m = n)
   | .hpLe n, .pokemon p => decide (p.hp ≤ n)
   | .noRuleBox, .pokemon p => decide (p.ruleBox = .none)
   | .trainer, .trainer _ _ _ => true
+  | .trainer, .tool _ _ => true
   | .kind k, .trainer _ k' _ => decide (k' = k)
+  | .tool, .tool _ _ => true
   | .energy, .energy _ => true
   | .energyOf t, .energy e => decide (e.type = t)
   | .and a b, c => a.eval c && b.eval c
@@ -992,6 +1039,7 @@ def Card.tmax : Card → Nat
   | .pokemon p => max (attacksTmax p.attacks) (abilitiesTmax p.abilities)
   | .energy _ => 0
   | .trainer _ _ e => e.tmax
+  | .tool _ gr => max (attacksTmax gr.attacks) (abilitiesTmax gr.abilities)
 
 /-- The script of an attack is tame when its effect is: the base damage adds no reduction and
 no `drain`. -/
@@ -1012,5 +1060,6 @@ def Card.tame : Card → Bool
   | .pokemon p => attacksTame p.attacks && abilitiesTame p.abilities
   | .energy _ => true
   | .trainer _ _ e => e.tame
+  | .tool _ gr => attacksTame gr.attacks && abilitiesTame gr.abilities
 
 end Pokemon

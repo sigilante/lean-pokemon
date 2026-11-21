@@ -47,6 +47,9 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | retreat _ _ _ _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | item _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | supporter _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | stadium _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | tool _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | toolBench _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | ability _ _ _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | onPlay hp => exact absurd (ha.symm.trans hp.attacked) (by decide)
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
@@ -84,7 +87,8 @@ def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List I
       active := some (b.unfresh.checkup true fb sb cb), bench := bc,
       mods := g.cur.mods.shift, hadTurn := true },
     curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
-    between := true, winner := g.winner, stadium := g.stadium }
+    between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
+    stadiumUsed := false }
 
 /-- With no Char counter on any Pokémon of a Bench, the Benches' Char step leaves it as it is. -/
 theorem BenchChar.eq_of_noChar {b b' : List InPlay} (h : BenchChar b b')
@@ -119,6 +123,9 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | retreat _ _ _ _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | item _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | supporter _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | stadium _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | tool _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | toolBench _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | ability _ _ _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | onPlay hp => exact absurd (ha.symm.trans hp.attacked) (by decide)
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)

@@ -56,7 +56,7 @@ def wpl (r : Nat) (u : Bool) : PlayerState :=
     false, false, store r, true⟩
 
 def wgs (r : Nat) (u : Bool) : GameState :=
-  ⟨wpl r u, Recycle.pl [] [] 0, true, false, false, false, none, none⟩
+  ⟨wpl r u, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false⟩
 
 theorem wgs_settled (r : Nat) (u : Bool) : Settled (wgs r u) :=
   Trainer.settled_of rfl rfl (show 0 < 10 by decide) (by decide) (fun p hp => by cases hp)
@@ -150,7 +150,7 @@ def kpl (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : Playe
     false, false, store r, true⟩
 
 def kgs (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : GameState :=
-  ⟨kpl u hand discard r b, Recycle.pl [] [] 0, true, false, false, false, none, none⟩
+  ⟨kpl u hand discard r b, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false⟩
 
 theorem kgs_settled (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) :
     Settled (kgs u hand discard r b) :=
@@ -267,7 +267,7 @@ def bpl : PlayerState :=
     false, false, false, false, Store.empty, true⟩
 
 /-- The charger's player to move, in the turn proper, `u` whether it has used its Ability. -/
-def cgs (u : Bool) (b : Nat) : GameState := ⟨cpl u b, bpl, true, false, false, false, none, none⟩
+def cgs (u : Bool) (b : Nat) : GameState := ⟨cpl u b, bpl, true, false, false, false, none, none, false, false⟩
 
 theorem cgs_settled (u : Bool) (b : Nat) : Settled (cgs u b) :=
   settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl
@@ -327,7 +327,7 @@ def spl (hand deck : List Card) (bench : List InPlay) : PlayerState :=
     false, false, Store.empty, true⟩
 
 def sgs (hand deck : List Card) (bench : List InPlay) : GameState :=
-  ⟨spl hand deck bench, bpl, true, false, false, false, none, none⟩
+  ⟨spl hand deck bench, bpl, true, false, false, false, none, none, false, false⟩
 
 /-- **An on-play Ability**: playing `scoutMon` from the hand onto the Bench triggers its Ability,
 and the player draws a card. -/
@@ -374,7 +374,7 @@ def vpl (u onV : Bool) : PlayerState :=
     [{ InPlay.ofBasic sprout with energy := if onV then [] else [.energy .grass] }], false, false,
     false, false, false, Store.empty, true⟩
 
-def vgs (u onV : Bool) : GameState := ⟨vpl u onV, bpl, true, false, false, false, none, none⟩
+def vgs (u onV : Bool) : GameState := ⟨vpl u onV, bpl, true, false, false, false, none, none, false, false⟩
 
 theorem vgs_settled (u onV : Bool) : Settled (vgs u onV) :=
   Trainer.settled_of rfl rfl (show 0 < 36 by decide) (show 0 < 10 by decide)
@@ -428,7 +428,7 @@ def opl (u onO : Bool) : PlayerState :=
     [{ InPlay.ofBasic sprout with damage := if onO then 0 else 1 }], false, false,
     false, false, false, Store.empty, true⟩
 
-def ogs (u onO : Bool) : GameState := ⟨opl u onO, bpl, true, false, false, false, none, none⟩
+def ogs (u onO : Bool) : GameState := ⟨opl u onO, bpl, true, false, false, false, none, none, false, false⟩
 
 theorem ogs_settled (u onO : Bool) : Settled (ogs u onO) := by
   cases onO
@@ -487,7 +487,7 @@ write a damage bonus. -/
 theorem feraligatr_faithful :
     (⟨⟨[], [ironDefender], [], [.energy .water], [], some (InPlay.ofBasic feraligatr), [], false,
       false, false, false, false, Store.empty, true⟩, Recycle.pl [] [] 0, true, false, false,
-      false, none, none⟩ : GameState).Faithful := by
+      false, none, none, false, false⟩ : GameState).Faithful := by
   refine ⟨by unfold GameState.LoopFree; decide, ?_, by unfold GameState.RecycleSafe; decide,
     by unfold GameState.AbilitySafe; decide⟩
   intro p hp atk hm

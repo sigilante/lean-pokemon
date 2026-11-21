@@ -272,18 +272,21 @@ def states (C : List Card) : List GameState :=
   (players C).flatMap fun cur => (players C).flatMap fun opp =>
   bools.flatMap fun curIsFirst => bools.flatMap fun firstTurn =>
   bools.flatMap fun attacked => bools.flatMap fun between => winners.flatMap fun winner =>
-  (opts (bools.flatMap fun b => C.map fun c => (b, c))).map fun stadium =>
-  ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium⟩
+  (opts (bools.flatMap fun b => C.map fun c => (b, c))).flatMap fun stadium =>
+  bools.flatMap fun stadiumPlayed => bools.map fun stadiumUsed =>
+  ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium, stadiumPlayed, stadiumUsed⟩
 
 theorem mem_states {C : List Card} {g : GameState} (hp : g.allCards.Perm C)
     (hd : SideDamageLe (bound C) g.cur ∧ SideDamageLe (bound C) g.opp) : g ∈ states C := by
   have hw : Within C (g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium) :=
     Within.of_perm hp
-  obtain ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium⟩ := g
+  obtain ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium, stadiumPlayed,
+    stadiumUsed⟩ := g
   simp only [states, List.mem_flatMap, List.mem_map]
   refine ⟨cur, mem_players hw.left.left hd.1, opp, mem_players hw.left.right hd.2,
     curIsFirst, mem_bools _, firstTurn, mem_bools _, attacked, mem_bools _,
-    between, mem_bools _, winner, mem_winners _, stadium, ?_, rfl⟩
+    between, mem_bools _, winner, mem_winners _, stadium, ?_, stadiumPlayed, mem_bools _,
+    stadiumUsed, mem_bools _, rfl⟩
   refine mem_opts fun ⟨b, c⟩ hc => ?_
   subst hc
   exact List.mem_flatMap.2 ⟨b, mem_bools _, List.mem_map.2 ⟨c, hw.right.2 c (.head _), rfl⟩⟩

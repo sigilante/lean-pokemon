@@ -1124,6 +1124,9 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | retreat ha hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim
+  | stadium hh => exact (not_mem_hand hC hh rfl).elim
+  | tool hh => exact (not_mem_hand hC hh rfl).elim
+  | toolBench hh => exact (not_mem_hand hC hh rfl).elim
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
       exact (not_mem_hand hC hh rfl).elim
@@ -1252,6 +1255,8 @@ def start (M : Machine) (a b : Nat) : GameState where
   between := false
   winner := none
   stadium := none
+  stadiumPlayed := false
+  stadiumUsed := false
 
 /-- **The encoding of a configuration** `c` at the start of the first player's main phase
 (after the draw, before attacking): the abstract state has configuration `c`, the Tape is

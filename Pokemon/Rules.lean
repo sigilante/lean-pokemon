@@ -373,11 +373,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
   Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
   Underdepths, S8 L2) wait for the Stadium milestone (M5);
-* Stadium and Tool cards occupy state but have no move (survey S8 B9, B10: milestone M5): the
-  Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
-  as the rulebook has it, but it only holds a card of the start state; so the rules that come
-  with playing a Stadium (one per turn, no Stadium of the same name, the old one discarded) and
-  Tools (one per Pokémon) have nothing to act on yet;
+* Stadium and Tool cards (milestone M5; survey S8 B9, B10): a Stadium is played from the hand
+  into the one slot both players share (`Move.stadium`: one per turn, `GameState.stadiumPlayed`;
+  not while a Stadium of the same name is in play; the Stadium it replaces goes to its owner's
+  discard pile), and a Tool is attached from the hand to a Pokémon with no Tool (`Move.tool`,
+  `Move.toolBench`; any number per turn; it stays attached and leaves play with the Pokémon).
+  In this stage neither has an effect: a Stadium or Tool occupies its place and does nothing;
 * Abilities (milestone M8a): a Pokémon card has a list of Abilities (`PokemonCard.abilities`;
   every Standard Pokémon has at most one, survey S9), each with a use limit, a place, an optional
   printed condition and an effect (`Ability`). Activated Abilities, "once during your turn" (per
@@ -765,6 +766,45 @@ inductive Move : GameState → GameState → Prop where
       (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :
       Move g g'
+  /-- play a Stadium card (milestone M5): "You can play only one Stadium card each turn", "You
+  can't play a Stadium card if a Stadium with the same name is already in play", "Only one Stadium
+  can be in play at a time—if a new one comes into play, discard the old one and end its effects",
+  and "it stays in play" (rulebook 2023 p. 12). The Stadium goes to the shared slot with its owner
+  (the player to move); the one it replaces, if any, goes to its owner's discard pile, whoever
+  that is (`stadiumTo`). Played during the turn proper, before attacking, with no Knock Out
+  pending, like an Item; an Item lock does not stop it (a Stadium is not an Item). Playing it
+  resolves nothing: its effect is used by `Move.stadiumUse`, and the new Stadium has not been
+  used this turn (`stadiumUsed := false`) -/
+  | stadium {g : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
+      (hh : g.cur.hand = l₁ ++ Card.trainer n .stadium e :: l₂)
+      (hs : g.stadiumPlayed = false) (hn : g.stadiumNamed n = false)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with
+        cur := { g.cur with
+          hand := l₁ ++ l₂, discard := stadiumTo g.curIsFirst g.stadium ++ g.cur.discard },
+        opp := { g.opp with discard := stadiumTo (!g.curIsFirst) g.stadium ++ g.opp.discard },
+        stadium := some (g.curIsFirst, Card.trainer n .stadium e),
+        stadiumPlayed := true, stadiumUsed := false }
+  /-- attach a Pokémon Tool from the hand to the player's Active Pokémon (milestone M5), which must
+  have no Tool attached ("Each Pokémon can have only 1 Pokémon Tool attached at a time", rulebook
+  2023 glossary p. 40; printed on the cards: "You may attach any number of Pokémon Tools to your
+  Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays
+  attached"). Any number per turn; during the turn proper, before attacking, with no Knock Out
+  pending; an Item lock does not stop it. The Tool stays attached through evolution and retreat
+  and goes to the discard pile with the Pokémon (`InPlay.cardList`) -/
+  | tool {g : GameState} {l₁ l₂ : List Card} {n : String} {gr : ToolGrant} {a : InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.tool n gr :: l₂) (ha : g.cur.active = some a)
+      (ht : a.tools = []) (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂, active := some { a with tools := [Card.tool n gr] } } }
+  /-- attach a Pokémon Tool from the hand to one of the player's Benched Pokémon that has no Tool
+  attached (milestone M5), as `tool` -/
+  | toolBench {g : GameState} {l₁ l₂ : List Card} {n : String} {gr : ToolGrant} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.tool n gr :: l₂) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (ht : q.tools = []) (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂, bench := b₁ ++ { q with tools := [Card.tool n gr] } :: b₂ } }
   /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, Active or
   Benched as the Ability allows (`Ability.spotOk`), during the turn proper and before attacking
   (rulebook 2023 p. 9: "2) … F. Use Abilities (as many as you want). 3) Attack. Then, end your
@@ -899,7 +939,8 @@ inductive Move : GameState → GameState → Prop where
             active := some (b.unfresh.checkup true fb sb cb), bench := bc,
             mods := g.cur.mods.shift, hadTurn := true },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
-          between := true, winner := g.winner, stadium := g.stadium }
+          between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
+          stadiumUsed := false }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken
   and both Active Spots are filled -/
   | startTurn {g : GameState} {a b : InPlay} {c : Card} {d : List Card}

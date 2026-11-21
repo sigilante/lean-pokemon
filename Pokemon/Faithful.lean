@@ -317,6 +317,8 @@ def Card.loopFree : Card → Bool
       p.abilities.all fun a => a.scripts.all fun e => e.loopFree
   | .energy _ => true
   | .trainer _ _ e => e.loopFree
+  | .tool _ gr => (gr.attacks.all fun a => a.effect.loopFree) &&
+      gr.abilities.all fun a => a.scripts.all fun e => e.loopFree
 
 /-- **Clause 1** (`LoopFree`): no effect of any card in the game (attacks, Trainer cards and,
 since milestone M8a, Abilities) has a damage bonus or reduction under `iter`. -/
@@ -847,6 +849,7 @@ was `Card.trainerRec`, the Trainer part.) -/
 def Card.freeRec : Card → List Filter
   | .trainer _ _ e => e.recFilters
   | .pokemon p => unlimitedRec p.abilities
+  | .tool _ gr => unlimitedRec gr.abilities
   | _ => []
 
 /-- The recycling filters of all of a card's effects, attacks and (milestone M8a) Abilities
@@ -854,6 +857,7 @@ included. -/
 def Card.allRec : Card → List Filter
   | .pokemon p => attacksRec p.attacks ++ abilitiesRec p.abilities
   | .trainer _ _ e => e.recFilters
+  | .tool _ gr => attacksRec gr.attacks ++ abilitiesRec gr.abilities
   | _ => []
 
 /-- The amount a card writes when it is played, if it is a Trainer card that is not a Supporter
@@ -874,11 +878,13 @@ theorem Card.wAmt_le : ∀ c : Card, c.wAmt ≤ c.amt
   | .trainer _ k e => by simp only [Card.wAmt, Card.amt]; split <;> omega
   | .pokemon _ => Nat.le_refl _
   | .energy _ => Nat.le_refl _
+  | .tool _ _ => Nat.le_refl _
 
 theorem Card.alAmt_le : ∀ c : Card, c.alAmt ≤ c.amt
   | .trainer _ _ e => e.amtAt_le_amt .always
   | .pokemon _ => Nat.le_refl _
   | .energy _ => Nat.le_refl _
+  | .tool _ _ => Nat.le_refl _
 
 theorem GameState.discW_le {w : Card → Nat} (hw : ∀ c, w c ≤ c.amt) (g : GameState) :
     g.discW w ≤ cardsAmt g.allCards := by
@@ -914,6 +920,7 @@ theorem GameState.NoRecycle.recycleSafe {g : GameState} (h : g.NoRecycle) : g.Re
       cases x with
       | trainer n k e => exact hf
       | pokemon p => exact List.mem_append_right _ (unlimitedRec_sub hf)
+      | tool n gr => exact List.mem_append_right _ (unlimitedRec_sub hf)
       | energy _ => nomatch hf
     rw [h x hx] at e; nomatch e
   · rw [h x hx] at hf; nomatch hf
@@ -952,9 +959,8 @@ def abilitiesQ (P : Nat) : List Ability → Nat
   | [] => 0
   | a :: as => max (a.q P) (abilitiesQ P as)
 
-def Card.abQ (P : Nat) : Card → Nat
-  | .pokemon p => abilitiesQ P p.abilities
-  | _ => 0
+/-- The largest `Ability.q P` among the Abilities a card has or (milestone M5) gives. -/
+def Card.abQ (P : Nat) (c : Card) : Nat := abilitiesQ P c.abilities
 
 /-- The largest `Ability.q P` among the cards `C` (0 for a deck without Abilities). -/
 def cardsAbQ (P : Nat) : List Card → Nat
@@ -992,6 +998,8 @@ Abilities may write modifiers and recycle (within clause 3 (b)): they are used a
 `GameState.abPot` times in a turn. Decidable. Every deck without Abilities satisfies it. -/
 def Card.abilitySafe : Card → Bool
   | .pokemon p => p.abilities.all fun ab => ab.scripts.all fun e =>
+      (ab.use != .unlimited || e.amt == 0) && e.amtAt .always == 0
+  | .tool _ gr => gr.abilities.all fun ab => ab.scripts.all fun e =>
       (ab.use != .unlimited || e.amt == 0) && e.amtAt .always == 0
   | _ => true
 
@@ -1609,6 +1617,11 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         e.amtAt (hr.slot_le hlf) e.amtAt_le_amt (Nat.le_trans ?_ hk.disc)
       · simp only [GameState.discAmt, cardsAmt]; omega
       · simp only [GameState.discAmt, cardsAmt, Card.amt]; omega
+  | stadium =>
+      refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
+      simp only [GameState.discAmt, cardsAmt_append]; omega
+  | tool => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
+  | toolBench => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
   | @onPlay g₁ g'' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
       have hxC := hp.top_mem
       have he := ab.script_mem none
@@ -1796,6 +1809,15 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
         List.length_append, List.length_cons]; omega
   | item _ _ _ hr => exact hr.abPot_le
   | supporter _ _ _ _ hr => exact hr.abPot_le
+  | stadium => exact Nat.le_refl _
+  | @tool l₁ l₂ n gr a hh ha =>
+      have e : ({ a with tools := [Card.tool n gr] } : InPlay).abW = a.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
+  | @toolBench l₁ l₂ n gr q b₁ b₂ hh hb =>
+      simp only [GameState.abPot, PlayerState.abPot, hb,
+        abWs_split (b₁ := b₁) (b₂ := b₂) (q := q)
+          (q' := { q with tools := [Card.tool n gr] }) rfl,
+        List.length_append, List.length_cons]; omega
   | ability hu _ _ _ _ _ _ _ _ hr =>
       have := hu.abPot
       exact Nat.le_trans hr.abPot_le (by omega)
@@ -1983,6 +2005,14 @@ theorem TInv.move {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm : 
       exact ⟨_, _, _, _, _, hi.same (by simp only [GameState.discW, wsum_append]; omega)
         (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl (fun _ => rfl)
         (hpot rfl)⟩
+  | stadium =>
+      exact ⟨_, _, _, _, _, hi.same (by simp only [GameState.discW, wsum_append]; omega)
+        (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl (fun _ => rfl)
+        (hpot rfl)⟩
+  | tool => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
+  | toolBench => exact ⟨_, _, _, _, _, hi.same (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
+      (fun _ => rfl) (hpot rfl)⟩
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hx : Card.trainer n .item e ∈ g.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)

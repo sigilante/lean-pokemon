@@ -256,6 +256,15 @@ theorem PlayFromHand.perm {g g₁ : GameState} {x : InPlay} {w : PlayWay}
   | evolve hh ha => perm_count [hh, ha]
   | evolveBench hh hb => perm_count [hh, hb]
 
+/-- The Stadium slot's card goes to one of the two players: `stadiumTo` splits it by owner
+(milestone M5). -/
+theorem count_stadiumTo (b : Bool) (s : Option (Bool × Card)) (x : Card) :
+    List.count x (stadiumTo b s) + List.count x (stadiumTo (!b) s) =
+      List.count x (stadiumCardList s) := by
+  rcases s with _ | ⟨o, c⟩
+  · rfl
+  · cases o <;> cases b <;> simp [stadiumTo, stadiumCardList]
+
 /-- A legal move permutes the cards in the game. -/
 theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCards := by
   cases h with
@@ -271,6 +280,14 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | supporter hh hs hbt hst hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
+  | @stadium l₁ l₂ n e hh =>
+      refine ListPerm.perm_of_count fun x => ?_
+      have := count_stadiumTo g.curIsFirst g.stadium x
+      simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,
+        List.count_nil, stadiumCardList, hh] at this ⊢
+      omega
+  | tool hh ha ht => perm_count [hh, ha, ht]
+  | toolBench hh hb ht => perm_count [hh, hb, ht]
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.perm.trans hu.perm
   | onPlay hp _ _ _ _ _ hr => exact hr.perm.trans hp.perm
   | attack ha hm hc hs hn hf hbt hst hr => exact hr.perm

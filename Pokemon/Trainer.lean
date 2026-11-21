@@ -169,7 +169,7 @@ def selfItem : Card := .trainer "SelfHarm" .item (.seq (.selfDamage 5) (.heal 5)
 def start1 : GameState :=
   ⟨side [selfItem] [.energy .fire] (InPlay.ofBasic mon) [InPlay.ofBasic big],
     side [] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 theorem start1_wellFormed : WellFormed start1 := by
   refine ⟨fun _ => ⟨by simp [start1, side], by simp [start1, side]⟩, fun p hp => ?_,
@@ -191,7 +191,7 @@ def after1 : GameState :=
       false, Store.empty, true⟩,
     ⟨[.energy .grass], [.energy .fire], [], [.energy .fire], [], some (InPlay.ofBasic big), [],
       false, false, false, false, false, Store.empty, true⟩,
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 theorem move_after1 : Move start1 after1 := by
   refine .item (l₁ := []) (l₂ := []) (n := "SelfHarm") rfl rfl start1_settled
@@ -228,7 +228,7 @@ move has two Prize cards and `hitItem` in hand. -/
 def start2 : GameState :=
   ⟨side [hitItem] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic mon) [InPlay.ofBasic big],
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 theorem start2_wellFormed : WellFormed start2 := by
   refine ⟨fun _ => ⟨by simp [start2, side], by simp [start2, side]⟩,
@@ -250,7 +250,7 @@ def after2 : GameState :=
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [],
       some { InPlay.ofBasic big with damage := 0 + 5 }, [], false, false, false, false,
       false, Store.empty, true⟩,
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 theorem move_after2 : Move start2 after2 := by
   refine .item (l₁ := []) (l₂ := []) (n := "Hit") rfl rfl start2_settled
@@ -287,7 +287,7 @@ Pokémon has 50 HP. -/
 def start3 : GameState :=
   ⟨side [winItem] [.energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic mon) [InPlay.ofBasic big],
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 theorem start3_wellFormed : WellFormed start3 := by
   refine ⟨fun _ => ⟨by simp [start3, side], by simp [start3, side]⟩,
@@ -305,7 +305,7 @@ def after3 : GameState :=
       [], false, false, false, false, false, Store.empty, true⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [], none, [InPlay.ofBasic big],
       false, false, false, false, false, Store.empty, true⟩,
-    true, false, false, false, some true, none⟩
+    true, false, false, false, some true, none, false, false⟩
 
 theorem move_after3 : Move start3 after3 :=
   .item (l₁ := []) (l₂ := []) (n := "Win") rfl rfl start3_settled

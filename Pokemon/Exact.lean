@@ -958,6 +958,28 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (hF.1.of_perm hp.perm) hcm (.inl hst₁)
       exact ⟨g₂', .onPlay hp' (hxt ▸ hm) hk hw hst₂ hcd' hr' hnd hbh, hc'⟩
+  | @stadium l₁ l₂ n e hh hs hn hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      exact ⟨_, .stadium hh hs hn hbt hs' hat, by
+        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂]⟩
+  | @tool l₁ l₂ n gr a hh ha ht hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      rw [ha] at hc₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+      have key := hq.clamp_map (c' := .hp) (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
+        (fun x => { x with tools := [Card.tool n gr] }) (fun _ => rfl) rfl rfl
+      exact ⟨_, .tool hh rfl (hq.tools.trans ht) hbt hs' hat, by
+        simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂, key, he₁, he₂]⟩
+  | @toolBench l₁ l₂ n gr q b₁ b₂ hh hb ht hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
+      have hr := InPlay.agree_of_clamp h2
+      exact ⟨_, .toolBench hh rfl (hr.tools.trans ht) hbt hs' hat, by
+        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
+          List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.setTools [Card.tool n gr])]⟩
   | @ability g₁m g' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
       have hs' := hs₂ hst
       have hb := hF.ability hu hm

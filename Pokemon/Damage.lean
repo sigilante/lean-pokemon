@@ -290,6 +290,12 @@ theorem InPlay.Agree.markUsed {c : Cap} {q p : InPlay} (h : Agree c q p) :
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, rfl,
     h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩
 
+/-- Agreement survives attaching a Tool (milestone M5). -/
+theorem InPlay.Agree.setTools {c : Cap} {q p : InPlay} (h : Agree c q p) (t : List Card) :
+    Agree c { q with tools := t } { p with tools := t } :=
+  ⟨h.top, h.under, h.energy, rfl, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
+    h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩
+
 /-- Agreement survives a change of markers. -/
 theorem InPlay.Agree.setMarks {c : Cap} {q p : InPlay} (h : Agree c q p) (f : Marks → Marks) :
     Agree c (q.setMarks f) (p.setMarks f) :=
@@ -1002,7 +1008,7 @@ def cxSide (a : InPlay) : PlayerState :=
 /-- Both Active Pokémon have 10 HP and no damage; the opponent's is Poisoned. -/
 def cxState : GameState :=
   ⟨cxSide (InPlay.ofBasic cxCard), cxSide { InPlay.ofBasic cxCard with poisoned := true },
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 /-- `Move.damageBounded_of_turn` (every move that passes the turn yields a state with no
 pending Knock Out) is false in the model with Checkup: ending the turn from a state with no
