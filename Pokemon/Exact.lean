@@ -603,7 +603,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
         (by subst hg; exact hbt) hs' hr', hc'⟩
-  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl =>
+  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx =>
       have hs' := hs₂ hst
       have hb := hF.attack ha hm
       obtain ⟨g₂', hr', hc''⟩ := Run.xcap_sim hr hb (GameState.xrclamp_of_xclamp hc hst.1)
@@ -612,8 +612,10 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       refine ⟨_, .attack rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' hl, ?_⟩
-      have := congrArg (fun g : GameState => ({ g with attacked := true } : GameState)) hc''
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' hl hgx, ?_⟩
+      have := congrArg (fun g : GameState => ({ g with
+        attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
+        GameState)) hc''
       exact GameState.xclamp_of_xrclamp this
         (fun p hp => hhp _ (GameState.top_mem_opp_active (g := g') hp))
   | attackConfused ha hm hc' hs hn hf hbt hst hl =>

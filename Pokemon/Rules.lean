@@ -123,7 +123,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * `ite`, `scale`, `selfDamage` and `healAll` are general primitives, usable in any effect,
   any number of times and inside `iter`, whereas printed cards use them once, in fixed forms;
   the model over-approximates the printed texts;
-* an attack does not end the turn; the first player may play a Supporter on the first turn;
+* GX attacks (`Attack.gx`): a player who has used one (`PlayerState.gxUsed`) cannot use another
+  in the same game; the flag is set by `Move.attack` (a rule added for `Pokemon/Faithful.lean`;
+  before it, `gxUsed` was never read or written). A Confused Pokémon's failed attempt at a GX
+  attack (`attackConfused`) does not use it up; VSTAR Powers are absent (`vstarUsed` is unused);
+* an attack does not end the turn, but at most one attack is made per turn (`attacked`, reset
+  only by `endTurn`); the first player may play a Supporter on the first turn;
   each player has their own Stadium slot;
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them only from the player's own Active Pokémon (`cure`); the variants with a number
@@ -319,15 +324,18 @@ inductive Move : GameState → GameState → Prop where
       Move g g'
   /-- attack: do the base damage (with the lingering modifiers, `Effect.damage`), then resolve
   the attack's effect. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
-  its coin flip is heads; nobody can attack while an attack lock is in effect on them. -/
+  its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
+  attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
+  using it records that (`PlayerState.gxUsed`). -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
       (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g)
       (hr : Run (.seq (.damage atk.damage) atk.effect) g g')
-      (hl : g.cur.mods.live.noAttack = false) :
-      Move g { g' with attacked := true }
+      (hl : g.cur.mods.live.noAttack = false)
+      (hgx : atk.gx = true → g.cur.gxUsed = false) :
+      Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
   happen, and the attacker gets 3 damage counters -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}

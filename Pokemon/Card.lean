@@ -147,6 +147,9 @@ structure Attack where
   /-- base damage, in counters -/
   damage : Nat
   effect : Effect
+  /-- a GX attack: each player can use at most one GX attack in a game (`PlayerState.gxUsed`;
+  "You can't use more than 1 GX attack in a game") -/
+  gx : Bool
   deriving DecidableEq
 
 structure PokemonCard where

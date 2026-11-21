@@ -275,9 +275,9 @@ def effB (M : Machine) : Effect :=
     (sel .opp (fun q => stepBOf (W M) q (M.instr q)) (List.range (V M))))
 
 /-- The Clock's only attack: no cost, base damage 0, effect `effA`. -/
-def atkA (M : Machine) : Attack := ⟨"Tick", [], 0, effA M⟩
+def atkA (M : Machine) : Attack := ⟨"Tick", [], 0, effA M, false⟩
 /-- The Tape's only attack: no cost, base damage 0, effect `effB`. -/
-def atkB (M : Machine) : Attack := ⟨"Tock", [], 0, effB M⟩
+def atkB (M : Machine) : Attack := ⟨"Tock", [], 0, effB M, false⟩
 
 /-- The first player's Pokémon: its damage is the program counter, so its HP exceeds every
 value the counter takes. -/
@@ -334,6 +334,11 @@ def Pk.weak (k : Pk) : Pk := { k with stocked := false, held := false }
 
 theorem Fits.weak {k : Pk} {s : PlayerState} (h : Fits k s) : Fits k.weak s :=
   ⟨h.active, h.bench, h.deck, h.hand, h.mods, (fun e => by cases e), (fun e => by cases e)⟩
+
+/-- `Fits` does not read the once-per-game flag. -/
+theorem Fits.setGx {k : Pk} {s : PlayerState} (h : Fits k s) (b : Bool) :
+    Fits k { s with gxUsed := b } :=
+  ⟨h.active, h.bench, h.deck, h.hand, h.mods, h.stocked, h.held⟩
 
 /-- `e`, resolved as an attack's effect (`Run`) from any state of shape `(kc, ko)`, can be
 resolved, and every resolution ends in a state of shape `(kc', ko')`. -/
@@ -967,7 +972,8 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
     (hoc : ko.marks.char = false) :
     Shape kc.weak ko.weak g' ∨ Shape ko.weak kc.weak g' ∨
       ∃ atk g'', atk ∈ kc.top.attacks ∧ Run (.seq (.damage atk.damage) atk.effect) g g'' ∧
-        g' = { g'' with attacked := true } := by
+        g' = { g'' with
+          attacked := true, cur := { g''.cur with gxUsed := atk.gx || g''.cur.gxUsed } } := by
   have hC := hs.cur
   have hO := hs.opp
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hC.active
@@ -986,7 +992,7 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | retreat ha hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim
-  | @attack g'' a atk ha hm' _ _ _ _ _ _ hr _ =>
+  | @attack g'' a atk ha hm' _ _ _ _ _ _ hr _ _ =>
       rw [hp] at ha; cases ha
       exact .inr (.inr ⟨atk, g'', h1 ▸ hm', hr, rfl⟩)
   | attackConfused ha _ _ hs' => rw [hp] at ha; cases ha; rw [h2] at hs'; cases hs'
@@ -1027,15 +1033,15 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
     (hatk : atk ∈ kc.top.attacks) (hcost : atk.cost = [])
     (hD : Does (.seq (.damage atk.damage) atk.effect) kc ko kc' ko')
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hbt : g.between = false)
-    (hn : g.attacked = false) (hf : g.firstTurn = false) :
+    (hn : g.attacked = false) (hf : g.firstTurn = false) (hgx : atk.gx = false) :
     ∃ g', Move g g' ∧ Shape kc' ko' g' ∧ g'.between = false ∧ g'.firstTurn = false ∧
       g'.winner = g.winner := by
   obtain ⟨p, hp, h1, h2, -⟩ := hs.cur.active
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs
   have hfl := Run.flags hr
   refine ⟨_, .attack hp (h1 ▸ hatk) (by rw [hcost]; exact Nat.zero_le _) (by rw [h2]; rfl) hn hf
-    hbt (hs.settled hc ho) hr (by rw [hs.cur.mods]; rfl), ⟨(hsh _ hr).cur, (hsh _ hr).opp⟩,
-    hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
+    hbt (hs.settled hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h),
+    ⟨(hsh _ hr).cur.setGx _, (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
 /-- Ending the turn from a state of known shape swaps the shape. -/
 theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)
@@ -1163,13 +1169,13 @@ theorem simulate {M : Machine} {c c' : Config} {g : GameState} (hst : M.Step c c
   have hg₁ := (tickS_spec hg).1
   have hg₂ := (tockS_spec hg₁).1
   obtain ⟨g₁, m₁, s₁, b₁, f₁, w₁⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
-    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft
+    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
   obtain ⟨g₂, m₂, s₂, b₂, a₂, f₂, w₂⟩ := endTurn_move s₁ (hg₁.hpA _ _) (hg₁.hpB _ _)
     (mkOf_char _) rfl b₁
   obtain ⟨g₃, m₃, s₃, b₃, a₃, f₃, w₃⟩ := startTurn_move s₂ (hg₁.hpB _ _) (hg₁.hpA _ _) b₂ rfl
   obtain ⟨g₄, m₄, s₄, b₄, f₄, w₄⟩ := attack_move (atk := atkB M) s₃ (.head _) rfl
     (Does.attackB hg₁ false true true false) (hg₁.hpB _ _) (hg₁.hpA _ _) b₃ (a₃.trans a₂)
-    (f₃.trans f₂)
+    (f₃.trans f₂) rfl
   obtain ⟨g₅, m₅, s₅, b₅, a₅, f₅, w₅⟩ := endTurn_move s₄ (hg₂.hpB _ _) (hg₂.hpA _ _) rfl
     (mkOf_char _) b₄
   obtain ⟨g₆, m₆, s₆, b₆, a₆, f₆, w₆⟩ := startTurn_move s₅ (hg₂.hpA _ _) (hg₂.hpB _ _) b₅ rfl
@@ -1197,7 +1203,7 @@ theorem haltMarked_of_halted {M : Machine} {c : Config} {g : GameState} (he : En
     (hH : M.Halted c) : ∃ g', Reach g g' ∧ HaltMarked g' := by
   obtain ⟨s, rfl, hg, hb, -, hsh, hbt, hat, hft, hw⟩ := he
   obtain ⟨g₁, m₁, s₁, -⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
-    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft
+    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
   obtain ⟨p, hp, -, -, -, -, -, hm⟩ := s₁.cur.active
   refine ⟨g₁, .step (.refl _) hw m₁, p, .inl hp, ?_⟩
   rw [hm]; simp only [pkA, tickS_halted hb hH]; rfl
@@ -1234,14 +1240,16 @@ theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g
     · simp only [pkA, clock, List.mem_singleton] at ha
       subst ha
       have h := (Does.attackA hg false false false false g hs).2 g'' hr'
-      exact ⟨_, (tickS_spec hg).1, reaches_of_spec hr (tickS_spec hg).2, .inl ⟨h.cur, h.opp⟩⟩
+      exact ⟨_, (tickS_spec hg).1, reaches_of_spec hr (tickS_spec hg).2,
+        .inl ⟨h.cur.setGx _, h.opp⟩⟩
   · rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) with h | h | ⟨atk, g'', ha, hr', rfl⟩
     · exact ⟨s, hg, hr, .inr h⟩
     · exact ⟨s, hg, hr, .inl h⟩
     · simp only [pkB, tape, List.mem_singleton] at ha
       subst ha
       have h := (Does.attackB hg false false false false g hs).2 g'' hr'
-      exact ⟨_, (tockS_spec hg).1, reaches_of_spec hr (tockS_spec hg).2, .inr ⟨h.cur, h.opp⟩⟩
+      exact ⟨_, (tockS_spec hg).1, reaches_of_spec hr (tockS_spec hg).2,
+        .inr ⟨h.cur.setGx _, h.opp⟩⟩
 
 theorem reach_inv {M : Machine} {c₀ : Config} {g₀ g : GameState} (h₀ : Inv M c₀ g₀)
     (h : Reach g₀ g) : Inv M c₀ g := by

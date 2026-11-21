@@ -121,7 +121,7 @@ theorem run_clamp_not_sim (k : Nat) :
 /-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
 on itself. -/
 def hurter : PokemonCard :=
-  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9⟩], 1⟩
+  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9, false⟩], 1⟩
 
 def start2 : GameState :=
   ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),
@@ -145,10 +145,10 @@ theorem start2_wellFormed : WellFormed start2 := by
     intro p hp <;> cases hp
 
 theorem reach_after2 : Reach start2 after2 :=
-  .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9⟩) rfl (.head _)
+  .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9, false⟩) rfl (.head _)
     (Nat.zero_le _) rfl rfl rfl rfl
     ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
-    (.seq (.damage 0 rfl) (.selfDamage 9 rfl)) rfl)
+    (.seq (.damage 0 rfl) (.selfDamage 9 rfl)) rfl (fun h => absurd h (by decide)))
 
 /-- **The old bound on the player's own Active Pokémon is false.** From a well-formed start with
 no pending Knock Out, one attack whose effect damages the attacker reaches, during the turn, a
