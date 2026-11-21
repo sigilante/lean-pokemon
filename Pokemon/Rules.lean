@@ -253,7 +253,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   counters);
 * `ite`, `scale`, `selfDamage` and `healAll` are general primitives, usable in any effect,
   any number of times and inside `iter`, whereas printed cards use them once, in fixed forms;
-  the model over-approximates the printed texts;
+  the model over-approximates the printed texts. The same holds for the Bench primitives of
+  milestone M3: `benchCounters`, `spreadCounters`, `benchHeal` and `switch` are usable in any
+  effect and inside `iter` (except that an attack has no `switch .own` under `iter`,
+  `Effect.switchSafe`), and `benchDamage` and `spreadDamage` in any attack and inside `iter`, so
+  `iter (benchDamage .opp n)` in an attack does Bench damage any number of times, which no
+  printed card does;
 * GX attacks (`Attack.gx`): a player who has used one (`PlayerState.gxUsed`) cannot use another
   in the same game; the flag is set by `Move.attack` (a rule added for `Pokemon/Faithful.lean`;
   before it, `gxUsed` was never read or written). A Confused Pokémon can try a GX attack
@@ -261,7 +266,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
   ruling, and the model takes the answer "no"; VSTAR Powers are absent (`vstarUsed` is unused);
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
-  remove them only from the player's own Active Pokémon (`cure`); the variants with a number
+  remove them from the player's own Active Pokémon (`cure`) and, since milestone M3, from the
+  Pokémon that a switch sends to the Bench, either player's (`switch .own` and `switch .opp`,
+  as the rulebook says for any Active Pokémon that goes to the Bench); the variants with a number
   ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; a new Poison
   replaces the old one, as the rulebook says (2023 p. 16, 2024 the same), so poisoning a
   Pokémon that is already Poisoned resets its Poison strength (`poisonUp`) to 0
@@ -295,10 +302,17 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage reaches the opponent's Active Pokémon (the damage step, `dealtBy`) and, since M3, Benched
   Pokémon of either player (`benchDamage`, `spreadDamage`: a printed amount, with no Weakness,
   Resistance, bonus, reduction or prevention, and none on a Tera Pokémon; `InPlay.hitBench`;
-  amounts computed by the text, "30 damage for each Energy", are not expressible; the defender's
-  reduction and prevention protect only the Active Pokémon here, whereas a printed "all of your
-  Metal Pokémon take 30 less damage" or "prevent all damage done to your Benched Pokémon" would
-  protect Benched ones too, a difference recorded here); the damage
+  amounts computed by the text, "30 damage for each Energy", are not expressible). Dropping the
+  modifiers departs from the rulebook in both directions, so Bench damage in the model is not a
+  superset of the printed outcomes: the defender's reduction and prevention protect only the
+  Active Pokémon here, whereas a printed "all of your Metal Pokémon take 30 less damage" or
+  "prevent all damage done to your Benched Pokémon" protects Benched ones too, so the model
+  does more damage to the Bench than the rulebook; and the attacker's bonus is not added, on the
+  claim that printed bonuses name "your opponent's Active Pokémon", which the rulebook's own
+  example of step 2 does not support ("During your next turn, this Pokémon's attacks do 40 more
+  damage (before applying Weakness and Resistance)", 2023 p. 20, names no target), so the model
+  may do less damage to the Bench than the rulebook. No search of the card pool settles which
+  printed bonuses reach the Bench. The damage
   counters an effect places are not affected by Weakness, Resistance or any other effect, as the
   rulebook says (2023 p. 20, step 1);
 * `heal` and `healAll` remove damage from the player's own Active Pokémon, and `benchHeal` from
@@ -312,7 +326,25 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   rulebook also ends "any effects from attacks" on it; the model's lingering effects belong to a
   player, not to a Pokémon, so there is nothing more to end (per-Pokémon effects are milestone
   M7). With no Benched Pokémon a switch does nothing. A switch that the rulebook makes a choice
-  of a player other than the one the model lets choose is still in the relation;
+  of a player other than the one the model lets choose is still in the relation. Inside an
+  attack the printed game keeps the attacking Pokémon as "this Pokémon" after it is switched
+  to the Bench, whereas the model's effects on the player's Active Pokémon act on whichever
+  Pokémon is Active; so `Attack.wf` (a premise of `Move.attack` and `Move.attackConfused`)
+  requires `Effect.switchSafe`: after a `switch .own`, nothing on the same line of resolution
+  reads or writes the player's own Active Pokémon (the damage step, which reads the attacker's
+  type for Weakness and Resistance, `drain`, `heal`, `healAll`, `cure`, `selfDamage`,
+  `scale .own`, a test on it, another `switch .own`), and no `switch .own` is under `iter`.
+  So every damage step of an attack is reached with the attacking Pokémon Active
+  (`Attack.attacker_at_hit`), and an attack that switches and then does damage is not playable
+  (`Bench.switchThenHit_not_wf`). The restriction excludes nothing printed that the model can
+  express: in the card data the 132 distinct attack texts that "Switch this Pokémon with 1 of
+  your Benched Pokémon" do their damage first (rulebook 2023 p. 20, step F) and switch after;
+  after the switch some act on "this Pokémon" on the Bench (attach Energy, Return Charge
+  sv8-68; evolve it, Valiant Evolution sv3-60; inexpressible here), on the opponent (switch,
+  lingering modifiers), or on the player (Fluffy Tag bw7-15: "the attacks of that Pokémon do 40
+  more damage", a player's bonus here). `mark .own` and `color .own` stay allowed after a
+  switch: they choose any of the player's Pokémon, Bench included. Trainer effects have no
+  attacker, and their "your Active Pokémon" is whichever is Active, as in the model;
 * absent after milestone M3: moving damage counters between Pokémon ("move 1 damage counter from
   1 of your Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an Ability;
   Gengar-style moves among the opponent's Pokémon), tests and counts on Benched Pokémon ("if any
@@ -591,7 +623,8 @@ inductive Move : GameState → GameState → Prop where
   /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage
   step), making the rulebook's damage calculation at most once (`Attack.wf`, `Effect.oneHit`;
-  `dealtBy`). The attack ends the turn (`attacked`): afterwards only Knock Outs and
+  `dealtBy`), with nothing after a switch of the attacker that acts on the player's Active
+  Pokémon (`Effect.switchSafe`, part of `Attack.wf`). The attack ends the turn (`attacked`): afterwards only Knock Outs and
   `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
   its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and

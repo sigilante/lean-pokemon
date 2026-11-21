@@ -305,6 +305,25 @@ theorem sel_oneHit {w : Whose} {f : Nat → Effect} : ∀ {l : List Nat},
       simp only [sel, Effect.oneHit, h v (.head _), sel_oneHit (fun u hu => h u (.tail _ hu)),
         Bool.and_self]
 
+theorem sel_switchesOwn {w : Whose} {f : Nat → Effect} : ∀ {l : List Nat},
+    (∀ v ∈ l, (f v).switchesOwn = false) → (sel w f l).switchesOwn = false
+  | [], _ => rfl
+  | v :: l, h => by
+      simp only [sel, Effect.switchesOwn, h v (.head _),
+        sel_switchesOwn (fun u hu => h u (.tail _ hu)), Bool.or_self]
+
+theorem stepAOf_switchesOwn (w : Nat) (i : Instr) : (stepAOf w i).switchesOwn = false := by
+  cases i with
+  | inc r q => cases r <;> rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
+theorem stepBOf_switchesOwn (w q : Nat) (i : Instr) : (stepBOf w q i).switchesOwn = false := by
+  cases i with
+  | inc r q' => rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
 theorem stepAOf_oneHit (w : Nat) (i : Instr) : (stepAOf w i).oneHit = true := by
   cases i with
   | inc r q => cases r <;> rfl
@@ -326,14 +345,24 @@ theorem atkA_wf (M : Machine) : (atkA M).wf = true := by
   have h3 : (effA M).oneHit = true :=
     Effect.oneHit_seq_right rfl (Effect.oneHit_seq_right h1 (by
       simp only [Effect.oneHit, h2, Bool.and_self]))
-  simp only [Attack.wf, atkA, h3, decide_true, Bool.true_or, Bool.and_self]
+  have h4 : (effA M).switchSafe = true := Effect.switchSafe_of_switchesOwn (by
+    simp only [effA, normA, Effect.switchesOwn,
+      sel_switchesOwn (fun _ _ => rfl : ∀ v ∈ (List.range (V M)).map (W M + ·),
+        (setPc (v - W M)).switchesOwn = false),
+      sel_switchesOwn (fun _ _ => stepAOf_switchesOwn _ _ : ∀ v ∈ List.range (V M),
+        (stepAOf (W M) (M.instr v)).switchesOwn = false), Bool.or_self])
+  simp only [Attack.wf, atkA, h3, h4, decide_true, Bool.true_or, Bool.and_self]
 
 /-- The Tape's attack is well formed. -/
 theorem atkB_wf (M : Machine) : (atkB M).wf = true := by
   have h3 : (effB M).oneHit = true :=
     Effect.oneHit_seq_right rfl (Effect.oneHit_seq_right rfl
       (sel_oneHit fun _ _ => stepBOf_oneHit _ _ _))
-  simp only [Attack.wf, atkB, h3, decide_true, Bool.true_or, Bool.and_self]
+  have h4 : (effB M).switchSafe = true := Effect.switchSafe_of_switchesOwn (by
+    simp only [effB, Effect.switchesOwn,
+      sel_switchesOwn (fun _ _ => stepBOf_switchesOwn _ _ _ : ∀ v ∈ List.range (V M),
+        (stepBOf (W M) v (M.instr v)).switchesOwn = false), Bool.or_self])
+  simp only [Attack.wf, atkB, h3, h4, decide_true, Bool.true_or, Bool.and_self]
 
 /-- The first player's Pokémon: its damage is the program counter, so its HP exceeds every
 value the counter takes. -/

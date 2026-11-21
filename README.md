@@ -59,11 +59,20 @@ rulebook, the later sources and the model differ, are listed at the top of
 Benched Pokémon of either player (`benchCounters`, `spreadCounters`), healing one of the player's
 own Benched Pokémon (`benchHeal`), attack damage to Benched Pokémon (`benchDamage`,
 `spreadDamage`: a printed amount with no Weakness, Resistance or other modifier, and none on a
-Tera Pokémon on the Bench), switching the player's own or the opponent's Active Pokémon with a
-Benched one (`switch`, which cures the Pokémon sent to the Bench), Energy attachment and evolution
-on the Bench, Char counters acting on Benched Pokémon between turns, Knock Outs of any Pokémon in
-play (a Benched one goes to the discard pile with no promotion; several pending Knock Outs are
-all taken, in any order, before play continues, since no rule fixing the order was found), and
+Tera Pokémon on the Bench; dropping the defender's reduction and prevention does more damage to
+the Bench than the rulebook, and dropping the attacker's bonus rests on a claim about printed
+bonuses that the rulebook's own example, "this Pokémon's attacks do 40 more damage", does not
+support, so the model's Bench damage is not a superset of the printed outcomes), switching the
+player's own or the opponent's Active Pokémon with a Benched one (`switch`, which cures the
+Pokémon sent to the Bench; inside an attack nothing after a `switch .own` may act on the
+player's Active Pokémon, `Effect.switchSafe`, so the attacker stays the attacker,
+`Attack.attacker_at_hit`; printed switch-out attacks do their damage first), Energy attachment
+and evolution on the Bench, Char counters acting on Benched Pokémon between turns, Knock Outs of
+any Pokémon in play (a Benched one goes to the discard pile with no promotion; several pending
+Knock Outs are all taken, in any order, before play continues, since no rule fixing the order was
+found; the order can decide the winner: one attack that leaves both Active Pokémon pending with
+each player on their last Prize card has two orders with opposite winners, where the rulebook
+would apply its simultaneous-win rule, which the model lacks), and
 Prize values by rule box (1; 2 for Pokémon ex; 3 for Mega Evolution Pokémon ex), taking the top
 Prize cards and winning when the last one is taken in the middle of a multi-Prize Knock Out
 (witnesses in `Pokemon/Bench.lean`). The Bench holds at most 5 Pokémon. For that model it proves:
