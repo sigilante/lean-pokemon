@@ -295,8 +295,10 @@ inductive Dst where
 "up to `n`" (any number from 0 to `n`), exactly `n` (the move has no resolution if fewer can be
 taken: "You can use this card only if you discard 2 other cards from your hand"; a continuation
 after it in `seq` runs only if the cost was paid), or all of them ("discard all Energy from this
-Pokémon"; drawing and milling are `all` from the top `n` cards). Today's rule (S8, PP26) reads "up
-to X" as 0..X in attacks and 1..X in other effects; `upTo` allows 0 in both, a superset. -/
+Pokémon"; drawing and milling are `all` from the top `n` cards). The rulebook (2026 p. 21) reads
+"up to X" as 0..X in attacks and 1..X in other effects (Trainer cards, Abilities), and at least 1
+for a search of the deck or discard pile "for any card you want"; `upTo` allows 0 in every effect,
+a superset outside attacks (Known gaps). "Any amount" allows 0 (p. 21), as `upTo` does. -/
 inductive Qty where
   | upTo (n : Nat)
   | exactly (n : Nat)
@@ -399,7 +401,7 @@ inductive Amt where
 /-- Which steps of the damage calculation an attack's damage step switches off (milestone MV3): the
 Defending Pokémon's Weakness (step 3), its Resistance (step 4), and every effect on it (step 5: its
 stored reduction and prevention and the static reductions and preventions in force on it). The
-2026 rulebook's steps (p. 19): "3) Increase the damage by the amount next to your opponent's Active
+2026 rulebook's steps (p. 20): "3) Increase the damage by the amount next to your opponent's Active
 Pokémon's Weakness … 4) Reduce the damage by the amount next to your opponent's Active Pokémon's
 Resistance … 5) Figure out damage effects of Trainer or Energy cards, or other effects on your
 opponent's Active Pokémon". The printed variants: "This attack's damage isn't affected by
@@ -714,12 +716,17 @@ def Qty.canFail : Qty → Bool
   | _ => false
 
 /-- **The trigger fragment** (milestone M8b): the effects a triggered Ability resolves. Drawing,
-damage counters and a Special Condition on the opponent's Active Pokémon (from the trigger's owner,
-"the Attacking Pokémon"), shuffling, the zone moves that always have a resolution (no `exactly`),
+damage counters and a Special Condition other than Paralysis on the opponent's Active Pokémon (from
+the trigger's owner, "the Attacking Pokémon"), shuffling, the zone moves that always have a resolution (no `exactly`),
 discarding Tools, in sequence or as a choice. Excluded: tests and `iter`, every effect that reads
 damage (`heal`, `scale`, the damage steps, `moveCounter`), lingering modifiers (`linger`), switching,
-markers, `poisonUp`, `search` (no resolution on an empty deck; "search your deck" is a `move`) and
-`discardStadium`. So a trigger can always be resolved when both Active Spots are filled
+markers, `poisonUp`, `search` (no resolution on an empty deck; "search your deck" is a `move`),
+`discardStadium`, and Paralysis: a trigger resolves during the attacker's owner's turn, and
+"After its owner's next turn, it recovers during Pokémon Checkup" (rulebook 2026 p. 16) would keep
+the attacker Paralyzed through its owner's next turn, whereas `InPlay.checkup` cures Paralysis at
+the Checkup that ends its owner's turn, here the very turn it was inflicted; the model has no
+record of when a Condition was inflicted, so the fragment leaves Paralysis out (no imported trigger
+inflicts it). So a trigger can always be resolved when both Active Spots are filled
 (`Run.exists_of_trigOk`), writes no store, and reads no damage, which both clamps need. Every
 printed effect of the two implemented shapes in today's Standard that the model can express is in
 the fragment (survey S12 §3). -/
@@ -727,7 +734,7 @@ def Effect.trigOk : Effect → Bool
   | .skip => true
   | .draw => true
   | .counters _ => true
-  | .inflict _ => true
+  | .inflict c => decide (c ≠ .paralyzed)
   | .shuffle => true
   | .move _ _ _ _ q => !q.canFail
   | .drawTo _ _ => true
@@ -1078,7 +1085,9 @@ Pokémon ex included ("Like other Pokémon ex, when a Tera Pokémon ex is Knocke
 takes 2 Prize cards", p. 24; printed "Pokémon ex rule: When your Pokémon ex is Knocked Out, your
 opponent takes 2 Prize cards."); and Mega Evolution Pokémon ex ("Mega Evolution ex Rule: When
 your Mega Evolution Pokémon ex is Knocked Out, your opponent takes 3 Prize cards.", printed on the
-cards; the 2023 rulebook predates them, S9). In the card data every Standard card with the MEGA
+cards; the 2023 rulebook predates them, S9; the 2026 rulebook confirms it: "these Pokémon allow
+your opponent to take three Prize cards when they are Knocked Out", 2026 p. 24, and "Mega Evolution
+Pokémon ex are considered to be Pokémon ex", p. 24). In the card data every Standard card with the MEGA
 subtype is also ex, and 45 of its records print both rules; the Mega Evolution rule is the one
 that gives the number. Older kinds (EX, GX, V, VSTAR: 2; VMAX, TAG TEAM, V-UNION: 3; Radiant:
 1) give the same three numbers and are out of scope until the card pool needs them. -/

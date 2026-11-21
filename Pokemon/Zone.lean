@@ -25,6 +25,14 @@ theorem Split.count {f : Filter} {l t r : List Card} (h : Split f l t r) (x : Ca
   | take _ _ ih => simp only [List.count_cons, ih]; omega
   | keep _ ih => simp only [List.count_cons, ih]; omega
 
+/-- The cards taken by a split are at most the cards split. -/
+theorem Split.taken_le {f : Filter} {l t r : List Card} (h : Split f l t r) :
+    t.length ≤ l.length := by
+  induction h with
+  | nil => exact Nat.le_refl _
+  | take _ _ ih => simp only [List.length_cons]; omega
+  | keep _ ih => simp only [List.length_cons]; omega
+
 /-- Every card taken passes the filter. -/
 theorem Split.taken {f : Filter} {l t r : List Card} (h : Split f l t r) :
     ∀ x ∈ t, f.eval x = true := by

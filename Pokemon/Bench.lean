@@ -754,7 +754,9 @@ theorem benchDamage_reachable :
 "You win if you take your last Prize card or if your opponent has no Benched Pokémon to replace
 their Active Pokémon if it is Knocked Out … This makes it possible for both players to win at the
 same time. If this happens, play Sudden Death. However, if you win in both ways and your opponent
-wins in only one way, you are the victor!" (rulebook 2023 p. 21). Before milestone batch-KO the
+wins in only one way, you are the victor!" (rulebook 2023 p. 21; the 2026 rulebook, p. 21, plays
+a tiebreaker game instead of Sudden Death, and `Outcome.suddenDeath` stands for it). Before
+milestone batch-KO the
 model took the two Knock Outs one at a time and the first one taken decided the game (either
 player could win). With the batch Knock Out step the outcome no longer depends on any order: every
 move from the state after the attack gives the rulebook's outcome. -/

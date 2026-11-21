@@ -8,7 +8,7 @@ Survey S15 §1: 39 refused Standard cards print one of five variants of "This at
 affected by Weakness / Resistance / Weakness or Resistance / any effects on your opponent's Active
 Pokémon / Weakness or Resistance, or by any effects on your opponent's Active Pokémon". The damage
 step carries a flag record, `Ign` (`Effect.damage a ig`), and its damage is `GameState.dealtI ig n`:
-the rulebook's calculation (2026 p. 19, steps 1–6, quoted in `dealtBy`) with step 3 (Weakness),
+the rulebook's calculation (2026 p. 20, steps 1–6, quoted in `dealtBy`) with step 3 (Weakness),
 step 4 (Resistance) or step 5 ("other effects on your opponent's Active Pokémon": the defender's
 stored reduction and prevention and its static reductions) switched off. Step 2, the attacker's own
 bonuses, always applies. `dealtI {}` is `dealt` by definition (`GameState.dealtI_none`).

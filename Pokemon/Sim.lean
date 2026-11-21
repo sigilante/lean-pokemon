@@ -1238,7 +1238,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1.lt_bound hH (w := .own) (sp := .active) ha))
       obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      refine ⟨_, .retreat rfl rfl hr (hq.energy.trans he) (by rw [hsf.retreatOf hq.sv]; exact hp)
+      refine ⟨_, .retreat rfl rfl hr (hq.energy ▸ he) (by rw [hsf.retreatOf hq.sv]; exact hp)
         (by rw [hq.rot]; exact hs) hbt hs' (by rw [hfl.2.2.1]; exact hl) hat, ?_⟩
       rw [e]
       simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₂, Option.map_some,

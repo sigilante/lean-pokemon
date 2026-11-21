@@ -80,9 +80,9 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
   | retreat ha hb hr he hp =>
       simp only [R, T, tpl, Option.some.injEq] at ha; subst ha
       rw [(GameState.plain_of_plainB (g := R) rfl).retreatOf rfl] at hp
-      have := congrArg List.length he
-      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at this hp
-      omega
+      have := Split.taken_le he
+      rw [hp] at this
+      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at this
   | item hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])
   | supporter hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])
   | stadium hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])

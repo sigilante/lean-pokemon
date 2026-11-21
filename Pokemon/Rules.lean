@@ -46,8 +46,12 @@ if the game is over, so no step of a Trainer effect runs while a Pokémon is at 
 
 Sources of the turn rules (milestone M1). The rulebook quoted is the *Scarlet & Violet—151*
 rulebook (©2023, `data/mew_rulebook_en.pdf`, survey S9); survey S8 read the *Surging Sparks*
-rulebook (©2024) and a Professor Program post on the rule changes of February 2026. The model
-follows the latest source; for the rules below the three agree except where noted.
+rulebook (©2024) and a Professor Program post on the rule changes of February 2026. Survey S14
+checked the model against the current rulebook ("last updated November 2026",
+`data/dlr_rulebook_en.pdf`; cited as "2026" with its printed page numbers): the rules below are
+unchanged in it, apart from the simultaneous-win rule, "up to X", the order of Checkup effects,
+Mega Evolution Pokémon ex, ACE SPEC and Legendary Stadiums (S14 §1). The model follows the latest
+source; for the rules below the sources agree except where noted.
 * An attack ends the turn (2023 pp. 9, 13; 2024 the same, S8 B13). The failed Confused attempt
   also ends the turn: the rulebook says only that "the attack doesn't happen" (p. 16); the model
   reads the Confusion check as step C of using the attack (p. 20).
@@ -64,14 +68,16 @@ follows the latest source; for the rules below the three agree except where note
   "Once during each player's turn" effects usable by whoever is taking their turn (milestone M5).
 * Pokémon Tools (2023 glossary p. 40, "Each Pokémon can have only 1 Pokémon Tool attached at a
   time"; p. 9, "as many Item and Pokémon Tool cards as you like"): milestone M5. Technical
-  Machines (glossary p. 41: an Item "you can attach to your Pokémon"; "remain attached unless the
-  card text says otherwise") are, in today's Standard, one Tool (Technical Machine: Fluorite
+  Machines (2023 glossary p. 41: an Item "you can attach to your Pokémon"; 2026 glossary p. 45: "A
+  kind of Trainer card (an Item or Pokémon Tool) you can attach to your Pokémon", "remain attached
+  unless the card text says otherwise") are, in today's Standard, one Tool (Technical Machine: Fluorite
   sv8-188) whose text says "discard it at the end of your turn" (survey S9 C10); the model has no
   end-of-turn discard.
-* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21), and "if you win in both ways and
-  your opponent wins in only one way, you are the victor!"; the model ends the game with the
-  outcome `Outcome.suddenDeath` (milestone batch-KO) and does not play the new game; the 2026 post
-  replaced Sudden Death with tiebreaker games (S8 J4, unverified against a rulebook; gaps).
+* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21); the 2026 rulebook has "If this
+  happens, play a tiebreaker game. However, if you win in both ways and your opponent wins in only
+  one way, you are the victor!" (2026 p. 21). The model ends the game with the outcome
+  `Outcome.suddenDeath` (milestone batch-KO), which now stands for "a tiebreaker game is played",
+  and does not play the new game (gaps).
 * Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
   model's rule comes from another source (gaps).
 
@@ -112,7 +118,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`Card.provides`); Special Energy (several units, or units of several types), cost changes
   ("this attack costs ✱ less") and Energy that provides nothing in some states are absent. A
   Retreat Cost is still paid by discarding that many Energy cards, which with Basic Energy only
-  is the rulebook's rule;
+  is the rulebook's rule ("you must discard 1 Energy from your Active Pokémon for each [✱] listed
+  in its Retreat Cost", 2026 p. 12); the player chooses which (`Move.retreat`: any sub-multiset,
+  `Split .any`; until survey S14 only the most recently attached Energy could be discarded, which
+  forbade keeping the Energy an attack needs; `Retreat.discard_first`, `Retreat.discard_second`);
 * Weakness is ×2 to one type and Resistance −N to one type, as printed today (S9: every Standard
   Weakness is ×2; Resistance −30, once −20). Absent: "+10" to "+40" Weakness on older cards,
   two Weaknesses or two Resistances on one card (dual-type Pokémon, S8 C6; a Pokémon has one
@@ -122,7 +131,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   attack's damage step may ignore them and the effects on the defender (`Ign`, `GameState.dealtI`:
   "This attack's damage isn't affected by Weakness / Resistance / any effects on your opponent's
   Active Pokémon" and their combinations, 39 refused Standard cards in survey S15; exact: the
-  rulebook's step 3, 4 or 5 is switched off, 2026 p. 19, and step 2, the attacker's bonuses, is
+  rulebook's step 3, 4 or 5 is switched off, 2026 p. 20, and step 2, the attacker's bonuses, is
   kept). Absent from the same family: a reduction of the Defending Pokémon's attacks before Weakness
   ("attacks used by the Defending Pokémon do 30 less damage (before applying Weakness and
   Resistance)", 10 cards), an increase after it ("the Defending Pokémon takes 50 more damage", 4),
@@ -175,10 +184,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
     before deciding would Knock it Out too and give A a second way to win, so A would win. The
     rulebook is silent on this case; deciding per round is the model's reading
     (`StaticWitness.outcome_per_round`, a machine-checked witness);
-  - Sudden Death is a new game, which the model does not play: `Outcome.suddenDeath` is a terminal
-    outcome of the model's game. The 2026 rules (Professor Program post, survey S8 J4) replaced
-    Sudden Death by a tiebreaker game; that was read only through a secondary summary and is
-    unverified against a rulebook. For the model it changes only the name of the outcome;
+  - when both players win in as many ways the 2026 rulebook plays a tiebreaker game ("Both players
+    set up as though they were playing a normal game … The first player to take a Prize card … wins",
+    2026 p. 21; the 2023 rulebook's Sudden Death, a new game with 1 Prize card each, is gone). The
+    model does not play the new game: `Outcome.suddenDeath` is a terminal outcome of the model's
+    game and stands for "a tiebreaker game is played"; the constructor keeps the 2023 name, which
+    generated code and the paper cite;
   - the outcome counts the two ways of winning the rulebook names at a Knock Out (p. 21); a third
     way, an opponent who cannot draw at the start of their turn (`deckOut`), never coincides with a
     Knock Out check in the model (the draw is a separate move);
@@ -288,7 +299,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * lingering modifiers (`Store`, `Effect.linger`): each player has a damage bonus for their
   attacks, a damage reduction and a damage prevention for attacks against their Pokémon, and
   locks on attacking, retreating and playing Items, for this turn, the next turn, the turn
-  after, or the rest of the game; `endTurn` shifts the turns (`Store.shift`). Amounts add up
+  after, or the rest of the game; `endTurn` shifts the turns (`Store.shift`). They also survive
+  evolution, whereas "Any effects of attacks or Special Conditions affecting the Pokémon … end
+  when it evolves" (2026 p. 11): a departure in both directions (a lock or a reduction that print
+  ends stays in force and forbids or changes outcomes; a bonus that print ends stays and adds
+  damage), as for leaving the Active Spot below; per-Pokémon effects are milestone M7. Amounts add up
   without limit: `linger` is a general primitive, usable any number of times and inside
   `iter` (printed same-turn bonuses and reductions are bounded by copies times a constant if no
   card-recycling loop replays them, an empirical claim about the card pool; rest-of-game ones
@@ -306,7 +321,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   and Resistance)", "… less damage … (after applying Weakness and Resistance)", survey S9);
   modifiers that name the other step are not expressible. An attack whose damage "isn't affected
   by any effects on your opponent's Active Pokémon" (milestone MV3, `Ign.fx`) reads the defender's
-  store as empty and its static reduction as 0: no reduction and no prevention apply to it. Static
+  store as empty and its static reduction as 0: no reduction and no prevention apply to it,
+  including a Stadium's (Full Metal Lab's reduction, Neutralization Zone's prevention): the model
+  reads "effects on your opponent's Active Pokémon" as every step-5 effect, a Stadium's included; no
+  ruling on Stadiums was checked. Static
   damage prevention by a filter on the attacker (milestone MV3, `SEff.prevent`, "Prevent all damage
   done to this Pokémon by attacks from your opponent's Pokémon ex") is read at step 5 with the
   defender's other effects (`GameState.sPrevent`); it is never stored, and prevented damage fires
@@ -435,9 +453,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   only: no Ability (Checkup Abilities, 5 Standard cards in survey S12, are not modelled; milestone
   M8b implemented the two commonest trigger shapes instead),
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
-  choice of order between Special Conditions and those effects does not arise); Burn uses the
-  current rule (2 counters, then heads cures); Paralysis ends at the Checkup after its
-  owner's turn, which is exact here because only the opponent's Pokémon can be Paralyzed;
+  order of Checkup effects does not arise: since 2026 "The player whose turn is next decides the
+  order of the effects, but all Special Conditions must happen at the same time", 2026 p. 15);
+  Burn uses the current rule (2 counters, then heads cures); Paralysis ends at the Checkup after
+  its owner's turn ("After its owner's next turn, it recovers during Pokémon Checkup", 2026
+  p. 16). That is exact when Paralysis is inflicted during the opponent's turn, which is the only
+  case the model has: attacks, Trainer cards and Abilities inflict only on the opponent's Active
+  Pokémon, and a triggered Ability, which resolves in the attacker's owner's turn and inflicts on
+  the Attacking Pokémon, cannot Paralyze (`Effect.trigOk` excludes it; no imported trigger does);
+  a Pokémon Paralyzed during its owner's own turn would have to stay Paralyzed through that
+  owner's next turn, which needs a record of when it was Paralyzed that the model lacks;
   coin flips are nondeterministic choices, so the model is silent about probability;
 * `poisonUp n` is a general effect primitive, usable in any effect and inside `iter`, whereas
   the printed card (Croagunk) raises Poison strength once per use of its attack; the model
@@ -559,8 +584,18 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   card-by-card check of every condition. Since milestone MV3 damage prevention by a filter on the
   attacker is expressed (`SEff.prevent`: Neutralization Zone, without its "can't be put into your
   hand or deck" rider; on Abilities Sylveon sv8pt5-40, Crustle sv10-12, Farigiraf ex sv5-108,
-  Cornerstone Mask Ogerpon ex ×2; survey S15 §3), for the Active Pokémon only (Bench damage takes no
-  modifier). Absent kinds, for a later milestone: other damage prevention (Battle Cage's counters on
+  Cornerstone Mask Ogerpon ex ×2; survey S15 §3), for the Active Pokémon only: `SEff.prevent` is
+  read at the damage step against the Active Pokémon (`GameState.sPrevent`) and `InPlay.hitBench`
+  reads no static effect, so a Benched Pokémon whose Ability (or the Stadium) prevents damage from
+  the attacker still takes the attack's Bench damage (`benchDamage`, `spreadDamage`, `benchSome`).
+  Direction: the model does damage to the Bench that print prevents (an outcome print forbids,
+  and the printed outcome, no damage, is missing), so these cards are exact in the Active Spot
+  only. Neutralization Zone prevents damage "by attacks from your opponent's Pokémon ex and
+  Pokémon V"; the model has no "Pokémon V" filter (`RuleBox` has `none`, `ex`, `megaEx`), and the
+  filter is `ex` alone. That is exact for today's Standard: no card of regulation mark H, I or J has
+  the V, VSTAR, VMAX or V-UNION subtype in the card data (3219 records, checked for survey S14), so
+  no Pokémon V can be played in a Standard game, though 39 of those records name "Pokémon V" in
+  their text. A deck with older cards would need the filter. Absent kinds, for a later milestone: other damage prevention (Battle Cage's counters on
   the Bench; prevention on the Bench, 7 cards; thresholds, Drednaw sv7-44), prevention of effects (8)
   and Special Condition immunity (Hoothoot, Festival Grounds ×2); attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
   Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no
@@ -633,11 +668,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   this Pokémon is Knocked Out)") and `TrigEvent.koByAttack` ("if this Pokémon is Knocked Out by
   damage from an attack from your opponent's Pokémon"), on a Pokémon card or given by a Tool,
   mandatory or optional, with an effect in the trigger fragment (`Effect.trigOk`: draw, damage
-  counters and a Special Condition on the Attacking Pokémon, zone moves that cannot fail, Tool
-  discard). Resolution (see the triggers section above `Move`): from the owner's side on the
-  exchanged state (`GameState.swap`), by `Run`, each trigger as a whole, several in any order
-  (`List.Perm`: the order of simultaneous triggers is not in the 2023 rulebook, and the 2026 rule
-  on who orders them is unverified, S8); `damaged` at the end of the attack, before the Knock Out
+  counters and a Special Condition other than Paralysis on the Attacking Pokémon (Paralysis
+  inflicted in its owner's turn would last through the owner's next turn, Checkup item), zone
+  moves that cannot fail, Tool discard). Resolution (see the triggers section above `Move`): from
+  the owner's side on the exchanged state (`GameState.swap`), by `Run`, each trigger as a whole,
+  several in any order (`List.Perm`: the order of simultaneous triggers is in neither rulebook,
+  2026 outside Checkup; survey S8's report of a 2026 rule is not in the 2026 rulebook, S14); `damaged` at the end of the attack, before the Knock Out
   check; `koByAttack` in the batch move, after the batch step. Departures: a trigger's steps get no
   Knock Out check between them (`TRun` checks after each step of a Trainer effect); "the
   Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves (for a
@@ -687,22 +723,43 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `moveEnergy`, semantics `ZStep` lifted by `Run.zone`): cards that pass a filter (`Filter`:
   Pokémon, Basic, Stage, type, name, HP at most `n`, no rule box, Trainer, a Trainer kind, Energy,
   Energy of a type, since milestone MV2 Pokémon ex, Tera, a named printed attack and a printed
-  Ability, and Boolean combinations) move between one player's deck (searched, or its
+  Ability, and Boolean combinations; no "Pokémon V", static-effects item) move between one player's deck (searched, or its
   top `n` cards), hand and discard pile, to the hand, the discard pile, the top or bottom of the
   deck or shuffled into it, "up to `n`", exactly `n` or all of them; Energy is attached from a
   zone to the Active Pokémon or a Benched one, Basic Pokémon are put onto the Bench from a zone,
   Energy is discarded from a Pokémon or moved between a player's Pokémon. Simplifications and
-  departures: "up to `n`" allows 0 in every effect (today's rule allows 0 only in attacks, S8
-  PP26), a superset; `attach`, `putBench` and `moveEnergy` may always do nothing, a superset of
-  "if you can"; a cost ("discard 2 cards from your hand. If you do, …") is `exactly 2`, which has
+  departures: "up to `n`" (`Qty.upTo n`, `Qty.ok`: any number of cards from 0 to `n`) allows 0 in
+  every effect, attacks, Item and Supporter cards, Abilities, Stadiums and triggers alike, whereas
+  the rulebook allows 0 only in attacks ("For effects of attacks … between 0 and the maximum. For
+  other effects (such as the effects of Trainer cards and Abilities), you can choose any number
+  between 1 and the maximum", and at least 1 for an effect that searches the deck or discard pile
+  "for any card you want and doesn't specify what kind", 2026 p. 21): exact in attacks, a superset
+  elsewhere (a Trainer or Ability may take nothing where print must take at least one card, if
+  one can be taken); "any amount" / "any number" allows 0 (p. 21), as the model does; `attach`,
+  `putBench` and `moveEnergy` may always do nothing, a superset of "if you can"; a cost ("discard 2 cards from your hand. If you do, …") is `exactly 2`, which has
   no resolution when it cannot be paid, so a Trainer whose cost cannot be paid cannot be played,
   and an attack writes the optional reading with `choice`; since milestone MV3 the "if you do" and
   "for each … in this way" shapes of survey S15 §2 are derived forms with no new state
-  (`Pokemon/IfDo.lean`): `Effect.mayDo` ("You may A. If you do, B"), `Effect.ifDone` ("A. If you do,
-  B", and "If you can't, this attack does nothing", with a test that A can be done; exact when A has
-  a resolution exactly when the test holds) and `Effect.forUpTo` ("discard up to N …, K damage for
-  each card discarded in this way": the number discarded is the branch; for "any amount" exact once
-  the bound covers the cards that can be taken, `Run.forUpTo_complete`). Absent from that family:
+  (`Pokemon/IfDo.lean`), whose exactness is conditional on A, card by card:
+  `Effect.mayDo` ("You may A. If you do, B") is exact only if A has no resolution that does
+  nothing, otherwise B can follow an A that did not happen (`Run.mayDo_exact`); primitives that can
+  resolve doing nothing are `skip`, `iter`, `attach`, `putBench`, `moveEnergy`, `move` and
+  `discardEnergy` with `upTo` or `exactly 0`, and in some states `draw`, `drawTo`, `move … all`,
+  the Bench primitives on an empty Bench, `spread…`, `benchSome`, `poisonUp`, `shuffle`, `unmark`
+  and amounts of 0 (the list in `Pokemon/IfDo.lean`); `Effect.ifDone` ("A. If you do, B", and "If
+  you can't, this attack does nothing", with a test `t` that A can be done) is exact when `t` holds
+  exactly when A has a resolution (`Run.ifDone_exact`); with a test that holds where A has no
+  resolution the effect has none (an attack with no resolution is not a legal move), and with one
+  that fails where A has one both A and B are skipped; `Effect.forUpTo` ("discard up to N …, K
+  damage for each card discarded in this way": the number discarded is the branch) is exact for
+  "any amount" once the bound covers the cards that can be taken, a hypothesis of
+  `Run.forUpTo_complete` discharged per card. Proved for the commonest costs of the census, so that
+  those instances are exact by theorem and not by the importer's care: "discard N cards [passing a
+  filter] from your hand" (`Run.discardHand_exists`, `Run.discardHand_does`, `Run.discardHand_ne`,
+  `Run.ifDone_discardHand`) and "discard N Energy from this Pokémon" (`Run.discardActive_exists`,
+  `Run.discardActive_does`, `Run.discardActive_ne`, `Run.ifDone_discardActive`,
+  `Run.forUpTo_discardActive`), each for `Run` (attacks) only; any other A, and the importer's
+  choice of test, are unproved. Absent from that family:
   "If you attached Energy / put any Pokémon onto your Bench in this way" (7 refused cards: `attach`
   and `putBench` may always do nothing, so the consequence could follow an action that did not
   happen), "If you healed any damage in this way … that Pokémon" (3), consequences on "that
@@ -751,7 +808,30 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   triggers (4), filtered "during this turn" bonuses (4), Prize and Knock Out consequences (8),
   "Prize cards your opponent took during their last turn" (1, the one counted quantity, at most 6),
   and name prefixes ("any of your Ethan's Pokémon", 2 of the 10 Knock Out tests);
-* first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
+* a Pokémon that an effect puts onto the opponent's Bench (`putBench .opp`) enters play `fresh`,
+  and `Move.endTurn` clears `fresh` only on the side whose turn ends, so it stays `fresh` through
+  its owner's next turn and cannot evolve then. The rulebook allows evolving "a Pokémon you had in
+  play at the beginning of your turn" but "Neither player can evolve a Pokémon on its first turn in
+  play" (2026 p. 11); whether the owner's next turn is that Pokémon's "first turn in play" is not
+  settled there. If it is not, the model forbids an evolution print allows. No imported card uses
+  `putBench .opp`;
+* deck construction is not modelled: "your deck must be exactly 60 cards", "except for Basic
+  Energy, you can only have 4 cards with the same name in your deck" (2026 p. 22), "your deck can
+  include only one total ACE SPEC card" (p. 26), one Radiant Pokémon (p. 29). The theorems
+  quantify over every state and so over every multiset of card terms, illegal decks included (more
+  decks, a superset). The negative theorems (`LoopFreeNeeded.iter_writer_breaks_bound`,
+  `Faithful.counter_not_gxOnly`, `Recycle.recycling_breaks_bound`,
+  `Abilities.unlimited_writer_breaks_bound`, `Abilities.unlimited_recycler_breaks_bound`,
+  `Stadiums.stadium_writer_breaks_bound`) and the universality construction (`Counter.universal`)
+  are about decks in the model's sense, arbitrary multisets of card terms: their witness states
+  hold a few cards, not 60, and their writer cards are invented terms, not printed cards (survey
+  S14, "Witness-deck legality"), so none of them is a statement about a legal deck of printed
+  cards;
+* Legendary Stadiums (2026 p. 23: "You must play both halves of a Legendary Stadium card at the
+  same time … When a Legendary Stadium is in play, the pair of cards is treated as one card") are
+  not representable: a Stadium is one card. The importer refuses all three (Legendary Pyroduct,
+  Summit, Trench), so no imported deck contains one;
+* first-turn rules are the rulebook's (2023 pp. 11–13; unchanged in 2026 pp. 11–13, S14): the
   starting player cannot attack or play a Supporter on the first turn of the game
   (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
   that lifts these bans ("If you go first, you can use this attack during your first turn",
@@ -849,7 +929,8 @@ Spot, and the opponent takes a Prize card.)" Both players at once (p. 21): "You 
 your last Prize card or if your opponent has no Benched Pokémon to replace their Active Pokémon if
 it is Knocked Out (or otherwise removed from play). This makes it possible for both players to win
 at the same time. If this happens, play Sudden Death. However, if you win in both ways and your
-opponent wins in only one way, you are the victor!"
+opponent wins in only one way, you are the victor!" (2023 p. 21; the 2026 rulebook, p. 21, has
+"play a tiebreaker game" in place of "play Sudden Death", and `Outcome.suddenDeath` stands for it)
 
 `GameState.koStep` is that check: the test `koT` (damage at least the derived HP of the place) is
 evaluated once for every Pokémon in play of both players, in the state before any removal; all the
@@ -919,7 +1000,8 @@ def winWays (n : Nat) (taker other : PlayerState) : Nat :=
 
 /-- The outcome of a check in which the player to move wins in `wc` ways and the opponent in `wo`:
 no outcome if neither wins; otherwise the player with more ways wins ("if you win in both ways and
-your opponent wins in only one way, you are the victor!"), and equal ways are Sudden Death. -/
+your opponent wins in only one way, you are the victor!"), and equal ways are `Outcome.suddenDeath`,
+which under the 2026 rules (p. 21) means that a tiebreaker game is played. -/
 def Outcome.ofWays (curIsFirst : Bool) (wc wo : Nat) : Option Outcome :=
   if wc = wo then (if wc = 0 then none else some .suddenDeath)
   else if wo < wc then some (.win curIsFirst) else some (.win !curIsFirst)
@@ -1175,8 +1257,9 @@ turn's attack has been made (`GameState.attacked`), and only if the game goes on
 effect causes are taken by the next batch: the check repeats.
 
 Order. Several triggers fire at once (several Pokémon Knocked Out by one check; a Pokémon and its
-Tool). The 2023 rulebook says nothing about their order, and the 2026 rule on who orders
-simultaneous triggers (survey S8) is unverified; the model resolves them one after another in any
+Tool). The rulebook says nothing about their order (2023, and 2026 outside Checkup; the rule
+on who orders them reported from a 2026 Professor Program post, survey S8, is not in the 2026
+rulebook, survey S14); the model resolves them one after another in any
 order (`List.Perm`, a nondeterministic choice that covers whoever orders them), each as a whole.
 
 Departures (Known gaps): a trigger's effect resolves as a whole, by `Run`, with the Knock Out check
@@ -1461,10 +1544,13 @@ inductive Move : GameState → GameState → Prop where
           top := p, under := Card.pokemon q.top :: q.under,
           rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
           used := false } :: b₂ } }
-  /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon -/
+  /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon. The
+  player chooses which Energy to discard ("you must discard 1 Energy from your Active Pokémon for
+  each [✱] listed in its Retreat Cost", rulebook 2026 p. 12): `paid` is any sub-multiset of the
+  attached Energy and `rest` the others, each in attachment order (`Split .any`) -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
-      (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
+      (hr : g.cur.retreated = false) (he : Split .any a.energy paid rest)
       (hp : paid.length = g.retreatOf a)
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
