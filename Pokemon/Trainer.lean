@@ -21,7 +21,9 @@ resolves Trainer effects by `TRun` (in `Pokemon.Rules`), which does exactly this
   `selfKO_reachable` (an Item `seq (selfDamage 5) (heal 5)` Knocks Out the player's own 50-HP
   Active Pokémon after its first step; the heal then acts on the promoted Pokémon),
   `koThenHit_reachable` (an Item `iter (counters 5)` Knocks Out the opponent's 50-HP Active
-  Pokémon, the opponent promotes a 100-HP Pokémon, and the next round hits it), and
+  Pokémon, the opponent promotes a 100-HP Pokémon, and the next round hits it; this is
+  rulebook behaviour for "as often as you like, put 5 damage counters", but for "flip until
+  tails, 5 counters per heads" it is an artefact of the check between primitives), and
   `winMidEffect_reachable` (an Item `seq (counters 5) draw` takes the last Prize card in its
   first step; the game is over and the draw is not made).
 

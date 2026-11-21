@@ -38,10 +38,14 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   gives exactly one Prize;
 * Knock Outs in mid-effect (Item and Supporter cards, `TRun`): they are checked after each
   primitive step of the model's effect language, so a printed sentence that the model writes
-  as several primitives gets a check between them; the Knocked Out Pokémon's replacement is
+  as several primitives gets a check between them, and the outcome in which the whole
+  sentence acts on the original Pokémon is then absent from the model (e.g.
+  `seq (counters 5) (scale opp 1)` against a 5-HP Active always acts on the promoted
+  Pokémon in its second step); the Knocked Out Pokémon's replacement is
   promoted at once, before the next step (no ruling was found on when the replacement is
   chosen in mid-effect; the promoted Pokémon is a nondeterministic choice, which covers the
-  owner's choice); when a Prize ends the game, or its owner has no Pokémon to promote, the
+  owner's choice, but outcomes in which later steps of the effect find an empty Active Spot
+  are absent from the model); when a Prize ends the game, or its owner has no Pokémon to promote, the
   game ends and the rest of the effect is not resolved. Simultaneous Knock Outs cannot arise
   inside a Trainer effect here (each primitive step damages at most one Active Pokémon and
   starts `Settled`), so the order in which they are taken, and Sudden Death, do not arise

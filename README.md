@@ -28,11 +28,14 @@ Sleep, Paralysis, then Knock Outs). For that model it proves:
   the effect starts in a `Settled` state, so no step runs while a Pokémon is at or above its
   HP; the effect ends `Settled` or with the game over (`TRun.settled_or_won`), and a finished
   game resolves nothing more (`TRun.of_won`). Single legal moves from well-formed starts
-  witness the rulebook behaviours the earlier model lacked: an Item `seq (selfDamage 5)
+  witness behaviours the earlier model lacked: an Item `seq (selfDamage 5)
   (heal 5)` Knocks Out its player's 50-HP Active Pokémon after the first step
-  (`Trainer.selfKO_reachable`); an Item `iter (counters 5)` Knocks Out the opponent's Active
+  (`Trainer.selfKO_reachable`); an Item `iter (counters 5)`, read as "as often as you like,
+  put 5 damage counters on the opponent's Active Pokémon", Knocks Out the opponent's Active
   Pokémon, the opponent promotes, and the next round hits the new Active Pokémon
-  (`Trainer.koThenHit_reachable`); an Item takes the last Prize card in mid-effect and the
+  (`Trainer.koThenHit_reachable`; read instead as "flip until tails, 5 counters per heads",
+  this outcome is a consequence of the model's check between primitives, not rulebook
+  behaviour, since the printed card places all its counters at once); an Item takes the last Prize card in mid-effect and the
   rest of it is not resolved (`Trainer.winMidEffect_reachable`);
 * from a well-formed start (`WellFormed`: both players have Prizes while there is no winner;
   Benched Pokémon are below HP with no Special Condition), no reachable state without a winner
@@ -73,9 +76,15 @@ written as several primitives gets a check between them); the replacement is pro
 before the next step (no ruling on its timing was found); the Prize card is the top one; and
 an effect that damages several Pokémon at once is not expressible, so the order of
 simultaneous Knock Outs does not arise inside a Trainer effect. Up to these, the model's
-Trainer timing is the rulebook's (an earlier version resolved a Trainer effect as a whole,
-which made the two incomparable), so this is no longer a reason why finiteness of the model
-would fail to carry over to the printed game; the other listed departures remain.
+Trainer timing is the rulebook's (an earlier version resolved a Trainer effect as a whole and
+could read and heal damage above HP; that defect is gone). Two of these simplifications can
+still lose printed outcomes, so transfer to the printed game by inclusion needs them as named
+caveats: where a printed sentence is atomic but is written as several primitives, the check
+between them removes the outcome in which the whole sentence acts on the original Pokémon
+(e.g. `seq (counters 5) (scale opp 1)` against a 5-HP Active always doubles the promoted
+Pokémon's damage); and immediate promotion removes outcomes in which later steps find an
+empty Active Spot. Neither makes finiteness easier: the atomic reading is the attack case,
+and deferred promotion is a finite-branching variant. The other listed departures remain.
 
 Build: `lake build` (core Lean only, no dependencies). `Pokemon/Audit.lean` runs
 `#audit_namespace Pokemon` (defined in `Pokemon/AuditCmd.lean`), which checks every theorem
