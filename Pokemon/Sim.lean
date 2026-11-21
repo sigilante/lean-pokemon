@@ -580,13 +580,13 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         GameState)) hc''
       exact GameState.clamp_of_rclamp this
         (fun p hp => hhp _ (GameState.top_mem_opp_active (g := g') hp))
-  | attackConfused ha hm hc' hs hn hf hbt hst hl =>
+  | attackConfused ha hm hc' hs hn hf hbt hst hl hgx =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl), by
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl) hgx, by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3)]⟩
   | knockOut ha hk hp =>

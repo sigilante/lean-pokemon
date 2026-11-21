@@ -106,8 +106,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`GameState.Fit`); for every cap `k ≥ 3` there is a deck with a reduction for which that clamp
   is not a simulation (`Lingering.reduce_breaks_clamp`), and for every `k ≥ 2` a deck with
   `drain` (`Lingering.drain_breaks_clamp`). *Faithful decks* (`Faithful.xfinite`): the clamp
-  with exact stores, `GameState.xclamp`, is a bisimulation for every deck
-  (`Reach.xclamp_bisim`), and its reachable values are finite when the stores stay bounded
+  with exact stores, `GameState.xclamp`, is a bisimulation for every deck, on all pairs of
+  states with equal `xclamp` (`Reach.xclamp_bisim`, `GameState.xclamp_bisim`), and its reachable
+  values are finite when the stores stay bounded
   (`Reach.xfinite_bounded`), which holds for decks with no damage bonus or reduction under
   `iter` (`LoopFree`) and rest-of-game bonuses and reductions only in GX attacks (`GXOnly`;
   `Faithful.reach_boundedStores`). Faithful decks may use damage reduction, `drain`, and
@@ -118,12 +119,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   simulates every two-counter machine (`Counter.universal`; this rests on the
   over-approximation of rest-of-game modifiers just described, on `damage` read by a test later
   in the same attack, on a printed HP chosen for the machine, and on the other departures listed
-  in `Pokemon/Counter.lean`); its start states satisfy `LoopFree` and violate `GXOnly`
-  (`Faithful.dichotomy`); with Minsky's theorem (prose) this rules out a uniform computable
+  in `Pokemon/Counter.lean`); its start states satisfy `LoopFree`, and violate `GXOnly` when the
+  machine's first instruction is not `halt` (`Faithful.counter_not_gxOnly`), so the `GXOnly`
+  clause cannot be dropped from `Faithful.xfinite` (`Faithful.dichotomy`, a sharpness result, not
+  a classification: nothing is proved about other decks that are not faithful); with Minsky's theorem (prose) this rules out a uniform computable
   finite abstraction of the generalised model; for one such deck the reachable states are not
   finite up to the exact-store clamp, nor up to any equivalence fine enough to recover the
   machine's configuration, a statement about representation, not play
   (`Faithful.xclamp_not_finite`, `Counter.not_finite_up_to`);
+* base damage 0: the rulebook stops an attack's damage calculation when its base damage is 0,
+  so a 0-damage attack does no damage whatever the bonuses; the model's `dealtBy` adds the
+  bonus to it, so `damage 0` deals `bonus - reduction` (an over-approximation). The two-counter
+  construction does not rely on this: both of its attacks have base damage 0, but in every state
+  it tracks (`Counter.pkA`, `Counter.pkB`) the defender's rest-of-game reduction is at least the
+  attacker's bonus (`x + a` against `x`), so the base damage deals 0 as the rulebook says; its
+  zero test is `damage 1` inside the effect, whose base is 1;
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending
@@ -135,15 +145,19 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the model over-approximates the printed texts;
 * GX attacks (`Attack.gx`): a player who has used one (`PlayerState.gxUsed`) cannot use another
   in the same game; the flag is set by `Move.attack` (a rule added for `Pokemon/Faithful.lean`;
-  before it, `gxUsed` was never read or written). A Confused Pokémon's failed attempt at a GX
-  attack (`attackConfused`) does not use it up; VSTAR Powers are absent (`vstarUsed` is unused);
+  before it, `gxUsed` was never read or written). A Confused Pokémon can try a GX attack
+  (`attackConfused`) only under the same condition, and a failed attempt (tails) does not use it
+  up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
+  ruling, and the model takes the answer "no"; VSTAR Powers are absent (`vstarUsed` is unused);
 * an attack does not end the turn, but at most one attack is made per turn (`attacked`, reset
   only by `endTurn`); the first player may play a Supporter on the first turn;
   each player has their own Stadium slot;
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them only from the player's own Active Pokémon (`cure`); the variants with a number
   ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; poisoning a
-  Pokémon that is already Poisoned keeps its `poisonUp` (no ruling was found either way);
+  Pokémon that is already Poisoned keeps its accumulated Poison strength (`poisonUp`), whereas
+  the rulebook says a new Poison replaces the old one (so the strength would return to that of
+  the new Poison);
   Croagunk's cumulative increase is modelled as a number on the Pokémon (`poisonUp`) that
   lasts until Poison ends, not as a lingering effect; a Confused Pokémon whose flip is tails
   uses up the turn's attack, and its attack must be one it could otherwise use;
@@ -347,12 +361,15 @@ inductive Move : GameState → GameState → Prop where
       (hgx : atk.gx = true → g.cur.gxUsed = false) :
       Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
-  happen, and the attacker gets 3 damage counters -/
+  happen, and the attacker gets 3 damage counters. As for `attack`, a GX attack can be tried
+  only by a player who has not used one in this game; the failed attempt does not use it up
+  (an unverified ruling; see the Known gaps). -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
       (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot = .confused)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
-      (hst : Settled g) (hl : g.cur.mods.live.noAttack = false) :
+      (hst : Settled g) (hl : g.cur.mods.live.noAttack = false)
+      (hgx : atk.gx = true → g.cur.gxUsed = false) :
       Move g { g with
         cur := { g.cur with active := some { a with damage := a.damage + 3 } },
         attacked := true }

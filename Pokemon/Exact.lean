@@ -22,6 +22,10 @@ clamps only what Knock Outs make irrelevant.
   simulation for Trainer effects and a (strong) bisimulation for moves and for reachability,
   under `GameState.XFit k`: every printed HP is at most `k` and every test constant is below
   `k`. Nothing is assumed about modifiers, damage reduction or `drain`.
+* `Reach.xclamp_bisim`, `GameState.xclamp_bisim`: with `k` computed from the cards, the kernel
+  of `xclamp` is a two-way bisimulation for every deck. The first is stated along states
+  reachable from a start `g₀`; that premise is vacuous (take `g₀ = g₁`), and the second states
+  it for all pairs of states with equal `xclamp`.
 
 Why this works, reader by reader. Two states with the same `xrclamp k` have identical stores,
 identical Benches, hands, decks, discard piles, flags and markers, the same Active Pokémon
@@ -618,13 +622,13 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         GameState)) hc''
       exact GameState.xclamp_of_xrclamp this
         (fun p hp => hhp _ (GameState.top_mem_opp_active (g := g') hp))
-  | attackConfused ha hm hc' hs hn hf hbt hst hl =>
+  | attackConfused ha hm hc' hs hn hf hbt hst hl hgx =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hl, by
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx, by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3)]⟩
   | knockOut ha hk hp =>
@@ -714,7 +718,8 @@ theorem Reach.xclamp_sim {k : Nat} {g₀ h₀ g₁ : GameState} (hF : g₀.XFit 
       exact ⟨g₂', .step hr₂ hw' hm', hc''⟩
 
 /-- **The exact-store clamp is a two-way bisimulation along reachable states, for every deck.**
-From any start state `g₀` (no hypothesis on its cards: damage reduction, `drain`, rest-of-game
+(The reachability premise is vacuous; `GameState.xclamp_bisim` states the same for all pairs
+of states with equal `xclamp`.) From any start state `g₀` (no hypothesis on its cards: damage reduction, `drain`, rest-of-game
 modifiers and `linger` inside `iter` are all allowed), if `g₁` is reachable and `g₂` has the
 same `xclamp`, every move from either is matched by a move from the other to a state with the
 same `xclamp`. The bound `Enum.bound g₀.allCards` is only used to cap the opponent's damage
@@ -726,5 +731,14 @@ theorem Reach.xclamp_bisim {g₀ g₁ g₂ : GameState} (h : Reach g₀ g₁)
   have hF := h.xfit (GameState.xfit_bound g₀)
   exact ⟨fun g₁' hm => hm.xclamp_sim hF hc,
     fun g₂' hm => hm.xclamp_sim (hF.of_xclamp hc) hc.symm⟩
+
+/-- **The exact-store clamp is a two-way bisimulation on all states, for every deck.** For any
+two states with the same `xclamp`, reachable or not, every move from either is matched by a
+move from the other to a state with the same `xclamp`. The reachability premise of
+`Reach.xclamp_bisim` is vacuous: take the start to be `g₁` itself (`Reach.refl`). -/
+theorem GameState.xclamp_bisim {g₁ g₂ : GameState} (hc : g₁.xclamp = g₂.xclamp) :
+    (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
+      (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) :=
+  Reach.xclamp_bisim (.refl g₁) hc
 
 end Pokemon
