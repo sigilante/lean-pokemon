@@ -13,6 +13,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Knock Outs are separate moves that must all be taken before the turn can end, rather than
   being checked at the rulebook's fixed points; only Active Pokémon can be Knocked Out, which
   suffices while no effect damages the Bench; a Knock Out always gives exactly one Prize;
+  until its Knock Out is taken, a Pokémon at or above its HP stays in play and can still be
+  affected: in particular, the player's own Active Pokémon, after evolving into a card with
+  less HP, can still attack, take Energy, or be healed back below its HP (the rulebook would
+  Knock it Out at once);
 * HP is the printed value: there are no HP modifiers (the survey's loophole L1);
 * there are no markers (Imprison, Shock-wave), which the survey found to be uncapped counts;
 * effects cannot read the state: no "for each" counts, no full-HP or zero tests, and no
@@ -23,13 +27,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Pokémon Checkup (Poison, Burn, Sleep, Paralysis recovery) is absent, and no effect in the
   language applies a Special Condition yet;
 * Stadium and Tool cards occupy state but have no move; Abilities are absent;
+* start states are not required to be well formed: from a state with no winner and an empty
+  Prize list, a pending Knock Out cannot be taken and the game is stuck with no legal move;
 * the "no evolving on your first turn" rule is applied to the first turn of the game only.
 -/
 
 namespace Pokemon
 
 /-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP.
-`endTurn` requires it. It is NOT an invariant of all reachable states (see `Conservation`). -/
+`endTurn` requires it. It is NOT an invariant of all reachable states (`counters_unbounded`);
+`Damage` proves it at turn boundaries and bounds damage elsewhere. -/
 def DamageBounded (g : GameState) : Prop :=
   ∀ p : InPlay,
     (g.cur.active = some p ∨ p ∈ g.cur.bench ∨ g.opp.active = some p ∨ p ∈ g.opp.bench) →
