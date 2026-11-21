@@ -41,6 +41,11 @@ def Effect.touch : Effect → Option (Whose × (Marks → Marks))
 /-- Put `n` more damage counters on a Pokémon. -/
 def InPlay.addDamage (n : Nat) (p : InPlay) : InPlay := { p with damage := p.damage + n }
 
+/-- Attack damage `n` to a Benched Pokémon: `n` more damage counters, none on a Tera Pokémon ("As
+long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both
+yours and your opponent's)", printed on every Tera Pokémon; rulebook 2023 p. 24). -/
+def InPlay.hitBench (n : Nat) (p : InPlay) : InPlay := if p.top.tera then p else p.addDamage n
+
 /-- Remove the marker `m` from every Pokémon of one player. -/
 def PlayerState.unmark (m : Marker) (s : PlayerState) : PlayerState :=
   { s with active := s.active.map (InPlay.setMarks (Marks.set m false)),
@@ -190,6 +195,17 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.switch w) g
         (g.updSide w fun s => { s with active := some q, bench := b₁ ++ a.cure :: b₂ })
   | switchNone {g : GameState} (w : Whose) (hb : (g.side w).bench = []) : Run (.switch w) g g
+  /-- attack damage to one of the `w` player's Benched Pokémon (milestone M3) -/
+  | benchDamage {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)
+      (h : (g.side w).bench = b₁ ++ q :: b₂) :
+      Run (.benchDamage w n) g
+        (g.updSide w fun s => { s with bench := b₁ ++ q.hitBench n :: b₂ })
+  | benchDamageNone {g : GameState} (w : Whose) (n : Nat) (h : (g.side w).bench = []) :
+      Run (.benchDamage w n) g g
+  /-- attack damage to each of the `w` player's Benched Pokémon -/
+  | spreadDamage (w : Whose) (n : Nat) (g : GameState) :
+      Run (.spreadDamage w n) g
+        (g.updSide w fun s => { s with bench := s.bench.map (InPlay.hitBench n) })
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

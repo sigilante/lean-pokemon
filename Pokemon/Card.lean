@@ -322,6 +322,21 @@ inductive Effect where
   covers whoever chooses); nothing if that player has no Benched Pokémon. The Pokémon that goes
   to the Bench recovers from all Special Conditions (rulebook 2023 p. 12, p. 16). Milestone M3 -/
   | switch (w : Whose)
+  /-- attack damage `n` to one of the `w` player's Benched Pokémon, chosen when the effect
+  resolves ("This attack also does 30 damage to 1 of your opponent's Benched Pokémon"); nothing if
+  that player has no Benched Pokémon. Damage to a Benched Pokémon is not affected by Weakness or
+  Resistance ("Don't apply Weakness and Resistance for Benched Pokémon!", rulebook 2023 p. 14);
+  in the model no other modifier applies either (the bonus because printed bonuses name "your
+  opponent's Active Pokémon"; the defender's reduction and prevention because the model's
+  modifiers protect a player's Active Pokémon, Known gaps), and a Tera Pokémon on the Bench takes
+  none (`InPlay.hitBench`). The amount is a printed number. Not a damage step of the Active
+  Pokémon (`hitFree`, `oneHit` ignore it); only attacks may use it (`benchHitFree`, required by
+  `Move.item` and `Move.supporter`). Milestone M3 -/
+  | benchDamage (w : Whose) (n : Nat)
+  /-- attack damage `n` to each of the `w` player's Benched Pokémon ("This attack also does 10
+  damage to each of your opponent's Benched Pokémon"; with `w = own`, "to each of your Benched
+  Pokémon"), as `benchDamage` -/
+  | spreadDamage (w : Whose) (n : Nat)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -349,6 +364,18 @@ def Effect.hitFree : Effect → Bool
   | .seq a b => a.hitFree && b.hitFree
   | .choice a b => a.hitFree && b.hitFree
   | .iter a => a.hitFree
+  | _ => true
+
+/-- No attack damage to a Benched Pokémon anywhere in the effect (`benchDamage`,
+`spreadDamage`): Item and Supporter effects must satisfy it, as they must `hitFree` (printed
+Trainer cards place damage counters, not attack damage). -/
+def Effect.benchHitFree : Effect → Bool
+  | .benchDamage _ _ => false
+  | .spreadDamage _ _ => false
+  | .ite _ a b => a.benchHitFree && b.benchHitFree
+  | .seq a b => a.benchHitFree && b.benchHitFree
+  | .choice a b => a.benchHitFree && b.benchHitFree
+  | .iter a => a.benchHitFree
   | _ => true
 
 /-- At most one damage step on each line of resolution: the branches of `ite` and `choice` may
@@ -393,7 +420,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
-  | .switch _, _ => rfl
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

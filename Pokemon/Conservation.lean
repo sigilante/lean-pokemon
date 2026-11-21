@@ -49,6 +49,26 @@ theorem benchCardList_addDamage (n : Nat) (b : List InPlay) :
   | nil => rfl
   | cons p ps ih => simp only [List.map, benchCardList, ih]; rfl
 
+/-- Attack damage to a Benched Pokémon changes only its damage. -/
+theorem InPlay.hitBench_fields (n : Nat) (p : InPlay) :
+    (p.hitBench n).top = p.top ∧ (p.hitBench n).under = p.under ∧
+      (p.hitBench n).energy = p.energy ∧ (p.hitBench n).tools = p.tools ∧
+      (p.hitBench n).rot = p.rot ∧ (p.hitBench n).poisoned = p.poisoned ∧
+      (p.hitBench n).burned = p.burned ∧ (p.hitBench n).poisonUp = p.poisonUp ∧
+      (p.hitBench n).fresh = p.fresh ∧ (p.hitBench n).marks = p.marks := by
+  unfold InPlay.hitBench; split <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem InPlay.cardList_hitBench (n : Nat) (p : InPlay) :
+    (p.hitBench n).cardList = p.cardList := by
+  obtain ⟨h1, h2, h3, h4, -⟩ := p.hitBench_fields n
+  simp only [InPlay.cardList, h1, h2, h3, h4]
+
+theorem benchCardList_hitBench (n : Nat) (b : List InPlay) :
+    benchCardList (b.map (InPlay.hitBench n)) = benchCardList b := by
+  induction b with
+  | nil => rfl
+  | cons p ps ih => simp only [List.map, benchCardList, ih, InPlay.cardList_hitBench]
+
 theorem benchCardList_append (a b : List InPlay) :
     benchCardList (a ++ b) = benchCardList a ++ benchCardList b := by
   induction a with
@@ -133,6 +153,15 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @switch g a q b₁ b₂ w ha hb =>
       cases w <;> simp only [GameState.side] at ha hb <;> perm_count [ha, hb, GameState.updSide]
   | switchNone => exact .refl _
+  | @benchDamage g q b₁ b₂ w n h =>
+      cases w <;> simp only [GameState.side] at h <;>
+        perm_count [h, GameState.updSide, (q.hitBench_fields n).1, (q.hitBench_fields n).2.1,
+          (q.hitBench_fields n).2.2.1, (q.hitBench_fields n).2.2.2.1]
+  | benchDamageNone => exact .refl _
+  | spreadDamage w n g =>
+      cases w <;>
+        simp only [GameState.allCards, PlayerState.allCards, GameState.updSide,
+          benchCardList_hitBench] <;> exact .refl _
   | damage n h => perm_count [h]
   | drain n h hq => perm_count [h, hq]
   | shuffle h =>

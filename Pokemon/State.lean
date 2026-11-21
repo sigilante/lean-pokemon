@@ -395,7 +395,8 @@ def GameState.resist (g : GameState) : Nat :=
 /-- The damage an attack with base damage `n` does to the opponent's Active Pokémon in state
 `g`: `dealtBy` with the Active Pokémon's Weakness and Resistance and both players' modifiers
 in effect. Weakness and Resistance apply to the Active Pokémon only ("Don't apply Weakness and
-Resistance for Benched Pokémon!", p. 14), which is the only Pokémon attack damage reaches here. -/
+Resistance for Benched Pokémon!", p. 14); attack damage to Benched Pokémon (`InPlay.hitBench`,
+milestone M3) skips the calculation. -/
 def GameState.dealt (n : Nat) (g : GameState) : Nat :=
   dealtBy n g.weak g.resist g.cur.mods g.opp.mods
 

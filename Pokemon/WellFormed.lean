@@ -130,6 +130,34 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
             first
             | exact benched_update h hb ⟨rfl, rfl, rfl, rfl⟩
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
+  | @benchDamage g q b₁ b₂ w n h =>
+      have hq : ∀ x, Benched x → Benched (x.hitBench n) := fun x hx => by
+        obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields n
+        exact hx.of_eq e1 e2 e3 e4
+      cases w <;> simp only [GameState.side] at h <;>
+        exact ⟨fun hb => by
+            first
+            | exact benched_update h hb
+                (hq q (hb q (by rw [h]; exact List.mem_append_right _ (.head _))))
+            | exact hb,
+          fun hb => by
+            first
+            | exact benched_update h hb
+                (hq q (hb q (by rw [h]; exact List.mem_append_right _ (.head _))))
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
+  | spreadDamage w n g =>
+      have hq : ∀ x, Benched x → Benched (x.hitBench n) := fun x hx => by
+        obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields n
+        exact hx.of_eq e1 e2 e3 e4
+      cases w <;>
+        exact ⟨fun hb => by
+            first
+            | exact hb.map hq
+            | exact hb,
+          fun hb => by
+            first
+            | exact hb.map hq
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/

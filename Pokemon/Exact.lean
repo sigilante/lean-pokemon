@@ -555,6 +555,46 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           rw [h, List.map_nil, List.map_eq_nil_iff] at he₂
           subst he₂
           exact ⟨_, .switchNone .opp rfl, hc⟩
+  | @benchDamage g q b₁ b₂ w n h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
+          have hr := InPlay.agree_of_clamp h2
+          exact ⟨_, .benchDamage (b₁ := d₁) .own n rfl, by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₂,
+              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.hitBench n)]⟩
+      | opp =>
+          simp only [GameState.side] at h
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
+          have hr := InPlay.agree_of_clamp h2
+          exact ⟨_, .benchDamage (b₁ := d₁) .opp n rfl, by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁,
+              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.hitBench n)]⟩
+  | benchDamageNone w n h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₁
+          subst he₁
+          exact ⟨_, .benchDamageNone .own n rfl, hc⟩
+      | opp =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₂
+          subst he₂
+          exact ⟨_, .benchDamageNone .opp n rfl, hc⟩
+  | spreadDamage w n g =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      cases w <;>
+        exact ⟨_, .spreadDamage _ n _, by
+          simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁, he₂,
+            bench_map_agree (U := InPlay.hitBench n) (fun x y h => h.hitBench n) he₁,
+            bench_map_agree (U := InPlay.hitBench n) (fun x y h => h.hitBench n) he₂]⟩
   | benchHealNone n h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -768,7 +808,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       rw [e]
       simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₂, Option.map_some,
         List.map_append, List.map_cons, h1, h2, h3]
-  | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd =>
+  | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .item e ∈ g₁.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -782,8 +822,8 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂])
         (.inl hst)
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
-        (by subst hg; exact hl) (by subst hg; exact hat) hnd, hc'⟩
-  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd =>
+        (by subst hg; exact hl) (by subst hg; exact hat) hnd hbh, hc'⟩
+  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd hbh =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .supporter e ∈ g₁.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -799,7 +839,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂])
         (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
-        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf) hnd,
+        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf) hnd hbh,
         hc'⟩
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw =>
       have hs' := hs₂ hst

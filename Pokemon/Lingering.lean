@@ -174,13 +174,13 @@ theorem reach_red (k : Nat) (i : Bool) :
         (settled_st _ _ _ _ _ _ (by decide) (by decide))
         (.seq (.prim rfl rfl (.linger .opp .now _ _) (.done (.inl s₁)))
           (.choiceL (.prim rfl rfl (.linger .own .now _ _)
-            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl)
+            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl rfl)
   | false =>
       exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) rfl rfl
         (settled_st _ _ _ _ _ _ (by decide) (by decide))
         (.seq (.prim rfl rfl (.linger .opp .now _ _) (.done (.inl s₁)))
           (.choiceR (.prim rfl rfl (.linger .own .now _ _)
-            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl)
+            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl rfl)
 
 theorem hpLe_red₀ {k : Nat} (hk : 3 ≤ k) : (red₀ k).HpLe k := by
   intro p hp
@@ -313,12 +313,12 @@ theorem reach_dr (k : Nat) (i : Bool) :
       exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) rfl rfl
         (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
         (.choiceL (.prim rfl rfl (.linger .own .now _ _)
-          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl)
+          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl rfl)
   | false =>
       exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) rfl rfl
         (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
         (.choiceR (.prim rfl rfl (.linger .own .now _ _)
-          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl)
+          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl rfl)
 
 theorem hpLe_dr₀ {k : Nat} (hk : 2 ≤ k) : (dr₀ k).HpLe k := by
   intro p hp

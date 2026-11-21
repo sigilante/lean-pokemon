@@ -70,8 +70,8 @@ word on the damage steps, survey S9 against S8 F2; S8 records no later change to
   Pokémon takes more damage if it has Weakness to the attacker's type. It takes less damage from
   a Pokémon if it has Resistance to that Pokémon's type", and "Don't apply Weakness and
   Resistance for Benched Pokémon!"; S8 E1): `PokemonCard.weakness` (×2), `resistance` (−N).
-  Attack damage reaches only the opponent's Active Pokémon in the model, so the Bench rule holds
-  trivially. The attacker's type is `InPlay.type` (a Coloring counter changes it).
+  Since milestone M3 attack damage also reaches Benched Pokémon (`Effect.benchDamage`,
+  `Effect.spreadDamage`), and Weakness and Resistance are not applied to it. The attacker's type is `InPlay.type` (a Coloring counter changes it).
 * The damage calculation (2023 p. 20, steps 1–6, quoted in `dealtBy`; S8 F2): one calculation
   per attack (`Effect.oneHit`, required by `Move.attack` through `Attack.wf`), on the base damage
   as the text computes it (`Amt`), then the attacker's bonus, Weakness, Resistance, the
@@ -101,7 +101,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Weakness is ×2; Resistance −30, once −20). Absent: "+10" to "+40" Weakness on older cards,
   two Weaknesses or two Resistances on one card (dual-type Pokémon, S8 C6; a Pokémon has one
   type here), and effects that change or ignore Weakness or Resistance (S8 E2); Weakness and
-  Resistance never apply to the Bench, which attack damage does not reach in this model;
+  Resistance never apply to the Bench (milestone M3: attack damage to Benched Pokémon skips them);
 * Knock Outs are separate moves, forced by `Settled` (above) before any other move. Any
   Pokémon in play whose damage reaches its HP is Knocked Out (milestone M3): an Active Pokémon
   (`knockOut`, `knockOutOwn`, followed by a promotion) or a Benched one (`knockOutBench`,
@@ -244,7 +244,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   inside the branches of `ite` or `choice`, which also lets the same flip decide the damage and
   another effect. Not expressible: damage counts other than damage counters on the Active
   Pokémon (Energy, Benched Pokémon, cards in hand or discard pile), and two damage calculations
-  in one attack (an attack that also damages a Benched Pokémon; the Bench is absent anyway).
+  in one attack on the Active Pokémon (damage to Benched Pokémon is separate: `benchDamage`,
+  `spreadDamage`).
   Generality lost
   against the earlier model: an attack can no longer make several damage steps (an `iter` of
   `damage`, which applied the modifiers per step and is not the rulebook's calculation), and
@@ -291,7 +292,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`spreadCounters`); recoil and other self-damage are written as damage counters
   (`selfDamage`), not as attack damage, so a printed recoil "This Pokémon also does 30 damage to
   itself" escapes the attacker's own Weakness, Resistance and modifiers in the model; attack
-  damage (the damage step, `dealtBy`) reaches only the opponent's Active Pokémon; the damage
+  damage reaches the opponent's Active Pokémon (the damage step, `dealtBy`) and, since M3, Benched
+  Pokémon of either player (`benchDamage`, `spreadDamage`: a printed amount, with no Weakness,
+  Resistance, bonus, reduction or prevention, and none on a Tera Pokémon; `InPlay.hitBench`;
+  amounts computed by the text, "30 damage for each Energy", are not expressible; the defender's
+  reduction and prevention protect only the Active Pokémon here, whereas a printed "all of your
+  Metal Pokémon take 30 less damage" or "prevent all damage done to your Benched Pokémon" would
+  protect Benched ones too, a difference recorded here); the damage
   counters an effect places are not affected by Weakness, Resistance or any other effect, as the
   rulebook says (2023 p. 20, step 1);
 * `heal` and `healAll` remove damage from the player's own Active Pokémon, and `benchHeal` from
@@ -558,7 +565,7 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
       (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false)
-      (hnd : e.hitFree = true) :
+      (hnd : e.hitFree = true) (hbh : e.benchHitFree = true) :
       Move g g'
   /-- play a Supporter card, once per turn, and not on the first turn of the game ("The player
   who goes first cannot play a Supporter card on their first turn", rulebook 2023 p. 12); its
@@ -569,7 +576,8 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
-      (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true) :
+      (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
+      (hbh : e.benchHitFree = true) :
       Move g g'
   /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage

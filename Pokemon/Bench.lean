@@ -22,6 +22,8 @@ Knock Out wins.
 * `gust_reachable`: an Item switches the opponent's 50-HP Benched Pokémon into the Active Spot
   and Knocks it Out there; `switch_cures`: the player's Poisoned Active Pokémon switched to the
   Bench is no longer Poisoned.
+* `teraBench_reachable`: an attack does 50 damage to each of the opponent's Benched Pokémon; the
+  Tera Pokémon among them takes none, the other is left at its HP and is Knocked Out next.
 -/
 
 namespace Pokemon.Bench
@@ -66,7 +68,7 @@ theorem twoPrizes_reachable :
         (.step rfl (.knockOut rfl (by decide) rfl)
           (.step rfl (.promote (b₁ := []) rfl rfl)
             (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
-              (fun p hp => by cases hp))))))) rfl rfl rfl
+              (fun p hp => by cases hp))))))) rfl rfl rfl rfl
   exact ⟨_, hm, .step (.refl _) rfl hm, rfl, rfl, .head _, rfl⟩
 
 /-- **Witness: the last Prize card in the middle of a multi-Prize Knock Out wins.** With one
@@ -80,7 +82,7 @@ theorem lastPrize_reachable :
   have hm : Move (exStart [.energy .fire]) _ :=
     .item (l₁ := []) (l₂ := []) (n := "Hit5") rfl rfl (exStart_settled _)
       (.prim rfl rfl (.counters 5 rfl)
-        (.step rfl (.knockOut rfl (by decide) rfl) (.done (.inr (by decide))))) rfl rfl rfl
+        (.step rfl (.knockOut rfl (by decide) rfl) (.done (.inr (by decide))))) rfl rfl rfl rfl
   exact ⟨_, hm, .step (.refl _) rfl hm, rfl, rfl, rfl⟩
 
 /-! ## Energy and evolution on the Bench, and a Knock Out on the Bench -/
@@ -186,7 +188,7 @@ theorem doubleKO_reachable :
         (.step rfl (.knockOutBench (b₁ := []) rfl (by decide) rfl)
           (.step rfl (.knockOutBench (b₁ := []) rfl (by decide) rfl)
             (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
-              (fun p hp => by cases hp))))))) rfl rfl rfl
+              (fun p hp => by cases hp))))))) rfl rfl rfl rfl
   exact ⟨spreadStart, spreadStart_wellFormed, spreadStart_settled, _, hm,
     .step (.refl _) rfl hm, rfl, rfl, rfl, rfl⟩
 
@@ -275,7 +277,7 @@ theorem gust_reachable :
           (.step rfl (.knockOut rfl (by decide) rfl)
             (.step rfl (.promote (b₁ := []) rfl rfl)
               (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
-                (fun p hp => by cases hp)))))))) rfl rfl rfl
+                (fun p hp => by cases hp)))))))) rfl rfl rfl rfl
   exact ⟨gustStart, gustStart_wellFormed, gustStart_settled, _, hm, .step (.refl _) rfl hm,
     .head _, rfl, rfl, rfl⟩
 
@@ -306,7 +308,51 @@ theorem switch_cures :
           (fun p hp => by
             simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
             subst hp; decide)
-          (fun p hp => by cases hp))))) rfl rfl rfl
+          (fun p hp => by cases hp))))) rfl rfl rfl rfl
   exact ⟨_, _, hm, rfl, rfl, rfl, _, rfl, rfl⟩
+
+/-! ## Attack damage to the Bench, and Tera -/
+
+/-- 50 damage to each of the opponent's Benched Pokémon, no damage to the Active Pokémon. -/
+def snipe : Attack := ⟨"Snipe", [], 0, .spreadDamage .opp 5, false⟩
+
+/-- A 100-HP Basic Pokémon with `snipe`. -/
+def sniper : PokemonCard := ⟨"Sniper", .basic, none, 10, .grass, [snipe], 1, none, none, .none, false⟩
+
+/-- A 50-HP Basic Tera Pokémon ex. -/
+def teraMon : PokemonCard := ⟨"TeraMon", .basic, none, 5, .grass, [], 1, none, none, .ex, true⟩
+
+def snipeStart : GameState :=
+  ⟨side [] [.energy .fire, .energy .fire] (InPlay.ofBasic sniper) [],
+    side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low, InPlay.ofBasic teraMon],
+    true, false, false, false, none, none⟩
+
+theorem snipeStart_wellFormed : WellFormed snipeStart := by
+  refine ⟨fun _ => ⟨by simp [snipeStart, Trainer.side], by simp [snipeStart, Trainer.side]⟩,
+    (fun p hp => by cases hp), fun p hp => ?_⟩
+  simp only [snipeStart, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
+  rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
+
+theorem snipeStart_settled : Settled snipeStart :=
+  settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+    (fun p hp => by
+      simp only [snipeStart, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
+      rcases hp with rfl | rfl <;> decide)
+
+/-- **Witness: attack damage to the Bench, and Tera.** From a well-formed, `Settled` start, the
+attack `snipe` does 50 damage to each of the opponent's Benched Pokémon: the 50-HP `low` gets 5
+damage counters and its Knock Out is pending; the Tera Pokémon `teraMon` on the Bench takes no
+damage. -/
+theorem teraBench_reachable :
+    ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g, Move g₀ g ∧ Reach g₀ g ∧
+      g.opp.bench = [(InPlay.ofBasic low).addDamage 5, InPlay.ofBasic teraMon] ∧
+      ¬ DamageBounded g := by
+  have hm : Move snipeStart _ :=
+    .attack (atk := snipe) rfl (.head _) (.nil _) rfl rfl rfl rfl snipeStart_settled
+      (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl
+  refine ⟨snipeStart, snipeStart_wellFormed, snipeStart_settled, _, hm, .step (.refl _) rfl hm,
+    rfl, fun hk => ?_⟩
+  exact absurd (hk ((InPlay.ofBasic low).addDamage 5) (Or.inr (Or.inr (Or.inr (.head _)))))
+    (by decide)
 
 end Pokemon.Bench

@@ -575,6 +575,15 @@ theorem bench_map_comm {c : Cap} {U : InPlay → InPlay}
   have hc : InPlay.clampWith c ∘ U = U ∘ InPlay.clampWith c := funext hU
   rw [List.map_map, List.map_map, hc, ← List.map_map, ← List.map_map, h]
 
+/-- Attack damage to a Benched Pokémon preserves agreement: the Tera flag is on the top card. -/
+theorem InPlay.Agree.hitBench {c : Cap} {q p : InPlay} (h : InPlay.Agree c q p) (n : Nat) :
+    InPlay.Agree c (q.hitBench n) (p.hitBench n) := by
+  unfold InPlay.hitBench
+  rw [h.top]
+  split
+  · exact h
+  · exact h.upd.2.1 n
+
 /-- An update that preserves agreement keeps two agreeing Benches agreeing. -/
 theorem bench_map_agree {c : Cap} {U : InPlay → InPlay}
     (hU : ∀ x y, InPlay.Agree c y x → InPlay.Agree c (U y) (U x)) {b e : List InPlay}
