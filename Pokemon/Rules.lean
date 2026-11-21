@@ -315,7 +315,7 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, bench := g.cur.bench ++ [InPlay.ofBasic p] } }
   /-- attach one Energy card from hand to the Active Pokémon, once per turn -/
-  | attach {g : GameState} {l₁ l₂ : List Card} {t : EType} {a : InPlay}
+  | attach {g : GameState} {l₁ l₂ : List Card} {t : BasicEnergy} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
       (hf : g.cur.energyAttached = false) (ha : g.cur.active = some a)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :

@@ -16,6 +16,25 @@ inductive EType where
   | darkness | metal | fairy | dragon | colorless
   deriving DecidableEq
 
+/-- The nine types of Basic Energy card: "A Grass, Fire, Water, Lightning, Psychic, Fighting,
+Darkness, Metal or Fairy Energy card" (rulebook 2023, glossary p. 39). There is no Basic
+Colorless or Dragon Energy. Special Energy cards are absent from the model. -/
+inductive BasicEnergy where
+  | grass | fire | water | lightning | psychic | fighting | darkness | metal | fairy
+  deriving DecidableEq
+
+/-- The type of Energy a Basic Energy card provides. -/
+def BasicEnergy.type : BasicEnergy → EType
+  | .grass => .grass
+  | .fire => .fire
+  | .water => .water
+  | .lightning => .lightning
+  | .psychic => .psychic
+  | .fighting => .fighting
+  | .darkness => .darkness
+  | .metal => .metal
+  | .fairy => .fairy
+
 inductive Stage where
   | basic | stage1 | stage2
   deriving DecidableEq
@@ -176,7 +195,8 @@ inductive TrainerKind where
 
 inductive Card where
   | pokemon (p : PokemonCard)
-  | energy (t : EType)
+  /-- a Basic Energy card (`BasicEnergy`: nine types, no Colorless or Dragon) -/
+  | energy (t : BasicEnergy)
   | trainer (name : String) (kind : TrainerKind) (effect : Effect)
   deriving DecidableEq
 

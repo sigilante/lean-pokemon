@@ -1116,9 +1116,9 @@ deck and one Prize card; the second player has the Tape Active, one Energy in it
 hand and one Prize card. Neither has a Bench. The inputs are rest-of-game damage reductions:
 `b` on the first player, `a` on the second. -/
 def start (M : Machine) (a b : Nat) : GameState where
-  cur := ⟨[], [.energy .colorless], [], [.energy .colorless], [], some (onPlay (clock M)), [],
+  cur := ⟨[], [.energy .grass], [], [.energy .grass], [], some (onPlay (clock M)), [],
     none, false, false, false, false, false, storeOf 0 b, true⟩
-  opp := ⟨[.energy .colorless], [], [], [.energy .colorless], [], some (onPlay (tape M)), [],
+  opp := ⟨[.energy .grass], [], [], [.energy .grass], [], some (onPlay (tape M)), [],
     none, false, false, false, false, false, storeOf 0 a, true⟩
   curIsFirst := true
   firstTurn := false
