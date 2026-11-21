@@ -10,8 +10,10 @@ and the Knock Out is taken at once, inside the same move), the Poison strength `
 Poisoned Pokémon (`poisonUp_unbounded`), and the lingering modifiers (`Store`): a damage bonus
 or reduction is added up without limit (`Effect.linger` inside `iter`).
 
-* `InPlay.clampWith K c` caps `poisonUp` at the printed HP and treats damage as `c : Cap` says:
-  exact, capped at the printed HP (`Cap.hp`), or capped at a constant (`Cap.upto k`).
+* `InPlay.clampWith K c` caps `poisonUp` at the bound `K` and treats damage as `c : Cap` says:
+  exact, capped at `K` (`Cap.hp`), or capped at a constant (`Cap.upto k`). Since milestone M6 HP
+  is derived (`GameState.hpOf`) and `K` must bound every derived HP (`hpBound`); before M6 the
+  caps were the printed HP.
   `GameState.clampAt co cp cbo cbp k` applies `clampWith co` to the Active Pokémon of the player
   to move, `clampWith cp` to the opponent's, `clampWith cbo` and `clampWith cbp` to their Benched
   Pokémon (milestone M3), and caps every damage bonus and reduction in both players' stores at
@@ -77,8 +79,9 @@ def GameState.clampAt (co cp cbo cbp : Cap) (k : Nat) (g : GameState) : GameStat
                                mods := g.opp.mods.cap (2 * k) } }
 
 /-- The clamp at move boundaries: damage and Poison strength on every Pokémon in play (both
-Active Pokémon and, since milestone M3, every Benched Pokémon) capped at the printed HP, damage
-bonuses and reductions capped at `2 * k`. The stores are capped at twice
+Active Pokémon and, since milestone M3, every Benched Pokémon) capped at `k` (milestone M6: before
+it, at the printed HP; the theorems take `k` at least every derived HP), damage bonuses and
+reductions capped at `2 * k`. The stores are capped at twice
 the damage cap because Resistance subtracts a card constant after the bonus is added: a bonus of
 `2 * k` or more still does at least `k` damage after a Resistance of at most `k`
 (`dealtBy_cap`); with the stores capped at `k` itself the kernel would not be a simulation (a

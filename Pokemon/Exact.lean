@@ -11,11 +11,12 @@ clamps only what Knock Outs make irrelevant.
 
 * `GameState.xclampAt K co cp cb` applies `InPlay.clampWith co` to the Active Pokémon of the player
   to move, `clampWith cp` to the opponent's, and `clampWith cb` to every Benched Pokémon
-  (milestone M3) (damage as the cap says, Poison strength capped at the printed HP); nothing else
-  changes, the modifier stores included.
-* `GameState.xclamp K` is `xclampAt .hp .hp .hp`, the clamp at move boundaries. It has no parameter.
-  `GameState.xrclamp K` is `xclampAt .exact .exact .exact`, the relation used inside an attack's effect:
-  damage exact on every Pokémon in play, Poison strength capped at HP. (Before milestone M4 the
+  (milestone M3) (damage as the cap says, Poison strength capped at `K`); nothing else changes,
+  the modifier stores included.
+* `GameState.xclamp K` is `xclampAt K .hp .hp .hp`, the clamp at move boundaries: damage capped at
+  `K`, a bound on every derived HP (milestone M6; before it the clamp capped at the printed HP and
+  had no parameter). `GameState.xrclamp K` is `xclampAt K .exact .exact .exact`, the relation used
+  inside an attack's effect: damage exact on every Pokémon in play, Poison strength capped at `K`. (Before milestone M4 the
   opponent's damage was capped at a constant `k` inside attacks; since an attack's damage step
   can read that damage, `Amt.per`, and `drain` writes the amount to the attacker, it is kept
   exact.)
@@ -24,8 +25,8 @@ clamps only what Knock Outs make irrelevant.
   tameness: damage reduction and `drain` are allowed.
 * `TRun.xclamp_sim`, `Move.xclamp_sim`, `Reach.xclamp_sim`: the kernel of `xclamp` is a
   simulation for Trainer effects and a (strong) bisimulation for moves and for reachability,
-  under `GameState.XFit k`: every printed HP and Resistance is at most `k` and every test
-  constant is below `k`. Nothing is assumed about modifiers, damage reduction or `drain`.
+  under `GameState.XFit k`: `hpBound` of the cards (so every derived HP) and every printed
+  Resistance are at most `k` and every test constant is below `k`. Nothing is assumed about modifiers, damage reduction or `drain`.
 * `Reach.xclamp_bisim`, `GameState.xclamp_bisim`: with `k` computed from the cards, the kernel
   of `xclamp` is a two-way bisimulation for every deck. The first is stated along states
   reachable from a start `g₀`; that premise is vacuous (take `g₀ = g₁`), and the second states
@@ -65,8 +66,9 @@ def GameState.xclampAt (K : Nat) (co cp cb : Cap) (g : GameState) : GameState :=
                                bench := g.opp.bench.map (InPlay.clampWith K cb) } }
 
 /-- **The clamp with exact stores**, at move boundaries: damage and Poison strength on every
-Pokémon in play (both Active Pokémon and, since milestone M3, every Benched Pokémon) capped at the
-printed HP; the modifier stores, and everything else, exact. -/
+Pokémon in play (both Active Pokémon and, since milestone M3, every Benched Pokémon) capped at `K`
+(milestone M6: a bound on every derived HP; before it, the printed HP); the modifier stores, and
+everything else, exact. -/
 def GameState.xclamp (K : Nat) (g : GameState) : GameState := g.xclampAt K .hp .hp .hp
 
 /-- The relation used inside an attack's effect: damage on every Pokémon in play exact, Poison

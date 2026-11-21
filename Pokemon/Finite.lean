@@ -6,9 +6,10 @@ import Pokemon.Sim
 `Reach.finite`, the headline: from any start state (well-formed or not) that is `Fit` at
 `k = bound g₀.allCards` (tame cards: no damage reduction, no `drain`; no reduction in effect),
 the clamps `clamp k` of all reachable states lie in one finite list, and the kernel of the clamp
-is a bisimulation for moves along reachable states. `bound C` is larger than every printed HP,
-every printed Resistance and every test constant in the cards `C`; the clamp caps damage and
-Poison strength on every Pokémon in play (Active and, since milestone M3, Benched) at HP and every
+is a bisimulation for moves along reachable states. `bound C` is larger than every HP a Pokémon
+made of the cards `C` can have (`hpBound`, milestone M6), every printed Resistance and every test
+constant in the cards `C`; the clamp caps damage and Poison strength on every Pokémon in play
+(Active and, since milestone M3, Benched) at `bound C` (milestone M6: before it, at HP) and every
 damage bonus and reduction at
 `2 * bound` (twice, because Resistance is subtracted after the bonus). So for tame decks the
 clamped game is a finite transition system that answers every question about legal play that
@@ -308,7 +309,8 @@ theorem GameState.allCards_clamp (k : Nat) (g : GameState) : (g.clamp k).allCard
     optCardList_clamp, benchCardList_clamp]
 
 /-- In the clamp of a reachable state, every Pokémon in play has damage and Poison strength at
-most `bound g₀.allCards`: the clamp caps every Pokémon in play, Active or Benched, at its HP.
+most `bound g₀.allCards`: the clamp caps every Pokémon in play, Active or Benched, at its bound
+(since milestone M6, `bound g₀.allCards` itself; before it, at the Pokémon's printed HP).
 (Before milestone M3 the clamp capped only the Active Pokémon, and this used `Reach.wellFormed`:
 Benched Pokémon were below HP with no Poison strength. Benched Pokémon can now be damaged, and
 reach or pass their HP, so the clamp caps them too and well-formedness is not needed here.) -/

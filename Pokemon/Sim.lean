@@ -4,11 +4,14 @@ import Pokemon.ZoneSim
 # The clamp is a bisimulation (for tame decks)
 
 `GameState.clamp k` caps damage and Poison strength on every Pokémon in play (both Active Pokémon
-and, since milestone M3, every Benched Pokémon) at their HP, and every
-damage bonus and reduction in both players' stores at `2 * k`. This file proves that its kernel
-is a bisimulation for moves, for a deck whose cards are *tame* (no damage reduction, no `drain`),
-whose test constants are below `k`, and whose printed HP and Resistance are at most `k`
-(`GameState.Fit`, `GameState.HpLe`). `Pokemon/Lingering.lean` shows that neither tameness
+and, since milestone M3, every Benched Pokémon) at `k` (milestone M6: before it, at their printed
+HP), and every damage bonus and reduction in both players' stores at `2 * k`. This file proves that
+its kernel is a bisimulation for moves, for a deck whose cards are *tame* (no damage reduction, no
+`drain`, since M6 no static damage reduction), whose test constants are below `k`, and whose
+derived HP (bounded by `hpBound` of the cards) and printed Resistance are at most `k`
+(`GameState.Fit`, `GameState.HpLe`). Derived HP is read only by Knock Out premises, against the
+same value in two states with the same clamp (`GameState.sameField_of_clampAt`), and damage at or
+above `k` is at or above every derived HP, so capping at `k` loses nothing. `Pokemon/Lingering.lean` shows that neither tameness
 condition can be dropped: with a damage reduction the kernel of `clamp k` is not a simulation for
 any `k ≥ 3`, with `drain` for any `k ≥ 2`.
 

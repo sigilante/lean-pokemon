@@ -155,7 +155,28 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   taken by `Resolve` in any order, as after an attack;
 * a Knock Out takes the top Prize cards of the Prize list, whereas the rulebook lets the player
   choose which Prize cards to take (a finite choice);
-* HP is the printed value: there are no HP modifiers (the survey's loophole L1);
+* HP is derived (milestone M6; the survey's loophole L1): `GameState.hpOf` is the printed HP plus
+  every `hpPlus` and less every `hpMinus` of the static effects in force (`Static`, from static
+  Abilities, Tools and the Stadium in play), computed from the state and never stored, and every
+  Knock Out premise (`DamageBounded`, `Settled`, the Knock Out moves, `moveCounter`'s "without
+  Knocking it Out") reads it. When a source leaves play (a Tool discarded, a Stadium replaced,
+  Energy removed, a Pokémon with a static Ability Knocked Out, a Pokémon moved out of the place its
+  bonus needs) HP can drop below the damage; no card text or rule found says what then happens to
+  the damage (survey S7 §A), and the model keeps the counters and takes the Knock Out by its
+  ordinary timing (between moves, `Settled`; in mid-effect, `Resolve` inside `TRun`; after an
+  attack or Checkup), a reading recorded here as a modelling decision. Chains are taken in turn
+  (`StaticWitness.chain_knock_out`). Not expressible, and open: HP defined by copying another
+  Pokémon's HP (Ditto dp6-27, base3-3: circular between two Dittos), an HP bonus keyed to the
+  Retreat Cost combined with a Retreat Cost keyed to the remaining HP (Heavy Boots with Rescue
+  Board: no condition of `Static` reads HP or the Retreat Cost, so HP is never defined in terms of
+  itself), "set" forms ("its maximum HP is 300", Crystal Wall; "max HP is 80", Koga's Ditto) and
+  the order of "set" and "add" (the model adds, then subtracts, stopping at 0), stacking rules
+  ("The effect of Vibrant Dance doesn't stack", "You can't apply more than 1 … at a time": the
+  model adds every effect in force), HP bonuses counted per Prize card taken, per Benched Pokémon
+  or per named Pokémon in play (Brambleghast, Pangoro, Nidoking), effects that read "remaining HP"
+  (Rescue Board), and Special Energy HP bonuses (no Special Energy). Before milestone M6 HP was the
+  printed value, and the clamps capped damage there; they now cap at a bound on every derived HP
+  (`hpBound`, `Enum.bound`);
 * markers (`Marks`): Imprison, Shock-wave, Lightning Rod and Char are flags, and the Coloring
   counter is a type. The printed Imprison and Shock-wave counts are uncapped, but only "has
   any" is read and removal takes them all, so a flag is exact for them (`Markers.flag_exact`;
@@ -254,11 +275,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `Stadiums.stadium_writer_breaks_bound`). What `Faithful.xfinite` covers is the model: for a
   deck containing a card whose static or triggered text is not modelled (the Stadium and Tool
   item below, static and triggered Abilities), it is a theorem about the inert card the model
-  plays, not the printed one. The omission that most directly makes the model's finiteness easier
-  than the real game's is HP modifiers (Hero's Cape, Cynthia's Power Weight, Ancient Booster Energy
-  Capsule, Gravity Mountain and others below): the exact-store clamp caps damage at printed HP, and
-  `Settled` forces a Knock Out at printed HP, so the real states in which a Pokémon survives with
-  damage between its printed and its modified HP do not exist in the model. The other static
+  plays, not the printed one. Until milestone M6 the omission that most directly made the model's
+  finiteness easier than the real game's was HP modifiers: the clamps capped damage at printed HP,
+  and `Settled` forced a Knock Out at printed HP. Since M6 HP is derived (item above): the clamps
+  cap damage and Poison strength at a bound `K` on every derived HP (`hpBound`, a function of the
+  cards of the game), and `Reach.finite` and `Faithful.xfinite` hold with the clamp at that bound;
+  `Fit` (for `Reach.finite`) also excludes static damage reductions, which break the capped clamp
+  as stored ones do. The other static
   omissions are milder: static damage bonuses and reductions, Bench-size and cost changes are
   constants of a card, not stored amounts; Ability and Tool locks only remove behaviour; triggered
   Tools add behaviour. The
@@ -402,7 +425,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   own damage is exact inside an attack; `CMove.sim`); moving counters off the opponent's Active
   Pokémon would read damage that the capped clamp `rclamp` knows only up to its cap inside an
   attack;
-* Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
+* Bench size is the constant `benchLimit = 5` (milestone M6 did not add a Bench-size static effect:
+  a shrinking Bench needs a discard rule, S7 §D) ("Each player may have up to 5 Pokémon on the
   Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
   Underdepths, S8 L2) are static Stadium effects, not modelled (next item but one);
 * Stadium and Tool cards (milestone M5; survey S8 B9, B10): a Stadium is played from the hand
@@ -430,17 +454,19 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   effect is `skip`, a Tool with an empty grant): it occupies the slot or the Tool place and does
   nothing, which under-models the printed card (it removes the printed outcomes the text adds and
   keeps the ones it forbids). `Faithful.xfinite` for a deck containing such a card is a theorem
-  about the inert card, not the printed one; of the kinds below, HP changes make the model's
-  finiteness most directly easier than the real game's (see the finiteness paragraph above:
-  damage is capped, and Knock Outs taken, at printed HP). Absent kinds, for a later milestone (derived HP, per-Pokémon and
-  static modifiers, triggers): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively
-  Stadium; Tools 3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage
-  bonuses (Stadium 1, Postwick; Tools 8: Binding Mochi, Brave Bangle ×2, Future Booster Energy
-  Capsule, Hop's Choice Band, Light Ball, Maximum Belt ×2); damage reduction or prevention
-  (Stadiums 4: Battle Cage, Full Metal Lab, Granite Cave, Neutralization Zone; Tools 3: Custom Vest,
-  Sacred Charm, Thick Scale); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort;
-  Tools 5: Air Balloon ×2, Gravity Gemstone, Rescue Board ×2, and Future Booster Energy Capsule);
-  attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
+  about the inert card, not the printed one. Since milestone M6 static text in the language of
+  `Static` is expressed (`ToolGrant.statics`, the `statics` of a Stadium; `Card.inert` is false
+  for such a card): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively Stadium; Tools
+  3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage bonuses with a
+  filter on the defender (Stadium 1, Postwick; Tools: Hop's Choice Band, Light Ball, Maximum Belt
+  and others whose condition is a filter on a top card; Binding Mochi's "if this Pokémon is
+  Poisoned" and Brave Bangle's conditions are not expressible); damage reduction (Stadiums 2: Full
+  Metal Lab, Granite Cave; Tools 2: Sacred Charm, Thick Scale; the Berries and Custom Vest are
+  triggered or conditional); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort; Tools 2:
+  Air Balloon, Gravity Gemstone; Rescue Board reads the remaining HP and is not expressible). These
+  counts are a regular-expression classification of the card data by kind (milestone M6), not a
+  card-by-card check of every condition. Absent kinds, for a later milestone: damage prevention
+  (Battle Cage, Neutralization Zone); attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
   Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no
   Abilities": Stadiums 2, Legendary Pyroduct, Team Rocket's Watchtower); Tool locks (Stadiums 2:
   Jamming Tower ×2); Special Condition rules (Stadiums 3: Dizzying Valley, Festival Grounds ×2;
@@ -482,9 +508,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Out pending; per-Pokémon bonuses ("attacks used by this Pokémon do 120 more damage", Feraligatr
   sv5-41) are the player's (per-Pokémon lingering modifiers are milestone M7); a condition is a
   `Test` on an Active Pokémon or a count (conditions on the Bench or on rule boxes, such as "if you
-  have any Fire Mega Evolution Pokémon ex in play", are not expressible). Absent: static (passive)
-  and triggered Abilities other than on-play ones, Checkup and Knock Out triggers (milestone
-  M8b; survey S9: 124 static, 33 damage-reaction or Knock Out, 16 other triggers), Ability locks
+  have any Fire Mega Evolution Pokémon ex in play", are not expressible). Since milestone M6 a
+  static Ability (`AbilityUse.static`) carries static effects in the language of `Static` (HP,
+  damage bonus and reduction, Retreat Cost; a regular-expression count of today's Standard by kind:
+  about 5 HP, 13 bonus, 17 reduction and 11 Retreat Cost Abilities, of which those with conditions
+  beyond a top-card filter, a place or an Energy count are not expressible); it is never used.
+  Absent: other static (passive) Abilities (immunities, locks, cost changes and the like, about 57
+  in today's Standard by the same count) and triggered Abilities other than on-play ones, Checkup
+  and Knock Out triggers (milestone M8b; survey S9: 124 static, 33 damage-reaction or Knock Out, 16
+  other triggers; triggered effects stay out of scope after M6), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
   (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
