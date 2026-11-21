@@ -494,7 +494,7 @@ namespace Pokemon
 /-- `HitAt e g h`: resolving `e` from `g` reaches a damage step (`damage` or `drain`) in the
 state `h`; the steps before it are resolved by `Run`, as in the resolution of `e`. -/
 inductive HitAt : Effect → GameState → GameState → Prop where
-  | damage (a : Amt) (g : GameState) : HitAt (.damage a) g g
+  | damage (a : Amt) (ig : Ign) (g : GameState) : HitAt (.damage a ig) g g
   | drain (a : Amt) (g : GameState) : HitAt (.drain a) g g
   | iteT {t : Test} {a b : Effect} {g h : GameState} {p : InPlay}
       (hp : g.activeOf t.whose = some p) (ht : t.eval g p = true) :
@@ -754,7 +754,9 @@ theorem benchDamage_reachable :
 "You win if you take your last Prize card or if your opponent has no Benched Pokémon to replace
 their Active Pokémon if it is Knocked Out … This makes it possible for both players to win at the
 same time. If this happens, play Sudden Death. However, if you win in both ways and your opponent
-wins in only one way, you are the victor!" (rulebook 2023 p. 21). Before milestone batch-KO the
+wins in only one way, you are the victor!" (rulebook 2023 p. 21; the 2026 rulebook, p. 21, plays
+a tiebreaker game instead of Sudden Death, and `Outcome.suddenDeath` stands for it). Before
+milestone batch-KO the
 model took the two Knock Outs one at a time and the first one taken decided the game (either
 player could win). With the batch Knock Out step the outcome no longer depends on any order: every
 move from the state after the attack gives the rulebook's outcome. -/

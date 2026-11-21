@@ -354,12 +354,12 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.unmark w m) g (g.updSide w (PlayerState.unmark m))
   | linger (w : Whose) (s : Slot) (m : Mod) (g : GameState) :
       Run (.linger w s m) g (g.updSide w fun p => { p with mods := p.mods.add s m })
-  /-- the damage step: the amount evaluates to `n`, and the calculation `GameState.dealt n`
-  gives the damage placed -/
-  | damage {g : GameState} {p : InPlay} {a : Amt} {n : Nat} (hv : a.Val g n)
+  /-- the damage step: the amount evaluates to `n`, and the calculation `GameState.dealtI ig n`
+  (`GameState.dealt n` when `ig` switches nothing off) gives the damage placed -/
+  | damage {g : GameState} {p : InPlay} {a : Amt} {ig : Ign} {n : Nat} (hv : a.Val g n)
       (h : g.opp.active = some p) :
-      Run (.damage a) g
-        { g with opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } }
+      Run (.damage a ig) g
+        { g with opp := { g.opp with active := some { p with damage := p.damage + g.dealtI ig n } } }
   | drain {g : GameState} {p q : InPlay} {a : Amt} {n : Nat} (hv : a.Val g n)
       (h : g.opp.active = some p) (hq : g.cur.active = some q) :
       Run (.drain a) g

@@ -35,7 +35,7 @@ state but which play preserves, `Reach.flagsOk`; the bans on the first turn of t
 evolution ban on their own first turn is a premise of the move, not a theorem),
 `Move.firstTurn_no_attack` and the like; after an attack a move either takes Knock Outs or
 gives exactly the state that ending the turn gives, `Move.after_attack_passTurn`); one Energy attachment, one Supporter and
-one retreat per turn; a new Poison replaces the old one, resetting its strength; Basic Energy
+one retreat per turn (discarding the Energy of the player's choice, `Pokemon/Retreat.lean`); a new Poison replaces the old one, resetting its strength; Basic Energy
 cards of the nine Basic types; typed attack costs, each typed symbol paid by Energy of its type
 and each Colorless symbol by any Energy (`Pays`, a matching, decided by `payable`);
 Weakness ×2 and Resistance −N on the Defending (Active) Pokémon; and the rulebook's damage
@@ -48,8 +48,9 @@ leaves a Pokémon at or above its HP, it must be Knocked Out and replaced before
 move (`Settled`); every Knock Out is taken by the batch Knock Out step (`KOBatch`, milestone
 batch-KO), the rulebook's single check: every Pokémon in play of both players is tested against
 its derived HP once, before any removal, all those at or above it leave play together, both
-players take their Prize cards, the game is decided (a win, or Sudden Death when both players win
-in as many ways, `Outcome`), and then empty Active Spots are filled; if that leaves another
+players take their Prize cards, the game is decided (a win, or `Outcome.suddenDeath` when both
+players win in as many ways: the 2026 rulebook's tiebreaker game, not played; the name is the 2023
+rulebook's), and then empty Active Spots are filled; if that leaves another
 Pokémon at or above its HP the check repeats; inside an attack's effect damage may exceed HP and be read, and the Knock
 Out comes after the attack; inside an Item or Supporter card's effect (`TRun`) the batch step
 is taken at once after the step that causes a Knock Out, the rest of the effect acts on the new board,
@@ -77,7 +78,7 @@ any Pokémon in play (a Benched one goes to the discard pile with no promotion; 
 batch-KO several pending Knock Outs were taken one at a time in any order, and the order could
 decide the winner and, with derived HP, which Pokémon were Knocked Out; since batch-KO they are
 taken together, and when both players take their last Prize card the rulebook's simultaneous-win
-rule applies: Sudden Death, unless one player wins in both ways, `Bench.suddenDeath_forced`,
+rule applies: a tiebreaker game (`Outcome.suddenDeath`), unless one player wins in both ways, `Bench.suddenDeath_forced`,
 `Bench.bothWays_wins`), and
 Prize values by rule box (1; 2 for Pokémon ex; 3 for Mega Evolution Pokémon ex), taking the top
 Prize cards and winning when the last one is taken in the middle of a multi-Prize Knock Out
@@ -192,6 +193,44 @@ a changed definition: the internal `Counter.Fits.toCur`, `Counter.Fits.toOpp` (t
 `after3` and `StaticWitness.tg2`, whose Knock Outs now leave a record. Not expressible: the played
 Supporter's name this turn, attacks used last turn and per-Pokémon attack locks, healing this turn,
 spread amounts computed by the text, name-prefix filters (Known gaps).
+Milestone MV3 (effect vocabulary 3; census in survey S15) added, in stage 1, damage steps that
+ignore steps of the damage calculation: `Effect.damage a ig` carries a flag record `Ign` (Weakness,
+Resistance, effects on the defender), and the damage is `GameState.dealtI ig n`, the rulebook's
+calculation with step 3, 4 or 5 switched off (2026 rulebook p. 20; step 2, the attacker's own
+bonuses, is kept); `damage a` is `damage a {}`, the full calculation (`GameState.dealtI_none`). Five
+printed variants, 39 refused Standard cards. Both clamps keep it with no new hypothesis
+(`dealtBy_cap_ign`); witnesses in `Pokemon/Ignore.lean` (one defender, Resistance and a reduction:
+1 damage counter from the plain attack, 6 from the one that ignores them). Stage 2 added "if you do"
+and "for each … in this way" as derived forms that read the branch a resolution took, with no log
+and no new state (`Pokemon/IfDo.lean`): `Effect.mayDo`, `Effect.ifDone` and `Effect.forUpTo`, each
+with a characterisation (`Run.mayDo_iff`, `Run.ifDone_iff`, `Run.forUpTo_iff`, and `TRun.mayDo_iff`,
+`TRun.ifDone_iff`, `TRun.forUpTo_iff`). Their exactness is conditional on the action A: `mayDo` only
+if no resolution of A does nothing (`Run.mayDo_exact`), `ifDone` only if its test holds exactly
+when A has a resolution (`Run.ifDone_exact`), `forUpTo` for "any amount" only once the bound covers
+what can be taken (`Run.forUpTo_complete`); these are proved for "discard N cards from your hand"
+and "discard N Energy from this Pokémon" (`Run.ifDone_discardHand`, `Run.ifDone_discardActive`,
+`Run.discardHand_ne`, `Run.discardActive_ne`, `Run.forUpTo_discardActive`), and are otherwise the
+importer's to respect (Known gaps); witnesses: Klefki's "Discard a card from your hand.
+If you do, draw 2 cards" as a legal attack that draws, and from an empty hand one that, on every
+resolution, changes nothing. Stage 3 added static damage prevention by a filter on the attacker
+(`SEff.prevent`: "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex"),
+read at step 5 with the defender's other effects and never stored (`GameState.sPrevent`); an attack
+whose damage ignores effects on the defender is not prevented, and prevented damage fires no
+`damaged` trigger (`Pokemon/Prevent.lean`: `prevented_quiet` on every resolution, `pierce_fires`
+for the same defender against `Ign.fx`). Lingering prevention stays per player (`Mod.prevent`).
+Changed definitions: `Effect.damage` (a second field, defaulted), `Run.damage`, `HitAt.damage`,
+`SEff` (a constructor), `GameState.dealt` (0 under static prevention); new `GameState.dealtI`,
+`GameState.sPrevent`. Every theorem statement is unchanged in text; `GameState.dealt_zero` is now
+proved by cases instead of `rfl`. The prevention protects the Active Pokémon only: Bench damage reads
+no static effect, so a Benched Pokémon with such an Ability takes Bench damage that print prevents
+(Known gaps). A review and a check against the 2026 rulebook (survey S14) then changed two
+definitions: `Move.retreat` discards any sub-multiset of the attached Energy (`Split .any`, the
+player's choice, 2026 p. 12; before, only the most recently attached), which changes the stated
+premise of `Move.retreat_marks` and `Move.retreat_movedUp`; and `Effect.trigOk` excludes Paralysis
+(a trigger Paralyzes in the attacker's owner's turn, where print keeps it Paralyzed through that
+owner's next turn and the model would cure it at once). The Known gaps were updated against the
+2026 rulebook (tiebreaker game, "up to", deck construction, Legendary Stadiums, effects ending on
+evolution, `putBench .opp` and evolution).
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the
@@ -228,7 +267,8 @@ statements are now false, `StaticWitness.promotion_rescues_false`,
 `StaticWitness.double_knockOut_lost_false`); for decks without static effects every derived
 quantity is the printed one (`Pokemon/NoStatics.lean`). Not expressible: circular HP (Ditto copying
 HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and its order against
-"+", stacking rules, Bench size, locks and prevention, cost changes and every triggered effect
+"+", stacking rules, Bench size, locks and prevention (static prevention by a filter on the attacker
+came with milestone MV3), cost changes and every triggered effect
 (Known gaps). For that model it proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects

@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.7.0'
+VERSION = '0.8.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -87,6 +87,11 @@ MECHS = [
     ('evolution or devolution by effect', r'evolve|devolve'),
     ('return from play to hand or deck', r'^Ability: returns|(this|that|those) Pokémon and all attached cards|all attached cards into'),
     ('copy an attack', r'use it as this attack|as this attack'),
+    # importer 0.8.0: the damage-modifier shapes of survey S15 §1 that milestone MV3 does not express, named apart from
+    # the 'isn't affected by' family (which MV3 expresses, `Ign`) so that the row below counts what is left of it
+    ("damage modifiers MV3 does not express (the opponent's attacks less damage before W/R, more damage taken after "
+     "W/R, a named attack's bonus, Weakness changes)",
+     r"less damage \(before|more damage from attacks \(after|Pokémon's [A-Z][\w' -]+ attack does|Weakness is now|has no Weakness"),
     ('Weakness/Resistance or effects ignored', r"isn't affected by|Weakness|Resistance"),
     ('test on a card in play (ex, Evolution, Basic, name, Tool, attack)', r"is a Pokémon ex|is an Evolution Pokémon|is a Basic Pokémon|is a Stage|has the .* attack|has a Pokémon Tool|in its name|Tera"),
     ('per-attack lock or attack choice', r"can't use (that attack|[A-Z][a-z]+)|Pokémon's attacks|tries to use an attack"),

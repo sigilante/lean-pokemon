@@ -36,6 +36,10 @@ def lean(x, top=True):
         # a structure instance (a `Static`, milestone M6), fields in the structure's order
         return '{ ' + ', '.join(k + ' := ' + lean(v) for k, v in x.items()) + ' }'
     assert isinstance(x, tuple) and x, x
+    if isinstance(x, Folded):
+        # a derived form of the model (milestone MV3, Pokemon/IfDo.lean), printed by its name; the term
+        # itself (what every mirror below reads) is its unfolding, equal to it by definition
+        return lean(x.form, top)
     if x[0] == 'some':
         s = 'some ' + lean(x[1], False)
         return s if top else '(' + s + ')'
@@ -45,6 +49,20 @@ def lean(x, top=True):
         return '.' + x[0]
     s = '.' + x[0] + ' ' + ' '.join(lean(a, False) for a in x[1:])
     return s if top else '(' + s + ')'
+
+
+class Folded(tuple):
+    """An effect term that is the unfolding of a derived form (`Effect.ifDone t a b` is by definition
+    `ite t (seq a b) skip`): it compares, and is read by every mirror, as the unfolded tuple; only the
+    Lean printer uses `form`, the derived form's name and arguments."""
+    form = None
+
+
+def if_done(t, a, b):
+    """`Effect.ifDone t a b` (Pokemon/IfDo.lean): `ite t (seq a b) skip`, printed as `.ifDone t a b`."""
+    x = Folded(('ite', t, ('seq', a, b), SKIP))
+    x.form = ('ifDone', t, a, b)
+    return x
 
 
 def seq(*es):

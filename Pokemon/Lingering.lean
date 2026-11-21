@@ -280,7 +280,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
                   have e := congrArg (fun g : GameState => g.opp.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg, red, st,
                     side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,
-                    GameState.sReduce, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
+                    GameState.sReduce, GameState.sPrevent, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
                     InPlay.sv, SView.statics, stadiumStatics, sumOf, List.flatMap_cons,
                     List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge, Store.add,
@@ -442,7 +442,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
                   have e := congrArg (fun g : GameState => g.cur.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg,
                     dr, st, side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,
-                    GameState.sReduce, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
+                    GameState.sReduce, GameState.sPrevent, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
                     InPlay.sv, SView.statics, stadiumStatics, sumOf, List.flatMap_cons,
                     List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge,

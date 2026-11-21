@@ -604,13 +604,14 @@ theorem dealt_shape {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.N
     g.dealt (n + 1) = (n + 1 + kc.bonus) - ko.reduce := by
   have hb0 : g.sBonus = 0 := g.sBonus_noStatics hns
   have hr0 : g.sReduce = 0 := g.sReduce_noStatics hns
+  have hp0 : g.sPrevent = false := g.sPrevent_noStatics hns
   obtain ⟨p, hp, -⟩ := hs.cur.active
   obtain ⟨p', hp', h1', -⟩ := hs.opp.active
   have hwk : g.weak = false := by
     simp [GameState.weak, hp, hp', PokemonCard.weakTo, h1', hw]
   have hrs : g.resist = 0 := by
     simp [GameState.resist, hp, hp', PokemonCard.resistTo, h1', hr]
-  simp [GameState.dealt, hb0, hr0, dealtBy, hwk, hrs, hs.cur.mods, hs.opp.mods, storeOf,
+  simp [GameState.dealt, hb0, hr0, hp0, dealtBy, hwk, hrs, hs.cur.mods, hs.opp.mods, storeOf,
     Store.live, Mods.merge, Mods.empty]
 
 /-- Base damage 0 does no damage (the rulebook's "Stop if the base damage is 0"). -/
@@ -629,7 +630,8 @@ theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
       cases hv
       rw [hp] at h'; cases h'
       have hc := hs.opp
-      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5, dealt_shape hs hns hw hr], h6⟩,
+      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
+        simp only [h5, GameState.dealtI_none, dealt_shape hs hns hw hr], h6⟩,
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
@@ -645,7 +647,8 @@ theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := 
       cases hv
       rw [hp] at h'; cases h'
       have hc := hs.opp
-      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5, dealt_zero, Nat.add_zero], h6⟩,
+      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
+        simp only [h5, GameState.dealtI_none, dealt_zero, Nat.add_zero], h6⟩,
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he

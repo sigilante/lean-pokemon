@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 2 of 8 (150 cards).
+Imported Standard cards, part 2 of 9 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.7.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.8.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,34 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Glalie (sv6-52). Records: sv6-52. -/
+def sv6_52 : Card := .pokemon
+  { name := "Glalie", stage := .stage1, evolvesFrom := some "Snorunt",
+    hp := 12, type := .water, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Damage Beat", cost := [.water], damage := 0,
+        effect := .damage (.per .opp 2),
+        gx := false },
+      { name := "Crazy Headbutt", cost := [.water, .colorless, .colorless], damage := 14,
+        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
+        gx := false }] }
+
+/-- Phione (sv6-55). Records: sv6-55, sv6-175. -/
+def sv6_55 : Card := .pokemon
+  { name := "Phione", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Beckon", cost := [.colorless], damage := 0,
+        effect := .ite (.countGe (.pile .own .discard (.kind .supporter)) 1) (.move .own .discard .hand (.kind .supporter) (.exactly 1)) .skip,
+        gx := false },
+      { name := "Energy Press", cost := [.water], damage := 0,
+        effect := .damage (.count (.energy .opp .energy) 2),
+        gx := false }] }
 
 /-- Froakie (sv6-56). Records: sv6-56. -/
 def sv6_56 : Card := .pokemon
@@ -59,6 +87,17 @@ def sv6_59 : Card := .pokemon
     attacks := [
       { name := "Aqua Slash", cost := [.water], damage := 3,
         effect := .linger .own .after (.lock .attack),
+        gx := false }] }
+
+/-- Iron Bundle (sv6-62). Records: sv6-62. -/
+def sv6_62 : Card := .pokemon
+  { name := "Iron Bundle", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Interjet", cost := [.water, .colorless], damage := 6,
+        effect := .ifDone (.countGe (.bench .own .pokemon) 1) (.switch .own) (.switch .opp),
         gx := false }] }
 
 /-- Zapdos (sv6-65). Records: sv6-65. -/
@@ -423,6 +462,20 @@ def sv6_111 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Cornerstone Mask Ogerpon ex (sv6-112). Records: sv6-112, sv6-199, sv6-215. Caveats: abilityByTool, ignFxStadium, staticPreventBench. -/
+def sv6_112 : Card := .pokemon
+  { name := "Cornerstone Mask Ogerpon ex", stage := .basic, evolvesFrom := none,
+    hp := 21, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .ex, tera := true,
+    abilities := [
+      { name := "Cornerstone Stance", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .prevent .hasAbility }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Demolish", cost := [.fighting, .colorless, .colorless], damage := 0,
+        effect := .damage (.const 14) { weak := true, resist := true, fx := true },
+        gx := false }] }
+
 /-- Poochyena (sv6-113). Records: sv6-113. -/
 def sv6_113 : Card := .pokemon
   { name := "Poochyena", stage := .basic, evolvesFrom := none,
@@ -516,6 +569,20 @@ def sv6_121 : Card := .pokemon
         gx := false },
       { name := "Metal Claw", cost := [.metal, .colorless, .colorless], damage := 6,
         effect := .skip,
+        gx := false }] }
+
+/-- Heatran (sv6-123). Records: sv6-123. Caveats: anyAmount60, trigAttacker, trigDamaged. -/
+def sv6_123 : Card := .pokemon
+  { name := "Heatran", stage := .basic, evolvesFrom := none,
+    hp := 14, type := .metal, retreat := 4, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Incandescent Body", use := .triggered .damaged false,
+        spot := some .active, cond := none,
+        effect := .fx (.inflict .burned) }],
+    attacks := [
+      { name := "Steel Burst", cost := [.metal, .colorless, .colorless], damage := 0,
+        effect := .choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 0)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 0))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 1)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 5)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 2)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 10)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 3)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 15)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 4)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 20)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 5)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 25)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 6)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 30)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 7)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 35)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 8)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 40)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 9)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 45)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 10)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 50)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 11)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 55)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 12)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 60)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 13)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 65)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 14)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 70)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 15)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 75)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 16)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 80)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 17)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 85)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 18)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 90)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 19)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 95)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 20)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 100)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 21)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 105)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 22)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 110)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 23)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 115)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 24)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 120)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 25)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 125)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 26)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 130)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 27)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 135)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 28)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 140)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 29)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 145)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 30)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 150)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 31)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 155)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 32)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 160)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 33)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 165)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 34)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 170)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 35)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 175)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 36)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 180)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 37)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 185)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 38)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 190)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 39)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 195)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 40)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 200)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 41)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 205)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 42)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 210)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 43)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 215)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 44)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 220)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 45)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 225)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 46)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 230)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 47)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 235)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 48)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 240)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 49)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 245)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 50)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 250)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 51)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 255)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 52)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 260)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 53)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 265)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 54)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 270)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 55)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 275)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 56)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 280)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 57)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 285)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 58)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 290)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 59)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 295)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .metal) (.exactly 60)) (.ite (.countGe (.energy .own (.energyOf .metal)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 300))),
         gx := false }] }
 
 /-- Varoom (sv6-124). Records: sv6-124. Caveats: mayFail. -/
@@ -699,6 +766,20 @@ def sv6pt5_4 : Card := .pokemon
         gx := false },
       { name := "Cutting Wind", cost := [.grass], damage := 3,
         effect := .skip,
+        gx := false }] }
+
+/-- Decidueye (sv6pt5-5). Records: sv6pt5-5. -/
+def sv6pt5_5 : Card := .pokemon
+  { name := "Decidueye", stage := .stage2, evolvesFrom := some "Dartrix",
+    hp := 15, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stock Up on Feathers", cost := [.colorless], damage := 0,
+        effect := .drawTo .own 7,
+        gx := false },
+      { name := "Power Shot", cost := [.grass], damage := 0,
+        effect := .ite (.countGe (.pile .own .hand (.energyOf .grass)) 1) (.seq (.move .own .hand .discard (.energyOf .grass) (.exactly 1)) (.damage (.const 17))) .skip,
         gx := false }] }
 
 /-- Tapu Bulu (sv6pt5-6). Records: sv6pt5-6, sv6pt5-65. Caveats: recoil. -/
@@ -1771,90 +1852,15 @@ def sv7_94 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Morgrem (sv7-95). Records: sv7-95. -/
-def sv7_95 : Card := .pokemon
-  { name := "Morgrem", stage := .stage1, evolvesFrom := some "Impidimp",
-    hp := 9, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 4,
-        effect := .skip,
-        gx := false },
-      { name := "Darkness Fang", cost := [.darkness, .colorless, .colorless], damage := 7,
-        effect := .skip,
-        gx := false }] }
-
-/-- Bombirdier (sv7-97). Records: sv7-97. Caveats: recoil. -/
-def sv7_97 : Card := .pokemon
-  { name := "Bombirdier", stage := .basic, evolvesFrom := none,
-    hp := 10, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Reckless Charge", cost := [.darkness, .colorless], damage := 7,
-        effect := .selfDamage 2,
-        gx := false }] }
-
-/-- Jirachi (sv7-98). Records: sv7-98. Caveats: mayFail. -/
-def sv7_98 : Card := .pokemon
-  { name := "Jirachi", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .metal, retreat := 1, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Swelling Wish", cost := [.colorless], damage := 0,
-        effect := .attach .own .discard .energy .bench .any,
-        gx := false },
-      { name := "Slap", cost := [.metal, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Klink (sv7-99). Records: sv7-99. -/
-def sv7_99 : Card := .pokemon
-  { name := "Klink", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .metal, retreat := 2, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Allure", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Beam", cost := [.colorless, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Klang (sv7-100). Records: sv7-100. Caveats: recoil. -/
-def sv7_100 : Card := .pokemon
-  { name := "Klang", stage := .stage1, evolvesFrom := some "Klink",
-    hp := 9, type := .metal, retreat := 3, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Iron Tackle", cost := [.colorless, .colorless], damage := 6,
-        effect := .selfDamage 2,
-        gx := false }] }
-
-/-- Meltan (sv7-102). Records: sv7-102. -/
-def sv7_102 : Card := .pokemon
-  { name := "Meltan", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .metal, retreat := 1, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Stampede", cost := [.metal], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Beam", cost := [.metal, .colorless, .colorless], damage := 4,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_52,
+  sv6_55,
   sv6_56,
   sv6_57,
   sv6_58,
   sv6_59,
+  sv6_62,
   sv6_65,
   sv6_66,
   sv6_67,
@@ -1883,6 +1889,7 @@ def cards : List Card := [
   sv6_108,
   sv6_109,
   sv6_111,
+  sv6_112,
   sv6_113,
   sv6_115,
   sv6_116,
@@ -1890,6 +1897,7 @@ def cards : List Card := [
   sv6_119,
   sv6_120,
   sv6_121,
+  sv6_123,
   sv6_124,
   sv6_125,
   sv6_126,
@@ -1907,6 +1915,7 @@ def cards : List Card := [
   sv6_165,
   sv6pt5_3,
   sv6pt5_4,
+  sv6pt5_5,
   sv6pt5_6,
   sv6pt5_7,
   sv6pt5_10,
@@ -1994,13 +2003,7 @@ def cards : List Card := [
   sv7_87,
   sv7_90,
   sv7_91,
-  sv7_94,
-  sv7_95,
-  sv7_97,
-  sv7_98,
-  sv7_99,
-  sv7_100,
-  sv7_102]
+  sv7_94]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2036,7 +2039,7 @@ counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
-theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Lucky Helmet"] := by decide +kernel
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Heatran", "Lucky Helmet"] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel

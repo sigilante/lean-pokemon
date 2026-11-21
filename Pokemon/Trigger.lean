@@ -262,7 +262,7 @@ theorem Run.exists_of_trigOk : ∀ {e : Effect}, e.trigOk = true → ∀ {g : Ga
   | .heal _, hk, _, _ | .poisonUp _, hk, _, _ | .cure, hk, _, _ | .search, hk, _, _
   | .handToBottom, hk, _, _ | .ite .., hk, _, _ | .scale .., hk, _, _ | .selfDamage _, hk, _, _
   | .healAll, hk, _, _ | .mark .., hk, _, _ | .unmark .., hk, _, _ | .color .., hk, _, _
-  | .linger .., hk, _, _ | .damage _, hk, _, _ | .drain _, hk, _, _
+  | .linger .., hk, _, _ | .damage _ _, hk, _, _ | .drain _, hk, _, _
   | .benchCounters .., hk, _, _ | .spreadCounters .., hk, _, _ | .benchHeal _, hk, _, _
   | .switch _, hk, _, _ | .benchDamage .., hk, _, _ | .spreadDamage .., hk, _, _
   | .moveCounter .., hk, _, _ | .discardStadium, hk, _, _ | .iter _, hk, _, _ => by

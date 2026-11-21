@@ -295,8 +295,10 @@ inductive Dst where
 "up to `n`" (any number from 0 to `n`), exactly `n` (the move has no resolution if fewer can be
 taken: "You can use this card only if you discard 2 other cards from your hand"; a continuation
 after it in `seq` runs only if the cost was paid), or all of them ("discard all Energy from this
-Pokémon"; drawing and milling are `all` from the top `n` cards). Today's rule (S8, PP26) reads "up
-to X" as 0..X in attacks and 1..X in other effects; `upTo` allows 0 in both, a superset. -/
+Pokémon"; drawing and milling are `all` from the top `n` cards). The rulebook (2026 p. 21) reads
+"up to X" as 0..X in attacks and 1..X in other effects (Trainer cards, Abilities), and at least 1
+for a search of the deck or discard pile "for any card you want"; `upTo` allows 0 in every effect,
+a superset outside attacks and for any search for any card (Known gaps). "Any amount" allows 0 (p. 21), as `upTo` does. -/
 inductive Qty where
   | upTo (n : Nat)
   | exactly (n : Nat)
@@ -396,6 +398,23 @@ inductive Amt where
   | count (c : Count) (k : Nat)
   deriving DecidableEq
 
+/-- Which steps of the damage calculation an attack's damage step switches off (milestone MV3): the
+Defending Pokémon's Weakness (step 3), its Resistance (step 4), and every effect on it (step 5: its
+stored reduction and prevention and the static reductions and preventions in force on it). The
+2026 rulebook's steps (p. 20): "3) Increase the damage by the amount next to your opponent's Active
+Pokémon's Weakness … 4) Reduce the damage by the amount next to your opponent's Active Pokémon's
+Resistance … 5) Figure out damage effects of Trainer or Energy cards, or other effects on your
+opponent's Active Pokémon". The printed variants: "This attack's damage isn't affected by
+Weakness" (`weak`), "… by Resistance" (`resist`), "… by Weakness or Resistance" (both), "… by any
+effects on your opponent's Active Pokémon" (`fx`), and "… by Weakness or Resistance, or by any
+effects on your opponent's Active Pokémon" (all three). Step 2, the attacker's own bonuses, is
+never switched off: the text names only the defender. The default, `{}`, switches nothing off. -/
+structure Ign where
+  weak : Bool := false
+  resist : Bool := false
+  fx : Bool := false
+  deriving DecidableEq
+
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
 `iter` covers "flip until tails" and "as often as you like". -/
 inductive Effect where
@@ -449,8 +468,11 @@ inductive Effect where
   opponent's Active Pokémon. An attack has at most one damage step on each line of resolution
   (`Effect.oneHit`, required by `Move.attack`), so the calculation is made once per attack, and
   Item and Supporter effects have none (`Effect.hitFree`, required by `Move.item` and
-  `Move.supporter`): printed Trainer cards place damage counters, not attack damage -/
-  | damage (a : Amt)
+  `Move.supporter`): printed Trainer cards place damage counters, not attack damage. Since milestone
+  MV3 the step carries `ig : Ign`, the steps of the calculation its text switches off ("This
+  attack's damage isn't affected by Resistance" is `damage a { resist := true }`); `damage a` is
+  `damage a {}`, the full calculation -/
+  | damage (a : Amt) (ig : Ign := {})
   /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
   | drain (a : Amt)
@@ -571,7 +593,7 @@ structure Attack where
 
 /-- No damage step (`damage` or `drain`) anywhere in the effect. -/
 def Effect.hitFree : Effect → Bool
-  | .damage _ => false
+  | .damage _ _ => false
   | .drain _ => false
   | .ite _ a b => a.hitFree && b.hitFree
   | .seq a b => a.hitFree && b.hitFree
@@ -622,7 +644,7 @@ def Effect.ownFree : Effect → Bool
   | .cure => false
   | .selfDamage _ => false
   | .healAll => false
-  | .damage _ => false
+  | .damage _ _ => false
   | .drain _ => false
   | .scale .own _ => false
   | .switch .own => false
@@ -683,7 +705,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
-  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
@@ -694,12 +716,17 @@ def Qty.canFail : Qty → Bool
   | _ => false
 
 /-- **The trigger fragment** (milestone M8b): the effects a triggered Ability resolves. Drawing,
-damage counters and a Special Condition on the opponent's Active Pokémon (from the trigger's owner,
-"the Attacking Pokémon"), shuffling, the zone moves that always have a resolution (no `exactly`),
+damage counters and a Special Condition other than Paralysis on the opponent's Active Pokémon (from
+the trigger's owner, "the Attacking Pokémon"), shuffling, the zone moves that always have a resolution (no `exactly`),
 discarding Tools, in sequence or as a choice. Excluded: tests and `iter`, every effect that reads
 damage (`heal`, `scale`, the damage steps, `moveCounter`), lingering modifiers (`linger`), switching,
-markers, `poisonUp`, `search` (no resolution on an empty deck; "search your deck" is a `move`) and
-`discardStadium`. So a trigger can always be resolved when both Active Spots are filled
+markers, `poisonUp`, `search` (no resolution on an empty deck; "search your deck" is a `move`),
+`discardStadium`, and Paralysis: a trigger resolves during the attacker's owner's turn, and
+"After its owner's next turn, it recovers during Pokémon Checkup" (rulebook 2026 p. 16) would keep
+the attacker Paralyzed through its owner's next turn, whereas `InPlay.checkup` cures Paralysis at
+the Checkup that ends its owner's turn, here the very turn it was inflicted; the model has no
+record of when a Condition was inflicted, so the fragment leaves Paralysis out (no imported trigger
+inflicts it). So a trigger can always be resolved when both Active Spots are filled
 (`Run.exists_of_trigOk`), writes no store, and reads no damage, which both clamps need. Every
 printed effect of the two implemented shapes in today's Standard that the model can express is in
 the fragment (survey S12 §3). -/
@@ -707,7 +734,7 @@ def Effect.trigOk : Effect → Bool
   | .skip => true
   | .draw => true
   | .counters _ => true
-  | .inflict _ => true
+  | .inflict c => decide (c ≠ .paralyzed)
   | .shuffle => true
   | .move _ _ _ _ q => !q.canFail
   | .drawTo _ _ => true
@@ -737,7 +764,7 @@ def Attack.wf (atk : Attack) : Bool :=
   atk.effect.oneHit && (decide (atk.damage = 0) || atk.effect.hitFree) && atk.effect.switchSafe
 
 theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneHit = true
-  | .damage _, h => by simp [Effect.hitFree] at h
+  | .damage _ _, h => by simp [Effect.hitFree] at h
   | .drain _, h => by simp [Effect.hitFree] at h
   | .ite _ a b, h => by
       simp only [Effect.hitFree, Bool.and_eq_true] at h
@@ -823,7 +850,13 @@ inductive SAmt where
 * `reduce n fr`: the affected Pokémon takes `n` less damage from attacks of Pokémon whose top card
   passes `fr`; subtracted at step 5, with the defender's stored reduction;
 * `retreatPlus n`, `retreatMinus n`: its Retreat Cost is `n` more or `n` less, stopping at 0
-  (`GameState.retreatOf`; Air Balloon "−2", Gravity Gemstone "+1"). -/
+  (`GameState.retreatOf`; Air Balloon "−2", Gravity Gemstone "+1");
+* `prevent fr` (milestone MV3): "Prevent all damage done to this Pokémon by attacks from your
+  opponent's Pokémon ex" (Sylveon sv8pt5-40: `fr = ex`); damage to the affected Pokémon in the
+  Active Spot from attacks of Pokémon whose top card passes `fr` is 0 (step 5 of the damage
+  calculation, with the defender's other effects; `GameState.sPrevent`). A flag, not an amount: it
+  is read, never stored, and an attack whose damage "isn't affected by any effects on your
+  opponent's Active Pokémon" (`Ign.fx`) is not prevented. -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -831,6 +864,7 @@ inductive SEff where
   | reduce (n : Nat) (fr : Filter)
   | retreatPlus (n : Nat)
   | retreatMinus (n : Nat)
+  | prevent (fr : Filter)
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative
@@ -1051,7 +1085,9 @@ Pokémon ex included ("Like other Pokémon ex, when a Tera Pokémon ex is Knocke
 takes 2 Prize cards", p. 24; printed "Pokémon ex rule: When your Pokémon ex is Knocked Out, your
 opponent takes 2 Prize cards."); and Mega Evolution Pokémon ex ("Mega Evolution ex Rule: When
 your Mega Evolution Pokémon ex is Knocked Out, your opponent takes 3 Prize cards.", printed on the
-cards; the 2023 rulebook predates them, S9). In the card data every Standard card with the MEGA
+cards; the 2023 rulebook predates them, S9; the 2026 rulebook confirms it: "these Pokémon allow
+your opponent to take three Prize cards when they are Knocked Out", 2026 p. 24, and "Mega Evolution
+Pokémon ex are considered to be Pokémon ex", p. 24). In the card data every Standard card with the MEGA
 subtype is also ex, and 45 of its records print both rules; the Mega Evolution rule is the one
 that gives the number. Older kinds (EX, GX, V, VSTAR: 2; VMAX, TAG TEAM, V-UNION: 3; Radiant:
 1) give the same three numbers and are out of scope until the card pool needs them. -/
