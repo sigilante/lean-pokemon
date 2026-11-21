@@ -706,7 +706,7 @@ theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.
 /-! ## The old turn-boundary statement fails: Checkup leaves a pending Knock Out -/
 
 /-- A Basic Pokémon with 10 HP (one counter). -/
-def cxCard : PokemonCard := ⟨"", .basic, none, 1, .grass, [], 0⟩
+def cxCard : PokemonCard := ⟨"", .basic, none, 1, .grass, [], 0, none, none⟩
 
 def cxSide (a : InPlay) : PlayerState :=
   ⟨[], [], [], [], [], some a, [], false, false, false, false, false, Store.empty, true⟩

@@ -287,10 +287,10 @@ def atkB (M : Machine) : Attack := ⟨"Tock", [], 0, effB M, false⟩
 /-- The first player's Pokémon: its damage is the program counter, so its HP exceeds every
 value the counter takes. -/
 def clock (M : Machine) : PokemonCard :=
-  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0⟩
+  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0, none, none⟩
 
 /-- The second player's Pokémon, the target of the first player's zero tests. -/
-def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0⟩
+def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0, none, none⟩
 
 /-- The halt mark: an Imprison marker on the Clock. -/
 def haltMarks : Marks := Marks.set .imprison true Marks.empty

@@ -121,7 +121,7 @@ theorem run_clamp_not_sim (k : Nat) :
 /-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
 on itself. -/
 def hurter : PokemonCard :=
-  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9, false⟩], 1⟩
+  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9, false⟩], 1, none, none⟩
 
 def start2 : GameState :=
   ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),

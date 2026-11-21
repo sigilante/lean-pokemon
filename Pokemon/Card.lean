@@ -311,7 +311,37 @@ structure PokemonCard where
   attacks : List Attack
   /-- retreat cost, in Energy cards -/
   retreat : Nat
+  /-- Weakness, as printed today: attacks from Pokémon of this type do double damage to it
+  ("Spriggatito's Weakness of ×2 to ◉ Pokémon makes that 10 ×2 = 20 damage", rulebook 2023
+  p. 14; ×2 on every Standard Pokémon with a Weakness, survey S9). Older forms are out of scope:
+  "+10" to "+40" Weakness (1,119 older card records in the data), and two Weaknesses on one card (38 records). -/
+  weakness : Option EType
+  /-- Resistance: attacks from Pokémon of the type do this much less damage, in counters (−30
+  is 3, −20 is 2; "It takes less damage from a Pokémon if it has Resistance to that Pokémon's
+  type", p. 14). Two Resistances on one card (54 older records) are out of scope. -/
+  resistance : Option (EType × Nat)
   deriving DecidableEq
+
+/-- Is this Pokémon weak to Pokémon of type `t`? -/
+def PokemonCard.weakTo (d : PokemonCard) (t : EType) : Bool := decide (d.weakness = some t)
+
+/-- The Resistance this Pokémon has to Pokémon of type `t`, in counters (0 if none). -/
+def PokemonCard.resistTo (d : PokemonCard) (t : EType) : Nat :=
+  match d.resistance with
+  | some (u, r) => if u = t then r else 0
+  | none => 0
+
+/-- The printed Resistance amount, whatever the type (0 if none). -/
+def PokemonCard.resistAmt (d : PokemonCard) : Nat :=
+  match d.resistance with
+  | some (_, r) => r
+  | none => 0
+
+theorem PokemonCard.resistTo_le (d : PokemonCard) (t : EType) : d.resistTo t ≤ d.resistAmt := by
+  unfold resistTo resistAmt
+  split
+  · split <;> omega
+  · exact Nat.le_refl _
 
 inductive TrainerKind where
   | item | supporter | stadium | tool

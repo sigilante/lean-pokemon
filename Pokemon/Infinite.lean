@@ -27,7 +27,7 @@ concern the unclamped states only.
 namespace Pokemon.Infinite
 
 /-- A Basic Pokémon with 50 HP (five counters). -/
-def mon : PokemonCard := ⟨"Mon", .basic, none, 5, .grass, [], 1⟩
+def mon : PokemonCard := ⟨"Mon", .basic, none, 5, .grass, [], 1, none, none⟩
 
 /-- Poison the opponent's Active Pokémon, then raise its Poison strength any number of times. -/
 def eff : Effect := .seq (.inflict .poisoned) (.iter (.poisonUp 1))

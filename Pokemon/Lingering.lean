@@ -96,7 +96,7 @@ namespace Lingering
 
 /-- A Basic Pokémon with `h` counters of HP and one free attack: base damage `d`, effect `e`. -/
 def mon (h d : Nat) (e : Effect) : PokemonCard :=
-  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0⟩
+  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], false, false, false,

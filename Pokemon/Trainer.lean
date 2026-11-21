@@ -137,7 +137,7 @@ namespace Trainer
 open Infinite (mon)
 
 /-- A Basic Pokémon with 100 HP (ten counters). -/
-def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1⟩
+def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1, none, none⟩
 
 /-- A player with the given hand, Prizes, Active Pokémon and Bench. -/
 def side (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerState :=
