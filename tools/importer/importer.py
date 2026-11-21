@@ -62,12 +62,13 @@ MECHS = [
      for k, d in TR.STATIC_DESC.items()] + [
     ('static Ability: first-turn rule', r'^Ability: static \(first-turn rule\)'),
     ('data defect: a Stage 1 or Stage 2 record with no evolves-from field', r'^evolution card with no evolves-from'),
-    ("triggered Ability (Knock Out, damage, Checkup, opponent's action, move between spots)", r'^Ability: triggered'),
+    ("triggered Ability of other shapes (another Pokémon's Knock Out, replacement, Checkup, opponent's action, move "
+     "between spots)", r'^Ability: triggered'),
     ('Ability with a first-turn rule ("once during your first turn", "can\'t use … during your first turn")',
      r'^Ability: (?:once during your first turn|first-turn limit)'),
     ('Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms)',
      r'^Ability: (?!returns|condition on the history)|^Ability$|^Ancient Trait$'),
-    ('Pokémon Tool card: triggered text (the model would play it inert; refused)', r'^Pokémon Tool: triggered'),
+    ('Pokémon Tool card: triggered text of other shapes (the model would play it inert; refused)', r'^Pokémon Tool: triggered'),
     ('Stadium card: triggered text, or several paragraphs (the model would play it inert; refused)',
      r'^Stadium: (?:triggered|text of several)'),
     ('Stadium card: activated effect the model cannot express', r'^Stadium: activated'),

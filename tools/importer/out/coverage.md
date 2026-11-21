@@ -48,7 +48,7 @@ Blocking mechanisms of the 1036 cards not imported (keyword classification of ea
 | test on a card in play (ex, Evolution, Basic, name, Tool, attack) | 39 | 49 |
 | Weakness/Resistance or effects ignored | 36 | 67 |
 | "If you do" / "in this way" consequences | 34 | 82 |
-| triggered Ability (Knock Out, damage, Checkup, opponent's action, move between spots) | 30 | 39 |
+| triggered Ability of other shapes (another Pokémon's Knock Out, replacement, Checkup, opponent's action, move between spots) | 30 | 39 |
 | Special Energy (card or text) | 30 | 34 |
 | effect prevention, threshold or typed prevention | 29 | 36 |
 | a count the model cannot read | 27 | 38 |
@@ -68,7 +68,7 @@ Blocking mechanisms of the 1036 cards not imported (keyword classification of ea
 | return from play to hand or deck | 10 | 21 |
 | Stadium in other card text | 10 | 13 |
 | Stadium card: activated effect the model cannot express | 9 | 9 |
-| Pokémon Tool card: triggered text (the model would play it inert; refused) | 8 | 8 |
+| Pokémon Tool card: triggered text of other shapes (the model would play it inert; refused) | 8 | 8 |
 | static text (Ability, Tool or Stadium): a filter the model has not (name prefix, Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex) | 7 | 25 |
 | effects before damage (switch then damage, "before doing damage") | 7 | 9 |
 | a card kind with no filter | 7 | 8 |
