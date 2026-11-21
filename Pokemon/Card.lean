@@ -526,6 +526,15 @@ inductive Effect where
   when the effect resolves, nothing with an empty Bench; "discard a Pokémon Tool from 1 of your
   opponent's Pokémon" is a `choice` of the two, exact with one Tool per Pokémon) -/
   | discardTools (w : Whose) (sp : Spot)
+  /-- (milestone MV2) attack damage `n` (`dmg = true`, as `benchDamage`: no modifier, none on a Tera
+  Pokémon) or `n` damage counters (`dmg = false`, as `benchCounters`) on each of `m` distinct
+  Benched Pokémon of the `w` player whose card passes `f`, chosen when the effect resolves; all of
+  them if fewer pass ("This attack also does 130 damage to 2 of your opponent's Benched Pokémon",
+  Hydreigon ex sv8-119, is `benchSome .opp 2 .any true 13`; "This attack does 210 damage to 1 of
+  your opponent's Benched Pokémon ex", Zeraora sv10-78, `benchSome .opp 1 .ex true 21`). With the
+  Active Pokémon among the targets ("120 damage to 2 of your opponent's Pokémon") it is a derived
+  form, `Effect.hitSome`. Only attacks may use the damage form (`benchHitFree`) -/
+  | benchSome (w : Whose) (m : Nat) (f : Filter) (dmg : Bool) (n : Nat)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -561,6 +570,7 @@ Trainer cards place damage counters, not attack damage). -/
 def Effect.benchHitFree : Effect → Bool
   | .benchDamage _ _ => false
   | .spreadDamage _ _ => false
+  | .benchSome _ _ _ dmg _ => !dmg
   | .ite _ a b => a.benchHitFree && b.benchHitFree
   | .seq a b => a.benchHitFree && b.benchHitFree
   | .choice a b => a.benchHitFree && b.benchHitFree
@@ -661,7 +671,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -732,7 +742,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

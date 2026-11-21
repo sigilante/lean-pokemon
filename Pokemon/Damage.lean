@@ -700,6 +700,22 @@ theorem InPlay.Agree.hitBench {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q p
   · exact h
   · exact h.upd.2.1 n
 
+/-- Damage or counters from `Effect.benchSome` preserve agreement (milestone MV2). -/
+theorem InPlay.Agree.hitWith {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q p) (dmg : Bool)
+    (n : Nat) : InPlay.Agree K c (q.hitWith dmg n) (p.hitWith dmg n) := by
+  cases dmg
+  · exact h.upd.2.1 n
+  · exact h.hitBench n
+
+theorem clampWith_hitWith {c : Cap} (dmg : Bool) (n : Nat) (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) :
+    InPlay.clampWith K c (y.hitWith dmg n) = InPlay.clampWith K c (x.hitWith dmg n) :=
+  InPlay.clamp_of_agree ((InPlay.agree_of_clamp h).hitWith dmg n)
+
+theorem clampWith_top {c : Cap} (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) : y.top = x.top :=
+  (InPlay.agree_of_clamp h).top
+
 /-- An update that preserves agreement keeps two agreeing Benches agreeing. -/
 theorem bench_map_agree {c : Cap} {U : InPlay → InPlay}
     (hU : ∀ x y, InPlay.Agree K c y x → InPlay.Agree K c (U y) (U x)) {b e : List InPlay}

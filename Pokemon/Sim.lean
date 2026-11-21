@@ -61,6 +61,7 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | unmark w m g => intro _ hn; cases w <;> exact hn
   | benchCounters w n h => intro _ hn; cases w <;> exact hn
   | spreadCounters w n g => intro _ hn; cases w <;> exact hn
+  | benchSome w _ _ _ _ _ => intro _ hn; cases w <;> exact hn
   | switch w ha hb => intro _ hn; cases w <;> exact hn
   | benchDamage w n h => intro _ hn; cases w <;> exact hn
   | spreadDamage w n g => intro _ hn; cases w <;> exact hn
@@ -514,6 +515,24 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂, he₁, he₂,
             bench_map_agree (U := InPlay.addDamage n) (fun x y h => h.upd.2.1 n) he₁,
             bench_map_agree (U := InPlay.addDamage n) (fun x y h => h.upd.2.1 n) he₂]⟩
+  | benchSome w m f dmg n h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitWith dmg n) clampWith_top he₁
+          rw [← benchElig_congr clampWith_top f he₁] at h'
+          exact ⟨_, .benchSome .own m f dmg n h', by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂,
+              he₂, he']⟩
+      | opp =>
+          simp only [GameState.side] at h
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitWith dmg n) clampWith_top he₂
+          rw [← benchElig_congr clampWith_top f he₂] at h'
+          exact ⟨_, .benchSome .opp m f dmg n h', by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂,
+              he₁, he']⟩
   | moveCounter h =>
       intro _ _ _ _ g₂ hc
       have hsf := GameState.sameField_of_clampAt hc

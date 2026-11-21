@@ -1036,6 +1036,7 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | unmark w m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | benchCounters w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | benchSome w _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | switch w ha hb => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | benchDamage w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩

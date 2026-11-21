@@ -509,6 +509,22 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           rw [h, List.map_nil, List.map_eq_nil_iff] at he₂
           subst he₂
           exact ⟨_, .benchCountersNone .opp n rfl, hc⟩
+  | benchSome w m f dmg n h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitWith dmg n) clampWith_top he₁
+          rw [← benchElig_congr clampWith_top f he₁] at h'
+          exact ⟨_, .benchSome .own m f dmg n h', by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₂, he']⟩
+      | opp =>
+          simp only [GameState.side] at h
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitWith dmg n) clampWith_top he₂
+          rw [← benchElig_congr clampWith_top f he₂] at h'
+          exact ⟨_, .benchSome .opp m f dmg n h', by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁, he']⟩
   | spreadCounters w n g =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc

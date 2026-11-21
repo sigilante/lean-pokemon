@@ -62,6 +62,20 @@ theorem InPlay.cardList_hitBench (n : Nat) (p : InPlay) :
   obtain ⟨h1, h2, h3, h4, -⟩ := p.hitBench_fields n
   simp only [InPlay.cardList, h1, h2, h3, h4]
 
+theorem InPlay.cardList_hitWith (dmg : Bool) (n : Nat) (p : InPlay) :
+    (p.hitWith dmg n).cardList = p.cardList := by
+  cases dmg
+  · rfl
+  · exact InPlay.cardList_hitBench n p
+
+/-- `Effect.benchSome` keeps the cards of the Bench (milestone MV2). -/
+theorem Hits.benchCardList {dmg : Bool} {n k : Nat} {f : Filter} {b b' : List InPlay}
+    (h : Hits (InPlay.hitWith dmg n) f k b b') : benchCardList b' = benchCardList b :=
+  h.congr Pokemon.benchCardList fun x y _ _ hy he => by
+    rcases hy with rfl | rfl
+    · simp only [Pokemon.benchCardList, he]
+    · simp only [Pokemon.benchCardList, he, InPlay.cardList_hitWith]
+
 theorem benchCardList_hitBench (n : Nat) (b : List InPlay) :
     benchCardList (b.map (InPlay.hitBench n)) = benchCardList b := by
   induction b with
@@ -180,6 +194,10 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
         perm_count [h, GameState.updSide, (q.hitBench_fields n).1, (q.hitBench_fields n).2.1,
           (q.hitBench_fields n).2.2.1, (q.hitBench_fields n).2.2.2.1]
   | benchDamageNone => exact .refl _
+  | benchSome w m f dmg n h =>
+      have hb := h.benchCardList
+      cases w <;> simp only [GameState.side] at hb <;>
+        simp only [GameState.allCards, PlayerState.allCards, GameState.updSide, hb] <;> exact .refl _
   | spreadDamage w n g =>
       cases w <;>
         simp only [GameState.allCards, PlayerState.allCards, GameState.updSide,

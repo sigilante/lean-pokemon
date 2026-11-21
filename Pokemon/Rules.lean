@@ -425,7 +425,14 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * effects place damage counters on either Active Pokémon (`counters`, `scale` on the
   opponent's, `selfDamage` on the player's own) and, since milestone M3, on one chosen Benched
   Pokémon of either player (`benchCounters`) or on each of a player's Benched Pokémon
-  (`spreadCounters`); recoil and other self-damage are written as damage counters
+  (`spreadCounters`), and since milestone MV2 on `m` distinct chosen Benched Pokémon passing a filter
+  (`benchSome`, attack damage or counters; "N damage to 2 of your opponent's Pokémon",
+  `Effect.hitSome`; "put N damage counters on your opponent's Pokémon in any way you like",
+  `Effect.spreadAny`, exact in attacks: inside a Trainer effect a Knock Out check follows each
+  counter; `Pokemon/Spread.lean`; absent: spread whose amount the text computes, "for each Energy
+  attached to this Pokémon", 7 refused cards in survey S13 §B, a target filtered by its damage, 2,
+  moving Energy or counters "in any way you like", 4, and "any number" of attachments); recoil and
+  other self-damage are written as damage counters
   (`selfDamage`), not as attack damage, so a printed recoil "This Pokémon also does 30 damage to
   itself" escapes the attacker's own Weakness, Resistance and modifiers in the model; attack
   damage reaches the opponent's Active Pokémon (the damage step, `dealtBy`) and, since M3, Benched
@@ -1281,6 +1288,7 @@ theorem Run.hitRun {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchDamage w n h => exact ⟨_, _, .plain rfl (.benchDamage w n h)⟩
   | benchDamageNone w n h => exact ⟨_, _, .plain rfl (.benchDamageNone w n h)⟩
   | spreadDamage w n g => exact ⟨_, _, .plain rfl (.spreadDamage w n g)⟩
+  | benchSome w m f dmg n h => exact ⟨_, _, .plain rfl (.benchSome w m f dmg n h)⟩
   | moveCounter h => exact ⟨_, _, .plain rfl (.moveCounter h)⟩
   | discardStadium g => exact ⟨_, _, .plain rfl (.discardStadium g)⟩
 

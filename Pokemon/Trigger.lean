@@ -113,6 +113,7 @@ theorem Run.zoneOnly {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchCounters w n h => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | benchCountersNone w n h => intro _; exact ⟨rfl, rfl, rfl, rfl⟩
   | spreadCounters w n g => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | benchSome w _ _ _ _ _ => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | switch w ha hb => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | switchNone w hb => intro _; exact ⟨rfl, rfl, rfl, rfl⟩
   | benchDamage w n h => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
