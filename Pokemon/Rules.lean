@@ -304,7 +304,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   pile (recycling), and `Faithful` has a third clause, `RecycleSafe`, in its present form (after
   milestones M8a and M5): (a) no free recycler (an Item or Supporter effect, or an "as often as you
   like" Ability of a Pokémon or given by a Tool, `Card.freeRec`; not an attack, a once-per-turn or
-  on-play Ability, or a Stadium's effect) can return an Item card that writes a bonus or reduction
+  on-play Ability, a triggered Ability (milestone M8b), or a Stadium's effect) can return an Item card that writes a bonus or reduction
   (`Card.wAmt`) from a discard pile, and (b) no effect at all can return an Item or Supporter card
   that writes a rest-of-game one (`Card.alAmt`); the
   bound is then per turn (each Item writer played at most once a turn, one Supporter, one
@@ -1656,6 +1656,13 @@ theorem Fire.nil_eq {ev : TrigEvent} {g g' : GameState} (h : Fire ev [] g g') : 
 theorem GameState.batchTrigs_of_not_attacked {g g₁ : GameState} (h : g.attacked = false) :
     g.batchTrigs g₁ = [] := by
   simp only [GameState.batchTrigs, h, Bool.false_and, Bool.false_eq_true, ite_false]
+
+/-- A batch that fires a trigger is taken after the turn's attack (milestone M8b). -/
+theorem GameState.attacked_of_batchTrigs {g g₁ : GameState} (h : g.batchTrigs g₁ ≠ []) :
+    g.attacked = true := by
+  cases e : g.attacked with
+  | true => rfl
+  | false => exact absurd (GameState.batchTrigs_of_not_attacked e) h
 
 /-- A batch that ends the game fires no trigger. -/
 theorem GameState.batchTrigs_of_won {g g₁ : GameState} (h : g₁.winner ≠ none) :

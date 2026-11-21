@@ -135,10 +135,14 @@ triggered Ability nothing changed (`Pokemon/NoTriggers.lean`). A chain of trigge
 ends (`KOMove.acc`, `Move.unsettled_acc`): every batch that Knocks Out a Pokémon takes Prize cards,
 which nothing returns, and a batch that Knocks Out none fires no trigger and fills an Active Spot;
 the Prize-changing triggers of the card pool, which would break this, are not modelled. The store
-bound counts triggered Abilities as free recyclers in clause 3 (a) of `Faithful`; they write no
-store (the fragment has no `linger`). Witnesses (`Pokemon/TriggerWitness.lean`): a `damaged`
-trigger that Knocks Out the attacker with the defender, the batch that follows with a `koByAttack`
-trigger that draws (forced when mandatory, declined when optional), and the simultaneous win. Milestone M5 added Stadiums
+bound needs no new clause of `Faithful`: triggered Abilities write no store (the fragment has no
+`linger`), their recycling is bound by clause 3 (b) like every effect's, and they are not free
+recyclers in clause 3 (a), since a `koByAttack` trigger fires only after the turn's attack, when the
+per-turn part of the invariant is vacuous (`TInv.same'`). Witnesses (`Pokemon/TriggerWitness.lean`):
+a `damaged` trigger that Knocks Out the attacker with the defender, the batch that follows with a
+`koByAttack` trigger that draws (forced when mandatory, declined when optional), the simultaneous
+win, and attacks that switch the opponent's Active Pokémon (`gust_quiet`, `pull_fires`,
+`hitRun_quiet`). Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
 Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and

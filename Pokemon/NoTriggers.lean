@@ -5,16 +5,15 @@ import Pokemon.Terminate
 # Decks without triggered Abilities (milestone M8b)
 
 Milestone M8b changed two moves (`Move.attack` ends with the opponent's `damaged` triggers,
-`Move.knockOuts` with the `koByAttack` triggers of the batch) and clause 3 (a) of `Faithful`
-(triggered Abilities are free recyclers, `AbilityUse.freeUse`). For a game in which no card has a
+`Move.knockOuts` with the `koByAttack` triggers of the batch); `Faithful` is unchanged (a first
+version of M8b counted triggered Abilities as free recyclers in clause 3 (a); a review showed that
+unnecessary, and it was undone). For a game in which no card has a
 triggered Ability (`GameState.TrigFree`, kept by play) nothing changed:
 
 * `Move.knockOuts_of_trigFree`, `Move.batch_of_not_settled_trigFree`: the batch move is the batch
   Knock Out step, as before (the statement of `Move.batch_of_not_settled` before milestone M8b);
 * `Move.attack_of_trigFree`, `Move.attack_eq_of_trigFree`: an attack is what it was, the state
   after its script with the attack recorded;
-* `AbilityUse.freeUse_iff`: an Ability with no event is a free use exactly when it is "as often as
-  you like", so clause 3 (a) is the clause of milestone M8a;
 * `Reach.trigFree`: play keeps the hypothesis.
 -/
 
@@ -56,11 +55,5 @@ theorem Move.attack_eq_of_trigFree {atk : Attack} {g g' g'' : GameState} {l : Li
   have hl := hd.nil_of ((htf.of_perm hr.perm).optTrigs_opp _)
   subst hl
   exact ht.nil_eq
-
-/-- An Ability with no event is a free use exactly when it is "as often as you like": for a deck
-without triggered Abilities clause 3 (a) of `Faithful` is the clause of milestone M8a. -/
-theorem AbilityUse.freeUse_iff {u : AbilityUse} (h : u.event = none) :
-    u.freeUse = true ↔ u = .unlimited := by
-  cases u <;> simp_all [AbilityUse.freeUse, AbilityUse.event]
 
 end Pokemon

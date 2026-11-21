@@ -686,20 +686,10 @@ def abilitiesRec : List Ability → List Filter
   | [] => []
   | a :: as => a.scripts.flatMap Effect.recFilters ++ abilitiesRec as
 
-/-- An Ability whose uses in one turn the potential `GameState.abPot` does not pay for: "as often as
-you like" (milestone M8a) and, since milestone M8b, a triggered one (it fires on its event, not by
-choice, so its uses are not bounded by the Pokémon in play). -/
-def AbilityUse.freeUse : AbilityUse → Bool
-  | .unlimited => true
-  | .triggered _ _ => true
-  | _ => false
-
-/-- The recycling filters of the "as often as you like" Abilities of a list (milestone M8a) and,
-since milestone M8b, of its triggered Abilities (`AbilityUse.freeUse`). For a list with no
-triggered Ability it is what it was. -/
+/-- The recycling filters of the "as often as you like" Abilities of a list (milestone M8a). -/
 def unlimitedRec : List Ability → List Filter
   | [] => []
-  | a :: as => (if a.use.freeUse then a.scripts.flatMap Effect.recFilters else []) ++
+  | a :: as => (if a.use = .unlimited then a.scripts.flatMap Effect.recFilters else []) ++
       unlimitedRec as
 
 theorem abilitiesRec_mem {ab : Ability} {e : Effect} {f : Filter} :
@@ -708,7 +698,7 @@ theorem abilitiesRec_mem {ab : Ability} {e : Effect} {f : Filter} :
   | _ :: _, .tail _ h, he, hf => List.mem_append_right _ (abilitiesRec_mem h he hf)
 
 theorem unlimitedRec_mem {ab : Ability} {e : Effect} {f : Filter} :
-    ∀ {as : List Ability}, ab ∈ as → ab.use.freeUse = true → e ∈ ab.scripts → f ∈ e.recFilters →
+    ∀ {as : List Ability}, ab ∈ as → ab.use = .unlimited → e ∈ ab.scripts → f ∈ e.recFilters →
       f ∈ unlimitedRec as
   | _ :: _, .head _, hu, he, hf =>
       List.mem_append_left _ (by simp only [hu, ite_true]; exact List.mem_flatMap.2 ⟨e, he, hf⟩)
@@ -786,13 +776,10 @@ theorem GameState.discW_le {w : Card → Nat} (hw : ∀ c, w c ≤ c.amt) (g : G
   simp only [GameState.discAmt, cardsAmt_eq] at h3
   simp only [GameState.discW, cardsAmt_eq]; omega
 
-/-- **Clause 3** (`RecycleSafe`, milestone MV; revised in milestones M8a, M5 and M8b):
+/-- **Clause 3** (`RecycleSafe`, milestone MV; revised in milestones M8a and M5):
 (a) no free recycler (`Card.freeRec`: the effect of an Item or Supporter card, or an "as often as
-you like" Ability of a Pokémon card or given by a Tool, or since milestone M8b a triggered Ability
-(`AbilityUse.freeUse`): its firings are bounded by Knock Outs and attacks, not by the potential,
-and the per-turn invariant does not pay for them; for a deck without triggered Abilities the clause
-is unchanged, `AbilityUse.freeUse_iff`; not an attack, a "once during your turn"
-or on-play Ability, or a Stadium's effect) can return from a discard pile to a hand or deck an
+you like" Ability of a Pokémon card or given by a Tool; not an attack, a "once during your turn"
+or on-play Ability, a triggered Ability, or a Stadium's effect) can return from a discard pile to a hand or deck an
 Item card of the game that writes a damage bonus or reduction (`Card.wAmt` is nonzero only for
 Item cards: a Supporter is played at most once a turn, and Stadium and Tool cards write nothing
 when played); and (b) no effect at all, attacks, Abilities and Stadium effects included, can
@@ -802,8 +789,13 @@ return an Item or Supporter card that writes a rest-of-game bonus or reduction (
 during your turn" and on-play Abilities, which are used boundedly often in a turn
 (`GameState.abPot`), and a Stadium's once-per-turn effect, which may also write a modifier other
 than a rest-of-game one (clause 5) and is paid per use through `Card.stQ`, at most two uses a turn
-(`GameState.stPot`). Decidable (a finite check over pairs of a recycling filter and a card of the
-game). For a deck without Abilities, Stadiums or Tools it is the clause of milestone MV. -/
+(`GameState.stPot`). Triggered Abilities (milestone M8b) are not free recyclers either: a
+`koByAttack` trigger fires only after the turn's attack (`GameState.batchTrigs`), when the per-turn
+part of the invariant no longer applies, and a `damaged` trigger fires inside the attack; both are
+bound by (b) like every effect. (A first M8b version counted them in (a); that was not needed, and
+the class of faithful decks is now larger.) Decidable (a finite check over pairs of a recycling
+filter and a card of the game). For a deck without Abilities, Stadiums or Tools it is the clause of
+milestone MV. -/
 def GameState.RecycleSafe (g : GameState) : Prop :=
   (∀ x ∈ g.allCards, ∀ f ∈ x.freeRec, ∀ y ∈ g.allCards, f.eval y = true → y.wAmt = 0) ∧
   (∀ x ∈ g.allCards, ∀ f ∈ x.allRec, ∀ y ∈ g.allCards, f.eval y = true → y.alAmt = 0)
@@ -1029,19 +1021,8 @@ theorem Card.freeRec_of_unlimited {c : Card} {ab : Ability} (hm : ab ∈ c.abili
     (hu : ab.use = .unlimited) {e : Effect} (he : e ∈ ab.scripts) {f : Filter}
     (hf : f ∈ e.recFilters) : f ∈ c.freeRec := by
   cases c with
-  | pokemon p => exact unlimitedRec_mem hm (by rw [hu]; rfl) he hf
-  | tool n gr => exact unlimitedRec_mem hm (by rw [hu]; rfl) he hf
-  | _ => nomatch hm
-
-/-- A recycling filter of a triggered Ability of a card is a free one (milestone M8b). -/
-theorem Card.freeRec_of_trigger {c : Card} {ab : Ability} (hm : ab ∈ c.abilities)
-    {ev : TrigEvent} (hu : ab.use.event = some ev) {e : Effect} (he : e ∈ ab.scripts) {f : Filter}
-    (hf : f ∈ e.recFilters) : f ∈ c.freeRec := by
-  have hfu : ab.use.freeUse = true := by
-    cases h : ab.use <;> rw [h] at hu <;> first | rfl | cases hu
-  cases c with
-  | pokemon p => exact unlimitedRec_mem hm hfu he hf
-  | tool n gr => exact unlimitedRec_mem hm hfu he hf
+  | pokemon p => exact unlimitedRec_mem hm hu he hf
+  | tool n gr => exact unlimitedRec_mem hm hu he hf
   | _ => nomatch hm
 
 theorem attacksRec_nil {c : Card} (h : c.allRec = []) {atk : Attack}
@@ -1581,9 +1562,10 @@ theorem UseAt.abPot {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x
 
 A trigger resolution (`Fire`) changes only the zones (`Fire.zoneOnly`): it writes no store and keeps
 the turn flags. What the store bound needs of it beyond that: it moves no card with an amount out of
-a discard pile when its Abilities' recycling filters admit none (`Fire.disc_mono`; clause 3 (a)
-counts triggered Abilities as free recyclers, `Card.freeRec_of_trigger`, and clause 3 (b) reads
-every Ability), and it does not raise the potential of the player to move (`Fire.abPot_le`): its
+a discard pile when its Abilities' recycling filters admit none (`Fire.disc_mono`; clause 3 (b)
+reads every Ability, and clause 3 (a) is not needed: a `koByAttack` trigger fires after the turn's
+attack, `GameState.attacked_of_batchTrigs`, where the per-turn part of the invariant is vacuous,
+`TInv.same'`), and it does not raise the potential of the player to move (`Fire.abPot_le`): its
 effects on that player's side (the opponent of the trigger's owner) add damage counters, a Special
 Condition, or move cards, which never raise a player's potential. -/
 

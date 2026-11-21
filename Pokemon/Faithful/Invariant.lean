@@ -468,10 +468,13 @@ theorem TInv.start (g : GameState) (A P Q K R : Nat) (hK : g.abPot ≤ K) :
     fun _ _ => by omega, ?_, ?_, ?_, ?_⟩ <;>
     simp only [GameState.storeTotal] <;> omega
 
-/-- A step that writes nothing and recycles no weighted card. -/
-theorem TInv.frame {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+/-- A step that writes nothing and recycles no weighted card. The weight of the discard piles
+is read only by the per-turn clause, before the turn's attack, so it need not be kept by a step
+that ends after the attack (milestone M8b: the `koByAttack` triggers). -/
+theorem TInv.frame' {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
     (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
-    (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s) (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt)
+    (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s)
+    (hW : g'.attacked = false → g.discW Card.wAmt ≤ g'.discW Card.wAmt)
     (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt) (ha : atkT A g ≤ atkT A g')
     (ht : g'.attacked = false → g'.winner = none → g.attacked = false ∧ supT P g ≤ supT P g' ∧
       g'.abPot ≤ g.abPot ∧ g'.stPot ≤ g.stPot)
@@ -484,9 +487,35 @@ theorem TInv.frame {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
     exact Nat.le_trans hp (hi.pot hg hn)
   · obtain ⟨hg, hsup, hp, hq⟩ := ht hf hw
     have := hi.turn hg hn
+    have := hW hf
     have := Nat.mul_le_mul_left Q hp
     have := Nat.mul_le_mul_left R hq
     omega
+
+/-- A step that writes nothing and recycles no weighted card. -/
+theorem TInv.frame {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
+    (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s) (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt)
+    (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt) (ha : atkT A g ≤ atkT A g')
+    (ht : g'.attacked = false → g'.winner = none → g.attacked = false ∧ supT P g ≤ supT P g' ∧
+      g'.abPot ≤ g.abPot ∧ g'.stPot ≤ g.stPot)
+    (hx : gxT A g ≤ gxT A g') : TInv S A P Q K R g' X₀ X₁ X₂ D E :=
+  hi.frame' hn hs (fun _ => hW) hAl ha ht hx
+
+/-- A step that changes no flag, store or discard pile weight of interest; the weight of Item
+writers need only be kept when the step ends before the turn's attack (`TInv.frame'`). -/
+theorem TInv.same' {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
+    (hW : g'.attacked = false → g.discW Card.wAmt ≤ g'.discW Card.wAmt)
+    (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt)
+    (ha : g'.attacked = g.attacked) (hsp : g'.cur.supporterPlayed = g.cur.supporterPlayed)
+    (hgc : g'.cur.gxUsed = g.cur.gxUsed) (hgo : g'.opp.gxUsed = g.opp.gxUsed)
+    (hs : ∀ s, g'.slotAmt s = g.slotAmt s) (hp : g'.winner = none → g'.abPot ≤ g.abPot)
+    (hq : g'.stPot ≤ g.stPot) :
+    TInv S A P Q K R g' X₀ X₁ X₂ D E :=
+  hi.frame' hn (fun s => Nat.le_of_eq (hs s)) hW hAl (Nat.le_of_eq (atkT_congr ha).symm)
+    (fun hf hw => ⟨ha ▸ hf, by simp only [supT, hsp]; exact Nat.le_refl _, hp hw, hq⟩)
+    (Nat.le_of_eq (gxT_congr hgc hgo).symm)
 
 /-- A step that changes no flag, store or discard pile weight of interest. -/
 theorem TInv.same {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
@@ -861,17 +890,17 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       have hf := h.flags_keep.trans ht.flags_keep
       have z := ht.zoneOnly
       have hC₁ : ∀ y ∈ g₁.allCards, y ∈ g.allCards := fun y hy => h.perm.mem_iff.1 hy
-      have hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt :=
-        Nat.le_trans (KOBatch.disc_mono _ h) (ht.disc_mono Card.wAmt_tw (C := g.allCards)
-          (fun ab hab f hf y hy hfy => by
-            obtain ⟨c, hc, hmc, he⟩ := GameState.batchTrigs_card (hl.mem_iff.1 hab)
-            exact hR.1 _ hc f (Card.freeRec_of_trigger hmc he (ab.script_mem _) hf) y hy hfy) hC₁)
+      have hW : g'.attacked = false → g.discW Card.wAmt ≤ g'.discW Card.wAmt := fun hf' => by
+        have hga : g.attacked = false := hf.attacked.symm.trans hf'
+        have e := Move.eq_of_batchTrigs_nil hl ht (GameState.batchTrigs_of_not_attacked hga)
+        subst e
+        exact KOBatch.disc_mono _ h
       have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt :=
         Nat.le_trans (KOBatch.disc_mono _ h) (ht.disc_mono Card.alAmt_tw (C := g.allCards)
           (fun ab hab f hf y hy hfy => by
             obtain ⟨c, hc, hmc, -⟩ := GameState.batchTrigs_card (hl.mem_iff.1 hab)
             exact hR.2 _ hc f (Card.allRec_of_ability hmc (ab.script_mem _) hf) y hy hfy) hC₁)
-      exact ⟨_, _, _, _, _, hi.same hwn hW hAl hf.attacked
+      exact ⟨_, _, _, _, _, hi.same' hwn hW hAl hf.attacked
         (z.cur_supporterPlayed.trans h.sides.2.2.2.2.2.2.2.2.1) hf.gxCur hf.gxOpp
         (fun s => (ht.slotAmt s).trans (h.keeps.2 s)) (hpot (z.first.trans h.same.1))
         (hstp (z.first.trans h.same.1))⟩
