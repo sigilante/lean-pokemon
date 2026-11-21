@@ -1865,7 +1865,8 @@ class Parser:
     def prev_item(self, i, what):
         """The item of the sentence just before sentence i, which a consequence refers to: a plain effect."""
         if not self.items or self.items[-1][0] != i - 1:
-            raise Refuse(what + ' with no action in the sentence before it')
+            # the sentence before was refused (its own blocker is recorded) or produced no item
+            raise Refuse(what + ' after a sentence with no translation')
         it = self.items[-1][1]
         if not isinstance(it, Eff) or it.pre:
             raise Refuse(what + ' after an action that is not a plain effect')
