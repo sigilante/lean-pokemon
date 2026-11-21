@@ -428,8 +428,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`spreadCounters`), and since milestone MV2 on `m` distinct chosen Benched Pokémon passing a filter
   (`benchSome`, attack damage or counters; "N damage to 2 of your opponent's Pokémon",
   `Effect.hitSome`; "put N damage counters on your opponent's Pokémon in any way you like",
-  `Effect.spreadAny`, exact in attacks: inside a Trainer effect a Knock Out check follows each
-  counter; `Pokemon/Spread.lean`; absent: spread whose amount the text computes, "for each Energy
+  `Effect.spreadAny`, each counter on the Active Pokémon when the Bench is empty, proved exact for `Run`,
+  the semantics of an attack's effect, from a state with both Active Pokémon: every distribution of the counters is a resolution and nothing else is,
+  `Spread.spreadAny_sound`, `Spread.spreadAny_complete`; inside a Trainer effect a Knock Out check
+  would follow each counter; `Pokemon/Spread.lean`; absent: spread whose amount the text computes, "for each Energy
   attached to this Pokémon", 7 refused cards in survey S13 §B, a target filtered by its damage, 2,
   moving Energy or counters "in any way you like", 4, and "any number" of attachments); recoil and
   other self-damage are written as damage counters
@@ -689,7 +691,17 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Spot this turn" flag (`InPlay.movedUp`, `Test.movedUp`) and "evolved this turn" (`Test.evolved`,
   from `fresh`). Departures: "Knocked Out by damage from an attack" is read as "Knocked Out by the
   check after the turn's attack", so damage counters placed by an attack's effect count too (a
-  superset); Knock Outs at Checkup are recorded in no turn (Checkup is between turns); a promotion
+  superset); the failed Confused attempt (`Move.attackConfused`) sets `GameState.attacked` like an
+  attack, so if its 3 damage counters bring the confused player's own Active Pokémon to its HP, the
+  batch Knock Out step records in that player's history a Knock Out "after an attack"
+  (`KOHist.nowAtk`) though no attack happened, and likewise a Knock Out of the attacker's own
+  Pokémon by recoil (`selfDamage`) is recorded in its owner's history as after an attack. The flag is read only through the record of the turn in which it was set: during the
+  next turn (the opponent's) by `Count.koLast .opp true`, and it is gone by the owner's own next
+  turn (`Move.endTurn` shifts it out). Both history shapes the census implements ("if any of your
+  Pokémon were Knocked Out [by damage from an attack] during your opponent's last turn") read
+  `Count.koLast .own`, the reader's own record of the opponent's turn, so no implemented card
+  notices; a card reading `koLast .opp true` would. Knock Outs at Checkup are recorded in no turn
+  (Checkup is between turns); a promotion
   after a Knock Out of the player's own Active Pokémon in their own turn does not set `movedUp`
   (an under-model). Absent, with the refused cards of today's Standard that need them (S13 §A;
   cards can need several): "if you played [named, Future, Ancient, Team Rocket] Supporter this

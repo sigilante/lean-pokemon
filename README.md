@@ -171,7 +171,11 @@ and `Count.inPlay` (Pokémon in play passing a filter); both clamps keep them, s
 printed cards (`Pokemon/InPlayTests.lean`). Spread: the primitive `Effect.benchSome` (damage or
 counters on `m` distinct Benched Pokémon passing a filter, all of them if fewer pass; semantics
 `Hits`) and the derived forms `Effect.rep`, `Effect.spreadAny` ("put 6 damage counters on your
-opponent's Benched Pokémon in any way you like", exact in attacks), `Effect.hitSome` ("120 damage to
+opponent's Benched Pokémon in any way you like"; on "your opponent's Pokémon", each counter goes on
+the Active Pokémon when the Bench is empty; proved exact for the resolution of an attack's effect
+from a state with both Active Pokémon: every distribution of the counters is a resolution, and every
+resolution is one and changes nothing else, `Spread.spreadAny_sound`, `Spread.spreadAny_complete`),
+`Effect.hitSome` ("120 damage to
 2 of your opponent's Pokémon") and `Effect.countersSome`; both clamps simulate it (`Hits.transfer`),
 and one spread can Knock Out two Benched Pokémon in one batch (`Pokemon/Spread.lean`). One-turn
 history: a per-player Knock Out record (`KOHist`: this turn and the last, any Knock Out and one by

@@ -134,9 +134,20 @@ theorem koLast_across_turn :
 theorem koLast_test : (Test.countGe (.koLast .own false) 1).eval after2End
     (InPlay.ofBasic big) = true := rfl
 
-/-- And at the end of the next turn it is forgotten: the shift moves the (empty) history of the
-turn after into `last`. -/
-theorem koLast_forgotten : after2End.cur.ko.shift.last = false := rfl
+/-- **Witness: the record lasts one turn.** Two consecutive ends of turn, with the draw between
+them: the Knock Out recorded for the opponent in `after2`'s turn is visible to them as "last turn"
+through the whole of their next turn (after the end of turn and after their draw), and once they end
+that turn it is gone: the shift has replaced it by their (empty) record of the turn just ended. -/
+theorem koLast_forgotten :
+    ∃ g₂ g₃, Move after2 after2End ∧ Move after2End g₂ ∧ Move g₂ g₃ ∧
+      after2.opp.ko.now = true ∧
+      (Count.koLast .own false).val after2End = 1 ∧ (Count.koLast .own false).val g₂ = 1 ∧
+      (Count.koLast .opp false).val g₃ = 0 :=
+  ⟨_, _, after2_end,
+    .startTurn rfl rfl rfl (by exact ((GameState.settled_iff _).2 (by decide)).1) rfl,
+    .endTurn false false false false false false rfl rfl
+      (by exact ((GameState.settled_iff _).2 (by decide)).1) rfl .nil .nil,
+    rfl, rfl, rfl, rfl⟩
 
 end History
 

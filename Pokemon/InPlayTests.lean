@@ -37,21 +37,49 @@ theorem hasTool_agree {K : Nat} {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q
 /-- "If your opponent's Active Pokémon is a Pokémon ex, put 3 damage counters on it." -/
 def exPunish : Effect := .ite (.top .opp .ex) (.counters 3) .skip
 
-/-- The player to move has `big` Active; the opponent has `opp` Active. -/
+/-- An attack whose whole effect is `exPunish`. -/
+def punish : Attack := ⟨"Punish", [], 0, exPunish, false⟩
+
+def punisher : PokemonCard := ⟨"Punisher", .basic, none, 10, .grass, [punish], 1, none, none, .none,
+  false, []⟩
+
+/-- The player to move has `punisher` Active; the opponent has `opp` Active; one Prize card each. -/
 def duel (opp : PokemonCard) : GameState :=
-  ⟨side [] [] (InPlay.ofBasic big) [], side [] [] (InPlay.ofBasic opp) [],
+  ⟨side [] [.energy .fire] (InPlay.ofBasic punisher) [],
+    side [] [.energy .fire] (InPlay.ofBasic opp) [],
     true, false, false, false, none, none, false, false⟩
 
-/-- **Witness: the test is true on a Pokémon ex.** -/
-theorem exPunish_ex :
-    Run exPunish (duel exMon)
-      { duel exMon with opp := { (duel exMon).opp with
-          active := some { InPlay.ofBasic exMon with damage := 3 } } } :=
-  .iteT (p := InPlay.ofBasic exMon) rfl (by decide) (.counters 3 rfl)
+theorem duel_wellFormed (opp : PokemonCard) : WellFormed (duel opp) := by
+  refine ⟨fun _ => ⟨by simp [duel, side], by simp [duel, side]⟩, ?_, ?_⟩ <;>
+    intro p hp <;> cases hp
 
-/-- **Witness: the test is false on a Pokémon without a rule box**, and the effect does nothing. -/
-theorem exPunish_plain : Run exPunish (duel big) (duel big) :=
-  .iteF (p := InPlay.ofBasic big) rfl (by decide) (.skip _)
+theorem duel_settled_ex : Settled (duel exMon) := (GameState.settled_iff _).2 (by decide)
+
+theorem duel_settled_plain : Settled (duel big) := (GameState.settled_iff _).2 (by decide)
+
+/-- **Witness: the test is true on a Pokémon ex.** From a well-formed, `Settled` state, the attack
+`punish` is a legal move, and it puts 3 damage counters on the opponent's Active Pokémon ex. -/
+theorem exPunish_ex :
+    WellFormed (duel exMon) ∧ Settled (duel exMon) ∧ ∃ g, Move (duel exMon) g ∧
+      g.opp.active = some { InPlay.ofBasic exMon with damage := 3 } :=
+  ⟨duel_wellFormed exMon, duel_settled_ex, _,
+    .attack (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_ex
+      (.iteT (p := InPlay.ofBasic exMon) rfl (by decide) (.counters 3 rfl)) rfl
+      (fun h => absurd h (by decide)) rfl
+      (HitTrig.exists_nil (.iteT (p := InPlay.ofBasic exMon) rfl (by decide) (.counters 3 rfl)) rfl)
+      (.nil _), rfl⟩
+
+/-- **Witness: the test is false on a Pokémon without a rule box**: the same attack, as a legal
+move, leaves the opponent's Active Pokémon undamaged. -/
+theorem exPunish_plain :
+    WellFormed (duel big) ∧ Settled (duel big) ∧ ∃ g, Move (duel big) g ∧
+      g.opp.active = some (InPlay.ofBasic big) :=
+  ⟨duel_wellFormed big, duel_settled_plain, _,
+    .attack (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_plain
+      (.iteF (p := InPlay.ofBasic big) rfl (by decide) (.skip _)) rfl
+      (fun h => absurd h (by decide)) rfl
+      (HitTrig.exists_nil (.iteF (p := InPlay.ofBasic big) rfl (by decide) (.skip _)) rfl)
+      (.nil _), rfl⟩
 
 /-- "For each of your Pokémon in play that has the Round attack": two of the player's three
 Pokémon in play pass `hasAttack "Round"`. -/
