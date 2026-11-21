@@ -1,9 +1,18 @@
-import Pokemon.Damage
+import Pokemon.Finite
 
 /-! Axiom audit. The build log must show only `propext` and `Quot.sound`
-(or no axioms) for each theorem below. -/
+(or no axioms) for each theorem below. The three private lemmas of `ListPerm` are covered
+through `ListPerm.perm_of_count`. -/
 
+#print axioms Pokemon.ListPerm.perm_cons_remove1
+#print axioms Pokemon.ListPerm.count_remove1
 #print axioms Pokemon.ListPerm.perm_of_count
+#print axioms Pokemon.InPlay.cardList_length
+#print axioms Pokemon.optCardList_unfresh
+#print axioms Pokemon.benchCardList_unfresh
+#print axioms Pokemon.benchCardList_append
+#print axioms Pokemon.optCards_eq_length
+#print axioms Pokemon.benchCards_eq_length
 #print axioms Pokemon.Run.perm
 #print axioms Pokemon.Move.perm
 #print axioms Pokemon.Reach.perm
@@ -32,3 +41,25 @@ import Pokemon.Damage
 #print axioms Pokemon.Move.damageLe
 #print axioms Pokemon.Reach.damage_le
 #print axioms Pokemon.Reach.clamp_damage_le
+#print axioms Pokemon.Enum.mem_listsUpTo
+#print axioms Pokemon.Enum.mem_opts
+#print axioms Pokemon.Enum.mem_bools
+#print axioms Pokemon.Enum.mem_rots
+#print axioms Pokemon.Enum.mem_winners
+#print axioms Pokemon.Enum.Within.of_sub
+#print axioms Pokemon.Enum.Within.left
+#print axioms Pokemon.Enum.Within.right
+#print axioms Pokemon.Enum.Within.of_perm
+#print axioms Pokemon.Enum.mem_tops
+#print axioms Pokemon.Enum.mem_cardLists
+#print axioms Pokemon.Enum.mem_inPlays
+#print axioms Pokemon.Enum.length_le_benchCardList
+#print axioms Pokemon.Enum.within_of_mem_bench
+#print axioms Pokemon.Enum.mem_players
+#print axioms Pokemon.Enum.mem_states
+#print axioms Pokemon.optCardList_clamp
+#print axioms Pokemon.GameState.allCards_clamp
+#print axioms Pokemon.InPlay.clamp_of_lt
+#print axioms Pokemon.GameState.clamp_of_damageBounded
+#print axioms Pokemon.Reach.finite
+#print axioms Pokemon.Reach.finite_damageBounded
