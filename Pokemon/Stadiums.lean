@@ -166,4 +166,216 @@ theorem stadium_recycler_not_M8a : ¬ D.RecycleSafeM8a := by
   have := h.1 depot (by decide) (.named "Iron Defender") (.head _) ironDefender (by decide) rfl
   exact absurd this (by decide)
 
+/-! ## Witnesses (milestone M5) -/
+
+theorem mem_of_eq {h l₁ l₂ : List Card} {c : Card} (e : h = l₁ ++ c :: l₂) : c ∈ h := by
+  rw [e]; exact List.mem_append_right _ (.head _)
+
+/-- Levincia sv10-244: "Once during each player's turn, that player may put up to 2 Basic
+Lightning Energy cards from their discard pile into their hand." -/
+def levincia : Card :=
+  .trainer "Levincia" .stadium (.move .own .discard .hand (.energyOf .lightning) (.upTo 2))
+
+/-- Academy at Night sv6pt5-54: "Once during each player's turn, that player may put a card from
+their hand on top of their deck." -/
+def academy : Card := .trainer "Academy at Night" .stadium (.move .own .hand .top .any (.upTo 1))
+
+def lt : Card := .energy .lightning
+def mt : Card := .energy .metal
+
+/-- A player with `mon` Active, no Bench, two Prize cards, and the given hand, deck and discard
+pile. -/
+def wpl (hand deck discard : List Card) : PlayerState :=
+  ⟨deck, hand, discard, [mt, mt], [], some mon, [], false, false, false, false, false,
+    Store.empty, true⟩
+
+/-- A state in the turn proper (`bt = false`) or between turns, with the player to move `a`, the
+opponent `b`, whether the player to move went first, the Stadium slot and the two Stadium flags. -/
+def W (a b : PlayerState) (cf bt : Bool) (st : Option (Bool × Card)) (sp su : Bool) : GameState :=
+  ⟨a, b, cf, false, false, bt, none, st, sp, su⟩
+
+theorem W_settled (a b : PlayerState) (cf bt : Bool) (st : Option (Bool × Card)) (sp su : Bool)
+    (ha : a.active = some mon) (hb : b.active = some mon) (ha' : a.bench = [])
+    (hb' : b.bench = []) : Settled (W a b cf bt st sp su) :=
+  settled_mon ha hb ha' hb'
+
+/-- The first player holds Levincia, and each player has Basic Lightning Energy in the discard
+pile; the second player holds Academy at Night. -/
+def W0 : GameState := W (wpl [levincia] [mt] [lt, lt]) (wpl [academy] [mt] [lt]) true false none
+  false false
+
+/-- After the first player has played Levincia and used it to return one Lightning Energy. -/
+def W2 : GameState := W (wpl [lt] [mt] [lt]) (wpl [academy] [mt] [lt]) true false
+  (some (true, levincia)) true true
+
+/-- After the second player has drawn and used Levincia (their own use in their own turn). -/
+def W5 : GameState := W (wpl [lt, mt, academy] [] []) (wpl [lt] [mt] [lt]) false false
+  (some (true, levincia)) false true
+
+/-- After the second player has played Academy at Night over Levincia and used it. -/
+def W7 : GameState := W (wpl [mt] [lt] []) (wpl [lt] [mt] [levincia, lt]) false false
+  (some (false, academy)) true true
+
+/-- **The first player plays Levincia and uses it**: one Lightning Energy goes from the discard
+pile to the hand. -/
+theorem levincia_first : Reach W0 W2 :=
+  .step (.step (.refl _) rfl
+    (.stadium (l₁ := []) (l₂ := []) rfl rfl rfl rfl
+      (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl) rfl))
+    rfl (.stadiumUse rfl rfl rfl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl) rfl
+      (.prim rfl rfl
+        (.zone (w := .own) rfl
+          (.move (src := .discard) (.take rfl (.keep .nil)) (by unfold Qty.ok; decide)
+            (.hand _ _)))
+        (.done (.inl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl))))
+      rfl rfl)
+
+/-- **The Stadium is refused a second time in the turn**: from `W2` no move of the first
+player's turn changes their discard pile, which still holds a Lightning Energy that a second use
+of Levincia would return, or the Stadium in play (a second Stadium may not be played either: one
+has been played this turn). -/
+theorem levincia_refused : ∀ g', Move W2 g' → g'.curIsFirst = true →
+    g'.cur.discard = W2.cur.discard ∧ g'.stadium = W2.stadium := by
+  intro g' hm hc
+  cases hm with
+  | playBasic hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | attach => exact ⟨rfl, rfl⟩
+  | evolve hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | attachBench _ _ hb => simp [W2, W, wpl] at hb
+  | evolveBench hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | retreat _ hb => simp [W2, W, wpl] at hb
+  | item hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | supporter hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | stadium hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | tool hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | toolBench hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | stadiumUse _ hu => simp [W2, W] at hu
+  | ability hu hm =>
+      cases hu with
+      | active ha =>
+          simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
+          simp [InPlay.abilities, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
+      | bench hb => simp [W2, W, wpl] at hb
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | attack ha hm =>
+      simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
+  | attackConfused ha hm =>
+      simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
+  | knockOut ha hk =>
+      simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+  | promote ha => simp [W2, W, wpl] at ha
+  | noPokemon ha => simp [W2, W, wpl] at ha
+  | knockOutOwn ha hk =>
+      simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+  | promoteOwn ha => simp [W2, W, wpl] at ha
+  | noPokemonOwn ha => simp [W2, W, wpl] at ha
+  | knockOutBench hb => simp [W2, W, wpl] at hb
+  | knockOutBenchOwn hb => simp [W2, W, wpl] at hb
+  | endTurn => simp [W2, W] at hc
+  | startTurn hbt => simp [W2, W] at hbt
+  | deckOut hbt => simp [W2, W] at hbt
+
+/-- **The second player uses the same Stadium in their turn**: the first player ends the turn,
+the second draws and uses Levincia, whose effect acts for them. -/
+theorem levincia_second : Reach W2 W5 :=
+  .step (.step (.step (.refl _) rfl
+    (.endTurn false false false false false false rfl rfl
+      (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl).1 rfl .nil .nil))
+    rfl (.startTurn rfl rfl rfl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl).1 rfl))
+    rfl (.stadiumUse rfl rfl rfl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl) rfl
+      (.prim rfl rfl
+        (.zone (w := .own) rfl
+          (.move (src := .discard) (.take rfl .nil) (by unfold Qty.ok; decide) (.hand _ _)))
+        (.done (.inl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl))))
+      rfl rfl)
+
+/-- **A new Stadium replaces the old one, which goes to its owner's discard pile**: the second
+player plays Academy at Night over Levincia, which goes to the first player's discard pile, and
+then uses the new Stadium in the same turn (a Stadium newly put into play has not been used: two
+Stadium uses in one turn, the most `GameState.stPot` allows). -/
+theorem academy_replaces : Reach W5 W7 :=
+  .step (.step (.refl _) rfl
+    (.stadium (l₁ := [lt, mt]) (l₂ := []) rfl rfl (by decide) rfl
+      (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl) rfl))
+    rfl (.stadiumUse rfl rfl rfl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl) rfl
+      (.prim rfl rfl
+        (.zone (w := .own) rfl
+          (.move (src := .hand) (.take rfl (.keep .nil)) (by unfold Qty.ok; decide)
+            (.top _ (List.Perm.refl _))))
+        (.done (.inl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl))))
+      rfl rfl)
+
+theorem academy_replaces_owner : W7.opp.discard = [levincia, lt] ∧ W7.cur.discard = [] ∧
+    W7.stadium = some (false, academy) := ⟨rfl, rfl, rfl⟩
+
+/-- Levincia in play (owned by the second player, already used this turn) and a second Levincia
+in the first player's hand; no Stadium played this turn. -/
+def X (inPlay : Card) : GameState :=
+  W (wpl [levincia] [mt] []) (wpl [] [mt] []) true false (some (false, inPlay)) false true
+
+/-- **No Stadium with the name of the one in play**: from `X levincia` no move of the turn plays
+the Levincia in hand or changes the Stadium in play ("You can't play a Stadium card if a Stadium
+with the same name is already in play"). -/
+theorem same_name_refused : ∀ g', Move (X levincia) g' → g'.curIsFirst = true →
+    g'.cur.hand = [levincia] ∧ g'.stadium = some (false, levincia) := by
+  intro g' hm hc
+  cases hm with
+  | playBasic hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | attach hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | evolve hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | attachBench _ _ hb => simp [X, W, wpl] at hb
+  | evolveBench hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | retreat _ hb => simp [X, W, wpl] at hb
+  | item hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | supporter hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | stadium hh _ hn =>
+      have hm := mem_of_eq hh
+      simp only [X, W, wpl, levincia, List.mem_singleton, Card.trainer.injEq] at hm
+      obtain ⟨rfl, -, rfl⟩ := hm
+      exact absurd hn (by decide)
+  | tool hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | toolBench hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | stadiumUse _ hu => simp [X, W] at hu
+  | ability hu hm =>
+      cases hu with
+      | active ha =>
+          simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
+          simp [InPlay.abilities, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
+      | bench hb => simp [X, W, wpl] at hb
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | attack ha hm =>
+      simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
+  | attackConfused ha hm =>
+      simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
+  | knockOut ha hk =>
+      simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+  | promote ha => simp [X, W, wpl] at ha
+  | noPokemon ha => simp [X, W, wpl] at ha
+  | knockOutOwn ha hk =>
+      simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
+      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+  | promoteOwn ha => simp [X, W, wpl] at ha
+  | noPokemonOwn ha => simp [X, W, wpl] at ha
+  | knockOutBench hb => simp [X, W, wpl] at hb
+  | knockOutBenchOwn hb => simp [X, W, wpl] at hb
+  | endTurn => simp [X, W] at hc
+  | startTurn hbt => simp [X, W] at hbt
+  | deckOut hbt => simp [X, W] at hbt
+
+/-- …while with Academy at Night in play the same Levincia can be played, replacing it. -/
+theorem other_name_allowed : ∃ g', Move (X academy) g' ∧ g'.stadium = some (true, levincia) :=
+  ⟨_, .stadium (l₁ := []) (l₂ := []) rfl rfl (by decide) rfl
+    (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl) rfl, rfl⟩
+
 end Pokemon.Stadiums

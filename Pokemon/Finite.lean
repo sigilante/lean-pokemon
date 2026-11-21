@@ -267,7 +267,9 @@ theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
       (hd.2.1 p hp).2
 
 /-- A finite list containing every state whose cards are those of `C` (up to order) and
-whose Pokémon in play all have damage and Poison strength at most `bound C`. -/
+whose Pokémon in play all have damage and Poison strength at most `bound C`. The Stadium slot (a
+card of `C` with its owner) and, since milestone M5, the two Stadium flags are enumerated; Tools
+are among each Pokémon's cards (`inPlays`). -/
 def states (C : List Card) : List GameState :=
   (players C).flatMap fun cur => (players C).flatMap fun opp =>
   bools.flatMap fun curIsFirst => bools.flatMap fun firstTurn =>

@@ -9,8 +9,8 @@ modifiers add up without limit); with those generalisations the model does have 
 stores, and the finiteness results below need a hypothesis on the deck: tame decks
 (`Reach.finite`) or faithful decks (`Faithful.xfinite`); neither class contains the other.
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 36 constructors) of
-thirty-two primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 38 constructors) of
+thirty-four primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
@@ -42,8 +42,8 @@ Weakness ×2 and Resistance −N on the Defending (Active) Pokémon; and the rul
 calculation, made once per attack (`dealtBy`: stop at base damage 0, the attacker's bonus,
 Weakness, Resistance, the defender's reduction or prevention; an attack has at most one damage
 step, whose amount its text may compute from the damage on either Active Pokémon, `Amt`, and
-Item and Supporter effects have none); one Stadium slot shared by both players (state only: no move
-plays a Stadium yet); the Knock Out timing: once a move
+Item and Supporter effects have none); one Stadium slot shared by both players (milestone M5,
+below); the Knock Out timing: once a move
 leaves a Pokémon at or above its HP, it must be Knocked Out and replaced before any other
 move (`Settled`); inside an attack's effect damage may exceed HP and be read, and the Knock
 Out comes after the attack; inside an Item or Supporter card's effect (`TRun`) every Knock
@@ -108,8 +108,32 @@ Pokémon" (`SelfOp`: heal it, put damage counters on it, attach Energy to it, sw
 Energy to it): exact in the Active Spot, on the Bench a chosen Benched Pokémon (a superset); and a
 new primitive moves a damage counter between the player's own Pokémon (`Effect.moveCounter`, Team
 Rocket's Orbeetle), which both clamps keep exact (`CMove.sim`). Static and triggered Abilities,
-Ability locks and per-Pokémon modifiers are not modelled (Known gaps). For that model it
-proves:
+Ability locks and per-Pokémon modifiers are not modelled (Known gaps). Milestone M5 added Stadiums
+and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
+(one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
+Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and
+`Move.stadiumUse` lets the player to move use the effect of the Stadium in play once in their turn
+("Once during each player's turn, that player may …", `GameState.stadiumUsed`, cleared at the end
+of the turn and when a Stadium is played; the effect resolves as a Trainer's, `TRun`). A Tool
+(`Card.tool`) is attached from the hand to a Pokémon with no Tool (`Move.tool`, `Move.toolBench`;
+any number per turn; it stays attached and goes to the discard pile with its Pokémon) and may give
+that Pokémon attacks and activated Abilities, for a holder passing a filter (`ToolGrant`,
+`InPlay.attacks`, `InPlay.abilities`; Core Memory's attack for Mega Zygarde ex). Two primitives
+discard a Stadium in play (`Effect.discardStadium`) and the Tools of a Pokémon
+(`Effect.discardTools`). Static and triggered Stadium and Tool text (HP, damage and Retreat Cost
+modifiers, Bench size, locks, Knock Out and damage triggers) is not modelled: such a card is
+played as a card with no effect (`Card.inert`), which under-models it; the kinds and their counts
+in today's Standard are in the Known gaps. Of the 37 distinct Standard Stadiums, 3 are expressed
+with their effect (Academy at Night, Levincia, Prism Tower), 9 have an activated effect the model
+cannot express exactly, and 25 are static or triggered; of the 45 Tools, 1 is expressed (Core
+Memory), 2 grant attacks the model cannot express exactly, 41 are static (22), triggered (18) or change
+nothing in the model (Backtrack Badge), and 1 record (Adventure Lantern me6-90) is unclassified.
+Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
+second time in the turn, used by the second player in their turn, replaced by Academy at Night,
+which goes to the first player's discard pile, and the new Stadium used in the same turn; the
+same-name ban) and `Pokemon/Tools.lean` (a Tool on a Benched Pokémon discarded with it on a Knock
+Out; a second Tool refused; an attack given by a Tool to its holder only; Tools discarded by an
+effect). For that model it proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects
   and zone moves included (`TRun.perm`, `ZStep.perm`);
@@ -219,8 +243,8 @@ clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the two decks 
 S10 found no Trainer card in today's Standard pool whose discard-pile filter admits a
 non-Supporter modifier writer, and no rest-of-game Trainer writer there, so the model's
 encodings of those Trainers and attacks satisfy clause 3 for every pairing of decks (a reading
-of the card pool, not a theorem; Stadium effects, static Abilities and returns from play are outside
-the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
+of the card pool, not a theorem; static Stadium and Tool text, static Abilities and returns from play
+are outside the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
 Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
 damage…"), so printed decks are not all tame. The model over-approximates modifiers on purpose;
 `Reach.finite` covers only the tame decks, and `Faithful.xfinite` (next paragraph) covers decks
@@ -261,11 +285,17 @@ finiteness; the deck condition `Faithful` buys it back:
   milestone M8a, clauses 1 and 3 read Abilities too ("as often as you like" Abilities count with
   Trainer effects in clause 3 (a)) and a fourth clause holds: no "as often as you like" Ability writes
   a bonus or reduction and no Ability a rest-of-game one (`AbilitySafe`, decidable; every deck without
-  Abilities satisfies it). Then every reachable state satisfies `BoundedStores (storeBound g₀)`
+  Abilities satisfies it), and, since milestone M5, a fifth: no Stadium's effect writes a
+  rest-of-game bonus or reduction (`StadiumSafe`, decidable; every deck without Stadiums satisfies
+  it); milestone M5 also weakened clause 3 for Stadiums (a Stadium card is not a protected writer,
+  and its effect is not a free recycler: its uses are bounded per turn), and for a deck without
+  Stadiums clauses 3 and 5 are what they were (`Pokemon/NoStadiums.lean`). Then every reachable
+  state satisfies `BoundedStores (storeBound g₀)`
   (`Faithful.reach_boundedStores`), where `storeBound` adds the start stores, six times the Trainer
   amounts of the cards, three times `Q · potBound |C|` for Abilities (`Q` what one bounded Ability use
-  can write and recycle, 0 for a deck without Abilities) and three times the largest amount of one
-  attack; so from any faithful start (well-formed or not) the `xclamp`s of all reachable states lie
+  can write and recycle, 0 for a deck without Abilities), six times `cardsStQ` for Stadium effects
+  (at most two uses a turn, each writing and recycling at most `cardsStQ`, 0 for a deck without
+  Stadiums) and three times the largest amount of one attack; so from any faithful start (well-formed or not) the `xclamp`s of all reachable states lie
   in one finite list, with the two-way bisimulation. Once-per-turn and on-play Abilities may write
   modifiers (Feraligatr sv5-41: `Abilities.feraligatr_faithful`) and recycle writers
   (`Abilities.once_recycler_faithful`): their uses in one turn are bounded by a potential of the
@@ -278,7 +308,9 @@ finiteness; the deck condition `Faithful` buys it back:
   Before milestone MV the bound counted each Trainer once per game, because nothing left a discard
   pile; that bound (`storeBoundNR`, with the Trainer amounts once) still holds for decks that recycle
   nothing and (since milestone M8a, a new hypothesis that every deck without Abilities satisfies)
-  whose Abilities write nothing (`Faithful.reach_boundedStores_noRecycle`). Faithful decks may use damage reduction,
+  whose Abilities write nothing, and (since milestone M5, a hypothesis that every deck without
+  Stadiums satisfies) whose Stadium effects write nothing
+  (`Faithful.reach_boundedStores_noRecycle`). Faithful decks may use damage reduction,
   `drain`, carried bonuses and reductions in attacks and Trainers (Iron Defender), rest-of-game
   modifiers in GX attacks and Trainer cards, and recycling within clause 3 (Energy Retrieval,
   Night Stretcher, Dedenne's "Put a Trainer card from your discard pile into your hand" attack:
@@ -308,6 +340,15 @@ finiteness; the deck condition `Faithful` buys it back:
   Grass Energy and Team Rocket's Orbeetle's damage counter moved to the Bench and back
   (`Abilities.venusaur_loop`, `Abilities.orbeetle_loop`): states reachable from themselves by
   Ability moves, which is why the finiteness theorems are about the state space, not termination;
+* **Stadium effects** (`Pokemon/Stadiums.lean`, milestone M5): a well-formed start satisfying
+  clauses 1–4 whose Stadium's effect writes a rest-of-game bonus has reachable states with
+  unbounded stores and `xclamp`s in no finite list (`Stadiums.stadium_writer_breaks_bound`: both
+  players use the Stadium every turn, and the effect also puts the hand on the bottom of the deck,
+  without which the draw of each turn would end the game); so clause 5 is needed. A Stadium whose
+  effect returns an Iron Defender-like Item from the discard pile every turn, to both players, is
+  faithful (`Stadiums.stadium_recycler_faithful`): the Item is replayed at most once per Stadium
+  use, and a turn has at most two uses (`GameState.stPot`); the clause 3 of milestone M8a refused
+  this deck (`Stadiums.stadium_recycler_not_M8a`). No Standard Stadium writes a modifier;
 * **the rule change**: `Attack` has a field `gx`, and `Move.attack` lets a player use a GX
   attack only if they have not used one in the game, and records it (`PlayerState.gxUsed`,
   unused before); `Move.attackConfused` (a Confused Pokémon's failed attempt) has the same
@@ -342,9 +383,9 @@ that write a modifier (outside clause 4); static and triggered Abilities and Sta
 (absent); returning a card from play to the hand (absent; with it a Pokémon could re-enter play and
 use or trigger its Ability again in the same turn, which the Ability bound does not cover);
 "attack twice", "attack again" after a Knock Out, and extra turns (absent: more than
-one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers or Stadiums (absent)
-and from Abilities (outside clause 4); copy attacks, for instance copying a GX attack (absent); static modifiers and
-modifiers from Pokémon Tools, static Abilities or Special Energy (absent: every modifier is written
+one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers (absent), from Abilities
+(outside clause 4) and from Stadium effects (outside clause 5); copy attacks, for instance copying a GX attack (absent); static modifiers and
+modifiers from static Stadium or Tool text, static Abilities or Special Energy (absent: every modifier is written
 by an effect when it resolves); per-Pokémon modifiers (Feraligatr's "attacks used by this Pokémon
 do 120 more damage" is the player's bonus in the model, milestone M7); reductions restricted by type (printed Iron Defender protects Metal
 Pokémon only, whereas the model's reduction protects all of a player's Pokémon); effects that

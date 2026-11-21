@@ -105,6 +105,10 @@ storeTotal g₀ + 6 · cardsAmt C + 3 · (Q · potBound |C|) + 3 · cardsAtkAmt 
   Abilities (`Abilities.unlimited_writer_breaks_bound`, `Abilities.unlimited_recycler_breaks_bound`);
   a once-per-turn recycler of a writer is faithful (`Abilities.once_recycler_faithful`), and so is
   a deck with Feraligatr's once-per-turn bonus (`Abilities.feraligatr_faithful`).
+* `Pokemon/Stadiums.lean` (milestone M5): clause 5 cannot be dropped
+  (`Stadiums.stadium_writer_breaks_bound`); a Stadium that returns a modifier writer every turn,
+  to both players, is faithful (`Stadiums.stadium_recycler_faithful`). `Pokemon/NoStadiums.lean`:
+  for a deck without Stadiums, clauses 3 and 5 and the bound are those of milestone M8a.
 
 **Which theorem applies.** `Reach.finite` (`Pokemon/Finite.lean`) needs tame cards (no damage
 reduction, no `drain`) and no reduction in effect at the start; it allows bonus writes under
@@ -1722,8 +1726,8 @@ theorem atkRes_gxT_true {A : Nat} {atk : Attack} {g g'' : GameState} (hgv : atk.
   omega
 
 /-- **Every move preserves the invariant**, for cards satisfying clauses 1 and 2 that recycle
-nothing (`NoRecycle`), whose Abilities write nothing (`AbilityQuiet`, milestone M8a) and whose
-attacks write at most `A`. -/
+nothing (`NoRecycle`), whose Abilities write nothing (`AbilityQuiet`, milestone M8a), whose Stadium
+effects write nothing (`StadiumQuiet`, milestone M5) and whose attacks write at most `A`. -/
 theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g)
     (hL : g.LoopFree) (hG : g.GXOnly) (hN : g.NoRecycle) (hQ : g.AbilityQuiet)
     (hSQ : g.StadiumQuiet) (hA : ∀ x ∈ g.allCards, x.atkAmt ≤ A) : Inv S A g' := by
@@ -1869,10 +1873,12 @@ theorem modsLe_of {B : Nat} {m : Mods} (h : m.amt ≤ B) : Enum.ModsLe B m := by
 /-- **Without recycling, the bound of master.** From a start state `g₀` satisfying clauses 1 and
 2 whose cards recycle nothing (`NoRecycle`: no effect moves a card out of a discard pile to a hand
 or deck; every deck before milestone MV) and whose Abilities write nothing (`AbilityQuiet`, added
-by milestone M8a: an Ability writes every turn, so its amounts are not counted once per game),
+by milestone M8a: an Ability writes every turn, so its amounts are not counted once per game) and
+whose Stadium effects write nothing (`StadiumQuiet`, added by milestone M5 for the same reason),
 every reachable state has every slot's bonus and reduction at most `storeBoundNR g₀`: each Trainer
 card is then played at most once per game. This is the statement `reach_boundedStores` had before
-milestone MV, with its bound; for decks without Abilities the added hypothesis holds. -/
+milestone MV, with its bound; for decks without Abilities and Stadiums the added hypotheses hold
+(`GameState.NoAbilities.quiet`, `GameState.NoStadiums.quiet`). -/
 theorem reach_boundedStores_noRecycle {g₀ g : GameState} (hL : g₀.LoopFree) (hG : g₀.GXOnly)
     (hN : g₀.NoRecycle) (hQ : g₀.AbilityQuiet) (hSQ : g₀.StadiumQuiet) (h : Reach g₀ g) :
     g.BoundedStores (storeBoundNR g₀) := by
@@ -1906,7 +1912,8 @@ potential), the weight `D` of the non-Supporter writers in the discard piles whe
 and the potential `E` when the turn began (milestone M8a); carried amounts expire within three turn
 boundaries, as for attacks. The rest-of-game slot is bounded as before, by the rest-of-game
 Trainer amounts in the discard piles, which no effect recycles (clause 3 (b)); no Ability writes
-it (clause 4). -/
+it (clause 4), and no Stadium effect (clause 5). Milestone M5 adds the Stadium uses of a turn,
+at most two (`GameState.stPot`), each paid for by `R` (`cardsStQ`). -/
 
 /-- `P` once the player to move has played a Supporter this turn, else 0. -/
 def supT (P : Nat) (g : GameState) : Nat := if g.cur.supporterPlayed then P else 0

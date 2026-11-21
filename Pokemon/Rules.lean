@@ -380,7 +380,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   attack;
 * Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
   Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
-  Underdepths, S8 L2) wait for the Stadium milestone (M5);
+  Underdepths, S8 L2) are static Stadium effects, not modelled (next item but one);
 * Stadium and Tool cards (milestone M5; survey S8 B9, B10): a Stadium is played from the hand
   into the one slot both players share (`Move.stadium`: one per turn, `GameState.stadiumPlayed`;
   not while a Stadium of the same name is in play; the Stadium it replaces goes to its owner's
@@ -398,6 +398,41 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   that raise the limit, S8 B10), and every static and triggered Stadium and Tool effect (next
   item): a Stadium whose effect is `skip` and a Tool with an empty grant (`ToolGrant.none`)
   occupy their place and do nothing, which under-models a printed card with such text;
+* static and triggered Stadium and Tool effects (after milestone M5; counts are distinct Standard
+  records, regulation marks H–J, read from the card data: 37 Stadiums, 45 Tools). A Stadium or
+  Tool with such text is still playable, as a card with no effect (`Card.inert`: a Stadium whose
+  effect is `skip`, a Tool with an empty grant): it occupies the slot or the Tool place and does
+  nothing, which under-models the printed card (it removes the printed outcomes the text adds and
+  keeps the ones it forbids). Absent kinds, for a later milestone (derived HP, per-Pokémon and
+  static modifiers, triggers): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively
+  Stadium; Tools 3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage
+  bonuses (Stadium 1, Postwick; Tools 8: Binding Mochi, Brave Bangle ×2, Future Booster Energy
+  Capsule, Hop's Choice Band, Light Ball, Maximum Belt ×2); damage reduction or prevention
+  (Stadiums 4: Battle Cage, Full Metal Lab, Granite Cave, Neutralization Zone; Tools 3: Custom Vest,
+  Sacred Charm, Thick Scale); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort;
+  Tools 5: Air Balloon ×2, Gravity Gemstone, Rescue Board ×2, and Future Booster Energy Capsule);
+  attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
+  Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no
+  Abilities": Stadiums 2, Legendary Pyroduct, Team Rocket's Watchtower); Tool locks (Stadiums 2:
+  Jamming Tower ×2); Special Condition rules (Stadiums 3: Dizzying Valley, Festival Grounds ×2;
+  Ancient Booster Energy Capsule); evolution timing (Stadium 1, Forest of Vitality); Checkup
+  (Stadium 1, Perilous Jungle); and triggered effects (Stadiums 3: Legendary Summit, Legendary
+  Trench, Risky Ruins; Tools 18: "If the Pokémon this card is attached to is Knocked Out / is
+  damaged by an attack / at the end of your turn …": Adversity Policy, Amulet of Hope, the six
+  type Berries, Deluxe Bomb, Handheld Fan, Heavy Baton, Lillie's Pearl, Lucky Helmet, Powerglass,
+  Punk Helmet, Survival Brace, Team Rocket's Hypnotizer, Tremendous Bomb). Activated effects the
+  model cannot express exactly: Stadiums 9 (Lumiose City ends the turn; Surfing Beach ×2 and
+  Spikemuth Gym need a filter on the Bench or a name prefix; Fossil Quarry benches Items; Grand Tree
+  evolves by effect; Mystery Garden draws to a count of Pokémon in play; Community Center and Team
+  Rocket's Factory read the turn's history), Tools 2 granting attacks (Technical Machine: Fluorite,
+  "heal all damage from each of your Tera Pokémon" and its end-of-turn discard; Mega Rayquaza Cap,
+  an attachment per capped Pokémon). Backtrack Badge (re-flip coins) changes nothing in a model in
+  which flips are nondeterministic choices. Expressed with effect: Stadiums 3 (Academy at Night,
+  Levincia, Prism Tower) and Tool 1 (Core Memory, whose attack goes to a holder named "Mega
+  Zygarde ex"). Adventure Lantern me6-90's record carries only an Item-like text and is left
+  unclassified. A Stadium's play condition ("only if you discard a Prism Tower in play", Ange
+  Floette) and "This card can't be put into your hand or deck from the discard pile"
+  (Neutralization Zone) are not modelled either;
 * Abilities (milestone M8a): a Pokémon card has a list of Abilities (`PokemonCard.abilities`;
   every Standard Pokémon has at most one, survey S9), each with a use limit, a place, an optional
   printed condition and an effect (`Ability`). Activated Abilities, "once during your turn" (per

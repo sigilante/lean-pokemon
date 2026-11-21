@@ -29,6 +29,7 @@ import Pokemon.Abilities
 import Pokemon.NoAbilities
 import Pokemon.NoStadiums
 import Pokemon.Stadiums
+import Pokemon.Tools
 
 /-! Axiom audit. `#audit_namespace` checks every theorem declared in the `Pokemon` modules
 (private and generated ones included) and fails the build unless each depends only on

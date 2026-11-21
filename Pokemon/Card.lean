@@ -1020,6 +1020,17 @@ theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
       · nomatch h
   | _ => nomatch h
 
+/-- **A Stadium or Tool that the model plays with no effect** (milestone M5): a Stadium whose
+effect is `skip`, or a Tool that gives nothing. Such a card occupies the Stadium slot or a
+Pokémon's Tool place and does nothing. An importer writes these terms for Stadiums and Tools whose
+printed text is static or triggered (not in the model), so `Card.inert` tells "playable, effect not
+modelled" (an under-model of the printed card) from "playable, effect expressed" (a Stadium with an
+activated effect, a Tool that gives an attack or an Ability). -/
+def Card.inert : Card → Bool
+  | .trainer _ .stadium e => e == .skip
+  | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty
+  | _ => false
+
 /-- Is the card a Stadium? (milestone M5) -/
 def Card.isStadium : Card → Bool
   | .trainer _ .stadium _ => true
