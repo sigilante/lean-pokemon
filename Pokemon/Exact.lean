@@ -905,17 +905,85 @@ theorem opt_exact_agree {K : Nat} {o₁ o₂ : Option InPlay}
     intro o; cases o <;> rfl
   exact ⟨by rw [d o₂, d o₁, h], by rw [t o₂, t o₁, h]⟩
 
-/-- **Which `damaged` triggers an attack fires is the same under the exact clamp.** -/
-theorem HitTrig.xclamp_sim {K : Nat} {atk : Attack} {g₁ g₁' g₂ g₂' : GameState} {l : List Ability}
-    (h : HitTrig atk g₁ g₁' l) (hc : g₁.xrclamp K = g₂.xrclamp K)
-    (hc' : g₁'.xrclamp K = g₂'.xrclamp K) : HitTrig atk g₂ g₂' l := by
-  obtain ⟨a1, -⟩ := opt_exact_agree (congrArg (fun g => g.opp.active) hc).symm .damaged
-  obtain ⟨a2, t2⟩ := opt_exact_agree (congrArg (fun g => g.opp.active) hc').symm .damaged
-  have key : g₂.damagedB g₂' = g₁.damagedB g₁' := by
-    rw [GameState.damagedB_eq, GameState.damagedB_eq, a1, a2]
+/-- **Inside an attack's effect, the kernel of `xrclamp` is a simulation for `HitRun`**
+(milestone M8b), with the flags kept: damage is exact inside an attack, so every flag is read
+exactly. -/
+theorem HitRun.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} {hb sw : Bool}
+    (h : HitRun e g₁ g₁' hb sw) :
+    e.tmax < k → ∀ {g₂ : GameState}, g₁.xrclamp k = g₂.xrclamp k →
+      ∃ g₂', HitRun e g₂ g₂' hb sw ∧ g₁'.xrclamp k = g₂'.xrclamp k := by
+  induction h with
+  | plain he h =>
+      intro htm g₂ hc
+      obtain ⟨g₂', r, hc'⟩ := Run.xcap_sim h htm hc
+      exact ⟨g₂', .plain he r, hc'⟩
+  | @hit e g g' p b he h hp hb =>
+      intro htm g₂ hc
+      obtain ⟨g₂', r, hc'⟩ := Run.xcap_sim h htm hc
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_exact hc (w := .opp) (p := p) hp
+      refine ⟨g₂', .hit he r hq (fun hlt => ?_), hc'⟩
+      have e1 : g₂.hpOf .opp .active q = g.hpOf .opp .active p :=
+        (GameState.sameField_of_xclampAt hc).hpOf .opp .active hqa.sv
+      rw [hqa.damage_eq, e1] at hlt
+      rw [hb hlt]
+      obtain ⟨a1, -⟩ := opt_exact_agree (congrArg (fun g => g.opp.active) hc).symm .damaged
+      obtain ⟨a2, -⟩ := opt_exact_agree (congrArg (fun g => g.opp.active) hc').symm .damaged
+      rw [GameState.damagedB_eq, GameState.damagedB_eq, a1, a2]
+  | gust h =>
+      intro htm g₂ hc
+      obtain ⟨g₂', r, hc'⟩ := Run.xcap_sim h htm hc
+      have hl := congrArg (fun g => (g.opp.bench).length) hc
+      simp only [GameState.xrclamp, GameState.xclampAt, List.length_map] at hl
+      exact ⟨g₂', hl ▸ .gust r, hc'⟩
+  | iteT h ht' _ ih =>
+      intro hb g₂ hc
+      simp only [Effect.tmax] at hb
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) hc h
+      obtain ⟨g₂', r', hc'⟩ := ih (by omega) hc
+      exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ (GameState.count_of_xclampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
+  | iteF h ht' _ ih =>
+      intro hb g₂ hc
+      simp only [Effect.tmax] at hb
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) hc h
+      obtain ⟨g₂', r', hc'⟩ := ih (by omega) hc
+      exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ (GameState.count_of_xclampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
+  | seq _ _ ih₁ ih₂ =>
+      intro hb g₂ hc
+      simp only [Effect.tmax] at hb
+      obtain ⟨g₂', r₁, hc'⟩ := ih₁ (by omega) hc
+      obtain ⟨g₂'', r₂, hc''⟩ := ih₂ (by omega) hc'
+      exact ⟨g₂'', .seq r₁ r₂, hc''⟩
+  | choiceL _ ih =>
+      intro hb g₂ hc
+      simp only [Effect.tmax] at hb
+      obtain ⟨g₂', r, hc'⟩ := ih (by omega) hc
+      exact ⟨g₂', .choiceL r, hc'⟩
+  | choiceR _ ih =>
+      intro hb g₂ hc
+      simp only [Effect.tmax] at hb
+      obtain ⟨g₂', r, hc'⟩ := ih (by omega) hc
+      exact ⟨g₂', .choiceR r, hc'⟩
+  | iterNil a g => intro _ g₂ hc; exact ⟨g₂, .iterNil a g₂, hc⟩
+  | iterCons _ _ ih₁ ih₂ =>
+      intro hb g₂ hc
+      obtain ⟨g₂', r₁, hc'⟩ := ih₁ hb hc
+      obtain ⟨g₂'', r₂, hc''⟩ := ih₂ hb hc'
+      exact ⟨g₂'', .iterCons r₁ r₂, hc''⟩
+
+/-- **Which `damaged` triggers an attack fires is the same under the exact clamp** (milestone
+M8b): the resolution it rests on (`HitRun`) is matched, flags included. -/
+theorem HitTrig.xclamp_sim {K : Nat} {atk : Attack} {g₁ g₁' : GameState} {l : List Ability}
+    (h : HitTrig atk g₁ g₁' l) (hb : atk.script.tmax < K) {g₂ : GameState}
+    (hc : g₁.xrclamp K = g₂.xrclamp K) :
+    ∃ g₂', HitTrig atk g₂ g₂' l ∧ g₁'.xrclamp K = g₂'.xrclamp K := by
   cases h with
-  | quiet hq => exact .quiet fun hcl => key.trans (hq hcl)
-  | fire hd hl => exact .fire (key.trans hd) (t2 ▸ hl)
+  | quiet hq =>
+      obtain ⟨g₂', r, hc'⟩ := hq.xcap_sim hb hc
+      exact ⟨g₂', .quiet r, hc'⟩
+  | fire hf hl =>
+      obtain ⟨g₂', r, hc'⟩ := hf.xcap_sim hb hc
+      obtain ⟨-, t2⟩ := opt_exact_agree (congrArg (fun g => g.opp.active) hc').symm .damaged
+      exact ⟨g₂', .fire r (t2 ▸ hl), hc'⟩
 
 /-- The triggers a check fires are the same in two states with the same `xclamp`. -/
 theorem GameState.koTrigs_of_xclamp {g₁ g₂ : GameState} (hc : g₁.xclamp K = g₂.xclamp K)
@@ -1078,8 +1146,8 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       have hs' := hs₂ hst
       have hb := hF.attack ha hm
       have hxr := GameState.xrclamp_of_xclamp hc hst.1 hH
-      obtain ⟨g₂', hr', hc''⟩ := Run.xcap_sim hr hb hxr
-      have hd' := hd.xclamp_sim hxr hc''
+      obtain ⟨g₂', hd', hc''⟩ := hd.xclamp_sim hb hxr
+      have hr' := hd'.run
       obtain ⟨g₂'', ht₂, hc'''⟩ := ht'.xclamp_sim (co := .exact) (cp := .exact) (cb := .exact) hc''
       subst hg
       rw [ha] at hc₂

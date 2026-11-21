@@ -669,23 +669,6 @@ def Effect.trigOk : Effect → Bool
   | .choice a b => a.trigOk && b.trigOk
   | _ => false
 
-/-- **No writer of the Defending Pokémon's damage but the damage step** (milestone M8b): the effect
-places no damage counters on the opponent's Active Pokémon (`counters`, `scale`) and switches
-neither Active Pokémon. For an attack whose script has this property, the Defending Pokémon at the
-end of the attack is the one at its start, and its damage rose exactly when the damage step did
-damage to it, which is when the rulebook's "is damaged by an attack" holds; `Move.attack` then fires
-the `damaged` triggers exactly then (`HitTrig`). For other attacks it may fire them when the
-opponent's Active Pokémon's damage rose, and need not. -/
-def Effect.oppClean : Effect → Bool
-  | .counters _ => false
-  | .scale _ _ => false
-  | .switch _ => false
-  | .ite _ a b => a.oppClean && b.oppClean
-  | .seq a b => a.oppClean && b.oppClean
-  | .choice a b => a.oppClean && b.oppClean
-  | .iter a => a.oppClean
-  | _ => true
-
 /-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
 damage, then place damage counters, and then do all other effects"). An attack with printed base
 damage `n ≠ 0` and no damage step in its text does its damage first, then its effect. An attack

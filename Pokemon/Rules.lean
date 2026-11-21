@@ -532,7 +532,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   type Berries, Deluxe Bomb, Handheld Fan, Heavy Baton, Lillie's Pearl, Lucky Helmet, Powerglass,
   Punk Helmet, Survival Brace, Team Rocket's Hypnotizer, Tremendous Bomb). Since milestone M8b
   the Tools of the two implemented trigger shapes are expressible as a triggered Ability given by
-  the Tool (6 of the 18: Amulet of Hope, Deluxe Bomb, Handheld Fan as a superset, Lucky Helmet,
+  the Tool (5 of the 18: Amulet of Hope, Deluxe Bomb, Handheld Fan as a superset, Lucky Helmet,
   Punk Helmet; Heavy Baton's Retreat Cost condition is not; survey S12 §3); the Berries and
   Survival Brace are replacement effects, Powerglass is an end-of-turn trigger, Lillie's Pearl
   changes Prize cards, Adversity Policy, Tremendous Bomb and Team Rocket's Hypnotizer have
@@ -602,8 +602,24 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check its
   replacement is hit); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
   while the turn's attack has been made" (Knock Outs by the attack's damage counters and by later
-  rounds of the check included); "is damaged" is exact for attacks whose script is
-  `Effect.oppClean` and a free choice on a rise of damage for others (`HitTrig`); a trigger with a
+  rounds of the check included); the failed Confused attempt (`Move.attackConfused`) also sets
+  `GameState.attacked`, so in the check after it a Knock Out of an opponent's Pokémon fires its
+  `koByAttack` triggers though no attack happened (more outcomes than the rulebook; the failed
+  attempt damages only the player's own Pokémon, so this needs an opponent's Pokémon brought to its
+  HP by a change of derived HP, such as a static HP bonus leaving play with the Confused Pokémon); "is damaged by an attack" is decided on the attack's damage step
+  (`HitRun`, `HitTrig`): the triggers of the Pokémon in the opponent's Active Spot at the end of
+  the attack fire exactly when the damage step did damage to it while it was in the Active Spot, so
+  an attack that only switches the opponent's Active Pokémon fires nothing
+  (`TriggerWitness.gust_quiet`) and one that switches and then does damage fires the triggers of the
+  Pokémon it damaged (`TriggerWitness.pull_fires`). Two departures remain, one in each direction.
+  Fewer outcomes: a Pokémon damaged and then switched to the Bench by the same attack fires
+  nothing (`TriggerWitness.hitRun_quiet`); the model reads "if this Pokémon is in the Active Spot
+  and is damaged by an attack" as needing the Pokémon in the Active Spot both when it is damaged
+  and at the end of the attack, an unverified reading (no ruling was found). More outcomes: when the
+  Defending Pokémon is already at or above its derived HP before the damage step (damage counters
+  placed earlier by the same attack), the triggers may fire or not, whatever the step did (the
+  capped clamp of `Reach.finite` does not know damage at or above its cap, `HitRun.cap_sim`); a
+  trigger with a
   printed condition (`cond`) or an effect outside the fragment never fires. The trigger chains end
   (`KOMove.acc`, `Move.unsettled_acc`): every Knock Out takes a Prize card, and nothing returns
   one; with Prize-changing triggers (absent) that argument fails;
@@ -1080,7 +1096,8 @@ Pokémon an earlier step brought to its HP, which is what a printed sentence tha
 `koByAttack` trigger after the promotions, so if the attacker was Knocked Out by the same check, the
 trigger acts on its replacement instead of on nothing. "Knocked Out by damage from an attack" is
 read as "Knocked Out by a check while the turn's attack has been made": it includes Knock Outs by
-damage counters the attack placed and by later rounds of the check. -/
+damage counters the attack placed and by later rounds of the check. "Is damaged by an attack" is
+decided on the damage step (`HitRun`), with the reading and the corner listed in the Known gaps. -/
 
 /-- The state as the opponent sees it: the two players exchanged (milestone M8b). Effects of the
 language act for the player to move (`.own`); a trigger of the other player resolves on the
@@ -1114,23 +1131,168 @@ inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → P
   | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
       (ho : ab.use.optional = true) (ht : Fire ev l g g₂) : Fire ev (ab :: l) g g₂
 
-/-- Did the opponent's Active Pokémon's damage rise from `g` to `g'`? -/
+/-- Did the opponent's Active Pokémon's damage rise from `g` to `g'`? Read on one damage step
+(`HitRun.hit`), where the opponent's Active Pokémon is the same Pokémon before and after. -/
 def GameState.damagedB (g g' : GameState) : Bool :=
   match g.opp.active, g'.opp.active with
   | some d, some d' => decide (d.damage < d'.damage)
   | _, _ => false
 
+/-- A primitive effect that neither does attack damage to the opponent's Active Pokémon nor
+replaces it (milestone M8b): every primitive but the damage steps (`damage`, `drain`) and
+`switch .opp`; not the compound effects. -/
+def Effect.plain : Effect → Bool
+  | .damage _ => false
+  | .drain _ => false
+  | .switch .opp => false
+  | .ite .. => false
+  | .seq .. => false
+  | .choice .. => false
+  | .iter .. => false
+  | _ => true
+
+/-- The damage steps. -/
+def Effect.isHit : Effect → Bool
+  | .damage _ => true
+  | .drain _ => true
+  | _ => false
+
+/-- **A resolution of an effect, with what it did to the opponent's Active Pokémon** (milestone
+M8b). `HitRun e g g' hit sw`: `Run e g g'` along one line of resolution, where `sw` says whether a
+`switch .opp` replaced the opponent's Active Pokémon (its Bench was not empty), and `hit` whether a
+damage step did damage to the opponent's Active Pokémon and no `switch .opp` replaced it after
+that step. So `hit` is "the Pokémon in the opponent's Active Spot after the attack was damaged by
+it, while in the Active Spot". It is read on the damage step itself (`hit`): the defender is the
+opponent's Active Pokémon at that step, and the damage done is the rise of its damage over the
+step (`GameState.damagedB` on the step), which is `GameState.dealt` of the amount. One corner is
+left free: when the defender is already at or above its derived HP before the step (counters
+placed earlier in the same attack), `hit` may be either value. (This keeps the capped clamp of
+the tame decks a simulation, `HitRun.cap_sim`, which does not know damage at or above the cap; such a
+defender is Knocked Out after the attack anyway.) -/
+inductive HitRun : Effect → GameState → GameState → Bool → Bool → Prop where
+  | plain {e : Effect} {g g' : GameState} (he : e.plain = true) (h : Run e g g') :
+      HitRun e g g' false false
+  | hit {e : Effect} {g g' : GameState} {p : InPlay} {b : Bool} (he : e.isHit = true)
+      (h : Run e g g') (hp : g.opp.active = some p)
+      (hb : p.damage < g.hpOf .opp .active p → b = g.damagedB g') : HitRun e g g' b false
+  | gust {g g' : GameState} (h : Run (.switch .opp) g g') :
+      HitRun (.switch .opp) g g' false (decide (0 < g.opp.bench.length))
+  | iteT {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} {hb sw : Bool}
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = true) :
+      HitRun a g g' hb sw → HitRun (.ite t a b) g g' hb sw
+  | iteF {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} {hb sw : Bool}
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = false) :
+      HitRun b g g' hb sw → HitRun (.ite t a b) g g' hb sw
+  | seq {a b : Effect} {g₁ g₂ g₃ : GameState} {h₁ s₁ h₂ s₂ : Bool} :
+      HitRun a g₁ g₂ h₁ s₁ → HitRun b g₂ g₃ h₂ s₂ →
+        HitRun (.seq a b) g₁ g₃ ((h₁ && !s₂) || h₂) (s₁ || s₂)
+  | choiceL {a b : Effect} {g g' : GameState} {hb sw : Bool} :
+      HitRun a g g' hb sw → HitRun (.choice a b) g g' hb sw
+  | choiceR {a b : Effect} {g g' : GameState} {hb sw : Bool} :
+      HitRun b g g' hb sw → HitRun (.choice a b) g g' hb sw
+  | iterNil (a : Effect) (g : GameState) : HitRun (.iter a) g g false false
+  | iterCons {a : Effect} {g₁ g₂ g₃ : GameState} {h₁ s₁ h₂ s₂ : Bool} :
+      HitRun a g₁ g₂ h₁ s₁ → HitRun (.iter a) g₂ g₃ h₂ s₂ →
+        HitRun (.iter a) g₁ g₃ ((h₁ && !s₂) || h₂) (s₁ || s₂)
+
+/-- A `HitRun` is a resolution. -/
+theorem HitRun.run {e : Effect} {g g' : GameState} {hb sw : Bool} (h : HitRun e g g' hb sw) :
+    Run e g g' := by
+  induction h with
+  | plain _ h => exact h
+  | hit _ h => exact h
+  | gust h => exact h
+  | iteT h ht _ ih => exact .iteT h ht ih
+  | iteF h ht _ ih => exact .iteF h ht ih
+  | seq _ _ ih₁ ih₂ => exact .seq ih₁ ih₂
+  | choiceL _ ih => exact .choiceL ih
+  | choiceR _ ih => exact .choiceR ih
+  | iterNil a g => exact .iterNil a g
+  | iterCons _ _ ih₁ ih₂ => exact .iterCons ih₁ ih₂
+
+/-- Every resolution is a `HitRun`, with some flags. -/
+theorem Run.hitRun {e : Effect} {g g' : GameState} (h : Run e g g') :
+    ∃ hb sw, HitRun e g g' hb sw := by
+  induction h with
+  | iteT h ht _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .iteT h ht r⟩
+  | iteF h ht _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .iteF h ht r⟩
+  | seq _ _ ih₁ ih₂ =>
+      obtain ⟨a, b, r⟩ := ih₁; obtain ⟨c, d, s⟩ := ih₂; exact ⟨_, _, .seq r s⟩
+  | choiceL _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .choiceL r⟩
+  | choiceR _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .choiceR r⟩
+  | iterNil a g => exact ⟨_, _, .iterNil a g⟩
+  | iterCons _ _ ih₁ ih₂ =>
+      obtain ⟨a, b, r⟩ := ih₁; obtain ⟨c, d, s⟩ := ih₂; exact ⟨_, _, .iterCons r s⟩
+  | damage hv h => exact ⟨_, _, .hit rfl (.damage hv h) h (fun _ => rfl)⟩
+  | drain hv h hq => exact ⟨_, _, .hit rfl (.drain hv h hq) h (fun _ => rfl)⟩
+  | switch w ha hb =>
+      cases w with
+      | own => exact ⟨_, _, .plain rfl (.switch .own ha hb)⟩
+      | opp => exact ⟨_, _, .gust (.switch .opp ha hb)⟩
+  | switchNone w hb =>
+      cases w with
+      | own => exact ⟨_, _, .plain rfl (.switchNone .own hb)⟩
+      | opp => exact ⟨_, _, .gust (.switchNone .opp hb)⟩
+  | @touchActive e w f g p he h =>
+      exact ⟨_, _, .plain (by cases e <;> simp_all [Effect.touch, Effect.plain]) (.touchActive he h)⟩
+  | @touchBench e w f g q b₁ b₂ he h =>
+      exact ⟨_, _, .plain (by cases e <;> simp_all [Effect.touch, Effect.plain]) (.touchBench he h)⟩
+  | @zone e w g s' hw h =>
+      exact ⟨_, _, .plain (by cases e <;> simp_all [Effect.zSide, Effect.plain]) (.zone hw h)⟩
+  | skip g => exact ⟨_, _, .plain rfl (.skip g)⟩
+  | draw h => exact ⟨_, _, .plain rfl (.draw h)⟩
+  | drawEmpty h => exact ⟨_, _, .plain rfl (.drawEmpty h)⟩
+  | heal n h => exact ⟨_, _, .plain rfl (.heal n h)⟩
+  | counters n h => exact ⟨_, _, .plain rfl (.counters n h)⟩
+  | inflict c h => exact ⟨_, _, .plain rfl (.inflict c h)⟩
+  | poisonUp n h hp => exact ⟨_, _, .plain rfl (.poisonUp n h hp)⟩
+  | poisonUpSkip n h hp => exact ⟨_, _, .plain rfl (.poisonUpSkip n h hp)⟩
+  | cure h => exact ⟨_, _, .plain rfl (.cure h)⟩
+  | shuffle h => exact ⟨_, _, .plain rfl (.shuffle h)⟩
+  | search h => exact ⟨_, _, .plain rfl (.search h)⟩
+  | handToBottom h => exact ⟨_, _, .plain rfl (.handToBottom h)⟩
+  | scale w k hs h => exact ⟨_, _, .plain rfl (.scale w k hs h)⟩
+  | selfDamage n h => exact ⟨_, _, .plain rfl (.selfDamage n h)⟩
+  | healAll h => exact ⟨_, _, .plain rfl (.healAll h)⟩
+  | unmark w m g => exact ⟨_, _, .plain rfl (.unmark w m g)⟩
+  | linger w s m g => exact ⟨_, _, .plain rfl (.linger w s m g)⟩
+  | benchCounters w n h => exact ⟨_, _, .plain rfl (.benchCounters w n h)⟩
+  | benchCountersNone w n h => exact ⟨_, _, .plain rfl (.benchCountersNone w n h)⟩
+  | spreadCounters w n g => exact ⟨_, _, .plain rfl (.spreadCounters w n g)⟩
+  | benchHeal n h => exact ⟨_, _, .plain rfl (.benchHeal n h)⟩
+  | benchHealNone n h => exact ⟨_, _, .plain rfl (.benchHealNone n h)⟩
+  | benchDamage w n h => exact ⟨_, _, .plain rfl (.benchDamage w n h)⟩
+  | benchDamageNone w n h => exact ⟨_, _, .plain rfl (.benchDamageNone w n h)⟩
+  | spreadDamage w n g => exact ⟨_, _, .plain rfl (.spreadDamage w n g)⟩
+  | moveCounter h => exact ⟨_, _, .plain rfl (.moveCounter h)⟩
+  | discardStadium g => exact ⟨_, _, .plain rfl (.discardStadium g)⟩
+
 /-- **Which `damaged` triggers an attack fires** (milestone M8b), from the state `g` before its
 script and `g'` after it: none (`quiet`), or every `damaged` trigger of the opponent's Active
-Pokémon in some order (`fire`), which needs the opponent's Active Pokémon's damage to have risen.
-For an attack whose script is `Effect.oppClean` (no other writer of the Defending Pokémon's damage
-than the damage step, no switch), the rise is exactly "damaged by the attack", and `quiet` is then
-allowed only without it: the triggers fire exactly when the printed ones do. For other attacks the
-model may fire them on a rise and need not (a superset of firing decisions). -/
+Pokémon in some order (`fire`). Each is allowed for the resolutions of the script from `g` to `g'`
+that agree with it (`HitRun`): `fire` for one in which the Pokémon in the opponent's Active Spot at
+the end was damaged by the attack's damage step while in the Active Spot, `quiet` for one in which
+it was not. So an attack that only switches the opponent's Active Pokémon fires nothing
+(`TriggerWitness.gust_quiet`), one that switches and then does damage fires the triggers of the
+Pokémon it damaged (`TriggerWitness.pull_fires`), and a Pokémon damaged and then switched to the
+Bench by the same attack fires nothing: the model reads "if this Pokémon is in the Active Spot and
+is damaged by an attack" as needing the Pokémon in the Active Spot both when it is damaged and when
+the trigger resolves, at the end of the attack (an unverified reading; Known gaps). The choice is
+exact on every resolution, except that when the defender was already at or above its HP before the
+damage step, either is allowed (`HitRun.hit`). Two resolutions with the same end state are told
+apart only by what they did: the model's outcomes are the union, over the resolutions, of the
+printed ones. -/
 inductive HitTrig (atk : Attack) (g g' : GameState) : List Ability → Prop where
-  | quiet (h : atk.script.oppClean = true → g.damagedB g' = false) : HitTrig atk g g' []
-  | fire {l : List Ability} (h : g.damagedB g' = true)
+  | quiet {sw : Bool} (h : HitRun atk.script g g' false sw) : HitTrig atk g g' []
+  | fire {l : List Ability} {sw : Bool} (h : HitRun atk.script g g' true sw)
       (hl : l.Perm (optTrigs .damaged g'.opp.active)) : HitTrig atk g g' l
+
+/-- The resolution an attack's choice of triggers rests on. -/
+theorem HitTrig.run {atk : Attack} {g g' : GameState} {l : List Ability}
+    (h : HitTrig atk g g' l) : Run atk.script g g' := by
+  cases h with
+  | quiet h => exact h.run
+  | fire h _ => exact h.run
 
 /-- The `koByAttack` triggers of the opponent's Pokémon that the check of `g` Knocks Out. -/
 def GameState.koTrigs (g : GameState) : List Ability :=

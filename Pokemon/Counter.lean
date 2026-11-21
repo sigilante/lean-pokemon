@@ -1224,7 +1224,7 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
   have hfl := Run.flags hr
   refine ⟨_, .attack hp (List.mem_append_left _ (h1 ▸ hatk)) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
     hbt (hs.settled hns hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw
-    (HitTrig.exists_nil ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _),
+    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _),
     ⟨(hsh _ hr).cur.setGx _, (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
 /-- Ending the turn from a state of known shape swaps the shape. -/

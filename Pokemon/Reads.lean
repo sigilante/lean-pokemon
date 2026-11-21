@@ -217,7 +217,7 @@ theorem reach_after2 : Reach start2 after2 :=
   .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9, false⟩) rfl (.head _)
     (.nil _) rfl rfl rfl rfl
     ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
-    (.selfDamage 9 rfl) rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil rfl) (.nil _))
+    (.selfDamage 9 rfl) rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil (.selfDamage 9 rfl) rfl) (.nil _))
 
 /-- **The old bound on the player's own Active Pokémon is false.** From a well-formed start with
 no pending Knock Out, one attack whose effect damages the attacker reaches, during the turn, a

@@ -595,11 +595,13 @@ theorem HitTrig.mem {atk : Attack} {g g' : GameState} {l : List Ability} {ab : A
   | quiet => nomatch hab
   | fire _ hl => exact hl.mem_iff.1 hab
 
-/-- An attack whose Defending Pokémon has no trigger has its (empty) choice of triggers. -/
-theorem HitTrig.exists_nil {atk : Attack} {g g' : GameState}
+/-- An attack whose Defending Pokémon has no trigger has its (empty) choice of triggers, on every
+resolution of its script. -/
+theorem HitTrig.exists_nil {atk : Attack} {g g' : GameState} (hr : Run atk.script g g')
     (hf : optTrigs .damaged g'.opp.active = []) : HitTrig atk g g' [] := by
-  cases hb : g.damagedB g' with
-  | false => exact .quiet fun _ => hb
-  | true => exact .fire hb (hf ▸ List.Perm.refl [])
+  obtain ⟨hb, sw, h⟩ := hr.hitRun
+  cases hb with
+  | false => exact .quiet h
+  | true => exact .fire h (hf ▸ List.Perm.refl [])
 
 end Pokemon

@@ -951,37 +951,134 @@ theorem GameState.ZoneOnly.noReduce {g g' : GameState} (z : GameState.ZoneOnly g
   rw [z.cur_mods, z.opp_mods]
   exact h
 
-/-- **Which `damaged` triggers an attack fires is the same under the clamp** (milestone M8b): the
-Defending Pokémon's damage before the attack is below the cap, so whether it rose is read exactly
-from the capped damage after it, and the Abilities of the Pokémon are kept. -/
-theorem HitTrig.clamp_sim {k : Nat} {atk : Attack} {g₁ g₁' g₂ g₂' : GameState} {l : List Ability}
-    (h : HitTrig atk g₁ g₁' l) {d₁ d₂ : InPlay} (h1 : g₁.opp.active = some d₁)
-    (h2 : g₂.opp.active = some d₂) (hd : d₂.damage = d₁.damage) (hk : d₁.damage < k)
-    (hc : g₁'.rclamp k = g₂'.rclamp k) : HitTrig atk g₂ g₂' l := by
+/-- Whether the opponent's Active Pokémon's damage rose is read exactly through `rclamp`, when its
+damage before is below the cap. -/
+theorem GameState.damagedB_of_rclamp {k : Nat} {g₁ g₁' g₂ g₂' : GameState} {d₁ d₂ : InPlay}
+    (h1 : g₁.opp.active = some d₁) (h2 : g₂.opp.active = some d₂) (hd : d₂.damage = d₁.damage)
+    (hk : d₁.damage < k) (hc : g₁'.rclamp k = g₂'.rclamp k) :
+    g₂.damagedB g₂' = g₁.damagedB g₁' := by
   have ha : g₂'.opp.active.map (InPlay.clampWith k (.upto k)) =
       g₁'.opp.active.map (InPlay.clampWith k (.upto k)) :=
     (congrArg (fun g => g.opp.active) hc).symm
-  have key : g₂.damagedB g₂' = g₁.damagedB g₁' ∧
-      optTrigs .damaged g₂'.opp.active = optTrigs .damaged g₁'.opp.active := by
-    cases e : g₁'.opp.active with
-    | none =>
-        rw [e] at ha
-        have hn := none_of_map ha
-        simp only [GameState.damagedB, h1, h2, e, hn, optTrigs]
-        constructor <;> first | trivial | rfl
-    | some p =>
-        rw [e] at ha
-        obtain ⟨q, hq', hq⟩ := agree_of_map ha
-        have hdm := hq.damage
-        simp only [Cap.dmg] at hdm
-        refine ⟨?_, ?_⟩
-        · simp only [GameState.damagedB, h1, h2, e, hq']
-          apply decide_eq_decide.2
-          constructor <;> intro <;> omega
-        · simp only [optTrigs, hq', InPlay.trigs, hq.grants.2]
+  cases e : g₁'.opp.active with
+  | none =>
+      rw [e] at ha
+      have hn := none_of_map ha
+      simp only [GameState.damagedB, h1, h2, e, hn]
+  | some p =>
+      rw [e] at ha
+      obtain ⟨q, hq', hq⟩ := agree_of_map ha
+      have hdm := hq.damage
+      simp only [Cap.dmg] at hdm
+      simp only [GameState.damagedB, h1, h2, e, hq']
+      apply decide_eq_decide.2
+      constructor <;> intro <;> omega
+
+/-- The `damaged` triggers of the opponent's Active Pokémon are read exactly through `rclamp`. -/
+theorem GameState.optTrigs_of_rclamp {k : Nat} {g₁' g₂' : GameState}
+    (hc : g₁'.rclamp k = g₂'.rclamp k) :
+    optTrigs .damaged g₂'.opp.active = optTrigs .damaged g₁'.opp.active := by
+  have ha : g₂'.opp.active.map (InPlay.clampWith k (.upto k)) =
+      g₁'.opp.active.map (InPlay.clampWith k (.upto k)) :=
+    (congrArg (fun g => g.opp.active) hc).symm
+  cases e : g₁'.opp.active with
+  | none =>
+      rw [e] at ha
+      simp only [none_of_map ha]
+  | some p =>
+      rw [e] at ha
+      obtain ⟨q, hq', hq⟩ := agree_of_map ha
+      simp only [optTrigs, hq', InPlay.trigs, hq.grants.2]
+
+/-- **Inside an attack's effect, the kernel of `rclamp k` is a simulation for `HitRun`**
+(milestone M8b), with the flags kept: `Run.cap_sim` on each step. A damage step whose defender is
+below its derived HP is below the cap, so whether the step did damage is read exactly; at or above
+its HP the flag is free (`HitRun.hit`). -/
+theorem HitRun.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState} {hb sw : Bool}
+    (h : HitRun e g₁ g₁' hb sw) :
+    e.tame = true → e.tmax < k → g₁.NoReduce → g₁.CapOk k → ∀ {g₂ : GameState},
+      g₁.rclamp k = g₂.rclamp k →
+      ∃ g₂', HitRun e g₂ g₂' hb sw ∧ g₁'.rclamp k = g₂'.rclamp k := by
+  induction h with
+  | plain he h =>
+      intro ht htm hn hR g₂ hc
+      obtain ⟨g₂', r, hc'⟩ := Run.cap_sim hk0 h ht htm hn hR hc
+      exact ⟨g₂', .plain he r, hc'⟩
+  | @hit e g g' p b he h hp hb =>
+      intro ht htm hn hR g₂ hc
+      obtain ⟨g₂', r, hc'⟩ := Run.cap_sim hk0 h ht htm hn hR hc
+      obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree hc (w := .opp) (p := p) hp
+      refine ⟨g₂', .hit he r hq (fun hlt => ?_), hc'⟩
+      have e1 : g₂.hpOf .opp .active q = g.hpOf .opp .active p :=
+        (GameState.sameField_of_clampAt hc).hpOf .opp .active hqa.sv
+      have hH : g.hpOf .opp .active p ≤ k := hR.1.below .opp .active p hp
+      have hdm := hqa.damage
+      simp only [Cap.dmg] at hdm
+      have hqp : q.damage = p.damage := by omega
+      rw [hb (by omega)]
+      exact (GameState.damagedB_of_rclamp hp hq hqp (by omega) hc').symm
+  | gust h =>
+      intro ht htm hn hR g₂ hc
+      obtain ⟨g₂', r, hc'⟩ := Run.cap_sim hk0 h ht htm hn hR hc
+      have hl := congrArg (fun g => (g.opp.bench).length) hc
+      simp only [GameState.rclamp, GameState.clampAt, List.length_map] at hl
+      exact ⟨g₂', hl ▸ .gust r, hc'⟩
+  | iteT h ht' _ ih =>
+      intro ht hb hn hR g₂ hc
+      simp only [Effect.tame, Bool.and_eq_true] at ht
+      simp only [Effect.tmax] at hb
+      obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree hc h
+      obtain ⟨g₂', r', hc'⟩ := ih ht.1 (by omega) hn hR hc
+      exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ (GameState.count_of_clampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
+  | iteF h ht' _ ih =>
+      intro ht hb hn hR g₂ hc
+      simp only [Effect.tame, Bool.and_eq_true] at ht
+      simp only [Effect.tmax] at hb
+      obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree hc h
+      obtain ⟨g₂', r', hc'⟩ := ih ht.2 (by omega) hn hR hc
+      exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ (GameState.count_of_clampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
+  | seq h₁ _ ih₁ ih₂ =>
+      intro ht hb hn hR g₂ hc
+      simp only [Effect.tame, Bool.and_eq_true] at ht
+      simp only [Effect.tmax] at hb
+      obtain ⟨g₂', r₁, hc'⟩ := ih₁ ht.1 (by omega) hn hR hc
+      obtain ⟨g₂'', r₂, hc''⟩ := ih₂ ht.2 (by omega) (h₁.run.noReduce ht.1 hn)
+        (hR.of_perm h₁.run.perm) hc'
+      exact ⟨g₂'', .seq r₁ r₂, hc''⟩
+  | choiceL _ ih =>
+      intro ht hb hn hR g₂ hc
+      simp only [Effect.tame, Bool.and_eq_true] at ht
+      simp only [Effect.tmax] at hb
+      obtain ⟨g₂', r, hc'⟩ := ih ht.1 (by omega) hn hR hc
+      exact ⟨g₂', .choiceL r, hc'⟩
+  | choiceR _ ih =>
+      intro ht hb hn hR g₂ hc
+      simp only [Effect.tame, Bool.and_eq_true] at ht
+      simp only [Effect.tmax] at hb
+      obtain ⟨g₂', r, hc'⟩ := ih ht.2 (by omega) hn hR hc
+      exact ⟨g₂', .choiceR r, hc'⟩
+  | iterNil a g => intro _ _ _ _ g₂ hc; exact ⟨g₂, .iterNil a g₂, hc⟩
+  | iterCons h₁ _ ih₁ ih₂ =>
+      intro ht hb hn hR g₂ hc
+      obtain ⟨g₂', r₁, hc'⟩ := ih₁ ht hb hn hR hc
+      obtain ⟨g₂'', r₂, hc''⟩ := ih₂ ht hb (h₁.run.noReduce ht hn) (hR.of_perm h₁.run.perm) hc'
+      exact ⟨g₂'', .iterCons r₁ r₂, hc''⟩
+
+/-- **Which `damaged` triggers an attack fires is the same under the clamp** (milestone M8b): the
+resolution it rests on (`HitRun`) is matched, flags included, and the Abilities of the opponent's
+Active Pokémon at the end are kept. -/
+theorem HitTrig.clamp_sim {k : Nat} (hk0 : 0 < k) {atk : Attack} {g₁ g₁' : GameState}
+    {l : List Ability} (h : HitTrig atk g₁ g₁' l) (ht : atk.script.tame = true)
+    (hb : atk.script.tmax < k) (hn : g₁.NoReduce) (hR : g₁.CapOk k) {g₂ : GameState}
+    (hc : g₁.rclamp k = g₂.rclamp k) :
+    ∃ g₂', HitTrig atk g₂ g₂' l ∧ g₁'.rclamp k = g₂'.rclamp k := by
   cases h with
-  | quiet hq => exact .quiet fun hcl => key.1.trans (hq hcl)
-  | fire hd' hl => exact .fire (key.1.trans hd') (key.2 ▸ hl)
+  | quiet hq =>
+      obtain ⟨g₂', r, hc'⟩ := hq.cap_sim hk0 ht hb hn hR hc
+      exact ⟨g₂', .quiet r, hc'⟩
+  | fire hf hl =>
+      obtain ⟨g₂', r, hc'⟩ := hf.cap_sim hk0 ht hb hn hR hc
+      exact ⟨g₂', .fire r ((GameState.optTrigs_of_rclamp hc') ▸ hl), hc'⟩
 
 theorem Move.noReduce {g g' : GameState} (h : Move g g')
     (ht : ∀ x ∈ g.allCards, x.tame = true) (hn : g.NoReduce) : g'.NoReduce := by
@@ -1203,16 +1300,11 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw l g'' hd ht' =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.attack ha hm
-      obtain ⟨g₂', hr', hc''⟩ := Run.cap_sim hF.1 hr ht hb hF.2.2.2.1 hcap
+      obtain ⟨g₂', hd', hc''⟩ := hd.clamp_sim hF.1 ht hb hF.2.2.2.1 hcap
         (GameState.rclamp_of_clamp hc hst.1 hH)
+      have hr' := hd'.run
       obtain ⟨g₂'', ht₂, hc'''⟩ := ht'.clamp_sim (co := .exact) (cp := .upto k) (cbo := .exact)
         (cbp := .upto k) hc''
-      obtain ⟨d₁, hd₁⟩ := Option.ne_none_iff_exists'.1 hst.2.2
-      have hlt : d₁.damage < k := hst.1.lt_bound hH (w := .opp) (sp := .active) hd₁
-      have hoa : g₂.opp.active.map (InPlay.clampWith k .hp) =
-          (some d₁).map (InPlay.clampWith k .hp) := by rw [hg, ← hd₁]; exact ha₂
-      obtain ⟨d₂, hd₂, hdq⟩ := agree_of_map hoa
-      have hd' := hd.clamp_sim hd₁ hd₂ (hdq.damage_eq_of_lt hlt) hlt hc''
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂

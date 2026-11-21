@@ -371,7 +371,7 @@ theorem whirl_reachable :
         (.switch (b₁ := []) .opp rfl rfl))
   have hm : Move whirlStart _ :=
     .attack (atk := whirl) rfl (.head _) (.nil _) rfl rfl rfl rfl whirlStart_settled hr rfl
-      (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
+      (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _)
   exact ⟨whirlStart, whirlStart_wellFormed, whirlStart_settled, _, _, hm, .step (.refl _) rfl hm,
     rfl, rfl, rfl, rfl, ⟨rfl, rfl, rfl, rfl⟩⟩
 
@@ -703,7 +703,8 @@ theorem teraBench_reachable :
       ¬ DamageBounded g := by
   have hm : Move snipeStart _ :=
     .attack (atk := snipe) rfl (.head _) (.nil _) rfl rfl rfl rfl snipeStart_settled
-      (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
+      (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl
+      (HitTrig.exists_nil (.spreadDamage .opp 5 _) rfl) (.nil _)
   refine ⟨snipeStart, snipeStart_wellFormed, snipeStart_settled, _, hm, .step (.refl _) rfl hm,
     rfl, fun hk => ?_⟩
   exact absurd (hk .opp .bench ((InPlay.ofBasic low).addDamage 5) (List.Mem.head _))
@@ -740,7 +741,8 @@ theorem benchDamage_reachable :
       ¬ DamageBounded g := by
   have hm : Move pokeStart _ :=
     .attack (atk := poke) rfl (.head _) (.nil _) rfl rfl rfl rfl pokeStart_settled
-      (.benchDamage (b₁ := []) .opp 5 rfl) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
+      (.benchDamage (b₁ := []) .opp 5 rfl) rfl (fun h => nomatch h) rfl
+      (HitTrig.exists_nil (.benchDamage (b₁ := []) .opp 5 rfl) rfl) (.nil _)
   refine ⟨pokeStart, pokeStart_wellFormed, pokeStart_settled, _, hm, .step (.refl _) rfl hm,
     rfl, fun hk => ?_⟩
   exact absurd (hk .opp .bench ((InPlay.ofBasic low).addDamage 5) (List.Mem.head _))
@@ -790,7 +792,8 @@ def lastHit (b : List InPlay) : GameState :=
 theorem move_lastHit (b : List InPlay) (hs : Settled (lastStart b)) :
     Move (lastStart b) (lastHit b) :=
   .attack (atk := both) rfl (.head _) (.nil _) rfl rfl rfl rfl hs
-    (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
+    (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl (fun h => nomatch h) rfl
+    (HitTrig.exists_nil (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl) (.nil _)
 
 /-- **Both players take their last Prize card: Sudden Death, whatever the order.** From a
 well-formed, `Settled` start in which each player has one Prize card left and a Benched Pokémon

@@ -152,7 +152,7 @@ theorem granted_attack : ∃ g, Move (G [memory] small) g ∧
       (Trainer.settled_of rfl rfl (show 0 < 1 by decide) (show 0 < 10 by decide)
         (fun p hp => by cases hp) (fun p hp => by cases hp))
       (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl
-      (HitTrig.exists_nil rfl) (.nil _), rfl⟩
+      (HitTrig.exists_nil (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl) (.nil _), rfl⟩
 
 /-- **…only to a holder passing its filter**: attached to `mon` (not named "Small") the Tool gives
 nothing, and `mon` has no attack. -/

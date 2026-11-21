@@ -46,7 +46,7 @@ theorem Move.attack_of_trigFree {g g' : GameState} {a : InPlay} {atk : Attack}
     (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) (htf : g.TrigFree) :
     Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } } :=
   .attack ha hm hc hs hn hf hbt hst hr hl hgx hw
-    (HitTrig.exists_nil ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
+    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
 
 /-- With no triggered Ability, an attack fires no trigger: its result is the state after its
 script with the attack recorded. -/

@@ -123,8 +123,9 @@ Pokémon is Knocked Out by damage from an attack from your opponent's Pokémon, 
 `opt` for "you may"), with effects in a fragment that always resolves and reads no damage
 (`Effect.trigOk`). They belong to the player whose turn it is not and resolve on the state with the
 players exchanged (`GameState.swap`, `Fire`), each as a whole and several in any order: `damaged`
-triggers at the end of the attack, before its Knock Out check (`Move.attack`, `HitTrig`; exact for
-attacks with no other writer of the Defending Pokémon's damage, `Effect.oppClean`), `koByAttack`
+triggers at the end of the attack, before its Knock Out check (`Move.attack`, `HitTrig`; decided on the
+attack's damage step, `HitRun`, so an attack that switches the opponent's Active Pokémon fires the
+triggers of the Pokémon it damaged and no other's; the departures are in the Known gaps), `koByAttack`
 triggers in the batch move after the attack (`Move.knockOuts`, `GameState.batchTrigs`), with the
 Pokémon already in the discard pile. Every earlier theorem was re-proved; the statements that
 named the batch step's result were restated (`Move.batch_of_not_settled`, `Move.after_attack`,

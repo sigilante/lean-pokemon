@@ -17,6 +17,14 @@ Single legal moves from concrete states, for the two trigger shapes of `TrigEven
 * `last_prizes_suddenDeath`: the same attack when each player has one Prize card left: every move
   after the attack ends the game in Sudden Death (both take their last Prize card), and the
   `koByAttack` trigger does not fire, the game being over.
+* `start_wellFormed`: the start states are `WellFormed` (and `Settled`, `start_settled`).
+* Attacks that switch the opponent's Active Pokémon (review of M8b): an attack that only switches
+  fires no `damaged` trigger, in any state (`gust_quiet`; the first M8b version could fire the
+  triggers of the Pokémon switched in, which the attack never damaged); an attack that switches and
+  then does damage fires the triggers of the Pokémon it damaged, and must when they are mandatory
+  (`pull_fires`; the first version compared its damage with the old Active Pokémon's and could not
+  fire them); a Pokémon damaged and then switched to the Bench by the same attack fires nothing
+  (`hitRun_quiet`, the model's reading, recorded in the Known gaps).
 -/
 
 namespace Pokemon.TriggerWitness
@@ -65,6 +73,16 @@ def two : List Card := [.energy .fire, .energy .water]
 /-- One Prize card. -/
 def one : List Card := [.energy .fire]
 
+theorem start_wellFormed (opt : Bool) (pz : List Card) (hz : pz = two ∨ pz = one) :
+    WellFormed (start opt pz) := by
+  refine ⟨fun _ => ⟨?_, ?_⟩, fun p hp => ?_, fun p hp => ?_⟩
+  · rcases hz with rfl | rfl <;> simp [start, Trainer.side, two, one]
+  · rcases hz with rfl | rfl <;> simp [start, Trainer.side, two, one]
+  · simp only [start, Trainer.side, List.mem_singleton] at hp
+    subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
+  · simp only [start, Trainer.side, List.mem_singleton] at hp
+    subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
+
 theorem start_settled (opt : Bool) (pz : List Card) (hz : pz = two ∨ pz = one) :
     Settled (start opt pz) := by
   rcases hz with rfl | rfl <;> cases opt <;> decide
@@ -79,7 +97,9 @@ theorem spikes_fire (opt : Bool) (pz : List Card) (hz : pz = two ∨ pz = one) :
   refine ⟨?_, fun hk => ?_, rfl, rfl⟩
   · have hm := Move.attack (g := start opt pz) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
       (start_settled opt pz hz) (.seq (.damage (.const 5 _) rfl) (.skip _)) rfl
-      (fun h => nomatch h) rfl (l := [spikes]) (.fire rfl (by cases opt <;> exact .refl _))
+      (fun h => nomatch h) rfl (l := [spikes])
+      (.fire (.seq (.hit (b := true) rfl (.damage (.const 5 _) rfl) rfl (fun _ => by cases opt <;> rfl))
+        (.plain rfl (.skip _))) (by cases opt <;> exact .refl _))
       (.run rfl (.counters 3 rfl) (.nil _))
     cases opt <;> exact hm
   · have := hk .opp .active _ rfl
@@ -160,5 +180,167 @@ theorem last_prizes_suddenDeath (opt : Bool) :
   have e := hm.eq_koStep_of_won hu (by cases opt <;> decide)
   subst e
   cases opt <;> exact ⟨rfl, rfl⟩
+
+/-! ## Attacks that switch the opponent's Active Pokémon
+
+Which `damaged` triggers fire is decided on the damage step (`HitRun`), not by comparing the
+Active Spot before and after the attack (the comparison of the first M8b version, under which an
+attack that switches the opponent's Active Pokémon could fire the triggers of a Pokémon it never
+damaged, and could fail to fire those of the Pokémon it did; review of M8b, probes `SwitchProbe`
+and `SwitchProbe2`). -/
+
+/-- "Switch out your opponent's Active Pokémon to the Bench": base damage 0, no damage. -/
+def gustAtk : Attack := ⟨"Gust", [], 0, .switch .opp, false⟩
+
+/-- **An attack that only switches fires no `damaged` trigger**, in every state: the Pokémon it
+brings into the Active Spot (with damage from earlier turns, say) was not damaged by it. (The first
+M8b version let it fire.) -/
+theorem gust_quiet {g g' : GameState} {l : List Ability} (h : HitTrig gustAtk g g' l) : l = [] := by
+  cases h with
+  | quiet => rfl
+  | fire hf _ =>
+      have e : gustAtk.script = .switch .opp := rfl
+      rw [e] at hf
+      cases hf with
+      | hit he => simp [Effect.isHit] at he
+
+/-- "Switch in 1 of your opponent's Benched Pokémon to the Active Spot. This attack does 30 damage
+to the new Active Pokémon." -/
+def pull : Attack := ⟨"Pull", [], 0, .seq (.switch .opp) (.damage (.const 3)), false⟩
+
+def puller : PokemonCard :=
+  ⟨"Puller", .basic, none, 3, .grass, [pull], 1, none, none, .none, false, []⟩
+
+/-- The opponent has `big` Active with 9 damage counters, and `spiky false` (a mandatory `damaged`
+trigger) undamaged on the Bench. -/
+def pullStart : GameState :=
+  ⟨side [] two (InPlay.ofBasic puller) [InPlay.ofBasic big],
+    side [] two { InPlay.ofBasic big with damage := 9 } [InPlay.ofBasic (spiky false)],
+    true, false, false, false, none, none, false, false⟩
+
+theorem pullStart_settled : Settled pullStart := by decide
+
+theorem pull_wf : pull.wf = true := by decide
+
+/-- On every resolution of `pull` from `pullStart` the Pokémon in the opponent's Active Spot at the
+end was damaged by the attack. -/
+theorem pull_hits {g' : GameState} {hb sw : Bool} (h : HitRun pull.script pullStart g' hb sw) :
+    hb = true := by
+  have e : pull.script = .seq (.switch .opp) (.damage (.const 3)) := rfl
+  rw [e] at h
+  cases h with
+  | plain he => simp [Effect.plain] at he
+  | hit he => simp [Effect.isHit] at he
+  | seq h1 h2 =>
+      cases h1.run with
+      | switchNone _ hb => simp [pullStart, Trainer.side, GameState.side] at hb
+      | touchActive he => simp [Effect.touch] at he
+      | touchBench he => simp [Effect.touch] at he
+      | zone hw => simp [Effect.zSide] at hw
+      | @switch _ a q b₁ b₂ _ ha hb =>
+          have hq : b₁ = [] ∧ q = InPlay.ofBasic (spiky false) ∧ b₂ = [] := by
+            rcases b₁ with _ | ⟨y, t⟩
+            · simp only [pullStart, Trainer.side, GameState.side, List.nil_append,
+                List.cons.injEq] at hb
+              exact ⟨rfl, hb.1.symm, hb.2.symm⟩
+            · simp [pullStart, Trainer.side, GameState.side] at hb
+          obtain ⟨rfl, rfl, rfl⟩ := hq
+          simp only [pullStart, Trainer.side, GameState.side] at ha
+          cases ha
+          cases h2 with
+          | plain he => simp [Effect.plain] at he
+          | hit _ r hp hb' =>
+              cases r with
+              | damage hv h' =>
+                  cases hv
+                  simp only [GameState.updSide, Option.some.injEq] at hp
+                  subst hp
+                  rw [hb' (by decide)]
+                  simp only [Bool.or_eq_true]
+                  exact .inr rfl
+              | touchActive he => simp [Effect.touch] at he
+              | touchBench he => simp [Effect.touch] at he
+              | zone hw => simp [Effect.zSide] at hw
+
+/-- **An attack that switches and then does damage fires the triggers of the Pokémon it damaged**:
+`pull` brings `spiky` into the Active Spot and does 3 damage to it, and every choice of triggers
+for that attack fires `spikes` (mandatory). (The first M8b version compared `spiky`'s 3 damage with
+the 9 of the Pokémon Active before the attack, and never fired it.) -/
+theorem pull_fires :
+    (∃ g', Run pull.script pullStart g' ∧ g'.opp.active.map InPlay.damage = some 3 ∧
+      HitTrig pull pullStart g' [spikes]) ∧
+    ∀ g' l, HitTrig pull pullStart g' l → l ≠ [] := by
+  refine ⟨⟨_, .seq (Run.switch (b₁ := []) (b₂ := []) .opp rfl rfl) (.damage (.const 3 _) rfl),
+    by decide, .fire (.seq (.gust (Run.switch (b₁ := []) (b₂ := []) .opp rfl rfl))
+      (.hit (b := true) rfl (.damage (.const 3 _) rfl) rfl (fun _ => by decide))) (.refl _)⟩,
+    fun g' l h hl => ?_⟩
+  subst hl
+  cases h with
+  | quiet hq => exact absurd (pull_hits hq) (by decide)
+  | fire hf hp =>
+      have hr := hf.run
+      have e : pull.script = .seq (.switch .opp) (.damage (.const 3)) := rfl
+      rw [e] at hr
+      cases hr with
+      | touchActive he => simp [Effect.touch] at he
+      | touchBench he => simp [Effect.touch] at he
+      | zone hw => simp [Effect.zSide] at hw
+      | seq r1 r2 =>
+          cases r1 with
+          | switchNone _ hb => simp [pullStart, Trainer.side, GameState.side] at hb
+          | touchActive he => simp [Effect.touch] at he
+          | touchBench he => simp [Effect.touch] at he
+          | zone hw => simp [Effect.zSide] at hw
+          | @switch _ a q b₁ b₂ _ ha hb =>
+              have hq : q = InPlay.ofBasic (spiky false) := by
+                rcases b₁ with _ | ⟨y, t⟩
+                · simp only [pullStart, Trainer.side, GameState.side, List.nil_append,
+                    List.cons.injEq] at hb
+                  exact hb.1.symm
+                · simp [pullStart, Trainer.side, GameState.side] at hb
+              subst hq
+              cases r2 with
+              | damage hv h' =>
+                  simp only [GameState.updSide, Option.some.injEq] at h'
+                  subst h'
+                  have := hp.length_eq
+                  simp [optTrigs, InPlay.trigs, InPlay.abilities] at this
+                  exact absurd this (by decide)
+              | touchActive he => simp [Effect.touch] at he
+              | touchBench he => simp [Effect.touch] at he
+              | zone hw => simp [Effect.zSide] at hw
+
+/-- "This attack does 30 damage. Switch out your opponent's Active Pokémon to the Bench." -/
+def hitRun : Attack := ⟨"Hit and Run", [], 3, .switch .opp, false⟩
+
+/-- On no resolution of `hitRun` from the start of `spikes_fire` is the Pokémon in the opponent's
+Active Spot at the end damaged by the attack. -/
+theorem hitRun_flag {g' : GameState} {hb sw : Bool}
+    (h : HitRun hitRun.script (start false two) g' hb sw) : hb = false := by
+  have e : hitRun.script = .seq (.damage (.const 3)) (.switch .opp) := rfl
+  rw [e] at h
+  cases h with
+  | plain he => simp [Effect.plain] at he
+  | hit he => simp [Effect.isHit] at he
+  | seq h1 h2 =>
+      cases h2 with
+      | plain he => simp [Effect.plain] at he
+      | hit he => simp [Effect.isHit] at he
+      | gust r =>
+          cases h1.run with
+          | damage hv hp => simp [start, Trainer.side]
+          | touchActive he => simp [Effect.touch] at he
+          | touchBench he => simp [Effect.touch] at he
+          | zone hw => simp [Effect.zSide] at hw
+
+/-- **A Pokémon damaged and then switched to the Bench by the same attack fires nothing** (the
+model's reading: the Pokémon must be in the Active Spot when it is damaged and when its trigger
+resolves; Known gaps). From the start of `spikes_fire`, `hitRun` damages `spiky` and switches it
+out; no choice of triggers for the attack fires one. -/
+theorem hitRun_quiet {g' : GameState} {l : List Ability} (h : HitTrig hitRun (start false two) g' l) :
+    l = [] := by
+  cases h with
+  | quiet => rfl
+  | fire hf _ => exact absurd (hitRun_flag hf) (by decide)
 
 end Pokemon.TriggerWitness

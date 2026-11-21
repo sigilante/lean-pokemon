@@ -234,7 +234,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     .attack (atk := ⟨"Hit", [], 1, .skip, false⟩) rfl (.head _) (.nil _) rfl rfl rfl
       rfl (settled_st _ _ _ _ _ _ (by decide) (by decide))
       (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl
-      (HitTrig.exists_nil rfl) (.nil _),
+      (HitTrig.exists_nil (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl) (.nil _),
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [red, st, side] at hh
@@ -394,7 +394,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       rfl (.head _) (.nil _) rfl rfl rfl rfl
       (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
       (.seq (.selfDamage _ rfl) (.drain (.const 1 _) rfl rfl)) rfl
-      (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _),
+      (fun h => nomatch h) rfl (HitTrig.exists_nil (.seq (.selfDamage _ rfl) (.drain (.const 1 _) rfl rfl)) rfl) (.nil _),
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [dr, st, side] at hh

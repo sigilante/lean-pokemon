@@ -410,7 +410,8 @@ def rA : GameState :=
 
 theorem move_r0_rA : Move r0 rA :=
   .attack (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
-    (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
+    (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl
+    (HitTrig.exists_nil (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl) (.nil _)
 
 /-- The attack is the only move from `r0` that leaves `guard` on the Bench with 3 counters: `r0`
 has no card in hand, no Benched Pokémon of the player to move, no Stadium, no Ability and no
@@ -582,7 +583,8 @@ def mA : GameState :=
 
 theorem move_m0_mA : Move m0 mA :=
   .attack (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
-    (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
+    (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl (fun h => nomatch h) rfl
+    (HitTrig.exists_nil (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl) (.nil _)
 
 /-- The attack is the only move from `m0` that leaves a `gm` with 2 counters on the opponent's
 Bench. -/
