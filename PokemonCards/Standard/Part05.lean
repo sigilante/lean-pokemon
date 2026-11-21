@@ -649,7 +649,7 @@ def me1_27 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Jumping Kick", cost := [.colorless], damage := 0,
-        effect := .choice (.damage (.const 4)) (.benchDamage .opp 4),
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 4)) (.benchDamage .opp 4)) (.damage (.const 4)),
         gx := false }] }
 
 /-- Sizzlipede (me1-29). Records: me1-29. -/

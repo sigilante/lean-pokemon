@@ -24,14 +24,14 @@ flip-until-tails-damage	damage (many (const k)) [+ base]	13	17	svp-162 Houndston
 switch-out-opp	switch opp	12	13	sv5-106 Mightyena	Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)
 recycle-to-hand	move own discard hand F (upTo n | at most n, as many as there are)	12	15	sv6-21 Poltchageist	Put a Basic Grass Energy card from your discard pile into your hand.
 discard-random-opp-hand	ite (countGe (pile opp hand any) 1) (move opp hand discard any (exactly 1)) skip	9	12	sv5-22 Scovillain ex	Discard a random card from your opponent's hand.
-damage-to-1-opp	choice (damage (const n)) (benchDamage opp n)	8	15	sv5-51 Pikachu	This attack does 10 damage to 1 of your opponent's Pokémon.
+damage-to-1-opp	ite (countGe (bench opp pokemon) 1) (choice (damage (const n)) (benchDamage opp n)) (damage (const n))	8	15	sv5-51 Pikachu	This attack does 10 damage to 1 of your opponent's Pokémon.
 also-each-bench	spreadDamage w n	7	8	sv6-98 Sandslash	This attack also does 10 damage to each of your Benched Pokémon.
 flip-n-coins-each	choice over 0..N heads of h copies of the effect	6	6	sv5-43 Sharpedo	Flip 3 coins. For each heads, discard a random card from your opponent's hand.
 reveal-hand	skip	6	11	sv5-126 Hoothoot	Your opponent reveals their hand.
 attach-from-discard	attach own discard F spot any (n times)	6	12	sv5-90 Lycanroc	Attach up to 2 Basic Fighting Energy cards from your discard pile to your Benched Pokémon in any way you like.
 gust	switch opp	6	16	sv10-110 Arven's Toedscruel	Switch in 1 of your opponent's Benched Pokémon to the Active Spot.
 discard-cost	move own hand discard any (exactly n), first	5	7	sv9-149 Iris's Fighting Spirit	You can use this card only if you discard another card from your hand.
-heal-1-of-your	choice (heal n) (benchHeal n)	5	7	sv6-86 Flabébé	Heal 30 damage from 1 of your Pokémon.
+heal-1-of-your	ite (countGe (bench own pokemon) 1) (choice (heal n) (benchHeal n)) (heal n)	5	7	sv6-86 Flabébé	Heal 30 damage from 1 of your Pokémon.
 discard-to-bench	putBench own discard F (n times)	4	4	svp-131 Kingdra ex	Put up to 3 Water Pokémon from your discard pile onto your Bench.
 recycle-to-deck	move own discard shuffle F (upTo n | ...)	4	4	svp-155 Wooper	Shuffle up to 3 Basic Water Energy cards from your discard pile into your deck.
 ling-prevent-self	linger own next prevent	4	5	sv5-87 Golett	During your opponent's next turn, prevent all damage done to this Pokémon by attacks.
@@ -46,7 +46,7 @@ also-each-bench-both	spreadDamage own n; spreadDamage opp n	2	2	sv6-69 Emolga	Th
 ling-bonus-self	linger own after (bonus n)	2	4	sv6-76 Kilowattrel	During your next turn, attacks used by this Pokémon do 120 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).
 may-switch-self	choice (switch own) skip	2	5	sv8pt5-91 Noivern ex	You may switch this Pokémon with 1 of your Benched Pokémon.
 may-search-to-hand	move own deck hand F (upTo n)	1	5	sv5-127 Noctowl	You may search your deck for up to 2 cards and put them into your hand.
-counters-opp-1	choice (counters n) (benchCounters opp n)	1	2	sv10-179 Team Rocket's Venture Bomb	Put 2 damage counters on 1 of your opponent's Pokémon.
+counters-opp-1	ite (countGe (bench opp pokemon) 1) (choice (counters n) (benchCounters opp n)) (counters n)	1	2	sv10-179 Team Rocket's Venture Bomb	Put 2 damage counters on 1 of your opponent's Pokémon.
 heal-active	heal n	1	3	sv6-147 Cook	Heal 70 damage from your Active Pokémon.
 draw-to	drawTo own n	1	6	sv9-149 Iris's Fighting Spirit	Draw cards until you have 6 cards in your hand.
 poison-strength	poisonUp (n-1), after the Poison	1	2	sv10-119 Team Rocket's Nidoking ex	During Pokémon Checkup, put 8 damage counters on that Pokémon instead of 1.

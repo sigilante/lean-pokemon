@@ -170,7 +170,7 @@ def sv8_77 : Card := .pokemon
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
     attacks := [
       { name := "Skill Dive", cost := [.psychic, .colorless], damage := 0,
-        effect := .choice (.damage (.const 5)) (.benchDamage .opp 5),
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 5)) (.benchDamage .opp 5)) (.damage (.const 5)),
         gx := false },
       { name := "Jet Headbutt", cost := [.psychic, .psychic, .colorless], damage := 11,
         effect := .skip,
@@ -514,7 +514,7 @@ def sv8_138 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Nutrients", cost := [.colorless], damage := 0,
-        effect := .choice (.heal 3) (.benchHeal 3),
+        effect := .ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3),
         gx := false },
       { name := "Trip Over", cost := [.grass, .fire], damage := 0,
         effect := .choice (.damage (.const 5)) (.damage (.const 2)),

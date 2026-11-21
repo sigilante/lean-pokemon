@@ -361,7 +361,7 @@ def me55_38 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Targeted Spark", cost := [.lightning], damage := 0,
-        effect := .choice (.damage (.const 2)) (.benchDamage .opp 2),
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 2)) (.benchDamage .opp 2)) (.damage (.const 2)),
         gx := false }] }
 
 /-- Pikachu (me55-39). Records: me55-39. -/
@@ -618,7 +618,7 @@ def me55_81 : Card := .pokemon
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
     attacks := [
       { name := "Strolls So Much", cost := [.colorless], damage := 0,
-        effect := .seq (.choice (.move .own .deck .hand .any (.upTo 1)) .skip) .shuffle,
+        effect := .choice (.seq (.move .own .deck .hand .any (.upTo 1)) .shuffle) .skip,
         gx := false }] }
 
 /-- Groudon (me55-82). Records: me55-82. Caveats: benchMods. -/

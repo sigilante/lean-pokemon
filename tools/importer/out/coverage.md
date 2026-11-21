@@ -5,15 +5,15 @@ Pool: 3402 records, 2193 cards (S9 identities: 2164), 7 Lean files.
 | kind | cards | imported exactly | with caveats | not imported |
 |---|---|---|---|---|
 | Pokémon | 1885 | 783 (41.5%) | 177 (9.4%) | 925 (49.1%) |
-| Item | 99 | 16 (16.2%) | 11 (11.1%) | 72 (72.7%) |
+| Item | 99 | 17 (17.2%) | 10 (10.1%) | 72 (72.7%) |
 | Supporter | 85 | 8 (9.4%) | 5 (5.9%) | 72 (84.7%) |
 | Pokémon Tool | 45 | 0 (0.0%) | 0 (0.0%) | 45 (100.0%) |
 | Stadium | 37 | 0 (0.0%) | 0 (0.0%) | 37 (100.0%) |
 | Basic Energy | 20 | 20 (100.0%) | 0 (0.0%) | 0 (0.0%) |
 | Special Energy | 22 | 0 (0.0%) | 0 (0.0%) | 22 (100.0%) |
-| **all** | **2193** | **827 (37.7%)** | **193 (8.8%)** | **1173 (53.5%)** |
+| **all** | **2193** | **828 (37.8%)** | **192 (8.8%)** | **1173 (53.5%)** |
 
-By records: imported exactly 1232, with caveats 252, not imported 1918 (of 3402).
+By records: imported exactly 1233, with caveats 251, not imported 1918 (of 3402).
 
 Caveats (cards may carry several):
 
@@ -28,7 +28,6 @@ Caveats (cards may carry several):
 | `mayFail` | 4 | an attach or Bench placement from a public zone (discard pile) may do nothing in the model, a superset of the printed 'if you can' (Known gaps) |
 | `searchAny` | 3 | a deck search for 'a card' (any card) may find nothing in the model |
 | `poisonStrength` | 1 | a stronger Poison ('N damage counters instead of 1') is written as Poison plus poisonUp (N-1); the Known gaps list numbered Poison variants as absent |
-| `koBetweenSteps` | 1 | a Trainer sentence written as several primitives gets a Knock Out check between them (Known gaps, TRun) |
 
 Blocking mechanisms of the 1173 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
 

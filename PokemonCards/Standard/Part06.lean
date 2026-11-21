@@ -473,7 +473,7 @@ def me2pt5_139 : Card := .pokemon
     resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
     attacks := [
       { name := "Bone Shot", cost := [.colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 5)) (.benchDamage .opp 5),
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 5)) (.benchDamage .opp 5)) (.damage (.const 5)),
         gx := false },
       { name := "Vulture Claw", cost := [.darkness, .colorless, .colorless], damage := 16,
         effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
@@ -627,7 +627,7 @@ def me2pt5_172 : Card := .pokemon
     resistance := none, ruleBox := .megaEx, tera := false,
     attacks := [
       { name := "Kaleidowaltz", cost := [.colorless], damage := 0,
-        effect := .seq (.choice .skip (.choice (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.choice (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)))))))) .shuffle,
+        effect := .choice .skip (.choice (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle) (.choice (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle)) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle))))),
         gx := false },
       { name := "Ear Force", cost := [.colorless, .colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 2) (.count (.energy .opp .energy) 8)),
@@ -866,7 +866,7 @@ def me3_35 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Sweet Scent", cost := [.colorless], damage := 0,
-        effect := .choice (.heal 3) (.benchHeal 3),
+        effect := .ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3),
         gx := false },
       { name := "Ram", cost := [.psychic], damage := 1,
         effect := .skip,
@@ -1017,7 +1017,7 @@ def me3_74 : Card := .trainer "Hole-Digging Shovel" .item
 
 /-- Poké Ball (me3-80). Records: me3-80. -/
 def me3_80 : Card := .trainer "Poké Ball" .item
-    (.seq (.choice (.move .own .deck .hand .pokemon (.upTo 1)) .skip) .shuffle)
+    (.choice (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle) .skip)
 
 /-- Pokémon Catcher (me3-82). Records: me3-82. -/
 def me3_82 : Card := .trainer "Pokémon Catcher" .item
@@ -1025,7 +1025,7 @@ def me3_82 : Card := .trainer "Pokémon Catcher" .item
 
 /-- Potion (me3-83). Records: me3-83. -/
 def me3_83 : Card := .trainer "Potion" .item
-    (.choice (.heal 3) (.benchHeal 3))
+    (.ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3))
 
 /-- Tarragon (me3-85). Records: me3-85, me3-116. Caveats: upTo0. -/
 def me3_85 : Card := .trainer "Tarragon" .supporter

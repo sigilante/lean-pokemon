@@ -630,7 +630,7 @@ def sv5_51 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Random Spark", cost := [.lightning], damage := 0,
-        effect := .choice (.damage (.const 1)) (.benchDamage .opp 1),
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 1)) (.benchDamage .opp 1)) (.damage (.const 1)),
         gx := false }] }
 
 /-- Electabuzz (sv5-53). Records: sv5-53. -/
@@ -1493,7 +1493,7 @@ def sv6_58 : Card := .pokemon
         effect := .skip,
         gx := false },
       { name := "Spit Shot", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .seq (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.discardEnergy .own .active .energy .all),
+        effect := .seq (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))) (.discardEnergy .own .active .energy .all),
         gx := false }] }
 
 /-- Finizen (sv6-59). Records: sv6-59. Caveats: perPokemon. -/

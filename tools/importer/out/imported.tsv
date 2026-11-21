@@ -547,7 +547,7 @@ sv10-160	Squawkabilly	Pokémon	imported exactly		sv10-160	sv10_160
 sv10-164	Energy Recycler	Item	imported with caveats	upTo0	sv10-164 me3-108	sv10_164
 sv10-168	Sacred Ash	Item	imported with caveats	upTo0	sv10-168 me3-115	sv10_168
 sv10-176	Team Rocket's Petrel	Supporter	imported exactly		sv10-176 sv10-226 me2pt5-207	sv10_176
-sv10-179	Team Rocket's Venture Bomb	Item	imported with caveats	koBetweenSteps	sv10-179	sv10_179
+sv10-179	Team Rocket's Venture Bomb	Item	imported exactly		sv10-179	sv10_179
 rsv10pt5-1	Sewaddle	Pokémon	imported exactly		rsv10pt5-1 rsv10pt5-87	rsv10pt5_1
 rsv10pt5-4	Cottonee	Pokémon	imported exactly		rsv10pt5-4 rsv10pt5-90	rsv10pt5_4
 rsv10pt5-6	Deerling	Pokémon	imported exactly		rsv10pt5-6 rsv10pt5-91	rsv10pt5_6

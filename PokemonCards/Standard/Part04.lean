@@ -429,7 +429,7 @@ def sv10_22 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Nutrients", cost := [.grass], damage := 0,
-        effect := .choice (.heal 4) (.benchHeal 4),
+        effect := .ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 4) (.benchHeal 4)) (.heal 4),
         gx := false },
       { name := "Tackle", cost := [.colorless, .colorless], damage := 4,
         effect := .skip,
@@ -1117,9 +1117,9 @@ def sv10_168 : Card := .trainer "Sacred Ash" .item
 def sv10_176 : Card := .trainer "Team Rocket's Petrel" .supporter
     (.seq (.move .own .deck .hand .trainer (.upTo 1)) .shuffle)
 
-/-- Team Rocket's Venture Bomb (sv10-179). Records: sv10-179. Caveats: koBetweenSteps. -/
+/-- Team Rocket's Venture Bomb (sv10-179). Records: sv10-179. -/
 def sv10_179 : Card := .trainer "Team Rocket's Venture Bomb" .item
-    (.choice (.choice (.counters 2) (.benchCounters .opp 2)) (.selfDamage 2))
+    (.choice (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 2) (.benchCounters .opp 2)) (.counters 2)) (.selfDamage 2))
 
 /-- Sewaddle (rsv10pt5-1). Records: rsv10pt5-1, rsv10pt5-87. -/
 def rsv10pt5_1 : Card := .pokemon

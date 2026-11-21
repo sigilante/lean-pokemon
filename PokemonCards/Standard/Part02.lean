@@ -71,7 +71,7 @@ def sv6_86 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Bind Wound", cost := [.colorless], damage := 0,
-        effect := .choice (.heal 3) (.benchHeal 3),
+        effect := .ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3),
         gx := false },
       { name := "Fairy Wind", cost := [.psychic], damage := 1,
         effect := .skip,
@@ -957,7 +957,7 @@ def sv7_56 : Card := .pokemon
     resistance := none, ruleBox := .none, tera := false,
     attacks := [
       { name := "Targeted Spark", cost := [.lightning], damage := 0,
-        effect := .choice (.damage (.const 2)) (.benchDamage .opp 2),
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 2)) (.benchDamage .opp 2)) (.damage (.const 2)),
         gx := false }] }
 
 /-- Slowpoke (sv7-57). Records: sv7-57. -/
@@ -1658,7 +1658,7 @@ def sv8_40 : Card := .pokemon
         effect := .skip,
         gx := false },
       { name := "Aqua Dive", cost := [.water, .colorless], damage := 0,
-        effect := .choice (.damage (.const 5)) (.benchDamage .opp 5),
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 5)) (.benchDamage .opp 5)) (.damage (.const 5)),
         gx := false }] }
 
 /-- Feebas (sv8-41). Records: sv8-41, sv8-198. -/

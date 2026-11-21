@@ -351,7 +351,7 @@ def _(m, ctx):
 
 
 @rule('damage-to-1-opp', r"This attack does (\d+) damage to 1 of your opponent's Pokémon\.", 'A',
-      'choice (damage (const n)) (benchDamage opp n)')
+      'ite (countGe (bench opp pokemon) 1) (choice (damage (const n)) (benchDamage opp n)) (damage (const n))')
 def _(m, ctx):
     return Dmg('target1', counters(m.group(1)), cavs={'benchMods'})
 
@@ -463,10 +463,18 @@ def _(m, ctx):
     return Eff(('heal', counters(m.group(1))))
 
 
-@rule('heal-1-of-your', r'Heal (\d+) damage from 1 of your Pokémon\.', 'B', 'choice (heal n) (benchHeal n)')
+def one_of(w, active, bench):
+    """'1 of the w player's Pokémon': the Active one or a Benched one, and the Active one when
+    there is no Benched Pokémon (`benchHeal`, `benchDamage` and `benchCounters` do nothing on an
+    empty Bench, so a bare `choice` would also allow doing nothing)."""
+    return ite(('countGe', ('bench', w, ('pokemon',)), 1), choice(active, bench), active)
+
+
+@rule('heal-1-of-your', r'Heal (\d+) damage from 1 of your Pokémon\.', 'B',
+      'ite (countGe (bench own pokemon) 1) (choice (heal n) (benchHeal n)) (heal n)')
 def _(m, ctx):
     n = counters(m.group(1))
-    return Eff(choice(('heal', n), ('benchHeal', n)))
+    return Eff(one_of(OWN, ('heal', n), ('benchHeal', n)))
 
 
 @rule('heal-1-bench', r'Heal (\d+) damage from 1 of your Benched Pokémon\.', 'B', 'benchHeal n')
@@ -503,10 +511,10 @@ def _(m, ctx):
 
 
 @rule('counters-opp-1', r"Put (\d+) damage counters? on 1 of your opponent's Pokémon\.", 'B',
-      'choice (counters n) (benchCounters opp n)')
+      'ite (countGe (bench opp pokemon) 1) (choice (counters n) (benchCounters opp n)) (counters n)')
 def _(m, ctx):
     n = num(m.group(1))
-    return Eff(choice(('counters', n), ('benchCounters', OPP, n)))
+    return Eff(one_of(OPP, ('counters', n), ('benchCounters', OPP, n)))
 
 
 @rule('counters-opp-each-bench', r"Put (\d+) damage counters? on each of your opponent's Benched Pokémon\.", 'B',
@@ -867,6 +875,15 @@ def match_rule(s, ctx):
     raise Refuse('unhandled sentence', s)
 
 
+def searches_deck(e):
+    """The effect takes cards from the deck (a search, a Bench placement or an attachment)."""
+    if e[0] == 'move' and e[2] == ('deck',):
+        return True
+    if e[0] in ('putBench', 'attach') and e[2] == ('deck',):
+        return True
+    return any(searches_deck(x) for x in T.subs(e))
+
+
 class Parser:
     """Walks the sentences of one text (an attack's or a Trainer's), collecting items, and refusals
     for the sentences it cannot translate."""
@@ -933,6 +950,13 @@ class Parser:
             self.used.append(('flip-a-coin', s))
             H = self.clause(heads) if heads else None
             Tl = self.clause(tails) if tails else None
+            # "If heads, search your deck ... Then, shuffle your deck.": the shuffle belongs to the
+            # heads branch (on tails the deck is left alone)
+            if (isinstance(H, Eff) and Tl is None and j < len(S) and S[j] == 'Then, shuffle your deck.'
+                    and searches_deck(H.e)):
+                self.used.append(('shuffle', S[j]))
+                H = Eff(seq(H.e, ('shuffle',)), H.cavs)
+                j += 1
             self.flip(H, Tl, i)
             return j
         m = re.match(r'^Flip (\d+|two|three|four) coins\.$', s)
@@ -949,12 +973,19 @@ class Parser:
                 if not isinstance(X, Eff) or not T.hit_free(X.e):
                     raise Refuse('coin-count effect not expressible', nxt)
                 self.used.append(('flip-n-coins-each', s + ' ' + nxt))
-                alts = [seq(*[X.e] * h) for h in range(k + 1)]
+                j = i + 2
+                tail = []
+                if j < len(S) and S[j] == 'Then, shuffle your deck.' and searches_deck(X.e):
+                    # the shuffle follows the searches; with no heads there was no search
+                    self.used.append(('shuffle', S[j]))
+                    tail = [('shuffle',)]
+                    j += 1
+                alts = [SKIP] + [seq(*([X.e] * h + tail)) for h in range(1, k + 1)]
                 e = alts[-1]
                 for a in reversed(alts[:-1]):
                     e = choice(a, e)
                 self.items.append((i, Eff(e, X.cavs)))
-                return i + 2
+                return j
             raise Refuse('coin flips not expressible', s + ' ' + nxt)
         if s == 'Flip a coin until you get tails.':
             m2 = re.match(r'^This attack does (\d+) (more )?damage for each heads\.$', nxt)
@@ -1083,7 +1114,7 @@ def to_effect(tree, drain=False):
         if drain:
             raise Refuse('drain with damage to a chosen Pokémon')
         n = tree[1]
-        return choice(('damage', ('const', n)), ('benchDamage', OPP, n))
+        return one_of(OPP, ('damage', ('const', n)), ('benchDamage', OPP, n))
     if tree[0] == 'ite':
         return ite(tree[1], to_effect(tree[2], drain), to_effect(tree[3], drain))
     if tree[0] == 'choice':
@@ -1345,13 +1376,35 @@ def translate_trainer(c, res):
     # self-recycling and self-counting (the card is in the discard pile while it resolves)
     if any(T.filter_eval(f, term) for f in T.rec_filters(e)) or reads_own_discard(e, term):
         res['caveats'].add('selfInDiscard')
-    ps = T.prims(e)
-    if any(x[0] in ('counters', 'benchCounters', 'spreadCounters', 'selfDamage') for x in ps) and len(ps) > 1:
+    if counters_then_more(e):
         res['caveats'].add('koBetweenSteps')
     res['caveats'].discard('_needsPoison')
     res['term'] = term
     res['ok'] = True
     return res
+
+
+PLACERS = ('counters', 'benchCounters', 'spreadCounters', 'selfDamage')
+
+
+def counters_then_more(e):
+    """Some line of resolution places damage counters and then resolves another primitive (a Knock
+    Out check falls between them in `TRun`)."""
+    def lines(x):
+        if x[0] == 'seq':
+            return [a + b for a in lines(x[1]) for b in lines(x[2])]
+        if x[0] in ('choice',):
+            return lines(x[1]) + lines(x[2])
+        if x[0] == 'ite':
+            return lines(x[2]) + lines(x[3])
+        if x[0] == 'iter':
+            return [p * 2 for p in lines(x[1])]
+        return [[x]]
+    for ln in lines(e):
+        for j, x in enumerate(ln):
+            if x[0] in PLACERS and any(y != SKIP for y in ln[j + 1:]):
+                return True
+    return False
 
 
 def reads_own_discard(e, term):
