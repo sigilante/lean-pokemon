@@ -27,7 +27,7 @@ concern the unclamped states only.
 namespace Pokemon.Infinite
 
 /-- A Basic Pokémon with 50 HP (five counters). -/
-def mon : PokemonCard := ⟨"Mon", .basic, none, 5, .grass, [], 1, none, none⟩
+def mon : PokemonCard := ⟨"Mon", .basic, none, 5, .grass, [], 1, none, none, .none, false⟩
 
 /-- Poison the opponent's Active Pokémon, then raise its Poison strength any number of times. -/
 def eff : Effect := .seq (.inflict .poisoned) (.iter (.poisonUp 1))
@@ -94,7 +94,7 @@ theorem reach_st (n : Nat) : Reach start (st n) := by
       (trun_iter_st n 0)
   rw [Nat.zero_add] at hr
   exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl
-    start_settled hr rfl rfl rfl)
+    start_settled hr rfl rfl rfl rfl)
 
 /-- Poison strength on the opponent's Active Pokémon. -/
 def oppPoisonUp (g : GameState) : Nat :=
@@ -139,7 +139,8 @@ theorem endTurn_pending_ko_reachable :
       ∃ g g', Reach g₀ g ∧ DamageBounded g ∧ g.between = false ∧ Move g g' ∧
         g'.curIsFirst ≠ g.curIsFirst ∧ g'.between = true ∧ ¬ DamageBounded g' := by
   refine ⟨start, start_wellFormed, start_damageBounded, st 5, _, reach_st 5,
-    st_damageBounded 5, rfl, .endTurn false false false false false false rfl rfl (st_damageBounded 5) rfl,
+    st_damageBounded 5, rfl, .endTurn false false false false false false rfl rfl (st_damageBounded 5) rfl
+      .nil .nil,
     by decide, rfl, fun hk => ?_⟩
   have := hk _ (Or.inl rfl)
   exact absurd this (by decide)

@@ -9,7 +9,7 @@ of a state, not of the proof, and proves finiteness under it.
 
 * `GameState.BoundedStores B g`: in both players' stores, every slot's damage bonus and damage
   reduction is at most `B` (flags are unrestricted; they have two values each).
-* `Reach.xclamp_mem_bounded`: from a well-formed start `g₀`, for every `B` there is one finite
+* `Reach.xclamp_mem_bounded`: from any start `g₀` (well-formed or not), for every `B` there is one finite
   list, depending only on `g₀` and `B`, that contains the `xclamp` of every reachable state
   satisfying `BoundedStores B`.
 * `Reach.xfinite_bounded`: that list, together with `Reach.xclamp_bisim`: the kernel of
@@ -59,20 +59,20 @@ def Enum.xstates (C : List Card) (B : Nat) : List GameState :=
     { s with cur := { s.cur with mods := t₁ }, opp := { s.opp with mods := t₂ } }
 
 /-- **The exact-store clamps of reachable states with bounded stores lie in a finite list.**
-From a well-formed start state `g₀`, for every `B` there is a finite list `L`, chosen before
+From any start state `g₀` (well-formed or not), for every `B` there is a finite list `L`, chosen before
 the reachable state (it depends only on `g₀` and `B`), containing `g.xclamp` for every state
 `g` reachable from `g₀` that satisfies `BoundedStores B`. -/
-theorem Reach.xclamp_mem_bounded {g₀ : GameState} (hw : WellFormed g₀) (B : Nat) :
+theorem Reach.xclamp_mem_bounded {g₀ : GameState} (B : Nat) :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp ∈ L := by
   refine ⟨xstates g₀.allCards B, fun g h hb => ?_⟩
   have hm : g.clamp (bound g₀.allCards) ∈ states g₀.allCards :=
-    mem_states (by rw [GameState.allCards_clamp]; exact h.perm) (h.clamp_bounded hw)
+    mem_states (by rw [GameState.allCards_clamp]; exact h.perm) h.clamp_bounded
   rw [GameState.xclamp_eq (bound g₀.allCards)]
   simp only [xstates, List.mem_flatMap, List.mem_map]
   exact ⟨_, hm, g.cur.mods, mem_stores hb.1, g.opp.mods, mem_stores hb.2, rfl⟩
 
-/-- **Finiteness on the bounded part.** Let `g₀` be a well-formed start state and `B` any
-bound. Then
+/-- **Finiteness on the bounded part.** Let `g₀` be any start state (well-formed or not) and `B`
+any bound. Then
 
 * the `xclamp`s of the states reachable from `g₀` that satisfy `BoundedStores B` lie in one
   finite list `L` (depending only on `g₀` and `B`); and
@@ -88,13 +88,13 @@ that may leave that set; it is not a finite quotient of the reachable states. Th
 finite quotient is `Faithful.xfinite`, under a deck condition that keeps every reachable state
 in the bounded part. As for `Reach.finite`, the list is not computed and the quotient's moves
 are not shown computable. -/
-theorem Reach.xfinite_bounded {g₀ : GameState} (hw : WellFormed g₀) (B : Nat) :
+theorem Reach.xfinite_bounded {g₀ : GameState} (B : Nat) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp ∈ L) ∧
       ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
         (g₁.BoundedStores B → g₂.BoundedStores B) ∧
         (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
         (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) :=
-  ⟨Reach.xclamp_mem_bounded hw B, fun _ _ h hc =>
+  ⟨Reach.xclamp_mem_bounded B, fun _ _ h hc =>
     ⟨fun hb => hb.of_xclamp hc, (Reach.xclamp_bisim h hc).1, (Reach.xclamp_bisim h hc).2⟩⟩
 
 end Pokemon

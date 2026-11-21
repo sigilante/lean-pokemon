@@ -9,8 +9,8 @@ modifiers add up without limit); with those generalisations the model does have 
 stores, and the finiteness results below need a hypothesis on the deck: tame decks
 (`Reach.finite`) or faithful decks (`Faithful.xfinite`); neither class contains the other.
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 23 constructors) of nineteen
-primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 29 constructors) of
+twenty-five primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
@@ -55,7 +55,27 @@ English rulebook's; the immediate Knock Outs at other times come from the Pokém
 problem recorded in the Known gaps); and Pokémon Checkup between turns (Poison, Burn,
 Sleep, Paralysis, then Knock Outs). The sources of the turn rules, and where the 2023
 rulebook, the later sources and the model differ, are listed at the top of
-`Pokemon/Rules.lean`. For that model it proves:
+`Pokemon/Rules.lean`. Milestone M3 (the Bench) added: damage counters on one chosen or on every
+Benched Pokémon of either player (`benchCounters`, `spreadCounters`), healing one of the player's
+own Benched Pokémon (`benchHeal`), attack damage to Benched Pokémon (`benchDamage`,
+`spreadDamage`: a printed amount with no Weakness, Resistance or other modifier, and none on a
+Tera Pokémon on the Bench; dropping the defender's reduction and prevention does more damage to
+the Bench than the rulebook, and dropping the attacker's bonus rests on a claim about printed
+bonuses that the rulebook's own example, "this Pokémon's attacks do 40 more damage", does not
+support, so the model's Bench damage is not a superset of the printed outcomes), switching the
+player's own or the opponent's Active Pokémon with a Benched one (`switch`, which cures the
+Pokémon sent to the Bench; inside an attack nothing after a `switch .own` may act on the
+player's Active Pokémon, `Effect.switchSafe`, so the attacker stays the attacker,
+`Attack.attacker_at_hit`; printed switch-out attacks do their damage first), Energy attachment
+and evolution on the Bench, Char counters acting on Benched Pokémon between turns, Knock Outs of
+any Pokémon in play (a Benched one goes to the discard pile with no promotion; several pending
+Knock Outs are all taken, in any order, before play continues, since no rule fixing the order was
+found; the order can decide the winner: one attack that leaves both Active Pokémon pending with
+each player on their last Prize card has two orders with opposite winners, where the rulebook
+would apply its simultaneous-win rule, which the model lacks), and
+Prize values by rule box (1; 2 for Pokémon ex; 3 for Mega Evolution Pokémon ex), taking the top
+Prize cards and winning when the last one is taken in the middle of a multi-Prize Knock Out
+(witnesses in `Pokemon/Bench.lean`). The Bench holds at most 5 Pokémon. For that model it proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects
   included (`TRun.perm`);
@@ -74,21 +94,27 @@ rulebook, the later sources and the model differ, are listed at the top of
   behaviour, since the printed card places all its counters at once); an Item takes the last Prize card in mid-effect and the
   rest of it is not resolved (`Trainer.winMidEffect_reachable`);
 * from a well-formed start (`WellFormed`: both players have Prizes while there is no winner;
-  Benched Pokémon are below HP with no Special Condition), no reachable state without a winner
-  is stuck (`Reach.progress`), and if a Knock Out is pending, a move that Knocks Out an Active
-  Pokémon and takes a Prize card is legal (`Reach.knockOut_of_pending`); a move never changes
-  an Active Pokémon at or above its HP except by Knocking it Out (`Move.pending_untouched`);
+  Benched Pokémon have no Special Condition; since M3 a Benched Pokémon may be at or above its HP,
+  which is a pending Knock Out, and `Settled` excludes it before every move but the Knock Out
+  moves), no reachable state without a winner is stuck (`Reach.progress`), and if a Knock Out is
+  pending, a Knock Out move is legal that Knocks Out a Pokémon in play (Active or Benched, of
+  either player) at or above its HP, and the taker's Prize list shrinks by exactly that
+  Pokémon's Prize count, or by all that are left, which is at least one card
+  (`Reach.knockOut_of_pending`; with every Prize count 1 this is the earlier statement "exactly
+  one"); a move never changes an Active Pokémon at or above its HP
+  except by Knocking it Out (`Move.pending_untouched`);
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at the Pokémon's HP the
-  damage and the Poison strength on both Active Pokémon, and cap every damage bonus and
+  damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
+  every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and
   reduction at `2 · bound` (`bound` is a constant computed from the cards: more than every
   printed HP, every Resistance and every test constant; the factor 2 absorbs Resistance, which is
-  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From a well-formed start whose cards are *tame* (no damage reduction, no
+  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no damage reduction, no
   `drain`) and with no reduction in effect (`GameState.Fit` at `bound`, which
   `GameState.fit_bound` gives), the clamps of all reachable states lie in one finite list, and
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
   `Reach.clamp_sim`), so the excesses the clamp removes cannot be observed by play. This holds
   with the Trainer timing above. The list half alone (`Reach.clamp_mem`) holds from every
-  well-formed start, but without tameness it says nothing about play: for every cap `k ≥ 3`
+  start, but without tameness it says nothing about play: for every cap `k ≥ 3`
   there is a deck with a damage reduction for which the clamp is not a simulation
   (`Lingering.reduce_breaks_clamp`), and for every cap `k ≥ 2` a deck with `drain`
   (`Lingering.drain_breaks_clamp`); with rest-of-game modifiers, a reduction on one player and a
@@ -163,14 +189,14 @@ damage…"), so printed decks are not all tame. The model over-approximates modi
 with reductions such as Iron Defender's.
 
 Exact stores. Both clamp counterexamples reach two states whose stores differ only above the
-cap. The clamp `GameState.xclamp` (`Pokemon/Exact.lean`) caps damage and Poison strength on both
-Active Pokémon at HP and keeps both stores exact, so those states are not identified. Every
+cap. The clamp `GameState.xclamp` (`Pokemon/Exact.lean`) caps damage and Poison strength on every
+Pokémon in play at HP and keeps both stores exact, so those states are not identified. Every
 reader of the stores sees equal values in two states with equal `xclamp`: the damage step
 computes the same `dealtBy` (the same amount, Weakness, Resistance and stores; `drain` heals the
 attacker by that amount), locks and prevention are flags in the stores, and `endTurn` shifts
 equal stores; damage is read by tests, by `scale`, by the damage step's amount, by Checkup only
 in states with no pending Knock Out, and by the Knock Out test at HP. Inside an attack damage is
-kept exact on both Active Pokémon (every attack starts with no pending Knock Out, where `xclamp`
+kept exact on every Pokémon in play (every attack starts with no pending Knock Out, where `xclamp`
 determines the damage; before milestone M4 the opponent's was capped, which a damage step that
 reads it and `drain` that writes the amount to the attacker would break); damage done needs no
 cap, however large in either direction, since it is computed from equal values. What the exact clamp gives up is boundedness of the stores, and with it
@@ -181,8 +207,8 @@ finiteness; the deck condition `Faithful` buys it back:
   hypothesis on the cards; it holds for all pairs of states with equal `xclamp`, reachable or
   not (the reachability premise of `Reach.xclamp_bisim` is vacuous: take the start to be the
   state itself);
-* **finiteness on bounded stores** (`Reach.xfinite_bounded`, `Pokemon/Bounded.lean`): from a
-  well-formed start, for every `B` one finite list (depending only on the start and `B`)
+* **finiteness on bounded stores** (`Reach.xfinite_bounded`, `Pokemon/Bounded.lean`): from
+  any start, for every `B` one finite list (depending only on the start and `B`)
   contains the `xclamp` of every reachable state satisfying `BoundedStores B` (every slot's
   bonus and reduction at most `B`). The bounded part is not closed under moves, so on its own
   this gives a finite set of classes and a bisimulation that may leave that set, not a finite
@@ -192,7 +218,7 @@ finiteness; the deck condition `Faithful` buys it back:
   only GX attacks write rest-of-game bonuses or reductions (`GXOnly`). Then every reachable state
   satisfies `BoundedStores (storeBound g₀)` (`Faithful.reach_boundedStores`), where `storeBound`
   adds the start stores, the amounts of every Trainer card in the game, and three times the
-  largest amount of one attack; so from a well-formed faithful start the `xclamp`s of all
+  largest amount of one attack; so from any faithful start (well-formed or not) the `xclamp`s of all
   reachable states lie in one finite list, with the two-way bisimulation. The bound rests on
   three facts of the model: no card ever leaves a discard pile (no effect or move returns one),
   so each Item and Supporter is played at most once per game, with no assumption about
@@ -246,7 +272,10 @@ would reopen it.
 For tame decks, effects that read damage do not break finiteness, but they change why it holds. Inside an
 attack's effect the clamp is not a simulation: a test against 6 counters separates 5 from 6
 counters on a 5-HP Pokémon (`Reads.run_clamp_not_sim`). Attack effects are instead simulated
-with the player's own damage exact and the opponent's capped at `bound` (`Run.cap_sim`), and
+with the damage on the player's own Pokémon exact and on the opponent's capped at `bound`
+(`Run.cap_sim`; since M3 this covers the Benches: the opponent's Bench is capped like the
+opponent's Active Pokémon, because a switch inside an attack moves a Pokémon between the two,
+and the only reader of a Benched Pokémon's damage, `benchHeal`, reads the player's own), and
 every move that resolves an effect starts from a state with no Pokémon at or above its HP,
 where equal clamps mean equal damage. Inside a Trainer effect the clamp is a simulation
 (`TRun.clamp_sim`), since every step of it starts in such a state. The damage cap at move
@@ -276,9 +305,8 @@ and the model's departures from the rulebook are listed at the top of `Pokemon/R
 For Knock Out timing inside Trainer effects the remaining simplifications are these: Knock
 Outs are checked after each primitive of the model's effect language (a printed sentence
 written as several primitives gets a check between them); the replacement is promoted at once,
-before the next step (no ruling on its timing was found); the Prize card is the top one; and
-an effect that damages several Pokémon at once is not expressible, so the order of
-simultaneous Knock Outs does not arise inside a Trainer effect. Up to these, the model's
+before the next step (no ruling on its timing was found); the Prize cards are the top ones; and
+several Knock Outs caused by one step (`spreadCounters`) are taken in any order. Up to these, the model's
 Trainer timing is that of the Advanced Player's Rulebook (Pokémon Asia, 2025; the English
 rulebook states no rule for it, see above) (an earlier version resolved a Trainer effect as a whole and
 could read and heal damage above HP; that defect is gone). Two of these simplifications can

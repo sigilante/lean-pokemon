@@ -304,6 +304,41 @@ inductive Effect where
   /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
   | drain (a : Amt)
+  /-- place `n` damage counters on one of the `w` player's Benched Pokémon, chosen when the effect
+  resolves ("Put 2 damage counters on 1 of your opponent's Benched Pokémon"); nothing if that
+  player has no Benched Pokémon. Damage counters, not damage: no Weakness, Resistance or other
+  modifier applies (rulebook 2023 p. 20, step 1). Milestone M3 -/
+  | benchCounters (w : Whose) (n : Nat)
+  /-- place `n` damage counters on each of the `w` player's Benched Pokémon -/
+  | spreadCounters (w : Whose) (n : Nat)
+  /-- remove up to `n` damage counters from one of the player's own Benched Pokémon, chosen when
+  the effect resolves ("Heal 30 damage from 1 of your Benched Pokémon"); nothing if the player has
+  no Benched Pokémon -/
+  | benchHeal (n : Nat)
+  /-- the `w` player's Active Pokémon switches with one of their Benched Pokémon, chosen when the
+  effect resolves (`own`: "Switch your Active Pokémon with 1 of your Benched Pokémon", Switch;
+  `opp`: "Switch in 1 of your opponent's Benched Pokémon to the Active Spot", Boss's Orders, or
+  "your opponent switches their Active Pokémon with 1 of their Benched Pokémon"; the relation
+  covers whoever chooses); nothing if that player has no Benched Pokémon. The Pokémon that goes
+  to the Bench recovers from all Special Conditions (rulebook 2023 p. 12, p. 16). In an attack,
+  nothing after `switch .own` may act on the player's Active Pokémon (`Effect.switchSafe`, part of
+  `Attack.wf`): the attacker stays the attacker. Milestone M3 -/
+  | switch (w : Whose)
+  /-- attack damage `n` to one of the `w` player's Benched Pokémon, chosen when the effect
+  resolves ("This attack also does 30 damage to 1 of your opponent's Benched Pokémon"); nothing if
+  that player has no Benched Pokémon. Damage to a Benched Pokémon is not affected by Weakness or
+  Resistance ("Don't apply Weakness and Resistance for Benched Pokémon!", rulebook 2023 p. 14);
+  in the model no other modifier applies either: no bonus (a departure: the rulebook's example
+  bonus, "this Pokémon's attacks do 40 more damage", p. 20, names no target), and no reduction
+  or prevention (a departure the other way: the model's modifiers protect a player's Active
+  Pokémon only; Known gaps), and a Tera Pokémon on the Bench takes none (`InPlay.hitBench`). The amount is a printed number. Not a damage step of the Active
+  Pokémon (`hitFree`, `oneHit` ignore it); only attacks may use it (`benchHitFree`, required by
+  `Move.item` and `Move.supporter`). Milestone M3 -/
+  | benchDamage (w : Whose) (n : Nat)
+  /-- attack damage `n` to each of the `w` player's Benched Pokémon ("This attack also does 10
+  damage to each of your opponent's Benched Pokémon"; with `w = own`, "to each of your Benched
+  Pokémon"), as `benchDamage` -/
+  | spreadDamage (w : Whose) (n : Nat)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -333,6 +368,18 @@ def Effect.hitFree : Effect → Bool
   | .iter a => a.hitFree
   | _ => true
 
+/-- No attack damage to a Benched Pokémon anywhere in the effect (`benchDamage`,
+`spreadDamage`): Item and Supporter effects must satisfy it, as they must `hitFree` (printed
+Trainer cards place damage counters, not attack damage). -/
+def Effect.benchHitFree : Effect → Bool
+  | .benchDamage _ _ => false
+  | .spreadDamage _ _ => false
+  | .ite _ a b => a.benchHitFree && b.benchHitFree
+  | .seq a b => a.benchHitFree && b.benchHitFree
+  | .choice a b => a.benchHitFree && b.benchHitFree
+  | .iter a => a.benchHitFree
+  | _ => true
+
 /-- At most one damage step on each line of resolution: the branches of `ite` and `choice` may
 each have one, a `seq` may have one in either part but not both, and nothing under `iter` may
 have one. So resolving the effect makes the damage calculation at most once. -/
@@ -343,6 +390,80 @@ def Effect.oneHit : Effect → Bool
   | .iter a => a.hitFree
   | _ => true
 
+/-- The test reads the player's own Active Pokémon. -/
+def Test.onOwn : Test → Bool
+  | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
+  | _ => false
+
+/-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
+`selfDamage`, `healAll`, `scale .own`, `switch .own`, no test on the player's own Active Pokémon,
+and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
+their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
+may choose any of the player's Pokémon in play, Active or Benched. -/
+def Effect.ownFree : Effect → Bool
+  | .heal _ => false
+  | .cure => false
+  | .selfDamage _ => false
+  | .healAll => false
+  | .damage _ => false
+  | .drain _ => false
+  | .scale .own _ => false
+  | .switch .own => false
+  | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
+  | .seq a b => a.ownFree && b.ownFree
+  | .choice a b => a.ownFree && b.ownFree
+  | .iter a => a.ownFree
+  | _ => true
+
+/-- The effect may switch the player's own Active Pokémon (`switch .own` somewhere in it). -/
+def Effect.switchesOwn : Effect → Bool
+  | .switch .own => true
+  | .ite _ a b => a.switchesOwn || b.switchesOwn
+  | .seq a b => a.switchesOwn || b.switchesOwn
+  | .choice a b => a.switchesOwn || b.switchesOwn
+  | .iter a => a.switchesOwn
+  | _ => false
+
+/-- Nothing after a `switch .own` on the same line of resolution reads or writes the player's own
+Active Pokémon (`ownFree`), and no `switch .own` is under `iter`. In the printed game the
+attacking Pokémon stays "this Pokémon" for the whole attack, also after it has been switched to
+the Bench; in the model the effects on the player's Active Pokémon act on whichever Pokémon is
+Active, so an attack could otherwise switch first and then do damage of the new Active Pokémon's
+type, or heal it. Printed attacks that switch the attacker out (132 distinct texts in the card
+data, "Switch this Pokémon with 1 of your Benched Pokémon") do their damage first and switch
+after it (rulebook 2023 p. 20, step F); what some of them do after the switch, to "this Pokémon"
+on the Bench (attach Energy, evolve it, Return Charge sv8-68, Valiant Evolution sv3-60) or to the
+opponent (switch, a lingering modifier), is not an effect on the player's Active Pokémon. -/
+def Effect.switchSafe : Effect → Bool
+  | .ite _ a b => a.switchSafe && b.switchSafe
+  | .seq a b => a.switchSafe && b.switchSafe && (!a.switchesOwn || b.ownFree)
+  | .choice a b => a.switchSafe && b.switchSafe
+  | .iter a => a.switchSafe && !a.switchesOwn
+  | _ => true
+
+theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = false →
+    e.switchSafe = true
+  | .ite _ a b, h => by
+      simp only [Effect.switchesOwn, Bool.or_eq_false_iff] at h
+      simp only [Effect.switchSafe, switchSafe_of_switchesOwn h.1, switchSafe_of_switchesOwn h.2,
+        Bool.and_self]
+  | .seq a b, h => by
+      simp only [Effect.switchesOwn, Bool.or_eq_false_iff] at h
+      simp only [Effect.switchSafe, switchSafe_of_switchesOwn h.1, switchSafe_of_switchesOwn h.2,
+        h.1, Bool.not_false, Bool.true_or, Bool.and_self]
+  | .choice a b, h => by
+      simp only [Effect.switchesOwn, Bool.or_eq_false_iff] at h
+      simp only [Effect.switchSafe, switchSafe_of_switchesOwn h.1, switchSafe_of_switchesOwn h.2,
+        Bool.and_self]
+  | .iter a, h => by
+      simp only [Effect.switchesOwn] at h
+      simp only [Effect.switchSafe, switchSafe_of_switchesOwn h, h, Bool.not_false, Bool.and_self]
+  | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
+  | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
+  | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
+  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _ => rfl
+
 /-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
 damage, then place damage counters, and then do all other effects"). An attack with printed base
 damage `n ≠ 0` and no damage step in its text does its damage first, then its effect. An attack
@@ -352,10 +473,12 @@ depends on a coin flip or a choice made in the same effect, or effects before th
 def Attack.script (atk : Attack) : Effect :=
   if atk.damage = 0 then atk.effect else .seq (.damage (.const atk.damage)) atk.effect
 
-/-- A well-formed attack: at most one damage step on each line of resolution, and none in the
-text when a printed base damage is done first. `Move.attack` requires it. -/
+/-- A well-formed attack: at most one damage step on each line of resolution, none in the
+text when a printed base damage is done first, and nothing that reads or writes the player's own
+Active Pokémon after a switch of it (`Effect.switchSafe`, so the attacker stays the attacker:
+`Attack.attacker_at_hit`). `Move.attack` requires it. -/
 def Attack.wf (atk : Attack) : Bool :=
-  atk.effect.oneHit && (decide (atk.damage = 0) || atk.effect.hitFree)
+  atk.effect.oneHit && (decide (atk.damage = 0) || atk.effect.hitFree) && atk.effect.switchSafe
 
 theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneHit = true
   | .damage _, h => by simp [Effect.hitFree] at h
@@ -374,7 +497,8 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
-  | .linger _ _ _, _ => rfl
+  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by
@@ -384,12 +508,49 @@ theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.o
 damage step on each line of resolution. -/
 theorem Attack.script_oneHit {atk : Attack} (h : atk.wf = true) : atk.script.oneHit = true := by
   simp only [Attack.wf, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] at h
+  replace h := h.1
   unfold Attack.script
   split
   · exact h.1
   · rcases h.2 with h0 | hf
     · contradiction
     · simp only [Effect.oneHit, Effect.hitFree, hf, Bool.and_self, Bool.true_or]
+
+/-- The script of a well-formed attack is `switchSafe`: the printed base damage, if any, comes
+before the effect and does not switch. -/
+theorem Attack.script_switchSafe {atk : Attack} (h : atk.wf = true) :
+    atk.script.switchSafe = true := by
+  simp only [Attack.wf, Bool.and_eq_true] at h
+  unfold Attack.script
+  split
+  · exact h.2
+  · simp only [Effect.switchSafe, Effect.switchesOwn, h.2, Bool.not_false, Bool.true_or,
+      Bool.and_self]
+
+/-- The rule box of a Pokémon card, as far as it decides how many Prize cards its Knock Out gives
+(milestone M3; survey S8 C3, S9). The kinds are those of today's Standard (regulation marks H, I,
+J): no rule box (1 Prize, "take one of your Prize cards", rulebook 2023 p. 7); Pokémon ex, Tera
+Pokémon ex included ("Like other Pokémon ex, when a Tera Pokémon ex is Knocked Out, your opponent
+takes 2 Prize cards", p. 24; printed "Pokémon ex rule: When your Pokémon ex is Knocked Out, your
+opponent takes 2 Prize cards."); and Mega Evolution Pokémon ex ("Mega Evolution ex Rule: When
+your Mega Evolution Pokémon ex is Knocked Out, your opponent takes 3 Prize cards.", printed on the
+cards; the 2023 rulebook predates them, S9). In the card data every Standard card with the MEGA
+subtype is also ex, and 45 of its records print both rules; the Mega Evolution rule is the one
+that gives the number. Older kinds (EX, GX, V, VSTAR: 2; VMAX, TAG TEAM, V-UNION: 3; Radiant:
+1) give the same three numbers and are out of scope until the card pool needs them. -/
+inductive RuleBox where
+  | none | ex | megaEx
+  deriving DecidableEq
+
+/-- The number of Prize cards a Knock Out of a Pokémon with this rule box gives. -/
+def RuleBox.prizes : RuleBox → Nat
+  | .none => 1
+  | .ex => 2
+  | .megaEx => 3
+
+theorem RuleBox.prizes_pos (r : RuleBox) : 0 < r.prizes := by cases r <;> decide
+
+theorem RuleBox.prizes_le (r : RuleBox) : r.prizes ≤ 3 := by cases r <;> decide
 
 structure PokemonCard where
   name : String
@@ -410,7 +571,18 @@ structure PokemonCard where
   is 3, −20 is 2; "It takes less damage from a Pokémon if it has Resistance to that Pokémon's
   type", p. 14). Two Resistances on one card (54 older records) are out of scope. -/
   resistance : Option (EType × Nat)
+  /-- the rule box, which gives the number of Prize cards its Knock Out gives
+  (`PokemonCard.prizeCount`) -/
+  ruleBox : RuleBox
+  /-- a Tera Pokémon: "As long as this Pokémon is on your Bench, prevent all damage done to this
+  Pokémon by attacks (both yours and your opponent's)" (printed on every Tera card; rulebook 2023
+  p. 24: "a new effect that prevents all attack damage done to them while they're on your
+  Bench"). In today's Standard every Tera Pokémon is a Pokémon ex (101 card records). -/
+  tera : Bool
   deriving DecidableEq
+
+/-- How many Prize cards the opponent takes when this Pokémon is Knocked Out (1, 2 or 3). -/
+def PokemonCard.prizeCount (d : PokemonCard) : Nat := d.ruleBox.prizes
 
 /-- Is this Pokémon weak to Pokémon of type `t`? -/
 def PokemonCard.weakTo (d : PokemonCard) (t : EType) : Bool := decide (d.weakness = some t)

@@ -137,7 +137,7 @@ namespace Trainer
 open Infinite (mon)
 
 /-- A Basic Pokémon with 100 HP (ten counters). -/
-def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1, none, none⟩
+def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1, none, none, .none, false⟩
 
 /-- A player with the given hand, Prizes, Active Pokémon and Bench. -/
 def side (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerState :=
@@ -156,8 +156,8 @@ theorem settled_of {g : GameState} {a b : InPlay} (hc : g.cur.active = some a)
   · rw [ho] at hp; cases hp; exact hb
   · exact hbo p hp
 
-theorem benched_ofBasic {c : PokemonCard} (h : 0 < c.hp) : Benched (InPlay.ofBasic c) :=
-  ⟨h, rfl, rfl, rfl, rfl⟩
+theorem benched_ofBasic {c : PokemonCard} (_h : 0 < c.hp) : Benched (InPlay.ofBasic c) :=
+  ⟨rfl, rfl, rfl, rfl⟩
 
 /-! ## A Knock Out after the first step of an Item -/
 
@@ -198,7 +198,7 @@ theorem move_after1 : Move start1 after1 := by
     (.seq (.prim rfl rfl (.selfDamage 5 rfl)
       (.step rfl (.knockOutOwn rfl (by decide) rfl)
         (.step rfl (.promoteOwn (b₁ := []) rfl rfl) (.done (.inl ?_)))))
-      (.prim rfl rfl (.heal 5 rfl) (.done (.inl ?_)))) rfl rfl rfl
+      (.prim rfl rfl (.heal 5 rfl) (.done (.inl ?_)))) rfl rfl rfl rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
@@ -257,7 +257,7 @@ theorem move_after2 : Move start2 after2 := by
     (.iterCons (.prim rfl rfl (.counters 5 rfl)
       (.step rfl (.knockOut rfl (by decide) rfl)
         (.step rfl (.promote (b₁ := []) rfl rfl) (.done (.inl ?_)))))
-      (.iterCons (.prim rfl rfl (.counters 5 rfl) (.done (.inl ?_))) (.iterNil _ _))) rfl rfl rfl
+      (.iterCons (.prim rfl rfl (.counters 5 rfl) (.done (.inl ?_))) (.iterNil _ _))) rfl rfl rfl rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
@@ -310,7 +310,7 @@ def after3 : GameState :=
 theorem move_after3 : Move start3 after3 :=
   .item (l₁ := []) (l₂ := []) (n := "Win") rfl rfl start3_settled
     (.seq (.prim rfl rfl (.counters 5 rfl) (.step rfl (.knockOut rfl (by decide) rfl)
-      (.done (.inr (by decide))))) (.stop (by decide))) rfl rfl rfl
+      (.done (.inr (by decide))))) (.stop (by decide))) rfl rfl rfl rfl
 
 /-- **Witness: the win condition fires inside an Item's effect.** From a well-formed, `Settled`
 start, `seq (counters 5) draw` Knocks Out the opponent's Active Pokémon in its first step, the

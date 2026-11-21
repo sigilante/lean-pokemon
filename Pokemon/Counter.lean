@@ -305,6 +305,25 @@ theorem sel_oneHit {w : Whose} {f : Nat → Effect} : ∀ {l : List Nat},
       simp only [sel, Effect.oneHit, h v (.head _), sel_oneHit (fun u hu => h u (.tail _ hu)),
         Bool.and_self]
 
+theorem sel_switchesOwn {w : Whose} {f : Nat → Effect} : ∀ {l : List Nat},
+    (∀ v ∈ l, (f v).switchesOwn = false) → (sel w f l).switchesOwn = false
+  | [], _ => rfl
+  | v :: l, h => by
+      simp only [sel, Effect.switchesOwn, h v (.head _),
+        sel_switchesOwn (fun u hu => h u (.tail _ hu)), Bool.or_self]
+
+theorem stepAOf_switchesOwn (w : Nat) (i : Instr) : (stepAOf w i).switchesOwn = false := by
+  cases i with
+  | inc r q => cases r <;> rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
+theorem stepBOf_switchesOwn (w q : Nat) (i : Instr) : (stepBOf w q i).switchesOwn = false := by
+  cases i with
+  | inc r q' => rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
 theorem stepAOf_oneHit (w : Nat) (i : Instr) : (stepAOf w i).oneHit = true := by
   cases i with
   | inc r q => cases r <;> rfl
@@ -326,22 +345,32 @@ theorem atkA_wf (M : Machine) : (atkA M).wf = true := by
   have h3 : (effA M).oneHit = true :=
     Effect.oneHit_seq_right rfl (Effect.oneHit_seq_right h1 (by
       simp only [Effect.oneHit, h2, Bool.and_self]))
-  simp only [Attack.wf, atkA, h3, decide_true, Bool.true_or, Bool.and_self]
+  have h4 : (effA M).switchSafe = true := Effect.switchSafe_of_switchesOwn (by
+    simp only [effA, normA, Effect.switchesOwn,
+      sel_switchesOwn (fun _ _ => rfl : ∀ v ∈ (List.range (V M)).map (W M + ·),
+        (setPc (v - W M)).switchesOwn = false),
+      sel_switchesOwn (fun _ _ => stepAOf_switchesOwn _ _ : ∀ v ∈ List.range (V M),
+        (stepAOf (W M) (M.instr v)).switchesOwn = false), Bool.or_self])
+  simp only [Attack.wf, atkA, h3, h4, decide_true, Bool.true_or, Bool.and_self]
 
 /-- The Tape's attack is well formed. -/
 theorem atkB_wf (M : Machine) : (atkB M).wf = true := by
   have h3 : (effB M).oneHit = true :=
     Effect.oneHit_seq_right rfl (Effect.oneHit_seq_right rfl
       (sel_oneHit fun _ _ => stepBOf_oneHit _ _ _))
-  simp only [Attack.wf, atkB, h3, decide_true, Bool.true_or, Bool.and_self]
+  have h4 : (effB M).switchSafe = true := Effect.switchSafe_of_switchesOwn (by
+    simp only [effB, Effect.switchesOwn,
+      sel_switchesOwn (fun _ _ => stepBOf_switchesOwn _ _ _ : ∀ v ∈ List.range (V M),
+        (stepBOf (W M) v (M.instr v)).switchesOwn = false), Bool.or_self])
+  simp only [Attack.wf, atkB, h3, h4, decide_true, Bool.true_or, Bool.and_self]
 
 /-- The first player's Pokémon: its damage is the program counter, so its HP exceeds every
 value the counter takes. -/
 def clock (M : Machine) : PokemonCard :=
-  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0, none, none⟩
+  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0, none, none, .none, false⟩
 
 /-- The second player's Pokémon, the target of the first player's zero tests. -/
-def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0, none, none⟩
+def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0, none, none, .none, false⟩
 
 /-- The halt mark: an Imprison marker on the Clock. -/
 def haltMarks : Marks := Marks.set .imprison true Marks.empty
@@ -987,6 +1016,11 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @touchActive e w f g p he h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | @touchBench e w f g q b₁ b₂ he h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | unmark w m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | benchCounters w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | switch w ha hb => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | benchDamage w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | linger w s m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -1018,24 +1052,24 @@ theorem checkup_calm {p : InPlay} (hr : p.rot = .none) (hp : p.poisoned = false)
 theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
     (ha : s.active = some a) (hc : k.marks.char = false) (o f sp c : Bool) :
     Fits k { s with
-      active := some (a.checkup o f sp c), energyAttached := false,
+      active := some (a.checkup o f sp c), bench := [], energyAttached := false,
       supporterPlayed := false, retreated := false, mods := s.mods.shift } := by
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
   rw [ha] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm h2 h3 h4 (by rw [h6]; exact hc) o f sp c
-  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, h.bench, h.deck, h.hand,
+  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, rfl, h.deck, h.hand,
     by rw [h.mods]; rfl, h.stocked, h.held⟩
 
 theorem Fits.toOpp {k : Pk} {s : PlayerState} {b : InPlay} (h : Fits k s)
     (hb : s.active = some b) (hc : k.marks.char = false) (o f sp c : Bool) :
     Fits k { s.unfresh with
-      active := some (b.unfresh.checkup o f sp c), mods := s.mods.shift, hadTurn := true } := by
+      active := some (b.unfresh.checkup o f sp c), bench := [], mods := s.mods.shift,
+      hadTurn := true } := by
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
   rw [hb] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm (p := b.unfresh) h2 h3 h4 (by rw [← hc, ← h6]; rfl)
     o f sp c
-  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩,
-    by simp only [PlayerState.unfresh, h.bench, List.map_nil], h.deck, h.hand,
+  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, rfl, h.deck, h.hand,
     by rw [h.mods]; rfl, h.stocked, h.held⟩
 
 theorem not_mem_hand {k : Pk} {s : PlayerState} {l₁ l₂ : List Card} {c : Card} (h : Fits k s)
@@ -1068,6 +1102,8 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
         · exact List.mem_append_left _ h
         · exact List.mem_append_right _ (.tail _ h))
   | evolve hh => exact (not_mem_hand hC hh rfl).elim
+  | attachBench _ _ hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
+  | evolveBench hh => exact (not_mem_hand hC hh rfl).elim
   | retreat ha hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim
@@ -1083,7 +1119,13 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
       rw [hp] at ha; cases ha; rw [h5, h1] at hk; exact absurd hk (Nat.not_le.2 hc)
   | promoteOwn ha => rw [hp] at ha; cases ha
   | noPokemonOwn ha => rw [hp] at ha; cases ha
-  | endTurn fa sa ca fb sb cb ha hb =>
+  | knockOutBench hb => rw [hO.bench] at hb; exact absurd hb.symm (by simp)
+  | knockOutBenchOwn hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
+  | endTurn fa sa ca fb sb cb ha hb _ _ hco hcc =>
+      rw [hO.bench] at hco
+      rw [hC.bench, List.map_nil] at hcc
+      cases hco
+      cases hcc
       exact .inr (.inl ⟨(hO.toCur ha hoc false fa sa ca).weak,
         (hC.toOpp hb hcc true fb sb cb).weak⟩)
   | @startTurn a b c d _ _ _ _ hd =>
@@ -1131,7 +1173,8 @@ theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)
       g'.firstTurn = false ∧ g'.winner = g.winner := by
   obtain ⟨p, hp, -⟩ := hs.cur.active
   obtain ⟨p', hp', -⟩ := hs.opp.active
-  exact ⟨_, .endTurn false false false false false false hp' hp (hs.damageBounded hc ho) hbt,
+  exact ⟨_, .endTurn false false false false false false hp' hp (hs.damageBounded hc ho) hbt
+      (by rw [hs.opp.bench]; exact .nil) (by rw [hs.cur.bench, List.map_nil]; exact .nil),
     ⟨hs.opp.toCur hp' hoc false false false false, hs.cur.toOpp hp hcc true false false false⟩,
     rfl, rfl, rfl, rfl⟩
 

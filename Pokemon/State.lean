@@ -301,6 +301,18 @@ def allCards (s : PlayerState) : List Card :=
 def unfresh (s : PlayerState) : PlayerState :=
   { s with active := s.active.map InPlay.unfresh, bench := s.bench.map InPlay.unfresh }
 
+/-- Take `n` Prize cards, the top ones, into the hand ("That player's opponent takes 1 of their
+own Prize cards and puts it into their hand", rulebook 2023 p. 14; "or 2 Prize cards, for certain
+kinds of Pokémon such as Pokémon ex", glossary p. 40). With fewer than `n` left, all are taken
+(the player has then taken their last Prize card and wins, `PlayerState.prizesOut`). The
+rulebook lets the player choose which Prize cards to take; the model takes the top ones (a
+finite choice; Known gaps). -/
+def takePrizes (n : Nat) (s : PlayerState) : PlayerState :=
+  { s with prizes := s.prizes.drop n, hand := s.prizes.take n ++ s.hand }
+
+/-- Taking `n` Prize cards leaves none: the player has taken their last Prize card. -/
+def prizesOut (n : Nat) (s : PlayerState) : Bool := (s.prizes.drop n).isEmpty
+
 end PlayerState
 
 /-- Whole-game state. `cur` is the player to move; the two swap at end of turn. -/
@@ -383,7 +395,8 @@ def GameState.resist (g : GameState) : Nat :=
 /-- The damage an attack with base damage `n` does to the opponent's Active Pokémon in state
 `g`: `dealtBy` with the Active Pokémon's Weakness and Resistance and both players' modifiers
 in effect. Weakness and Resistance apply to the Active Pokémon only ("Don't apply Weakness and
-Resistance for Benched Pokémon!", p. 14), which is the only Pokémon attack damage reaches here. -/
+Resistance for Benched Pokémon!", p. 14); attack damage to Benched Pokémon (`InPlay.hitBench`,
+milestone M3) skips the calculation. -/
 def GameState.dealt (n : Nat) (g : GameState) : Nat :=
   dealtBy n g.weak g.resist g.cur.mods g.opp.mods
 

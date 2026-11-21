@@ -26,7 +26,8 @@ if any Pokémon were Knocked Out by the attack", 2023 p. 14) and at the end of e
 Checkup ("After both players have gone through these checks", p. 15). The model also takes a
 Knock Out at once whenever damage reaches HP at any other time; that third clause is not in the
 English rulebook (see the Known gaps for its source). The model follows these in two ways. Between moves: every move that is not part of resolving a Knock Out
-(the six moves `knockOut`, `promote`, `noPokemon` and their `Own` versions) requires the state
+(the eight moves `knockOut`, `knockOutBench`, `promote`, `noPokemon` and their `Own` versions)
+requires the state
 to be `Settled`: no Pokémon in play is at or above its HP, and both Active Spots are filled.
 So once a move leaves a Pokémon at or above its HP, the next moves must Knock it Out (and
 promote a replacement) before anything else happens; nothing can read, heal or otherwise use
@@ -69,8 +70,8 @@ word on the damage steps, survey S9 against S8 F2; S8 records no later change to
   Pokémon takes more damage if it has Weakness to the attacker's type. It takes less damage from
   a Pokémon if it has Resistance to that Pokémon's type", and "Don't apply Weakness and
   Resistance for Benched Pokémon!"; S8 E1): `PokemonCard.weakness` (×2), `resistance` (−N).
-  Attack damage reaches only the opponent's Active Pokémon in the model, so the Bench rule holds
-  trivially. The attacker's type is `InPlay.type` (a Coloring counter changes it).
+  Since milestone M3 attack damage also reaches Benched Pokémon (`Effect.benchDamage`,
+  `Effect.spreadDamage`), and Weakness and Resistance are not applied to it. The attacker's type is `InPlay.type` (a Coloring counter changes it).
 * The damage calculation (2023 p. 20, steps 1–6, quoted in `dealtBy`; S8 F2): one calculation
   per attack (`Effect.oneHit`, required by `Move.attack` through `Attack.wf`), on the base damage
   as the text computes it (`Amt`), then the attacker's bonus, Weakness, Resistance, the
@@ -85,7 +86,10 @@ word on the damage steps, survey S9 against S8 F2; S8 records no later change to
 
 Known gaps (each is a place where this model is simpler than the rulebook):
 * setup, mulligans and the opening coin flip are not modelled; start from a set-up state;
-* Energy is attached to, and evolution applied to, the Active Pokémon only;
+* Energy is attached, and evolution applied, to the Active Pokémon (`attach`, `evolve`) or to a
+  Benched one (`attachBench`, `evolveBench`; milestone M3, rulebook 2023 p. 11); the "had in
+  play at the beginning of your turn" condition of evolution is read as `InPlay.fresh` (not
+  put into play or evolved this turn);
 * attack costs are typed (milestone M4; rulebook 2023 p. 13): each typed symbol is paid by a
   unit of attached Energy of that type and each Colorless symbol by any unit, every unit paying
   one symbol (`Pays`, decided by `payable`); only Basic Energy exists, one unit of its type
@@ -97,14 +101,29 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Weakness is ×2; Resistance −30, once −20). Absent: "+10" to "+40" Weakness on older cards,
   two Weaknesses or two Resistances on one card (dual-type Pokémon, S8 C6; a Pokémon has one
   type here), and effects that change or ignore Weakness or Resistance (S8 E2); Weakness and
-  Resistance never apply to the Bench, which attack damage does not reach in this model;
-* Knock Outs are separate moves, forced by `Settled` (above) before any other move; they are
-  taken one at a time, in either order when several are pending, so when both players take
-  their last Prize from the same attack or Checkup the first Knock Out taken decides the game
-  (no Sudden Death, which the 2023 rulebook has, nor the tiebreaker game that replaced it in
-  2026, survey S8 J4); a player with no Pokémon to promote loses at once; only Active Pokémon
-  can be Knocked Out, which suffices while no effect damages the Bench; a Knock Out always
-  gives exactly one Prize;
+  Resistance never apply to the Bench (milestone M3: attack damage to Benched Pokémon skips them);
+* Knock Outs are separate moves, forced by `Settled` (above) before any other move. Any
+  Pokémon in play whose damage reaches its HP is Knocked Out (milestone M3): an Active Pokémon
+  (`knockOut`, `knockOutOwn`, followed by a promotion) or a Benched one (`knockOutBench`,
+  `knockOutBenchOwn`: "If a player's Pokémon is Knocked Out, that player puts it and all cards
+  attached to it in the discard pile", rulebook 2023 p. 14; no promotion follows). Several
+  pending Knock Outs are taken one at a time, in any order, and all of them before any other
+  move. The order is nondeterministic because no rule fixes it: the 2023 rulebook says only
+  "check every Pokémon that was affected by the attack" (p. 14) and is silent on the order and
+  on who takes Prize cards first (survey S9); the 2026 rule changes were read by survey S8 only
+  through a summary and are unverified. So when both players take their last Prize card from
+  the same attack or Checkup the first Knock Out taken decides the game: there is no Sudden
+  Death (2023 rulebook p. 21), no tiebreaker game (2026, S8 J4), and no "if you win in both ways
+  and your opponent wins in only one way, you are the victor" (p. 21). A promotion may also be
+  made while a Benched Pokémon's Knock Out is pending, and may promote that Pokémon, which is
+  then Knocked Out from the Active Spot: the cards and Prize cards are the same, but the model
+  has orders of Knock Outs and promotions that the rulebook's "Knock Outs, then a new Active
+  Pokémon" does not. A player with no Pokémon to promote loses at once. A Knock Out gives the
+  Prize cards of the Knocked Out Pokémon's rule box (`PokemonCard.prizeCount`: 1, 2 for
+  Pokémon ex, 3 for Mega Evolution Pokémon ex), the top ones of the Prize list
+  (`PlayerState.takePrizes`); with fewer left, all are taken and the taker wins
+  (`PlayerState.prizesOut`). Effects that change the number taken (Shedinja, "take 1 more Prize
+  card", S8 I5) are absent;
 * the source of the Knock Out timing outside attacks and Checkup: survey S9 found no rule in
   the 2023 English rulebook (*Scarlet & Violet—151*) that Knock Outs are checked at once at
   other times, and survey S8 quotes none from the 2024 rulebook; the model's immediate Knock
@@ -124,12 +143,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   chosen in mid-effect; the promoted Pokémon is a nondeterministic choice, which covers the
   owner's choice, but outcomes in which later steps of the effect find an empty Active Spot
   are absent from the model); when a Prize ends the game, or its owner has no Pokémon to promote, the
-  game ends and the rest of the effect is not resolved. Simultaneous Knock Outs cannot arise
-  inside a Trainer effect here (each primitive step damages at most one Active Pokémon and
-  starts `Settled`), so the order in which they are taken, and Sudden Death, do not arise
-  there; a printed effect that damages several Pokémon at once is not expressible;
-* a Knock Out takes the top card of the Prize list, whereas the rulebook lets the player
-  choose any Prize card (a finite choice);
+  game ends and the rest of the effect is not resolved. Several Knock Outs after one step are
+  taken by `Resolve` in any order, as after an attack;
+* a Knock Out takes the top Prize cards of the Prize list, whereas the rulebook lets the player
+  choose which Prize cards to take (a finite choice);
 * HP is the printed value: there are no HP modifiers (the survey's loophole L1);
 * markers (`Marks`): Imprison, Shock-wave, Lightning Rod and Char are flags, and the Coloring
   counter is a type. The printed Imprison and Shock-wave counts are uncapped, but only "has
@@ -141,18 +158,20 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Pokémon (`Test.marked`, `Test.isType`); markers are general primitives, usable any number of
   times and inside `iter`. Markers stay through evolution, retreat and promotion and leave play
   with the Pokémon (text is silent except for Char, which stays while in play). Char puts 2
-  damage counters on tails at every Checkup, but only on an Active Pokémon: Checkup does not
-  reach the Bench, so a Char counter on a Benched Pokémon does nothing until it is Active again
-  (a restriction: the printed Char also damages a Benched Pokémon, which this model cannot Knock
-  Out). Absent: the readers of Imprison (Poké-Powers and Poké-Bodies; Abilities are absent),
+  damage counters on tails after every turn on its Pokémon, Active (`InPlay.checkup`) or, since
+  milestone M3, Benched (`BenchChar` in `Move.endTurn`, one flip per Pokémon); "A Char counter
+  requires your opponent to flip a coin after every turn. If tails, put 2 damage counters on the
+  Pokémon with that Char counter" (Quilava neo1-47) does not restrict it to the Active Spot. Absent: the readers of Imprison (Poké-Powers and Poké-Bodies; Abilities are absent),
   tests on Benched Pokémon's markers ("Choose 1 of your opponent's Pokémon that has any
   Shock-wave markers", "any Pokémon with a Lightning Rod marker"), Dark Ivysaur bp-6's
   transient markers allocated by the opponent, and the marker-like states of S7 §3.3 (Poison
   payloads, delayed triggers, attack locks bound to one Pokémon, history flags, face-up Prizes);
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
   `Test.atLeast` and `Test.exactly`; the proportional write `scale`), their Special
-  Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); there
-  are no tests or counts on Benched Pokémon, on Energy, on
+  Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); the
+  only read of a Benched Pokémon is the truncated subtraction of `benchHeal` (milestone M3);
+  there are no tests or counts on Benched Pokémon (none was needed by the Standard texts S9
+  sampled), on Energy, on
   cards in hand, deck, discard pile or Prizes, on Poison strength, on HP ("if it has full HP",
   "remaining HP"), or on the lingering modifiers in effect; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
@@ -225,7 +244,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   inside the branches of `ite` or `choice`, which also lets the same flip decide the damage and
   another effect. Not expressible: damage counts other than damage counters on the Active
   Pokémon (Energy, Benched Pokémon, cards in hand or discard pile), and two damage calculations
-  in one attack (an attack that also damages a Benched Pokémon; the Bench is absent anyway).
+  in one attack on the Active Pokémon (damage to Benched Pokémon is separate: `benchDamage`,
+  `spreadDamage`).
   Generality lost
   against the earlier model: an attack can no longer make several damage steps (an `iter` of
   `damage`, which applied the modifiers per step and is not the rulebook's calculation), and
@@ -233,7 +253,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   counters);
 * `ite`, `scale`, `selfDamage` and `healAll` are general primitives, usable in any effect,
   any number of times and inside `iter`, whereas printed cards use them once, in fixed forms;
-  the model over-approximates the printed texts;
+  the model over-approximates the printed texts. The same holds for the Bench primitives of
+  milestone M3: `benchCounters`, `spreadCounters`, `benchHeal` and `switch` are usable in any
+  effect and inside `iter` (except that an attack has no `switch .own` under `iter`,
+  `Effect.switchSafe`), and `benchDamage` and `spreadDamage` in any attack and inside `iter`, so
+  `iter (benchDamage .opp n)` in an attack does Bench damage any number of times, which no
+  printed card does;
 * GX attacks (`Attack.gx`): a player who has used one (`PlayerState.gxUsed`) cannot use another
   in the same game; the flag is set by `Move.attack` (a rule added for `Pokemon/Faithful.lean`;
   before it, `gxUsed` was never read or written). A Confused Pokémon can try a GX attack
@@ -241,7 +266,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
   ruling, and the model takes the answer "no"; VSTAR Powers are absent (`vstarUsed` is unused);
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
-  remove them only from the player's own Active Pokémon (`cure`); the variants with a number
+  remove them from the player's own Active Pokémon (`cure`) and, since milestone M3, from the
+  Pokémon that a switch sends to the Bench, either player's (`switch .own` and `switch .opp`,
+  as the rulebook says for any Active Pokémon that goes to the Bench); the variants with a number
   ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; a new Poison
   replaces the old one, as the rulebook says (2023 p. 16, 2024 the same), so poisoning a
   Pokémon that is already Poisoned resets its Poison strength (`poisonUp`) to 0
@@ -254,7 +281,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   failed attempt still ends the turn is the model's reading of the attack steps, p. 20, in
   which the Confusion check is step C of using the attack), and its attack must be one it could
   otherwise use;
-* Pokémon Checkup (`InPlay.checkup`) covers the five Special Conditions and the Char counter
+* Pokémon Checkup (`InPlay.checkup`, and `BenchChar` on the Benches) covers the five Special
+  Conditions (Active Pokémon only, the only ones that can have them) and the Char counter
   only: no Ability,
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
   choice of order between Special Conditions and those effects does not arise); Burn uses the
@@ -265,10 +293,70 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the printed card (Croagunk) raises Poison strength once per use of its attack; the model
   over-approximates it, and one Item can raise Poison strength without bound
   (`Infinite.not_finite_damageBounded`);
-* effects damage only the two Active Pokémon (`counters`, `scale` on the opponent's,
-  `selfDamage` on the player's own): no effect damages the Bench;
-* `heal` and `healAll` remove damage from the player's own Active Pokémon only, not from the
-  Bench nor from the opponent's Pokémon;
+* effects place damage counters on either Active Pokémon (`counters`, `scale` on the
+  opponent's, `selfDamage` on the player's own) and, since milestone M3, on one chosen Benched
+  Pokémon of either player (`benchCounters`) or on each of a player's Benched Pokémon
+  (`spreadCounters`); recoil and other self-damage are written as damage counters
+  (`selfDamage`), not as attack damage, so a printed recoil "This Pokémon also does 30 damage to
+  itself" escapes the attacker's own Weakness, Resistance and modifiers in the model; attack
+  damage reaches the opponent's Active Pokémon (the damage step, `dealtBy`) and, since M3, Benched
+  Pokémon of either player (`benchDamage`, `spreadDamage`: a printed amount, with no Weakness,
+  Resistance, bonus, reduction or prevention, and none on a Tera Pokémon; `InPlay.hitBench`;
+  amounts computed by the text, "30 damage for each Energy", are not expressible). Dropping the
+  modifiers departs from the rulebook in both directions, so Bench damage in the model is not a
+  superset of the printed outcomes: the defender's reduction and prevention protect only the
+  Active Pokémon here, whereas a printed "all of your Metal Pokémon take 30 less damage" or
+  "prevent all damage done to your Benched Pokémon" protects Benched ones too, so the model
+  does more damage to the Bench than the rulebook; and the attacker's bonus is not added, on the
+  claim that printed bonuses name "your opponent's Active Pokémon", which the rulebook's own
+  example of step 2 does not support ("During your next turn, this Pokémon's attacks do 40 more
+  damage (before applying Weakness and Resistance)", 2023 p. 20, names no target), so the model
+  may do less damage to the Bench than the rulebook. No search of the card pool settles which
+  printed bonuses reach the Bench. The damage
+  counters an effect places are not affected by Weakness, Resistance or any other effect, as the
+  rulebook says (2023 p. 20, step 1);
+* `heal` and `healAll` remove damage from the player's own Active Pokémon, and `benchHeal` from
+  one of the player's own Benched Pokémon (milestone M3); no effect heals the opponent's
+  Pokémon, and none heals each of a player's Benched Pokémon at once ("Heal 20 damage from
+  each of your Pokémon" is not expressible exactly);
+* switching by effect (`Effect.switch`, milestone M3): the player's own Active Pokémon with one of
+  their Benched Pokémon (Switch), or the opponent's ("gust": Boss's Orders, or the opponent's own
+  choice; the nondeterministic choice covers whoever chooses); the Pokémon that goes to the Bench
+  is cured of its Special Conditions and Poison strength (rulebook 2023 pp. 12, 16). The
+  rulebook also ends "any effects from attacks" on it; the model's lingering effects belong to a
+  player, not to a Pokémon, so there is nothing more to end (per-Pokémon effects are milestone
+  M7). With no Benched Pokémon a switch does nothing. A switch that the rulebook makes a choice
+  of a player other than the one the model lets choose is still in the relation. Inside an
+  attack the printed game keeps the attacking Pokémon as "this Pokémon" after it is switched
+  to the Bench, whereas the model's effects on the player's Active Pokémon act on whichever
+  Pokémon is Active; so `Attack.wf` (a premise of `Move.attack` and `Move.attackConfused`)
+  requires `Effect.switchSafe`: after a `switch .own`, nothing on the same line of resolution
+  reads or writes the player's own Active Pokémon (the damage step, which reads the attacker's
+  type for Weakness and Resistance, `drain`, `heal`, `healAll`, `cure`, `selfDamage`,
+  `scale .own`, a test on it, another `switch .own`), and no `switch .own` is under `iter`.
+  So every damage step of an attack is reached with the attacking Pokémon Active
+  (`Attack.attacker_at_hit`), and an attack that switches and then does damage is not playable
+  (`Bench.switchThenHit_not_wf`). The restriction excludes nothing printed that the model can
+  express: in the card data the 132 distinct attack texts that "Switch this Pokémon with 1 of
+  your Benched Pokémon" do their damage first (rulebook 2023 p. 20, step F) and switch after;
+  after the switch some act on "this Pokémon" on the Bench (attach Energy, Return Charge
+  sv8-68; evolve it, Valiant Evolution sv3-60; inexpressible here), on the opponent (switch,
+  lingering modifiers), or on the player (Fluffy Tag bw7-15: "the attacks of that Pokémon do 40
+  more damage", a player's bonus here). `mark .own` and `color .own` stay allowed after a
+  switch: they choose any of the player's Pokémon, Bench included. Trainer effects have no
+  attacker, and their "your Active Pokémon" is whichever is Active, as in the model;
+* absent after milestone M3: moving damage counters between Pokémon ("move 1 damage counter from
+  1 of your Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an Ability;
+  Gengar-style moves among the opponent's Pokémon), tests and counts on Benched Pokémon ("if any
+  of your Benched Pokémon have damage counters", "for each Benched Pokémon"), healing the
+  opponent's Pokémon, effects that put Pokémon onto the Bench from the deck or discard pile (S9:
+  68 Standard texts), moving Energy between Pokémon, and Bench damage whose amount the text
+  computes. Moving counters among the player's own Pokémon would keep both clamps (the player's
+  own damage is exact inside an attack); moving counters off the opponent's Active Pokémon would
+  read damage that the capped clamp `rclamp` knows only up to its cap inside an attack;
+* Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
+  Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
+  Underdepths, S8 L2) wait for the Stadium milestone (M5);
 * Stadium and Tool cards occupy state but have no move (survey S8 B9, B10: milestone M5): the
   Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
   as the rulebook has it, but it only holds a card of the start state; so the rules that come
@@ -302,34 +390,43 @@ def DamageBounded (g : GameState) : Prop :=
     (g.cur.active = some p ∨ p ∈ g.cur.bench ∨ g.opp.active = some p ∨ p ∈ g.opp.bench) →
       p.damage < p.top.hp
 
-/-- A Benched Pokémon as the rules leave it: below its HP and with no Special Condition. -/
+/-- A Benched Pokémon as the rules leave it: with no Special Condition ("When a Pokémon evolves
+or moves to the Bench, it recovers from all Special Conditions", rulebook 2023 p. 16) and so with
+no Poison strength. Before milestone M3 this also asked that the Pokémon be below its HP; once
+Benched Pokémon can be damaged and Knocked Out, a Benched Pokémon at or above its HP is a pending
+Knock Out, which `DamageBounded` (and so `Settled`) excludes before every move other than the
+Knock Out moves, as for the Active Pokémon. -/
 def Benched (p : InPlay) : Prop :=
-  p.damage < p.top.hp ∧ p.rot = .none ∧ p.poisoned = false ∧ p.burned = false ∧ p.poisonUp = 0
+  p.rot = .none ∧ p.poisoned = false ∧ p.burned = false ∧ p.poisonUp = 0
 
 /-- Well-formed states: while there is no winner both players have Prize cards left, and
-every Benched Pokémon is `Benched`. `Move` preserves it (`Move.wellFormed`). -/
+every Benched Pokémon is `Benched` (no Special Condition). `Move` preserves it
+(`Move.wellFormed`). Damage on Benched Pokémon below HP is part of `Settled`, not of
+`WellFormed`: since milestone M3 an effect or an evolution can leave a Benched Pokémon at or above
+its HP, and it is then Knocked Out by the next moves. -/
 def WellFormed (g : GameState) : Prop :=
   (g.winner = none → g.cur.prizes ≠ [] ∧ g.opp.prizes ≠ []) ∧
     (∀ p ∈ g.cur.bench, Benched p) ∧ ∀ p ∈ g.opp.bench, Benched p
 
-/-- No Knock Out is pending and both Active Spots are filled. Every move except the six that
-resolve Knock Outs (`knockOut`, `promote`, `noPokemon` and their `Own` versions) requires it,
-so a pending Knock Out is taken, and the Pokémon replaced, before any other move. -/
+/-- No Knock Out is pending (no Pokémon in play, Active or Benched, is at or above its HP) and
+both Active Spots are filled. Every move except the eight that resolve Knock Outs (`knockOut`,
+`knockOutBench`, `promote`, `noPokemon` and their `Own` versions) requires it, so every pending
+Knock Out is taken, and the Active Pokémon replaced, before any other move. -/
 def Settled (g : GameState) : Prop :=
   DamageBounded g ∧ g.cur.active ≠ none ∧ g.opp.active ≠ none
 
-/-- The six moves that resolve a Knock Out, as a relation of their own: they are the moves
-`Move.knockOut`, `Move.promote`, `Move.noPokemon`, `Move.knockOutOwn`, `Move.promoteOwn` and
-`Move.noPokemonOwn`, with the same premises and results (`KOMove.move`). `Resolve` uses them to
-take Knock Outs in the middle of a Trainer card's effect. -/
+/-- The eight moves that resolve a Knock Out, as a relation of their own: they are the moves
+`Move.knockOut`, `Move.knockOutBench`, `Move.promote`, `Move.noPokemon` and their `Own` versions,
+with the same premises and results (`KOMove.move`). `Resolve` uses them to take Knock Outs in
+the middle of a Trainer card's effect. -/
 inductive KOMove : GameState → GameState → Prop where
   | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
       (ha : g.opp.active = some p) (hk : p.top.hp ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       KOMove g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
-        cur := { g.cur with prizes := ps, hand := c :: g.cur.hand },
-        winner := if ps.isEmpty then some g.curIsFirst else g.winner }
+        cur := g.cur.takePrizes p.top.prizeCount,
+        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
   | promote {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.opp.active = none) (hb : g.opp.bench = b₁ ++ q :: b₂) :
       KOMove g { g with opp := { g.opp with active := some q, bench := b₁ ++ b₂ } }
@@ -340,13 +437,27 @@ inductive KOMove : GameState → GameState → Prop where
       (hp : g.opp.prizes = c :: ps) :
       KOMove g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
-        opp := { g.opp with prizes := ps, hand := c :: g.opp.hand },
-        winner := if ps.isEmpty then some (!g.curIsFirst) else g.winner }
+        opp := g.opp.takePrizes p.top.prizeCount,
+        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
   | promoteOwn {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.cur.active = none) (hb : g.cur.bench = b₁ ++ q :: b₂) :
       KOMove g { g with cur := { g.cur with active := some q, bench := b₁ ++ b₂ } }
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
       KOMove g { g with winner := some (!g.curIsFirst) }
+  | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
+      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hp : g.cur.prizes = c :: ps) :
+      KOMove g { g with
+        opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
+        cur := g.cur.takePrizes p.top.prizeCount,
+        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
+  | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
+      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hp : g.opp.prizes = c :: ps) :
+      KOMove g { g with
+        cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
+        opp := g.opp.takePrizes p.top.prizeCount,
+        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
 
 /-- `Resolve g g'`: take every pending Knock Out now. Knock Out moves (`KOMove`: a Prize to the
 other player, which may win the game; promotion of a Benched Pokémon chosen by its owner, a
@@ -376,9 +487,9 @@ timing: from a state that is `Settled` or finished, every primitive step and eve
 resolution starts in a `Settled` state, so no step of a Trainer effect is executed while an
 Active Pokémon is at or above its HP.
 
-At most one Active Pokémon can reach its HP in one step (each damaging primitive damages one
-Active Pokémon and the step starts `Settled`), so the order of simultaneous Knock Outs does not
-arise inside a Trainer effect; `Resolve` nonetheless allows any order. -/
+Several Pokémon can reach their HP in one step (`spreadCounters` damages every Benched Pokémon of
+a player, milestone M3); `Resolve` takes all of their Knock Outs, in any order, before the next
+step (`Bench.doubleKO_reachable`). -/
 inductive TRun : Effect → GameState → GameState → Prop where
   | prim {e : Effect} {g g₁ g₂ : GameState} (he : e.isPrim = true) (hn : g.winner = none)
       (hr : Run e g g₁) (hk : Resolve g₁ g₂) : TRun e g g₂
@@ -396,6 +507,25 @@ inductive TRun : Effect → GameState → GameState → Prop where
   | iterNil (a : Effect) (g : GameState) : TRun (.iter a) g g
   | iterCons {a : Effect} {g₁ g₂ g₃ : GameState} :
       TRun a g₁ g₂ → TRun (.iter a) g₂ g₃ → TRun (.iter a) g₁ g₃
+
+/-- Between turns, a Char counter on a Benched Pokémon: its owner flips a coin, and on tails the
+Pokémon gets 2 damage counters (Quilava neo1-47; the card text does not restrict the Char counter
+to the Active Spot, and since milestone M3 the model applies it on the Bench too, as Checkup
+applies it to the Active Pokémon, `InPlay.checkup`). `keep` is heads, or no Char counter. -/
+inductive CharStep : InPlay → InPlay → Prop where
+  | keep (p : InPlay) : CharStep p p
+  | burn {p : InPlay} (h : p.marks.char = true) : CharStep p (p.addDamage 2)
+
+/-- `CharStep` on every Pokémon of a Bench, each with its own coin flip. -/
+inductive BenchChar : List InPlay → List InPlay → Prop where
+  | nil : BenchChar [] []
+  | cons {p p' : InPlay} {b b' : List InPlay} :
+      CharStep p p' → BenchChar b b' → BenchChar (p :: b) (p' :: b')
+
+/-- Every Bench has a Char step: all coins heads. -/
+theorem BenchChar.refl : ∀ b : List InPlay, BenchChar b b
+  | [] => .nil
+  | p :: ps => .cons (.keep p) (BenchChar.refl ps)
 
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
@@ -429,6 +559,32 @@ inductive Move : GameState → GameState → Prop where
         active := some { a with
           top := p, under := Card.pokemon a.top :: a.under,
           rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } } }
+  /-- attach one Energy card from hand to one of the player's Benched Pokémon; the same
+  once-per-turn attachment as `attach` ("Take an Energy card from your hand and put it under your
+  Active Pokémon or one of your Benched Pokémon … You can attach Energy just once each turn!",
+  rulebook 2023 p. 11; milestone M3) -/
+  | attachBench {g : GameState} {l₁ l₂ : List Card} {t : BasicEnergy} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
+      (hf : g.cur.energyAttached = false) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂, energyAttached := true,
+        bench := b₁ ++ { q with energy := Card.energy t :: q.energy } :: b₂ } }
+  /-- evolve one of the player's Benched Pokémon ("You can evolve any Pokémon you have in play,
+  whether it's Active or Benched", rulebook 2023 p. 11; milestone M3), with the premises of
+  `evolve`; Special Conditions are removed (a Benched Pokémon has none) -/
+  | evolveBench {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (he : p.evolvesFrom = some q.top.name) (hfr : q.fresh = false)
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂,
+        bench := b₁ ++ { q with
+          top := p, under := Card.pokemon q.top :: q.under,
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } :: b₂ } }
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
@@ -450,7 +606,7 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
       (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false)
-      (hnd : e.hitFree = true) :
+      (hnd : e.hitFree = true) (hbh : e.benchHitFree = true) :
       Move g g'
   /-- play a Supporter card, once per turn, and not on the first turn of the game ("The player
   who goes first cannot play a Supporter card on their first turn", rulebook 2023 p. 12); its
@@ -461,12 +617,14 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
-      (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true) :
+      (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
+      (hbh : e.benchHitFree = true) :
       Move g g'
   /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage
   step), making the rulebook's damage calculation at most once (`Attack.wf`, `Effect.oneHit`;
-  `dealtBy`). The attack ends the turn (`attacked`): afterwards only Knock Outs and
+  `dealtBy`), with nothing after a switch of the attacker that acts on the player's Active
+  Pokémon (`Effect.switchSafe`, part of `Attack.wf`). The attack ends the turn (`attacked`): afterwards only Knock Outs and
   `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
   its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
@@ -500,8 +658,8 @@ inductive Move : GameState → GameState → Prop where
       (hp : g.cur.prizes = c :: ps) :
       Move g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
-        cur := { g.cur with prizes := ps, hand := c :: g.cur.hand },
-        winner := if ps.isEmpty then some g.curIsFirst else g.winner }
+        cur := g.cur.takePrizes p.top.prizeCount,
+        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
   /-- the opponent promotes a Benched Pokémon to the empty Active spot -/
   | promote {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.opp.active = none) (hb : g.opp.bench = b₁ ++ q :: b₂) :
@@ -517,8 +675,8 @@ inductive Move : GameState → GameState → Prop where
       (hp : g.opp.prizes = c :: ps) :
       Move g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
-        opp := { g.opp with prizes := ps, hand := c :: g.opp.hand },
-        winner := if ps.isEmpty then some (!g.curIsFirst) else g.winner }
+        opp := g.opp.takePrizes p.top.prizeCount,
+        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
   /-- the player promotes a Benched Pokémon to their own empty Active spot -/
   | promoteOwn {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.cur.active = none) (hb : g.cur.bench = b₁ ++ q :: b₂) :
@@ -526,22 +684,41 @@ inductive Move : GameState → GameState → Prop where
   /-- the player has no Pokémon left to promote -/
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
       Move g { g with winner := some (!g.curIsFirst) }
+  /-- Knock Out one of the opponent's Benched Pokémon and take its Prize cards; no promotion
+  follows (milestone M3) -/
+  | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
+      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hp : g.cur.prizes = c :: ps) :
+      Move g { g with
+        opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
+        cur := g.cur.takePrizes p.top.prizeCount,
+        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
+  /-- Knock Out one of the player's own Benched Pokémon; the opponent takes its Prize cards -/
+  | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
+      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hp : g.opp.prizes = c :: ps) :
+      Move g { g with
+        cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
+        opp := g.opp.takePrizes p.top.prizeCount,
+        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
-  (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own; the
-  lingering modifiers of this turn expire and the others move one turn closer (`Store.shift`);
-  then the opponent becomes the player to move, between turns. Requires both Active Pokémon
-  and no pending Knock Out anywhere. -/
-  | endTurn {g : GameState} {a b : InPlay} (fa sa ca fb sb cb : Bool)
+  (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
+  counters of both Benches, one coin flip per Pokémon (`BenchChar`: the opponent's Bench becomes
+  `bo`, the player's `bc`); the lingering modifiers of this turn expire and the others move one
+  turn closer (`Store.shift`); then the opponent becomes the player to move, between turns.
+  Requires both Active Pokémon and no pending Knock Out anywhere. -/
+  | endTurn {g : GameState} {a b : InPlay} {bo bc : List InPlay} (fa sa ca fb sb cb : Bool)
       (ha : g.opp.active = some a) (hb : g.cur.active = some b) (hk : DamageBounded g)
-      (hbt : g.between = false) :
+      (hbt : g.between = false) (hco : BenchChar g.opp.bench bo)
+      (hcc : BenchChar (g.cur.bench.map InPlay.unfresh) bc) :
       Move g
         { cur := { g.opp with
-            active := some (a.checkup false fa sa ca),
+            active := some (a.checkup false fa sa ca), bench := bo,
             energyAttached := false, supporterPlayed := false, retreated := false,
             mods := g.opp.mods.shift },
           opp := { g.cur.unfresh with
-            active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift,
-            hadTurn := true },
+            active := some (b.unfresh.checkup true fb sb cb), bench := bc,
+            mods := g.cur.mods.shift, hadTurn := true },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner, stadium := g.stadium }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken
@@ -570,5 +747,7 @@ theorem KOMove.move {g g' : GameState} (h : KOMove g g') : Move g g' := by
   | knockOutOwn ha hk hp => exact .knockOutOwn ha hk hp
   | promoteOwn ha hb => exact .promoteOwn ha hb
   | noPokemonOwn ha hb => exact .noPokemonOwn ha hb
+  | knockOutBench hb hk hp => exact .knockOutBench hb hk hp
+  | knockOutBenchOwn hb hk hp => exact .knockOutBenchOwn hb hk hp
 
 end Pokemon

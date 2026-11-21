@@ -99,7 +99,7 @@ namespace Lingering
 
 /-- A Basic Pokémon with `h` counters of HP and one free attack: base damage `d`, effect `e`. -/
 def mon (h d : Nat) (e : Effect) : PokemonCard :=
-  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none⟩
+  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none, .none, false⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], false, false, false,
@@ -174,13 +174,13 @@ theorem reach_red (k : Nat) (i : Bool) :
         (settled_st _ _ _ _ _ _ (by decide) (by decide))
         (.seq (.prim rfl rfl (.linger .opp .now _ _) (.done (.inl s₁)))
           (.choiceL (.prim rfl rfl (.linger .own .now _ _)
-            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl)
+            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl rfl)
   | false =>
       exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) rfl rfl
         (settled_st _ _ _ _ _ _ (by decide) (by decide))
         (.seq (.prim rfl rfl (.linger .opp .now _ _) (.done (.inl s₁)))
           (.choiceR (.prim rfl rfl (.linger .own .now _ _)
-            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl)
+            (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl rfl)
 
 theorem hpLe_red₀ {k : Nat} (hk : 3 ≤ k) : (red₀ k).HpLe k := by
   intro p hp
@@ -223,6 +223,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | playBasic hh => simp [red, st, side] at hh
   | attach hh => simp [red, st, side] at hh
   | evolve hh => simp [red, st, side] at hh
+  | attachBench hh => simp [red, st, side] at hh
+  | evolveBench hh => simp [red, st, side] at hh
   | retreat ha hb => simp [red, st, side] at hb
   | item hh => simp [red, st, side] at hh
   | supporter hh => simp [red, st, side] at hh
@@ -269,6 +271,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
       simp [InPlay.ofBasic, hitter, mon] at hk
   | promoteOwn ha => simp [red, st, side] at ha
   | noPokemonOwn ha => simp [red, st, side] at ha
+  | knockOutBench hb => simp [red, st, side] at hb
+  | knockOutBenchOwn hb => simp [red, st, side] at hb
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt] at e
@@ -309,12 +313,12 @@ theorem reach_dr (k : Nat) (i : Bool) :
       exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) rfl rfl
         (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
         (.choiceL (.prim rfl rfl (.linger .own .now _ _)
-          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl)
+          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl rfl)
   | false =>
       exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) rfl rfl
         (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
         (.choiceR (.prim rfl rfl (.linger .own .now _ _)
-          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl)
+          (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl rfl)
 
 theorem hpLe_dr₀ {k : Nat} (hk : 2 ≤ k) : (dr₀ k).HpLe k := by
   intro p hp
@@ -359,6 +363,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | playBasic hh => simp [dr, st, side] at hh
   | attach hh => simp [dr, st, side] at hh
   | evolve hh => simp [dr, st, side] at hh
+  | attachBench hh => simp [dr, st, side] at hh
+  | evolveBench hh => simp [dr, st, side] at hh
   | retreat ha hb => simp [dr, st, side] at hb
   | item hh => simp [dr, st, side] at hh
   | supporter hh => simp [dr, st, side] at hh
@@ -407,6 +413,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       simp [InPlay.ofBasic, drainer, mon] at hk
   | promoteOwn ha => simp [dr, st, side] at ha
   | noPokemonOwn ha => simp [dr, st, side] at ha
+  | knockOutBench hb => simp [dr, st, side] at hb
+  | knockOutBenchOwn hb => simp [dr, st, side] at hb
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt] at e
