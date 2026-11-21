@@ -90,6 +90,9 @@ def hit_free(e):
 def bench_hit_free(e):
     if e[0] in ('benchDamage', 'spreadDamage'):
         return False
+    if e[0] == 'benchSome':
+        # milestone MV2: `Effect.benchHitFree (.benchSome _ _ _ dmg _) = !dmg`
+        return not e[4]
     return all(bench_hit_free(s) for s in subs(e))
 
 
@@ -110,6 +113,9 @@ def test_on_own(t):
         return t[1] == OWN
     if t[0] == 'countGe':
         return t[1][0] == 'energy' and t[1][1] == OWN
+    if t[0] in ('top', 'hasTool', 'movedUp', 'evolved'):
+        # milestone MV2 (`Test.onOwn`)
+        return t[1] == OWN
     return False
 
 
@@ -347,6 +353,15 @@ def filter_eval(f, card):
             return p['hp'] <= f[1]
         if h == 'noRuleBox':
             return p['ruleBox'] == ('none',)
+        # milestone MV2
+        if h == 'ex':
+            return p['ruleBox'] != ('none',)
+        if h == 'tera':
+            return p['tera']
+        if h == 'hasAttack':
+            return any(a['name'] == f[1] for a in p['attacks'])
+        if h == 'hasAbility':
+            return bool(p['abilities'])
         return False
     if kind == 'trainer':
         if h == 'named':
