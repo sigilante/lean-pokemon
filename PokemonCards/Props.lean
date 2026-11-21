@@ -80,6 +80,16 @@ def Card.lingers : Card → Bool
   | .trainer _ _ e => e.lingers
   | .energy _ => false
 
+/-- An Ability of the card writes a lingering damage bonus or reduction (in any of its scripts). -/
+def Card.abilityWrites : Card → Bool
+  | .pokemon p => p.abilities.any fun ab => ab.scripts.any Effect.writes
+  | _ => false
+
+/-- An Ability of the card writes any lingering modifier (in any of its scripts). -/
+def Card.abilityLingers : Card → Bool
+  | .pokemon p => p.abilities.any fun ab => ab.scripts.any Effect.lingers
+  | _ => false
+
 /-- The card has an "as often as you like" Ability. -/
 def Card.hasUnlimited : Card → Bool
   | .pokemon p => p.abilities.any fun ab => ab.use == .unlimited

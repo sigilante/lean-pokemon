@@ -226,6 +226,12 @@ def run(data, out, survey=None):
            '/-- The imported Trainers that write a rest-of-game bonus or reduction (`Card.alAmt`), by name. -/',
            'theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = '
            + T.lean([t[1] for t in [r['term'] for _, r in imported] if al_amt(t)]) + ' := by decide +kernel\n',
+           '/-- The imported Pokémon whose Ability writes a lingering damage bonus or reduction, by name. -/',
+           'theorem abilityWriters : (all.filter Card.abilityWrites).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if ability_writes(r['term'], T.writes)]) + ' := by decide +kernel\n',
+           '/-- The imported Pokémon whose Ability writes any lingering modifier, by name. -/',
+           'theorem abilityLingerers : (all.filter Card.abilityLingers).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if ability_writes(r['term'], T.lingers)]) + ' := by decide +kernel\n',
            '/-- The imported Pokémon with an "as often as you like" Ability (`AbilityUse.unlimited`), by name. -/',
            'theorem unlimitedAbilities : (all.filter Card.hasUnlimited).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if has_unlimited(r['term'])]) + ' := by decide +kernel\n',
@@ -241,7 +247,15 @@ def run(data, out, survey=None):
            'theorem recSafe : recSafeB all = ' + ('true' if not rs_pairs else 'false') + ' := by decide +kernel\n',
            ]
     if not rs_pairs:
-        src += ['/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly`,\n'
+        src += ['/-- Clause 3 (`RecycleSafe`) for every game whose cards are all imported cards: no Trainer and no\n'
+                '"as often as you like" Ability of the pool can return a non-Supporter writer of a bonus or reduction,\n'
+                'and no effect of the pool a rest-of-game writer. -/',
+                'theorem recycleSafe (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.RecycleSafe :=\n'
+                '  recycleSafe_of recSafe g hg\n',
+                '/-- Clause 4 (`AbilitySafe`) for every game whose cards are all imported cards. -/',
+                'theorem abilitySafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.AbilitySafe :=\n'
+                '  fun x hx => abilitySafe_of all_ok x (hg x hx)\n',
+                '/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly`,\n'
                 '`RecycleSafe` and `AbilitySafe`), so `Faithful.xfinite` applies to it. -/',
                 'theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=\n'
                 '  faithful_of all_ok recSafe g hg\n',
@@ -361,6 +375,10 @@ def card_effects(term):
     if term[0] == 'trainer':
         return [term[3]]
     return []
+
+
+def ability_writes(term, pred):
+    return term[0] == 'pokemon' and any(pred(e) for ab in term[1]['abilities'] for e in T.ability_scripts(ab))
 
 
 def has_unlimited(term):

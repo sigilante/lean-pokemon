@@ -1255,6 +1255,12 @@ theorem nonSupporterWriters : (all.filter fun c => c.wAmt != 0).map Card.label =
 /-- The imported Trainers that write a rest-of-game bonus or reduction (`Card.alAmt`), by name. -/
 theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = [] := by decide +kernel
 
+/-- The imported Pokémon whose Ability writes a lingering damage bonus or reduction, by name. -/
+theorem abilityWriters : (all.filter Card.abilityWrites).map Card.label = [] := by decide +kernel
+
+/-- The imported Pokémon whose Ability writes any lingering modifier, by name. -/
+theorem abilityLingerers : (all.filter Card.abilityLingers).map Card.label = [] := by decide +kernel
+
 /-- The imported Pokémon with an "as often as you like" Ability (`AbilityUse.unlimited`), by name. -/
 theorem unlimitedAbilities : (all.filter Card.hasUnlimited).map Card.label = ["Emboar", "Mega Venusaur ex", "Azumarill ex", "Dewgong"] := by decide +kernel
 
@@ -1268,6 +1274,16 @@ theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label 
 
 /-- Clause 3 of `Faithful` over the whole imported pool, decided. -/
 theorem recSafe : recSafeB all = true := by decide +kernel
+
+/-- Clause 3 (`RecycleSafe`) for every game whose cards are all imported cards: no Trainer and no
+"as often as you like" Ability of the pool can return a non-Supporter writer of a bonus or reduction,
+and no effect of the pool a rest-of-game writer. -/
+theorem recycleSafe (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.RecycleSafe :=
+  recycleSafe_of recSafe g hg
+
+/-- Clause 4 (`AbilitySafe`) for every game whose cards are all imported cards. -/
+theorem abilitySafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.AbilitySafe :=
+  fun x hx => abilitySafe_of all_ok x (hg x hx)
 
 /-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly`,
 `RecycleSafe` and `AbilitySafe`), so `Faithful.xfinite` applies to it. -/
