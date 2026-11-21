@@ -486,7 +486,7 @@ theorem KOBatch.disc_mono (w : Card → Nat) {g g' : GameState} (h : KOBatch g g
     g.discW w ≤ g'.discW w := by
   obtain ⟨-, -, d1, d2, -⟩ := h.piles
   simp only [GameState.discW, d1, d2, GameState.koStep, PlayerState.takePrizes, GameState.koOf,
-    PlayerState.koOut, GameState.side, wsum_append]
+    PlayerState.koOut, GameState.side, PlayerState.noteKO, wsum_append]
   omega
 
 theorem Resolve.disc_mono (w : Card → Nat) {g g' : GameState} (h : Resolve g g') :
@@ -597,7 +597,7 @@ theorem KOBatch.keeps {g g' : GameState} (h : KOBatch g g') :
   have hd : g.discAmt ≤ g'.discAmt := by
     obtain ⟨-, -, d1, d2, -⟩ := h.piles
     simp only [GameState.discAmt, d1, d2, GameState.koStep, PlayerState.takePrizes,
-      GameState.koOf, PlayerState.koOut, GameState.side, cardsAmt_append]
+      GameState.koOf, PlayerState.koOut, GameState.side, PlayerState.noteKO, cardsAmt_append]
     omega
   cases h <;> exact ⟨⟨hd, rfl, rfl, rfl⟩, fun _ => rfl⟩
 
@@ -1354,8 +1354,9 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
       | own =>
           simp only [GameState.side] at ha hb
           have e1 : a.cure.abW = a.abW := rfl
+          have e2 : (Whose.mover .own q).abW = q.abW := rfl
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, ha, hb, abWo, optN,
-            abWs_append, abWs, e1, List.length_append, List.length_cons]; omega
+            abWs_append, abWs, e1, e2, List.length_append, List.length_cons]; omega
       | opp => exact Nat.le_refl _
   | @benchDamage g q b₁ b₂ w n h =>
       cases w with

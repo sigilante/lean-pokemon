@@ -41,4 +41,5 @@ import Pokemon.TriggerWitness
 import Pokemon.NoTriggers
 import Pokemon.InPlayTests
 import Pokemon.Spread
+import Pokemon.History
 import Pokemon.Audit

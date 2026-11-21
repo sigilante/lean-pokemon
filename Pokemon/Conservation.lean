@@ -112,6 +112,10 @@ theorem count_prizes (n : Nat) (l : List Card) (x : Card) :
     List.count x l = List.count x (l.take n) + List.count x (l.drop n) := by
   rw [← List.count_append, List.take_append_drop]
 
+theorem PlayerState.allCards_noteKO (ko atk : Bool) (s : PlayerState) :
+    (s.noteKO ko atk).allCards = s.allCards := rfl
+
+
 /-- Close a goal `l₁.Perm l₂` by comparing counts after unfolding `allCards`. -/
 macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
   `(tactic| (
@@ -119,7 +123,8 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
     simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,
       List.count_nil, optCardList, benchCardList, benchCardList_append, InPlay.cardList,
       InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
-      InPlay.inflict_energy, InPlay.inflict_tools, stadiumCardList, $hs,*] <;>
+      InPlay.inflict_energy, InPlay.inflict_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
+      $hs,*] <;>
     omega))
 
 /-- Moving a damage counter moves no card (milestone M8a). -/
@@ -295,7 +300,7 @@ theorem KOBatch.perm {g g' : GameState} (h : KOBatch g g') : g'.allCards.Perm g.
     have c4 := PlayerState.koOut_count (g.koT .opp .active) (g.koT .opp .bench) g.opp x
     simp only [GameState.koOf, GameState.side] at c1 c2
     simp only [GameState.allCards, GameState.koStep, List.count_append, GameState.koOf,
-      GameState.side] at c3 c4 ⊢
+      GameState.side, PlayerState.allCards_noteKO] at c3 c4 ⊢
     omega
   cases h with
   | won => exact hk

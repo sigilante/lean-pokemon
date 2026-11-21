@@ -263,8 +263,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Cost or remaining HP, and Special Energy;
   there are no other reads of the damage on Benched Pokémon (no tests or counts of it), none of
   Poison strength, of HP ("if it has full
-  HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history ("if you
-  played a Supporter this turn"); a count test is made, like every test, while the player has an
+  HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history beyond
+  milestone MV2's (next item); a count test is made, like every test, while the player has an
   Active Pokémon; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
   Pokémon, Bench included); the damage step's amount (`Amt`) reads the damage on either
@@ -684,6 +684,22 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Dudunsparce, Misty's Psyduck in S10), devolution, evolution by effect, switching a card in play
   with one in the discard pile (Transformation Tome, Ogre's Mask), Prize-card moves other than
   taking them, the Lost Zone, and "attach to each of" a varying set;
+* one-turn history (milestone MV2, survey S13 §A, `Pokemon/History.lean`): a per-player Knock Out
+  record (`KOHist`, read by `Count.koLast`), a per-Pokémon "moved from the Bench to the Active
+  Spot this turn" flag (`InPlay.movedUp`, `Test.movedUp`) and "evolved this turn" (`Test.evolved`,
+  from `fresh`). Departures: "Knocked Out by damage from an attack" is read as "Knocked Out by the
+  check after the turn's attack", so damage counters placed by an attack's effect count too (a
+  superset); Knock Outs at Checkup are recorded in no turn (Checkup is between turns); a promotion
+  after a Knock Out of the player's own Active Pokémon in their own turn does not set `movedUp`
+  (an under-model). Absent, with the refused cards of today's Standard that need them (S13 §A;
+  cards can need several): "if you played [named, Future, Ancient, Team Rocket] Supporter this
+  turn" (7), "if this Pokémon used [attack] during your last turn" (4) and "if 1 of your Pokémon
+  used [attack] during your last turn" (3), the per-Pokémon attack lock "during your next turn,
+  this Pokémon can't use [attack]" (36 in its own family), "healed this turn" (3), "damaged during
+  your opponent's last turn … that much more damage" (2, an amount), next-turn per-Pokémon
+  triggers (4), filtered "during this turn" bonuses (4), Prize and Knock Out consequences (8),
+  "Prize cards your opponent took during their last turn" (1, the one counted quantity, at most 6),
+  and name prefixes ("any of your Ethan's Pokémon", 2 of the 10 Knock Out tests);
 * first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
   starting player cannot attack or play a Supporter on the first turn of the game
   (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
@@ -873,8 +889,10 @@ either player wins (`Outcome.ofWays`; a game already over stays over). Nobody is
 batch-KO the model took Knock Outs one at a time, in any order, with promotions in between. -/
 def GameState.koStep (g : GameState) : GameState :=
   { g with
-    cur := (g.koOf .own).takePrizes (g.koVal .opp),
-    opp := (g.koOf .opp).takePrizes (g.koVal .own),
+    cur := ((g.koOf .own).takePrizes (g.koVal .opp)).noteKO
+      (!g.between && decide (0 < g.koVal .own)) g.attacked,
+    opp := ((g.koOf .opp).takePrizes (g.koVal .own)).noteKO
+      (!g.between && decide (0 < g.koVal .opp)) g.attacked,
     winner := match g.winner with
       | none => Outcome.ofWays g.curIsFirst (winWays (g.koVal .opp) g.cur (g.koOf .opp))
           (winWays (g.koVal .own) g.opp (g.koOf .own))
@@ -1399,7 +1417,7 @@ inductive Move : GameState → GameState → Prop where
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
-        active := some q,
+        active := some q.moveUp,
         bench := b₁ ++ { a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } }
@@ -1573,10 +1591,10 @@ inductive Move : GameState → GameState → Prop where
         { cur := { g.opp with
             active := some (a.checkup false fa sa ca), bench := bo,
             energyAttached := false, supporterPlayed := false, retreated := false,
-            mods := g.opp.mods.shift },
+            mods := g.opp.mods.shift, ko := g.opp.ko.shift },
           opp := { g.cur.unfresh with
             active := some (b.unfresh.checkup true fb sb cb), bench := bc,
-            mods := g.cur.mods.shift, hadTurn := true },
+            mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
           stadiumUsed := false }

@@ -95,6 +95,16 @@ structure InPlay where
   One flag per Pokémon: exact for cards with at most one Ability, which is every Standard card
   (survey S9); for a card with two once-per-turn Abilities the flag would let only one be used. -/
   used : Bool
+  /-- moved from its owner's Bench to the Active Spot during its owner's current turn (milestone
+  MV2: "If this Pokémon moved from your Bench to the Active Spot this turn", Keldeo ex
+  rsv10pt5-30): set by retreat and by `Effect.switch .own` (`InPlay.moveUp`, `Whose.mover`), that
+  is by the owner in the owner's turn, and cleared at the end of the owner's turn (`InPlay.unfresh`).
+  A switch made by the opponent (`switch .opp`, in the opponent's turn) and a promotion after a Knock
+  Out set nothing: exact for promotions between turns and in the opponent's turn, which are not moves
+  in the owner's turn; a promotion after a Knock Out of the player's own Active Pokémon in their own
+  turn (by an Item or an Ability) is a move the printed card counts and the model does not (Known
+  gaps) -/
+  movedUp : Bool
 
 namespace InPlay
 
@@ -161,11 +171,24 @@ theorem attacks_of_noTool {p : InPlay} (h : ∀ c ∈ p.tools, c.isTool = false)
 def ofBasic (p : PokemonCard) : InPlay :=
   { top := p, under := [], energy := [], tools := [], damage := 0,
     rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-    marks := Marks.empty, used := false }
+    marks := Marks.empty, used := false, movedUp := false }
 
 /-- The end of its owner's turn for a Pokémon in play: it is no longer one put into play or evolved
-this turn, and (milestone M8a) it has not used an Ability this turn. -/
-def unfresh (p : InPlay) : InPlay := { p with fresh := false, used := false }
+this turn, (milestone M8a) it has not used an Ability this turn, and (milestone MV2) it has not
+moved to the Active Spot this turn. -/
+def unfresh (p : InPlay) : InPlay := { p with fresh := false, used := false, movedUp := false }
+
+/-- The Pokémon moves from the Bench to the Active Spot (milestone MV2). -/
+def moveUp (p : InPlay) : InPlay := { p with movedUp := true }
+
+theorem cardList_moveUp (p : InPlay) : p.moveUp.cardList = p.cardList := rfl
+
+/-- The Pokémon moved by a switch of the `w` player's Active Pokémon (milestone MV2): marked as moved
+when the switch is the player's own (`own`), unmarked when it is made on the opponent's Pokémon,
+in a turn that is not theirs. -/
+def _root_.Pokemon.Whose.mover : Whose → InPlay → InPlay
+  | .own => moveUp
+  | .opp => id
 
 /-- Record that the Pokémon has used an Ability this turn (milestone M8a). -/
 def markUsed (p : InPlay) : InPlay := { p with used := true }
@@ -234,6 +257,8 @@ def Test.whose : Test → Whose
   | .countGe _ _ => .own
   | .top w _ => w
   | .hasTool w => w
+  | .movedUp w => w
+  | .evolved w => w
 
 def optCards : Option InPlay → Nat
   | none => 0
@@ -327,6 +352,34 @@ def shift (t : Store) : Store := ⟨t.next, t.after, Mods.empty, t.always⟩
 
 end Store
 
+/-- **Knock Out history of one player** (milestone MV2): whether any of the player's Pokémon was
+Knocked Out during the current turn (`now`), and by the Knock Out check after an attack
+(`nowAtk`), and the same for the previous turn (`last`, `lastAtk`). Four flags: the record takes 16
+values, and nothing is counted. Set by the batch Knock Out step outside Pokémon Checkup
+(`GameState.koStep`, `KOHist.note`), shifted at the end of every turn (`KOHist.shift`). Read by
+`Count.koLast`: "If any of your Pokémon were Knocked Out [by damage from an attack] during your
+opponent's last turn" (Iron Leaves sv6-19, Hassel sv6-151), made in the player's own turn, when
+`last` is the opponent's turn just ended. -/
+structure KOHist where
+  now : Bool
+  nowAtk : Bool
+  last : Bool
+  lastAtk : Bool
+  deriving DecidableEq
+
+namespace KOHist
+
+def empty : KOHist := ⟨false, false, false, false⟩
+
+/-- The end of a turn: this turn becomes the last one. -/
+def shift (h : KOHist) : KOHist := ⟨false, false, h.now, h.nowAtk⟩
+
+/-- Record a Knock Out of one of the player's Pokémon (`ko`), after an attack if `atk`. -/
+def note (ko atk : Bool) (h : KOHist) : KOHist :=
+  { h with now := h.now || ko, nowAtk := h.nowAtk || (ko && atk) }
+
+end KOHist
+
 structure PlayerState where
   /-- head of the list is the top of the deck -/
   deck : List Card
@@ -348,6 +401,8 @@ structure PlayerState where
   set by `Move.endTurn` when that turn ends. Read by the evolution ban: "neither player can
   evolve a Pokémon on that player's first turn" (rulebook 2023 p. 11). -/
   hadTurn : Bool
+  /-- the Knock Out history of this player (milestone MV2, `KOHist`) -/
+  ko : KOHist
 
 namespace PlayerState
 
@@ -362,6 +417,10 @@ Pokémon and each Benched Pokémon (top card, the cards under it, attached Energ
 def allCards (s : PlayerState) : List Card :=
   s.deck ++ s.hand ++ s.discard ++ s.prizes ++ s.lost
     ++ optCardList s.active ++ benchCardList s.bench
+
+/-- Record in the player's Knock Out history whether one of their Pokémon was Knocked Out (`ko`),
+after an attack if `atk` (milestone MV2). -/
+def noteKO (ko atk : Bool) (s : PlayerState) : PlayerState := { s with ko := s.ko.note ko atk }
 
 def unfresh (s : PlayerState) : PlayerState :=
   { s with active := s.active.map InPlay.unfresh, bench := s.bench.map InPlay.unfresh }
@@ -523,6 +582,7 @@ def Count.val : Count → GameState → Nat
   | .energyAll w f, g =>
       ((((g.side w).active.map InPlay.energy).getD []) ++
         ((g.side w).bench.map InPlay.energy).flatten).countP f.eval
+  | .koLast w atk, g => if cond atk (g.side w).ko.lastAtk (g.side w).ko.last then 1 else 0
   | .inPlay w f, g =>
       (((g.side w).active.map InPlay.top).toList ++ (g.side w).bench.map InPlay.top).countP
         fun p => f.eval (.pokemon p)
@@ -538,5 +598,7 @@ def Test.eval : Test → GameState → InPlay → Bool
   | .countGe c n, g, _ => Nat.ble n (c.val g)
   | .top _ f, _, p => f.eval (.pokemon p.top)
   | .hasTool _, _, p => !p.tools.isEmpty
+  | .movedUp _, _, p => p.movedUp
+  | .evolved _, _, p => p.fresh && !p.under.isEmpty
 
 end Pokemon

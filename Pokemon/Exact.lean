@@ -136,6 +136,7 @@ theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState
   | energyAll w f =>
       cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t2, t3]
   | inPlay w f => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t1, t4]
+  | koLast w atk => cases w <;> rfl
 
 theorem GameState.count_of_xclampAt {co cp cb : Cap} {g₁ g₂ : GameState}
     (h : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) (c : Count) : c.val g₂ = c.val g₁ := by
@@ -562,7 +563,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
           exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, ha₂, he₂, Option.map_some,
-              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
       | opp =>
           simp only [GameState.side] at ha h
           rw [ha] at ha₂
@@ -570,7 +571,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
           exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, he₁, Option.map_some,
-              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
   | switchNone w h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -1079,7 +1080,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by rw [hq.rot]; exact hs) hbt hs' hl hat, ?_⟩
       rw [e]
       simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₂, Option.map_some,
-        List.map_append, List.map_cons, h1, h2, h3]
+        List.map_append, List.map_cons, InPlay.clampWith_moveUp, h1, h2, h3]
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .item e ∈ g₁.cur.hand := by

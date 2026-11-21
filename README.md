@@ -9,8 +9,8 @@ modifiers add up without limit); with those generalisations the model does have 
 stores, and the finiteness results below need a hypothesis on the deck: tame decks
 (`Reach.finite`) or faithful decks (`Faithful.xfinite`); neither class contains the other.
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 38 constructors) of
-thirty-four primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 39 constructors) of
+thirty-five primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
@@ -163,6 +163,31 @@ with their effect (Academy at Night, Levincia, Prism Tower), 9 have an activated
 cannot express exactly, and 25 are static or triggered; of the 45 Tools, 1 is expressed (Core
 Memory), 2 grant attacks the model cannot express exactly, 41 are static (22), triggered (18) or change
 nothing in the model (Backtrack Badge), and 1 record (Adventure Lantern me6-90) is unclassified.
+Milestone MV2 (effect vocabulary 2; census in survey S13) added three families of card text. Tests
+and counts on cards in play: `Test.top` (the printed card of either Active Pokémon passes a filter:
+"is a Pokémon ex", "is an Evolution Pokémon", "is a Stage 2 Pokémon", "is a Tera Pokémon"),
+`Test.hasTool`, the filters `Filter.ex`, `Filter.tera`, `Filter.hasAttack` and `Filter.hasAbility`,
+and `Count.inPlay` (Pokémon in play passing a filter); both clamps keep them, since they read
+printed cards (`Pokemon/InPlayTests.lean`). Spread: the primitive `Effect.benchSome` (damage or
+counters on `m` distinct Benched Pokémon passing a filter, all of them if fewer pass; semantics
+`Hits`) and the derived forms `Effect.rep`, `Effect.spreadAny` ("put 6 damage counters on your
+opponent's Benched Pokémon in any way you like", exact in attacks), `Effect.hitSome` ("120 damage to
+2 of your opponent's Pokémon") and `Effect.countersSome`; both clamps simulate it (`Hits.transfer`),
+and one spread can Knock Out two Benched Pokémon in one batch (`Pokemon/Spread.lean`). One-turn
+history: a per-player Knock Out record (`KOHist`: this turn and the last, any Knock Out and one by
+the check after an attack; set by the batch check outside Checkup, shifted by `Move.endTurn`), read
+by `Count.koLast` ("if any of your Pokémon were Knocked Out by damage from an attack during your
+opponent's last turn"); a per-Pokémon flag `InPlay.movedUp` (set by a retreat and by `switch .own`,
+cleared at the end of its owner's turn), read by `Test.movedUp`; and `Test.evolved`, which reads
+`fresh` and the cards under the top card and needs no new state. The record is flags only, 16
+values per player and 2 per Pokémon, and nothing is counted, so every finiteness theorem holds with
+the enumerations extended and no new hypothesis (`Pokemon/History.lean`: a history test false and
+then true across a turn boundary). No theorem statement changed in text except those that spell out
+a changed definition: the internal `Counter.Fits.toCur`, `Counter.Fits.toOpp` (the record update of
+`Move.endTurn` gained `ko := s.ko.shift`), and the witness states `Trainer.after1`, `after2`,
+`after3` and `StaticWitness.tg2`, whose Knock Outs now leave a record. Not expressible: the played
+Supporter's name this turn, attacks used last turn and per-Pokémon attack locks, healing this turn,
+spread amounts computed by the text, name-prefix filters (Known gaps).
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

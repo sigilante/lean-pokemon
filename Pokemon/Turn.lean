@@ -78,10 +78,10 @@ def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List I
   { cur := { g.opp with
       active := some (a.checkup false fa sa ca), bench := bo,
       energyAttached := false, supporterPlayed := false, retreated := false,
-      mods := g.opp.mods.shift },
+      mods := g.opp.mods.shift, ko := g.opp.ko.shift },
     opp := { g.cur.unfresh with
       active := some (b.unfresh.checkup true fb sb cb), bench := bc,
-      mods := g.cur.mods.shift, hadTurn := true },
+      mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
     curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
     between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
     stadiumUsed := false }

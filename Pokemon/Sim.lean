@@ -353,7 +353,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           have hq' : InPlay.Agree k (.upto k) { q₂ with damage := q₂.damage + k' * q₂.damage }
               { q with damage := q.damage + k' * q.damage } :=
             ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
-              hq.marks, hq.used, by simp only [Cap.dmg]; exact min_add_mul hd k', hq.poisonUp⟩
+              hq.marks, hq.used, by simp only [Cap.dmg]; exact min_add_mul hd k', hq.poisonUp, hq.movedUp⟩
           exact ⟨_, .scale .opp k' rfl rfl, by
             simp only [GameState.rclamp, GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
               InPlay.clamp_of_agree hq', he₁, he₂]⟩
@@ -453,7 +453,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
                 (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce))) } :=
           ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
             hq.marks, hq.used, hq.dmg_add_upto (dealtBy_cap_reduce hk0 (Store.cap_add hm₁ _ _) hm₂
-              hn.2 n g.weak hr), hq.poisonUp⟩
+              hn.2 n g.weak hr), hq.poisonUp, hq.movedUp⟩
         simp only [GameState.rclamp, GameState.clampAt, GameState.dealt, hwr.1, hwr.2, hsf.sBonus,
           hsf.sReduce, Option.map_some, hc₂, hm₁, hm₂,
           InPlay.clamp_of_agree hq', he₁, he₂]
@@ -472,7 +472,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
                 opp := { g.opp with active := some q, bench := e₂, mods := m₂ } } }
             { p with damage := p.damage + g.dealt n } :=
           ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
-            hq.marks, hq.used, by simp only [Cap.dmg]; omega, hq.poisonUp⟩
+            hq.marks, hq.used, by simp only [Cap.dmg]; omega, hq.poisonUp, hq.movedUp⟩
         simp only [GameState.rclamp, GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
           InPlay.clamp_of_agree hq', he₁, he₂]
   | @benchCounters g q b₁ b₂ w n h =>
@@ -562,7 +562,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
           exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, by
             simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, ha₂, hm₁, hm₂, he₂, Option.map_some,
-              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
       | opp =>
           simp only [GameState.side] at ha h
           rw [ha] at ha₂
@@ -570,7 +570,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
           exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
             simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, hm₁, hm₂, he₁, Option.map_some,
-              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
   | switchNone w h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
@@ -1235,7 +1235,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (by rw [hq.rot]; exact hs) hbt hs' (by rw [hfl.2.2.1]; exact hl) hat, ?_⟩
       rw [e]
       simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₂, Option.map_some,
-        List.map_append, List.map_cons, h1, h2, h3]
+        List.map_append, List.map_cons, InPlay.clampWith_moveUp, h1, h2, h3]
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.trainer hh

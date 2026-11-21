@@ -330,6 +330,12 @@ inductive Count where
   MV2: "for each of your Pokémon in play that has the Round attack", "if you have any Tera Pokémon
   in play", "if you have Tornadus in play") -/
   | inPlay (w : Whose) (f : Filter)
+  /-- 1 if any of the `w` player's Pokémon were Knocked Out during the previous turn (with `atk`:
+  by the Knock Out check after an attack), else 0 (milestone MV2, `KOHist`): "If any of your Pokémon
+  were Knocked Out by damage from an attack during your opponent's last turn, this attack does 60
+  more damage" (Iron Leaves sv6-19) is `ite (countGe (koLast .own true) 1) …`. A flag read as a
+  count, so that it is a read of the state that both clamps keep like every count -/
+  | koLast (w : Whose) (atk : Bool)
   deriving DecidableEq
 
 /-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. Milestone
@@ -357,6 +363,15 @@ inductive Test where
   | top (w : Whose) (f : Filter)
   /-- it has a Pokémon Tool attached (milestone MV2) -/
   | hasTool (w : Whose)
+  /-- it moved from the Bench to the Active Spot this turn (milestone MV2, `InPlay.movedUp`: "If
+  this Pokémon moved from your Bench to the Active Spot this turn", Keldeo ex rsv10pt5-30) -/
+  | movedUp (w : Whose)
+  /-- it evolved this turn (milestone MV2: "If this Pokémon evolved from Salandit during this turn",
+  Salazzle sv7-24): it was put into play or evolved this turn (`InPlay.fresh`) and has a card under
+  it. Exact without new state: only Basic Pokémon are put into play, evolution sets `fresh`, and
+  `fresh` is cleared at the end of its owner's turn; the printed "from X" is the card's own
+  pre-evolution, the only way the model evolves it -/
+  | evolved (w : Whose)
   deriving DecidableEq
 
 /-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
@@ -592,7 +607,7 @@ included). -/
 def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
   | .countGe (.energy .own _) _ => true
-  | .top .own _ | .hasTool .own => true
+  | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own => true
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,

@@ -52,7 +52,7 @@ def store (r : Nat) : Store := ⟨Mods.empty, { Mods.empty with reduce := r }, M
 
 def pl (hand discard : List Card) (r : Nat) : PlayerState :=
   ⟨[], hand, discard, [.energy .metal], [], some (InPlay.ofBasic guard), [], false, false, false,
-    false, false, store r, true⟩
+    false, false, store r, true, KOHist.empty⟩
 
 def gs (hand discard : List Card) (r : Nat) : GameState :=
   ⟨pl hand discard r, pl [] [] 0, true, false, false, false, none, none, false, false⟩
