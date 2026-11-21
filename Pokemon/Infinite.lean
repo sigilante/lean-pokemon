@@ -19,8 +19,9 @@ no damage until Checkup, so each resulting state `Infinite.st n` is `DamageBound
   well-formed start by `endTurn` (compare `Move.endTurn_pending_ko`, whose witness is not
   reachable from a well-formed state).
 
-The excess Poison strength is invisible to play up to `clamp` (`Reach.clamp_sim`), and
-`Reach.finite` bounds the clamped states; these theorems concern the unclamped states only.
+The excess Poison strength is invisible to play up to `clamp` (`Reach.clamp_sim`; the Item here
+is tame, so `GameState.Fit` holds), and `Reach.finite` bounds the clamped states; these theorems
+concern the unclamped states only.
 -/
 
 namespace Pokemon.Infinite
@@ -35,7 +36,7 @@ def item : Card := .trainer "PoisonUpItem" .item eff
 
 def side (hand : List Card) (discard : List Card) (a : InPlay) : PlayerState :=
   ⟨[.energy .grass, .energy .grass], hand, discard, [.energy .fire], [], some a, [],
-    none, false, false, false, false, false⟩
+    none, false, false, false, false, false, Store.empty⟩
 
 /-- Each player has one Prize card and a 50-HP Active Pokémon; the player to move holds
 `item`. -/
@@ -93,7 +94,7 @@ theorem reach_st (n : Nat) : Reach start (st n) := by
       (trun_iter_st n 0)
   rw [Nat.zero_add] at hr
   exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl
-    start_settled hr)
+    start_settled hr rfl)
 
 /-- Poison strength on the opponent's Active Pokémon. -/
 def oppPoisonUp (g : GameState) : Nat :=

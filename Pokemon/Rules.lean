@@ -76,10 +76,44 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); there
   are no tests or counts on Benched Pokémon, on Energy, on
   cards in hand, deck, discard pile or Prizes, on Poison strength, on HP ("if it has full HP",
-  "remaining HP"), and no lingering "this turn" modifiers; `scale` writes only to the
+  "remaining HP"), or on the lingering modifiers in effect; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
   Pokémon, Bench included); "damage" in printed text, which Weakness and Resistance would
   modify, is modelled as damage counters, as for base damage;
+* lingering modifiers (`Store`, `Effect.linger`): each player has a damage bonus for their
+  attacks, a damage reduction and a damage prevention for attacks against their Pokémon, and
+  locks on attacking, retreating and playing Items, for this turn, the next turn, the turn
+  after, or the rest of the game; `endTurn` shifts the turns (`Store.shift`). Amounts add up
+  without limit: `linger` is a general primitive, usable any number of times and inside
+  `iter` (printed same-turn bonuses and reductions are bounded by copies times a constant if no
+  card-recycling loop replays them, an empirical claim about the card pool; rest-of-game ones
+  come from once-per-game GX attacks; a reduction carried into the opponent's turn exists on a
+  printed Item, Iron Defender; the model over-approximates them).
+  Modifiers belong to a player, not to one Pokémon: "this Pokémon takes 30 less damage during
+  your opponent's next turn" protects whichever Pokémon that player has Active, and does not
+  end when the Pokémon leaves the Active Spot or follow it to the Bench. Damage done by an
+  attack (`Effect.damage`, used for base damage) is `n + bonus - reduction`, or nothing under
+  prevention; Weakness and Resistance are absent, so the order "bonus, then Weakness and
+  Resistance, then reduction" collapses to this; `counters` (damage counters, not damage) is
+  not modified, as in the rulebook. `damage` and `drain` are also usable in Trainer effects,
+  where the printed game has no attack damage (an over-approximation). Absent: threshold
+  prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
+  Stadiums, Abilities or Energy attachment, cost changes, Weakness and type changes, "attack
+  twice" and "take another turn", and "that much more damage" (damage taken last turn).
+  **Finiteness is proved only for tame decks** (`Reach.finite`): the clamp, which caps every
+  bonus, is a bisimulation when no card adds a damage reduction or uses `drain` and no
+  reduction is in effect at the start (`GameState.Fit`); for every cap `k ≥ 3` there is a deck
+  with a reduction for which the clamp is not a simulation (`Lingering.reduce_breaks_clamp`),
+  and for every `k ≥ 2` a deck with `drain` (`Lingering.drain_breaks_clamp`); for some such
+  decks (one witness deck, with a reduction and without `drain`) the reachable states are not
+  finite up to any equivalence fine enough to recover the configuration of a two-counter
+  machine, a statement about representation, not play (`Counter.not_finite_up_to`). The
+  rest-of-game modifiers give two unbounded counters with an exact zero test, and the model
+  simulates every two-counter machine (`Counter.universal`; this rests on the
+  over-approximation of rest-of-game modifiers just described, on `damage` read by a test later
+  in the same attack, on a printed HP chosen for the machine, and on the other departures listed
+  in `Pokemon/Counter.lean`); with Minsky's theorem (prose) this rules out a uniform computable
+  finite abstraction of the generalised model;
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending
@@ -259,19 +293,21 @@ inductive Move : GameState → GameState → Prop where
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
       (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
       (hp : paid.length = a.top.retreat)
-      (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g) :
+      (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
+      (hl : g.cur.mods.live.noRetreat = false) :
       Move g { g with cur := { g.cur with
         active := some q,
         bench := b₁ ++ { a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } }
   /-- play an Item card: it goes to the discard pile and its effect resolves, with Knock Outs
-  taken at once in mid-effect (`TRun`) -/
+  taken at once in mid-effect (`TRun`); not while an Item lock is in effect -/
   | item {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
       (hh : g.cur.hand = l₁ ++ Card.trainer n .item e :: l₂) (hbt : g.between = false)
       (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
-        hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g') :
+        hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
+      (hl : g.cur.mods.live.noItem = false) :
       Move g g'
   /-- play a Supporter card, once per turn; its effect resolves as an Item's does (`TRun`) -/
   | supporter {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
@@ -281,14 +317,16 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g') :
       Move g g'
-  /-- attack: place the base damage, then resolve the attack's effect. An Asleep or
-  Paralyzed Pokémon cannot attack; a Confused one can, when its coin flip is heads. -/
+  /-- attack: do the base damage (with the lingering modifiers, `Effect.damage`), then resolve
+  the attack's effect. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
+  its coin flip is heads; nobody can attack while an attack lock is in effect on them. -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
       (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g)
-      (hr : Run (.seq (.counters atk.damage) atk.effect) g g') :
+      (hr : Run (.seq (.damage atk.damage) atk.effect) g g')
+      (hl : g.cur.mods.live.noAttack = false) :
       Move g { g' with attacked := true }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
   happen, and the attacker gets 3 damage counters -/
@@ -296,7 +334,7 @@ inductive Move : GameState → GameState → Prop where
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
       (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot = .confused)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
-      (hst : Settled g) :
+      (hst : Settled g) (hl : g.cur.mods.live.noAttack = false) :
       Move g { g with
         cur := { g.cur with active := some { a with damage := a.damage + 3 } },
         attacked := true }
@@ -334,17 +372,20 @@ inductive Move : GameState → GameState → Prop where
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
       Move g { g with winner := some (!g.curIsFirst) }
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
-  (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own; then the
-  opponent becomes the player to move, between turns. Requires both Active Pokémon and no
-  pending Knock Out anywhere. -/
+  (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own; the
+  lingering modifiers of this turn expire and the others move one turn closer (`Store.shift`);
+  then the opponent becomes the player to move, between turns. Requires both Active Pokémon
+  and no pending Knock Out anywhere. -/
   | endTurn {g : GameState} {a b : InPlay} (fa sa ca fb sb cb : Bool)
       (ha : g.opp.active = some a) (hb : g.cur.active = some b) (hk : DamageBounded g)
       (hbt : g.between = false) :
       Move g
         { cur := { g.opp with
             active := some (a.checkup false fa sa ca),
-            energyAttached := false, supporterPlayed := false, retreated := false },
-          opp := { g.cur.unfresh with active := some (b.unfresh.checkup true fb sb cb) },
+            energyAttached := false, supporterPlayed := false, retreated := false,
+            mods := g.opp.mods.shift },
+          opp := { g.cur.unfresh with
+            active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken

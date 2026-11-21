@@ -97,6 +97,11 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
       cases w <;>
         simp only [GameState.allCards, PlayerState.allCards, GameState.updSide,
           PlayerState.unmark, optCardList_setMarks, benchCardList_setMarks] <;> exact .refl _
+  | linger w s m g =>
+      cases w <;> simp only [GameState.allCards, PlayerState.allCards, GameState.updSide] <;>
+        exact .refl _
+  | damage n h => perm_count [h]
+  | drain n h hq => perm_count [h, hq]
   | shuffle h =>
       have := fun x => h.count_eq x
       perm_count [this]

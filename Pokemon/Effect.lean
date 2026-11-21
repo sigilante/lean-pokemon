@@ -91,6 +91,16 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run e g (g.updSide w fun s => { s with bench := b₁ ++ q.setMarks f :: b₂ })
   | unmark (w : Whose) (m : Marker) (g : GameState) :
       Run (.unmark w m) g (g.updSide w (PlayerState.unmark m))
+  | linger (w : Whose) (s : Slot) (m : Mod) (g : GameState) :
+      Run (.linger w s m) g (g.updSide w fun p => { p with mods := p.mods.add s m })
+  | damage {g : GameState} {p : InPlay} (n : Nat) (h : g.opp.active = some p) :
+      Run (.damage n) g
+        { g with opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } }
+  | drain {g : GameState} {p q : InPlay} (n : Nat) (h : g.opp.active = some p)
+      (hq : g.cur.active = some q) :
+      Run (.drain n) g
+        { g with cur := { g.cur with active := some { q with damage := q.damage - g.dealt n } },
+                 opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } }
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

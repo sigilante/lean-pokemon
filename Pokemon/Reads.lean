@@ -23,11 +23,15 @@ effect (`TRun`) they do not: a Knock Out is taken at once after the step that ca
   attack's effect can damage the player's own Pokémon. It is no longer needed.
 
 What survives. Every move except a Knock Out starts from a `Settled` state, where damage on
-every Pokémon in play is below HP and so equal clamps mean equal damage; `Run.exact_sim`
-simulates an attack's effect with damage exact, and `TRun.clamp_sim` a Trainer card's. Hence
-`Move.clamp_sim` and `Reach.clamp_sim` (the HP clamp is a bisimulation for moves) and
-`Reach.finite` (the clamps of the reachable states lie in one finite list) hold for the extended
-language, with the cap at HP; no larger cap computed from the constants in the cards is needed.
+every Pokémon in play is below HP and so equal clamps mean equal damage; `Run.cap_sim`
+simulates an attack's effect with the player's own damage exact (and the opponent's capped at a
+constant above every HP and test constant, which the damage bonus of `Pokemon/Lingering.lean`
+requires), and `TRun.clamp_sim` a Trainer card's. Hence `Move.clamp_sim` and `Reach.clamp_sim`
+(the clamp is a bisimulation for moves, for tame decks), `Reach.clamp_mem` (the clamps of the
+reachable states lie in one finite list) and `Reach.finite` (both together, for tame decks) hold
+for the extended language, with the damage cap at
+HP. (`run_clamp_not_sim` is stated for every cap `k` on the damage bonuses; its states have no
+modifiers.)
 In particular no combination of `iter`, `choice`, `selfDamage`, `scale`, `heal` and the tests
 inside one effect yields infinitely many states up to the clamp at move boundaries: within one
 attack's effect the damage is unbounded, but at the end of the effect it is either below HP
@@ -86,22 +90,26 @@ def probe : Effect := .ite (.atLeast .opp 6) .skip .draw
 /-- `rs 5` after drawing a card. -/
 def drawn : GameState :=
   ⟨⟨[.energy .grass], [.energy .grass], [], [.energy .fire], [], some (InPlay.ofBasic mon), [],
-    none, false, false, false, false, false⟩,
+    none, false, false, false, false, false, Store.empty⟩,
     side [] [] { InPlay.ofBasic mon with damage := 5 }, true, false, false, false, none⟩
 
-theorem rs_clamp : (rs 5).clamp = (rs 6).clamp := rfl
+theorem rs_clamp (k : Nat) : (rs 5).clamp k = (rs 6).clamp k := rfl
 
 /-- **The HP clamp is not a simulation for `Run`** once effects read damage: `rs 5` and `rs 6`
-have the same clamp, `probe` takes `rs 5` to `drawn`, and every resolution of `probe` from
-`rs 6` ends in a state whose clamp differs from that of `drawn` (the hand has no card). -/
-theorem run_clamp_not_sim :
-    ∃ e g₁ g₂ g₁', g₁.clamp = g₂.clamp ∧ Run e g₁ g₁' ∧
-      ∀ g₂', Run e g₂ g₂' → g₁'.clamp ≠ g₂'.clamp := by
-  refine ⟨probe, rs 5, rs 6, drawn, rs_clamp, .iteF rfl rfl (.draw rfl), fun g₂' hr heq => ?_⟩
+have the same clamp (whatever the cap `k` on damage bonuses), `probe` takes `rs 5` to `drawn`,
+and every resolution of `probe` from `rs 6` ends in a state whose clamp differs from that of
+`drawn` (the hand has no card). -/
+theorem run_clamp_not_sim (k : Nat) :
+    ∃ e g₁ g₂ g₁', g₁.clamp k = g₂.clamp k ∧ Run e g₁ g₁' ∧
+      ∀ g₂', Run e g₂ g₂' → g₁'.clamp k ≠ g₂'.clamp k := by
+  refine ⟨probe, rs 5, rs 6, drawn, rs_clamp k, .iteF rfl rfl (.draw rfl),
+    fun g₂' hr heq => ?_⟩
   cases hr with
   | iteT h ht r =>
       cases r with
-      | skip => exact absurd (congrArg (fun g : GameState => g.cur.hand.length) heq) (by decide)
+      | skip =>
+          exact absurd (congrArg (fun g : GameState => g.cur.hand.length) heq)
+            (show ¬ (drawn.cur.hand.length = (rs 6).cur.hand.length) by decide)
       | touchActive he => simp [Effect.touch] at he
       | touchBench he => simp [Effect.touch] at he
   | iteF h ht r =>
@@ -140,7 +148,7 @@ theorem reach_after2 : Reach start2 after2 :=
   .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9⟩) rfl (.head _)
     (Nat.zero_le _) rfl rfl rfl rfl
     ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
-    (.seq (.counters 0 rfl) (.selfDamage 9 rfl)))
+    (.seq (.damage 0 rfl) (.selfDamage 9 rfl)) rfl)
 
 /-- **The old bound on the player's own Active Pokémon is false.** From a well-formed start with
 no pending Knock Out, one attack whose effect damages the attacker reaches, during the turn, a

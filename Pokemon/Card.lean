@@ -40,6 +40,34 @@ inductive Marker where
   | imprison | shockwave | lightningRod | char
   deriving DecidableEq
 
+/-- When a lingering modifier is in effect, counted in turns from the current one (either
+player's): this turn, the next turn (the opponent's), the turn after (the player's next turn),
+or every turn for the rest of the game. "Until the end of your opponent's next turn" is `now`
+and `next` together. -/
+inductive Slot where
+  | now | next | after | always
+  deriving DecidableEq
+
+/-- What a lock forbids its player to do. -/
+inductive Lock where
+  | attack | retreat | item
+  deriving DecidableEq
+
+/-- A lingering modifier on one player (`survey/S7-load-bearing-spec.md` §4). -/
+inductive Mod where
+  /-- the player's attacks do `n` more damage (PlusPower, "this attack does 30 more damage
+  during your next turn"); repeated uses add up -/
+  | bonus (n : Nat)
+  /-- damage done to the player's Pokémon by attacks is reduced by `n` (Iron Defender, "during
+  your opponent's next turn, any damage done to this Pokémon is reduced by 30"); repeated uses
+  add up -/
+  | reduce (n : Nat)
+  /-- prevent all damage done to the player's Pokémon by attacks -/
+  | prevent
+  /-- the player cannot attack, retreat, or play Item cards -/
+  | lock (l : Lock)
+  deriving DecidableEq
+
 /-- A test an effect can make on one Active Pokémon. -/
 inductive Test where
   /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
@@ -99,6 +127,15 @@ inductive Effect where
   /-- put a Coloring counter for type `t` on one of the `w` player's Pokémon in play, replacing
   any earlier one: that Pokémon is now of type `t` (Smeargle basep-32, *Paint*) -/
   | color (w : Whose) (t : EType)
+  /-- the `w` player gets the lingering modifier `m` for the turns `s` -/
+  | linger (w : Whose) (s : Slot) (m : Mod)
+  /-- the attack does `n` damage to the opponent's Active Pokémon: `n` plus the player's damage
+  bonus, minus the opponent's damage reduction, or nothing if the opponent has damage
+  prevention (`GameState.dealt`) -/
+  | damage (n : Nat)
+  /-- as `damage n`, and heal the player's Active Pokémon by the damage done ("heal from this
+  Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
+  | drain (n : Nat)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -133,5 +170,49 @@ inductive Card where
   | energy (t : EType)
   | trainer (name : String) (kind : TrainerKind) (effect : Effect)
   deriving DecidableEq
+
+/-- The constant a test compares damage with (0 for the tests that do not read damage). -/
+def Test.bound : Test → Nat
+  | .atLeast _ n => n
+  | .exactly _ n => n
+  | _ => 0
+
+/-- The largest constant an effect's tests compare damage with. -/
+def Effect.tmax : Effect → Nat
+  | .ite t a b => max t.bound (max a.tmax b.tmax)
+  | .seq a b => max a.tmax b.tmax
+  | .choice a b => max a.tmax b.tmax
+  | .iter a => a.tmax
+  | _ => 0
+
+/-- No damage reduction and no `drain`: the effects for which the damage bonus can be capped
+(`Pokemon/Lingering.lean` shows that each of the two breaks the cap). -/
+def Effect.tame : Effect → Bool
+  | .linger _ _ (.reduce _) => false
+  | .drain _ => false
+  | .ite _ a b => a.tame && b.tame
+  | .seq a b => a.tame && b.tame
+  | .choice a b => a.tame && b.tame
+  | .iter a => a.tame
+  | _ => true
+
+/-- The largest test constant over a list of attacks. -/
+def attacksTmax : List Attack → Nat
+  | [] => 0
+  | a :: as => max a.effect.tmax (attacksTmax as)
+
+def attacksTame : List Attack → Bool
+  | [] => true
+  | a :: as => a.effect.tame && attacksTame as
+
+def Card.tmax : Card → Nat
+  | .pokemon p => attacksTmax p.attacks
+  | .energy _ => 0
+  | .trainer _ _ e => e.tmax
+
+def Card.tame : Card → Bool
+  | .pokemon p => attacksTame p.attacks
+  | .energy _ => true
+  | .trainer _ _ e => e.tame
 
 end Pokemon
