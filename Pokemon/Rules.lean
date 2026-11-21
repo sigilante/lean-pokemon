@@ -608,17 +608,25 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   attempt damages only the player's own Pokémon, so this needs an opponent's Pokémon brought to its
   HP by a change of derived HP, such as a static HP bonus leaving play with the Confused Pokémon); "is damaged by an attack" is decided on the attack's damage step
   (`HitRun`, `HitTrig`): the triggers of the Pokémon in the opponent's Active Spot at the end of
-  the attack fire exactly when the damage step did damage to it while it was in the Active Spot, so
+  the attack fire when the damage step did damage to it while it was in the Active Spot and no
+  later step of the attack switched the opponent's Active Pokémon, so
   an attack that only switches the opponent's Active Pokémon fires nothing
   (`TriggerWitness.gust_quiet`) and one that switches and then does damage fires the triggers of the
   Pokémon it damaged (`TriggerWitness.pull_fires`). Two departures remain, one in each direction.
   Fewer outcomes: a Pokémon damaged and then switched to the Bench by the same attack fires
-  nothing (`TriggerWitness.hitRun_quiet`); the model reads "if this Pokémon is in the Active Spot
+  nothing (`TriggerWitness.hitRun_quiet`), even if a second switch in the same attack brings it
+  back to the Active Spot (any later `switch .opp` with a Benched Pokémon clears the flag; no
+  printed attack is known to do this); the model reads "if this Pokémon is in the Active Spot
   and is damaged by an attack" as needing the Pokémon in the Active Spot both when it is damaged
   and at the end of the attack, an unverified reading (no ruling was found). More outcomes: when the
   Defending Pokémon is already at or above its derived HP before the damage step (damage counters
-  placed earlier by the same attack), the triggers may fire or not, whatever the step did (the
-  capped clamp of `Reach.finite` does not know damage at or above its cap, `HitRun.cap_sim`); a
+  placed earlier by the same attack, or its derived HP lowered earlier in the same attack: a Tool
+  with an HP bonus discarded from it, Energy discarded from under a per-Energy HP bonus, an HP
+  Stadium discarded), the triggers may fire or not, whatever the step did. This corner was chosen
+  so that the capped clamp of `Reach.finite` stays a simulation (`HitRun.cap_sim`); it is wider
+  than the case that clamp is blind to (damage at or above the cap), and whether a narrower rule
+  would do is not established, nor is it proved that such a defender is always Knocked Out after
+  the attack; a
   trigger with a
   printed condition (`cond`) or an effect outside the fragment never fires. The trigger chains end
   (`KOMove.acc`, `Move.unsettled_acc`): every Knock Out takes a Prize card, and nothing returns
@@ -1166,9 +1174,11 @@ it, while in the Active Spot". It is read on the damage step itself (`hit`): the
 opponent's Active Pokémon at that step, and the damage done is the rise of its damage over the
 step (`GameState.damagedB` on the step), which is `GameState.dealt` of the amount. One corner is
 left free: when the defender is already at or above its derived HP before the step (counters
-placed earlier in the same attack), `hit` may be either value. (This keeps the capped clamp of
-the tame decks a simulation, `HitRun.cap_sim`, which does not know damage at or above the cap; such a
-defender is Knocked Out after the attack anyway.) -/
+placed earlier in the same attack, or its derived HP lowered earlier in the same attack), `hit`
+may be either value. (This keeps the capped clamp of the tame decks a simulation,
+`HitRun.cap_sim`; the corner is wider than the case that clamp is blind to, and whether a narrower
+rule would do is not established.) In `seq`, any later `switch .opp` with a Benched Pokémon
+clears the flag, even if a further switch brings the damaged Pokémon back. -/
 inductive HitRun : Effect → GameState → GameState → Bool → Bool → Prop where
   | plain {e : Effect} {g g' : GameState} (he : e.plain = true) (h : Run e g g') :
       HitRun e g g' false false
@@ -1278,8 +1288,9 @@ Pokémon it damaged (`TriggerWitness.pull_fires`), and a Pokémon damaged and th
 Bench by the same attack fires nothing: the model reads "if this Pokémon is in the Active Spot and
 is damaged by an attack" as needing the Pokémon in the Active Spot both when it is damaged and when
 the trigger resolves, at the end of the attack (an unverified reading; Known gaps). The choice is
-exact on every resolution, except that when the defender was already at or above its HP before the
-damage step, either is allowed (`HitRun.hit`). Two resolutions with the same end state are told
+determined by the resolution, with two exceptions: when the defender was already at or above its
+HP before the damage step, either is allowed (`HitRun.hit`); and a Pokémon switched out after
+the damage step fires nothing even if the same attack switches it back. Two resolutions with the same end state are told
 apart only by what they did: the model's outcomes are the union, over the resolutions, of the
 printed ones. -/
 inductive HitTrig (atk : Attack) (g g' : GameState) : List Ability → Prop where
