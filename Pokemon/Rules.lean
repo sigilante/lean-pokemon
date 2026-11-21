@@ -61,7 +61,14 @@ follows the latest source; for the rules below the three agree except where note
 Known gaps (each is a place where this model is simpler than the rulebook):
 * setup, mulligans and the opening coin flip are not modelled; start from a set-up state;
 * Energy is attached to, and evolution applied to, the Active Pokémon only;
-* attack costs are checked by Energy count, not type; Weakness and Resistance are absent;
+* attack costs are typed (milestone M4; rulebook 2023 p. 13): each typed symbol is paid by a
+  unit of attached Energy of that type and each Colorless symbol by any unit, every unit paying
+  one symbol (`Pays`, decided by `payable`); only Basic Energy exists, one unit of its type
+  (`Card.provides`); Special Energy (several units, or units of several types), cost changes
+  ("this attack costs ✱ less") and Energy that provides nothing in some states are absent. A
+  Retreat Cost is still paid by discarding that many Energy cards, which with Basic Energy only
+  is the rulebook's rule;
+* Weakness and Resistance are absent;
 * Knock Outs are separate moves, forced by `Settled` (above) before any other move; they are
   taken one at a time, in either order when several are pending, so when both players take
   their last Prize from the same attack or Checkup the first Knock Out taken decides the game
@@ -425,7 +432,7 @@ inductive Move : GameState → GameState → Prop where
   using it records that (`PlayerState.gxUsed`). -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
-      (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot.canAct = true)
+      (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g)
       (hr : Run (.seq (.damage atk.damage) atk.effect) g g')
@@ -438,7 +445,7 @@ inductive Move : GameState → GameState → Prop where
   (an unverified ruling; see the Known gaps). -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
-      (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot = .confused)
+      (hc : Pays atk.cost a.units) (hs : a.rot = .confused)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g) (hl : g.cur.mods.live.noAttack = false)
       (hgx : atk.gx = true → g.cur.gxUsed = false) :

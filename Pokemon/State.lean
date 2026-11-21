@@ -106,6 +106,10 @@ def ofBasic (p : PokemonCard) : InPlay :=
 
 def unfresh (p : InPlay) : InPlay := { p with fresh := false }
 
+/-- The units of Energy attached to this Pokémon (`Card.provides`), which pay attack costs
+(`Pays`). -/
+def units (p : InPlay) : List (List EType) := p.energy.flatMap Card.provides
+
 /-- Change the markers. -/
 def setMarks (f : Marks → Marks) (p : InPlay) : InPlay := { p with marks := f p.marks }
 

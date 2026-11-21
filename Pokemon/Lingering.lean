@@ -206,7 +206,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_red₀ hk, tmax_red₀ hk,
     red k (k + 1), red k (k + 2), _, reach_red k true, reach_red k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
-    .attack (atk := ⟨"Hit", [], 1, .skip, false⟩) rfl (.head _) (Nat.zero_le _) rfl rfl rfl
+    .attack (atk := ⟨"Hit", [], 1, .skip, false⟩) rfl (.head _) (.nil _) rfl rfl rfl
       rfl (settled_st _ _ _ _ _ _ (by decide) (by decide)) (.seq (.damage 1 rfl) (.skip _)) rfl
       (fun h => nomatch h),
     fun g₂' hm heq => ?_⟩
@@ -333,7 +333,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
     dr k (k + 1), dr k (k + 2), _, reach_dr k true, reach_dr k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
     .attack (atk := ⟨"Hit", [], 0, .seq (.selfDamage (k + 3)) (.drain 1), false⟩) rfl
-      (.head _) (Nat.zero_le _) rfl rfl rfl rfl
+      (.head _) (.nil _) rfl rfl rfl rfl
       (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
       (.seq (.damage 0 rfl) (.seq (.selfDamage _ rfl) (.drain 1 rfl rfl))) rfl
       (fun h => nomatch h),

@@ -146,7 +146,7 @@ theorem start2_wellFormed : WellFormed start2 := by
 
 theorem reach_after2 : Reach start2 after2 :=
   .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9, false⟩) rfl (.head _)
-    (Nat.zero_le _) rfl rfl rfl rfl
+    (.nil _) rfl rfl rfl rfl
     ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
     (.seq (.damage 0 rfl) (.selfDamage 9 rfl)) rfl (fun h => absurd h (by decide)))
 

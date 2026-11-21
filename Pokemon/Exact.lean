@@ -615,7 +615,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      refine ⟨_, .attack rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
+      refine ⟨_, .attack rfl (by rw [hq.top]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' hl hgx, ?_⟩
       have := congrArg (fun g : GameState => ({ g with
         attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
@@ -627,7 +627,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
+      exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx, by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3)]⟩

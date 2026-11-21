@@ -1061,7 +1061,7 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
   obtain ⟨p, hp, h1, h2, -⟩ := hs.cur.active
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs
   have hfl := Run.flags hr
-  refine ⟨_, .attack hp (h1 ▸ hatk) (by rw [hcost]; exact Nat.zero_le _) (by rw [h2]; rfl) hn hf
+  refine ⟨_, .attack hp (h1 ▸ hatk) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
     hbt (hs.settled hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h),
     ⟨(hsh _ hr).cur.setGx _, (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
