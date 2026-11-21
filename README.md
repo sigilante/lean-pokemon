@@ -454,4 +454,32 @@ depends on an axiom other than `propext` and `Quot.sound` (so `sorry` fails it t
 file under `Pokemon/` is not imported. `scripts/audit.sh build.log` then fails CI unless the
 log shows the gate's success line and no error or `sorry`.
 
+Imported cards (library `PokemonCards`, not a default target): `tools/importer/` translates
+today's Standard pool (survey S9's pool B: regulation marks H, I, J plus Basic Energy) into
+`Card` terms, conservatively, and writes them to `PokemonCards/Standard/Part*.lean` with
+per-card checks, plus `PokemonCards/Standard.lean` (the count of imported cards, the named
+list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.faithful`:
+every game whose cards all come from the imported pool is `Faithful`, all four clauses).
+Since importer version 0.3.0 activated ("once during your turn", "as often as you like") and
+on-play Abilities are translated when every sentence has a rule; static, passive and triggered
+Abilities, and the other forms the model lacks, are refused with a reason. Regenerate with
+`python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
+memory and diffs); build with `lake build PokemonCards`, which runs its own axiom gate
+(`PokemonCards/Audit.lean`). These are facts about the generated terms; whether a term says
+what its printed card says is the importer's claim, validated by eye in survey S11. The
+theorems cover only games built entirely from imported cards: the refused cards, and decks
+that mix any of them in, are not covered, and "today's Standard satisfies `RecycleSafe`" is
+not proved. A separate, hand-written probe (`PokemonCards/OverApprox.lean`) adds
+over-approximated terms for the two refused Items that write a modifier (Iron Defender and
+Premium Power Pro, type restriction dropped) and shows the recycling check still holds; it is
+evidence about those two Items, not a theorem about the Standard pool. Cards imported with
+caveats are in general neither over- nor under-approximations of their printed cards (a
+caveat may allow outcomes the card does not, forbid outcomes it allows, or both; S11 tables
+the direction of each), so the imported pool must not be used for "no deck can …" arguments
+without checking the caveats. `Standard.all_nodup` proves that the imported list has no two
+equal terms; `pool_size` is arithmetic on two list lengths, and the partition of the pool into
+the two lists is established by the importer, not by Lean. The
+library lives outside `Pokemon/` because `Pokemon/Audit.lean` requires every module under
+`Pokemon/` to be imported by it.
+
 Licence: MIT (see `LICENSE`).
