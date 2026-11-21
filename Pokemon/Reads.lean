@@ -22,9 +22,10 @@ effect (`TRun`) they do not: a Knock Out is taken at once after the step that ca
 * `run_clamp_not_sim`: the HP clamp is NOT a simulation for `Run`. Two states whose opposing
   Active Pokémon have 5 and 6 damage counters on 5 HP have the same clamp, but the effect "if
   it has at least 6 damage counters, do nothing, else draw a card" separates them.
-* `Move.pending_untouched`: Knock Out timing. A move from a state with an Active Pokémon at or
-  above its HP is the batch Knock Out step, which Knocks it Out (its cards go to the discard
-  pile); and the turn does not pass. So no effect can read or heal over-HP damage between moves.
+* `Move.pending_knockedOut` (formerly `Move.pending_untouched`, kept as a deprecated alias):
+  Knock Out timing. A move from a state with an Active Pokémon at or above its HP is the batch
+  Knock Out step, which Knocks it Out (its cards go to the discard pile); and the turn does not
+  pass. So no effect can read or heal over-HP damage between moves.
 * `activeLe_false`: the invariant `Reach.activeLe` of the previous version (during a turn, the
   player's own Active Pokémon has at most `maxHp + 3` damage counters) is false once an
   attack's effect can damage the player's own Pokémon. It is no longer needed.
@@ -71,8 +72,10 @@ Milestone batch-KO changed the conclusion. Before it, the Pokémon stayed as it 
 Spot or the Active Spot was left empty (the one-at-a-time Knock Out moves; the Pokémon stayed only
 while another Knock Out was taken first, and promotion was a later move). The batch step Knocks it
 Out in every case and may refill the Active Spot by a promotion in the same move, so the statement
-now says where the Pokémon goes and which move it is. -/
-theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') :
+now says where the Pokémon goes and which move it is. Until this name was introduced the theorem was
+`Move.pending_untouched`, a name from before batch-KO that no longer fits; that name is kept as a
+deprecated alias. -/
+theorem Move.pending_knockedOut {g g' : GameState} {p : InPlay} (hm : Move g g') :
     (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage →
         KOBatch g g' ∧ (∃ l, g'.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
           g'.curIsFirst = g.curIsFirst) ∧
@@ -107,6 +110,19 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
   | knockOuts h =>
       exact ⟨fun ha hk => ⟨h, h.active_out (w := .own) ha hk, h.same.1⟩,
         fun ha hk => ⟨h, h.active_out (w := .opp) ha hk, h.same.1⟩⟩
+
+/-- Deprecated name of `Move.pending_knockedOut` (same statement). The name dates from before
+milestone batch-KO, when the pending Active Pokémon could stay untouched by the move; it is now
+Knocked Out, so the name no longer fits. -/
+@[deprecated Move.pending_knockedOut (since := "2026-11-22")]
+theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') :
+    (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage →
+        KOBatch g g' ∧ (∃ l, g'.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
+          g'.curIsFirst = g.curIsFirst) ∧
+      (g.opp.active = some p → g.hpOf .opp .active p ≤ p.damage →
+        KOBatch g g' ∧ (∃ l, g'.opp.discard = p.cardList ++ l ++ g.opp.discard) ∧
+          g'.curIsFirst = g.curIsFirst) :=
+  Move.pending_knockedOut hm
 
 namespace Reads
 
@@ -199,7 +215,7 @@ theorem reach_after2 : Reach start2 after2 :=
 no pending Knock Out, one attack whose effect damages the attacker reaches, during the turn, a
 state whose own Active Pokémon has more than `maxHp + 3` damage counters (`Reach.activeLe` of
 the previous version claimed at most `maxHp + 3`). The Knock Out is the next move
-(`Move.pending_untouched`). An Item with the same effect would have its Knock Out taken in
+(`Move.pending_knockedOut`). An Item with the same effect would have its Knock Out taken in
 mid-effect, inside the same move (`TRun`; compare `Trainer.selfKO_reachable`). -/
 theorem activeLe_false :
     ∃ g₀, WellFormed g₀ ∧ DamageBounded g₀ ∧

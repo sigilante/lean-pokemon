@@ -45,7 +45,10 @@ rulebook checks every Pokémon once, after the attack, and only then is a new Ac
   is the only move from the start that leads there (`move_r0`, `move_m0`);
 * `promotion_rescues_false`, `double_knockOut_lost_false`: the statements of the two departure
   witnesses are false. (`promotion_rescues_alt`, which stated that the rulebook's outcome is also
-  reachable, is still true: it is now the only outcome.)
+  reachable, is still true: it is now the only outcome, and redundant beside `guard_knocked_out`.)
+* `outcome_per_round`: a recorded modelling decision. The outcome is decided at the end of each
+  round of the repeated check, so a Pokémon that is doomed only because another leaves play is not
+  counted in the round that ends the game.
 -/
 
 namespace Pokemon.StaticWitness
@@ -535,7 +538,9 @@ theorem promotion_rescues_false :
 
 /-- The rulebook's outcome is reachable from `r0`: both Knock Outs, the Bench left empty. (Before
 milestone batch-KO this was the companion of the departure `promotion_rescues`, one of two orders;
-it is now the only outcome, `guard_knocked_out`.) -/
+it is now the only outcome, `guard_knocked_out`.) Redundant since milestone batch-KO: it follows
+from `guard_knocked_out` (whose moves `Move r0 rA` and `Move rA rA.koStep` give it), and is kept
+only because earlier versions stated it. -/
 theorem promotion_rescues_alt : ∃ g₁ g₂, Move r0 g₁ ∧ Move g₁ g₂ ∧ g₂.opp.bench = [] :=
   ⟨rA, rA.koStep, move_r0_rA, .knockOuts (.won (fun hs => (not_damageBounded_of_dbB (by decide)) hs.1)
     (by decide)), rfl⟩
@@ -645,7 +650,8 @@ opponent's two `gm` (HP 2 each, since each carries "your Pokémon get −10 HP")
 Every move from `mA` is the batch Knock Out step `mA.koStep`, which evaluates both HPs before
 removing either and Knocks Out both, as the rulebook's single check does: the opponent has no
 Pokémon left, both cards are in their discard pile, the player has taken two Prize cards (one is
-left) and has won (the opponent has no Pokémon to promote). -/
+left) and has won (the opponent has no Pokémon to promote). Every line of play from `mA` is `mA`
+itself or that state. -/
 theorem double_knockOut_taken :
     Move m0 mA ∧ mA.opp.active = some (at_ gm 2 [] []) ∧ mA.opp.bench = [at_ gm 2 [] []] ∧
       mA.hpOf .opp .active (at_ gm 2 [] []) = 2 ∧ mA.hpOf .opp .bench (at_ gm 2 [] []) = 2 ∧
@@ -654,12 +660,14 @@ theorem double_knockOut_taken :
       (∀ g₂, Move mA g₂ → g₂ = mA.koStep) ∧
       mA.koStep.opp.active = none ∧ mA.koStep.opp.bench = [] ∧
       mA.koStep.opp.discard = [.pokemon gm, .pokemon gm] ∧ mA.koStep.cur.prizes.length = 1 ∧
-      mA.koStep.winner = some (.win true) := by
+      mA.koStep.winner = some (.win true) ∧
+      (∀ g, Reach mA g → g = mA ∨ g = mA.koStep) := by
   have hk : ¬ DamageBounded mA := not_damageBounded_of_dbB (by decide)
   have hu : ¬ Settled mA := fun hs => hk hs.1
   have hw : mA.koStep.winner ≠ none := by decide
   exact ⟨move_m0_mA, rfl, rfl, by decide, by decide, hk, fun _ hm hb => move_m0 hm hb,
-    fun _ hm => move_eq_koStep hu hw hm, rfl, rfl, rfl, rfl, by decide⟩
+    fun _ hm => move_eq_koStep hu hw hm, rfl, rfl, rfl, rfl, by decide,
+    fun _ h => reach_of_won hu hw rfl h⟩
 
 /-- **`double_knockOut_lost` is false** with batch Knock Outs. That theorem (milestones M6 to
 batch-KO) stated that from the state after `hit2` either Knock Out could be taken first and left the
@@ -679,5 +687,58 @@ theorem double_knockOut_lost_false :
   have e2 := hmA g₂ h2
   subst e2
   exact absurd hb₂ (by simp [show mA.koStep.opp.bench = [] from rfl])
+
+/-! ## The outcome is decided at the end of each round of the check
+
+The check repeats (`KOBatch`), and the outcome is decided at the end of each round, from that
+round's Knock Outs (`GameState.koStep`). A Pokémon whose HP falls only because another Pokémon
+leaves play in that round is not Knocked Out in it; if the round ends the game, it is never
+counted. -/
+
+/-- "While this Pokémon is in the Active Spot, each of your Benched Pokémon gets +30 HP" (no
+printed card is claimed). -/
+def rallyAb : Ability :=
+  ⟨"Rally", .static [⟨.own, .any, some .bench, some .active, none, .hpPlus (.const 3)⟩], none, none,
+    .fx .skip⟩
+
+/-- A 50-HP Basic Pokémon with `rallyAb`. -/
+def boss : PokemonCard :=
+  ⟨"Boss", .basic, none, 5, .colorless, [], 1, none, none, .none, false, [rallyAb]⟩
+
+/-- Player A (to move) has one Prize card, an Active `small` with 3 damage counters (HP 3) and a
+healthy Benched `small`. Player B has one Prize card, an Active `boss` with 5 damage counters (HP
+5) and a Benched `small` with 4 damage counters (HP 6 with `boss`'s bonus, 3 without). -/
+def sd0 : GameState :=
+  gs (pl [] [mt] (at_ small 3 [] []) [at_ small 0 [] []])
+     (pl [] [mt] (at_ boss 5 [] []) [at_ small 4 [] []]) none
+
+theorem sd0_wellFormed : WellFormed sd0 :=
+  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp [benched_at])
+
+/-- **A recorded modelling decision: the outcome is decided at the end of each round of the
+check.** In `sd0` both Active Pokémon are at their HP; B's Benched `small` has 4 damage counters
+and HP 6, which it has only while `boss` is in B's Active Spot. Every move from `sd0` is the check
+`sd0.koStep`: both Active Pokémon are Knocked Out, each player takes their last Prize card, and B
+still has the Benched `small`, so each player wins in one way and the game ends in Sudden Death.
+In `sd0.koStep` the `small` has HP 3 and is at its HP, so a second round would Knock it Out, but
+the game is already over and nothing follows (every line of play from `sd0` is `sd0` or
+`sd0.koStep`). A reading that re-checked after the removals before deciding the game would also
+Knock Out the `small`, leaving B no Pokémon in play, and give A a second way to win, so A would win.
+The rulebook is silent on this case (it describes one check after an attack and one after Checkup);
+deciding at the end of each round is the model's reading, recorded here (Known gaps,
+`Pokemon/Rules.lean`). -/
+theorem outcome_per_round :
+    WellFormed sd0 ∧ sd0.winner = none ∧ ¬ Settled sd0 ∧
+      sd0.hpOf .opp .bench (at_ small 4 [] []) = 6 ∧
+      (∀ g, Move sd0 g → g = sd0.koStep) ∧
+      sd0.koStep.winner = some .suddenDeath ∧
+      sd0.koStep.opp.active = none ∧ sd0.koStep.opp.bench = [at_ small 4 [] []] ∧
+      sd0.koStep.hpOf .opp .bench (at_ small 4 [] []) = 3 ∧ ¬ DamageBounded sd0.koStep ∧
+      (∀ g, Reach sd0 g → g = sd0 ∨ g = sd0.koStep) := by
+  have hk : ¬ DamageBounded sd0 := not_damageBounded_of_dbB (by decide)
+  have hu : ¬ Settled sd0 := fun hs => hk hs.1
+  have hw : sd0.koStep.winner ≠ none := by decide
+  exact ⟨sd0_wellFormed, rfl, hu, by decide, fun _ hm => move_eq_koStep hu hw hm, by decide, rfl,
+    rfl, by decide, not_damageBounded_of_dbB (by decide), fun _ h => reach_of_won hu hw rfl h⟩
 
 end Pokemon.StaticWitness

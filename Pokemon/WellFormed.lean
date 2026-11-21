@@ -8,13 +8,15 @@ winner, and that every Benched Pokémon has no Special Condition (since mileston
 Pokémon may be at or above its HP: that is a pending Knock Out, excluded by `Settled`).
 
 * `Move.wellFormed`, `Reach.wellFormed`: legal play preserves it.
-* `Move.progress`, `Reach.progress`: from a well-formed state with no winner some move is
-  legal. In particular a pending Knock Out can always be taken: the player who takes the Prize
-  has one, and the Pokémon that must be promoted afterwards is on the Bench or the game is won.
+* `Move.exists_move`: every state has a legal move (no hypothesis); `Move.progress`,
+  `Reach.progress`: from a well-formed state with no winner some move is legal. In particular a
+  pending Knock Out can always be taken: the batch step exists from every state that is not
+  `Settled` (`KOBatch.exists_of`).
 * `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`: with no winner and a pending Knock
-  Out (as after Checkup or an attack), a move is legal that Knocks Out a Pokémon in play (Active
-  or Benched, of either player) at or above its HP, and the taker's Prize list shrinks by exactly
-  that Pokémon's Prize count, or by all that are left.
+  Out (as after Checkup or an attack), the batch Knock Out step is legal: it Knocks Out every
+  Pokémon in play (Active or Benched, of either player) at or above its HP, and each player's
+  Prize list loses its top cards, as many as the Prize value of the opponent's Knocked Out
+  Pokémon (or all that are left).
 -/
 
 namespace Pokemon
@@ -700,24 +702,31 @@ theorem GameState.koVal_eq_zero {g : GameState} {w : Whose} (h : g.koVal w = 0) 
 a pending Knock Out (for instance between turns, after Checkup, or after an attack that damaged a
 Benched Pokémon), the batch Knock Out step is legal. It Knocks Out every Pokémon in play at or
 above its HP, of both players, at least one Prize card's worth (`0 < koVal .own + koVal .opp`);
-each player's Prize list shrinks by exactly the Prize value of the opponent's Knocked Out Pokémon
-(`koVal`: 1 for each, 2 for a Pokémon ex, 3 for a Mega Evolution Pokémon ex, added up), or by all
-that are left; each player's discard pile is the check's (`koOf`: the Knocked Out Pokémon with
-every card attached on top of the old pile); and every Pokémon in play afterwards was below its HP
-before the step.
+each player's Prize list loses its top cards, as many as the Prize value of the opponent's Knocked
+Out Pokémon (`koVal`: 1 for each, 2 for a Pokémon ex, 3 for a Mega Evolution Pokémon ex, added up),
+or all that are left (`List.drop`; so its length shrinks by exactly that value, or to 0,
+`takePrizes_length`); each player's discard pile is the check's (`koOf`: the Knocked Out Pokémon
+with every card attached on top of the old pile); and every Pokémon in play afterwards was below
+its HP in the state before the step (at the place it then held). It need not be below its HP
+afterwards: a removal or a promotion can lower derived HP, and the check then repeats
+(`KOBatch`).
 
 Milestone M3 changed the statement (exact Prize count of one Pokémon instead of one Prize card).
-Milestone batch-KO changed it again: before it the move Knocked Out one Pokémon `x` at or above its
-HP, and only the taker's Prize list changed, by `min x.top.prizeCount` (its length); the step now
-Knocks Out all of them at once and both players' Prize lists change, each by the exact total; the
-old statement is the case of a single pending Knock Out. The hypotheses `WellFormed g` and
-`g.winner = none` are no longer used (the old moves needed the taker to have a Prize card left); the
-statement keeps them. -/
+Milestone batch-KO changed it again. Before it the move Knocked Out one Pokémon `x` at or above
+its HP, which the statement named; the taker's Prize list shrank by `min x.top.prizeCount` cards (a
+statement about lengths) and the other player's Prize list was unchanged (an equality of lists).
+The step now Knocks Out every pending Pokémon at once, and the statement names none of them; it
+gives both players' Prize lists, each the old list with its top `koVal` cards dropped. When exactly
+one Pokémon is pending, one `koVal` is its Prize value and the other is 0 (`drop 0`: that list is
+unchanged), which gives the old Prize conclusions, but not the old statement, which named the
+Pokémon. The hypotheses `WellFormed g` and `g.winner = none` are
+no longer used (the old moves needed the taker to have a Prize card left); the statement keeps
+them. -/
 theorem Move.knockOut_of_pending {g : GameState} (_hw : WellFormed g) (_hn : g.winner = none)
     (hk : ¬ DamageBounded g) :
     ∃ g', Move g g' ∧ KOBatch g g' ∧ 0 < g.koVal .own + g.koVal .opp ∧
-      g'.cur.prizes.length + min (g.koVal .opp) g.cur.prizes.length = g.cur.prizes.length ∧
-      g'.opp.prizes.length + min (g.koVal .own) g.opp.prizes.length = g.opp.prizes.length ∧
+      g'.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
+      g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
       g'.cur.discard = (g.koOf .own).discard ∧ g'.opp.discard = (g.koOf .opp).discard ∧
       (∀ w sp x, g'.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) := by
   obtain ⟨g', hb⟩ := KOBatch.exists_of (fun hs => hk hs.1)
@@ -732,18 +741,18 @@ theorem Move.knockOut_of_pending {g : GameState} (_hw : WellFormed g) (_hn : g.w
     cases w
     · exact g.koVal_eq_zero h1 sp p hp
     · exact g.koVal_eq_zero h2 sp p hp
-  · rw [p1]; exact takePrizes_length (g.koOf .own) _
-  · rw [p2]; exact takePrizes_length (g.koOf .opp) _
+  · rw [p1]; rfl
+  · rw [p2]; rfl
 
 /-- **A pending Knock Out is taken by the batch step**, for play: from a well-formed start, every
 reachable state with no winner and a pending Knock Out has the batch Knock Out step, with the Prize
-counts, discard piles and survivors of `Move.knockOut_of_pending` (statement changed by milestones
+lists, discard piles and survivors of `Move.knockOut_of_pending` (statement changed by milestones
 M3 and batch-KO, see there). -/
 theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g)
     (hn : g.winner = none) (hk : ¬ DamageBounded g) :
     ∃ g', Move g g' ∧ KOBatch g g' ∧ 0 < g.koVal .own + g.koVal .opp ∧
-      g'.cur.prizes.length + min (g.koVal .opp) g.cur.prizes.length = g.cur.prizes.length ∧
-      g'.opp.prizes.length + min (g.koVal .own) g.opp.prizes.length = g.opp.prizes.length ∧
+      g'.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
+      g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
       g'.cur.discard = (g.koOf .own).discard ∧ g'.opp.discard = (g.koOf .opp).discard ∧
       (∀ w sp x, g'.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) :=
   Move.knockOut_of_pending (h.wellFormed h₀) hn hk
@@ -768,16 +777,15 @@ theorem damageBounded_or_pending (g : GameState) : DamageBounded g ∨ ¬ Damage
   · exact hoa p hp
   · exact hob p hp
 
-/-- **No deadlock.** In a well-formed state with no winner, some move is legal: the batch Knock Out
-step if the state is not `Settled` (a Pokémon in play at or above its HP, or an empty Active Spot;
-the step exists in every such state, `KOBatch.exists_of`: if a player takes more Prize cards than
-remain they win, a player with no Pokémon to promote loses, both at once give the rulebook's
-simultaneous outcome, and otherwise every empty Active Spot is filled); otherwise the end of the
-turn, or between turns the draw (or a loss by decking out). Since milestone batch-KO the
-hypotheses are not used: every state has a move (`Reach` makes none once the game is over); the
-statement keeps them. -/
-theorem Move.progress {g : GameState} (_hw : WellFormed g) (_hn : g.winner = none) :
-    ∃ g', Move g g' := by
+/-- **No deadlock, in every state.** Every state has a legal move: the batch Knock Out step if the
+state is not `Settled` (a Pokémon in play at or above its HP, or an empty Active Spot; the step
+exists in every such state, `KOBatch.exists_of`: if a player takes more Prize cards than remain
+they win, a player with no Pokémon to promote loses, both at once give the rulebook's simultaneous
+outcome, and otherwise every empty Active Spot is filled); otherwise the end of the turn, or
+between turns the draw (or a loss by decking out). No hypothesis is needed (milestone batch-KO);
+`Reach` makes no move once the game is over, so for play the statement that matters is
+`Reach.progress`. -/
+theorem Move.exists_move (g : GameState) : ∃ g', Move g g' := by
   by_cases hs : Settled g
   · obtain ⟨hk, hc, ho⟩ := hs
     match ha : g.opp.active, hb : g.cur.active with
@@ -793,6 +801,13 @@ theorem Move.progress {g : GameState} (_hw : WellFormed g) (_hn : g.winner = non
             | c :: d => exact ⟨_, .startTurn hbt ha hb hk hd⟩
   · obtain ⟨g', hm⟩ := KOBatch.exists_of hs
     exact ⟨g', .knockOuts hm⟩
+
+/-- **No deadlock.** In a well-formed state with no winner, some move is legal (`Move.exists_move`,
+which needs neither hypothesis). Since milestone batch-KO the proof uses neither hypothesis; the
+statement keeps them. -/
+theorem Move.progress {g : GameState} (_hw : WellFormed g) (_hn : g.winner = none) :
+    ∃ g', Move g g' :=
+  Move.exists_move g
 
 /-- **No deadlock**, for play: from a well-formed start, every reachable state with no winner
 has a legal move. -/

@@ -159,7 +159,10 @@ count of cards), and the clamps now cap damage and Poison strength at that bound
 printed HP. Witnesses in `Pokemon/StaticWitness.lean` (a Pokémon surviving above its printed HP on
 a Tool and Knocked Out when the Tool is discarded; a Stadium replacement Knocking Out a Benched
 Pokémon; an Energy-scaled HP bonus raising HP in mid-effect; two Knock Outs in a chain from one
-removal, by two batches; a static reduction applied after Weakness). With derived HP the order of
+removal, by two batches; a static reduction applied after Weakness; and, as a recorded modelling
+decision, the outcome decided at the end of each round of the repeated check, so that a Pokémon
+doomed only by another's removal is not counted in the round that ends the game,
+`StaticWitness.outcome_per_round`). With derived HP the order of
 one-at-a-time Knock Outs changed outcomes, a departure from the rulebook recorded at milestone M6;
 the batch Knock Out step removed it: a Benched Pokémon at its HP can no longer be promoted and
 survive, and two Pokémon that lower each other's HP are Knocked Out together, on every line of play
@@ -191,14 +194,23 @@ HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and
   Benched Pokémon have no Special Condition; since M3 a Benched Pokémon may be at or above its HP,
   which is a pending Knock Out, and `Settled` excludes it before every move but the batch Knock
   Out step), no reachable state without a winner is stuck (`Reach.progress`; since milestone
-  batch-KO no state at all is), and if a Knock Out is pending the batch Knock Out step is legal: it
-  Knocks Out every Pokémon in play (Active or Benched, of either player) at or above its HP at once,
-  each player's Prize list shrinks by exactly the Prize value of the opponent's Knocked Out
-  Pokémon, or by all that are left, and every Pokémon in play afterwards was below its HP
-  (`Reach.knockOut_of_pending`; restated by milestone batch-KO, the earlier one-Pokémon statement
-  is the case of a single pending Knock Out); a move from a state with an Active Pokémon at or
-  above its HP is the batch step, which Knocks it Out (`Move.pending_untouched`, restated by
-  batch-KO: the same move may now fill the Active Spot again by a promotion);
+  batch-KO no state at all is, `Move.exists_move`), and if a Knock Out is pending the batch Knock
+  Out step is legal: it Knocks Out every Pokémon in play (Active or Benched, of either player) at
+  or above its HP at once, each player's Prize list loses its top cards, as many as the Prize value
+  of the opponent's Knocked Out Pokémon (or all that are left), and every Pokémon in play
+  afterwards was below its HP in the state before the step (`Reach.knockOut_of_pending`; a
+  survivor can be at its HP afterwards, when a removal or promotion lowered it, and then the check
+  repeats). Milestone batch-KO restated it: the earlier statement named the one Pokémon Knocked
+  Out and left the other player's Prize list unchanged; the new one names no Pokémon and gives
+  both Prize lists, each with its top cards dropped. A move from a state with an Active Pokémon
+  at or above its HP is the batch step, which Knocks it Out (`Move.pending_knockedOut`, formerly
+  `Move.pending_untouched`; restated by batch-KO: the same move may now fill the Active Spot again
+  by a promotion);
+* the repeated check ends (`Pokemon/Terminate.lean`): a batch that does not end the game lowers
+  twice the number of Pokémon in play plus the number of empty Active Spots
+  (`KOBatch.koMeasure_lt`), so every chain of batches is finite (`KOBatch.acc`), every state has a
+  `Resolve` result, `Settled` or with an outcome (`Resolve.exists`), and `Resolve` takes at most
+  that measure plus one batches (`Resolve.chain_le`);
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at `bound` the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and

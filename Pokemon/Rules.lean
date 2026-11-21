@@ -150,8 +150,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
     (`StaticWitness.chain_knock_out`), until the state is `Settled` or the game is over. The 2023
     rulebook describes one check after an attack and one after Checkup and is silent on this case;
     the repetition is the model's reading of the rule it uses for Knock Outs at other times (the
-    Asia rule, next item), and it ends (each batch from a pending state removes a Pokémon; argued
-    in `KOBatch`, not stated as a theorem);
+    Asia rule, next item), and it ends: a batch that does not end the game lowers twice the number
+    of Pokémon in play plus the number of empty Active Spots (`KOBatch.koMeasure_lt`), so every
+    chain of batches is finite (`KOBatch.acc`), every state has a `Resolve` result, `Settled` or
+    with an outcome (`Resolve.exists`), and `Resolve` takes at most that measure plus one batches
+    (`Resolve.chain_le`; all in `Pokemon/Terminate.lean`);
+  - the outcome is decided at the end of each round of the repeated check, from that round's
+    Knock Outs, so a Pokémon that is doomed only because another leaves play (its HP falls after
+    the removal) is not counted in the round that ends the game. Example: player B has an Active
+    Pokémon whose static effect gives B's Benched Pokémon +30 HP, and a Benched Pokémon with 4
+    damage counters and 60 HP with the bonus (30 without); both Active Pokémon are Knocked Out and
+    both players take their last Prize card. The model ends the game in Sudden Death at the end of
+    round 1 (B still has the Benched Pokémon), whereas a reading that re-checked after the removals
+    before deciding would Knock it Out too and give A a second way to win, so A would win. The
+    rulebook is silent on this case; deciding per round is the model's reading
+    (`StaticWitness.outcome_per_round`, a machine-checked witness);
   - Sudden Death is a new game, which the model does not play: `Outcome.suddenDeath` is a terminal
     outcome of the model's game. The 2026 rules (Professor Program post, survey S8 J4) replaced
     Sudden Death by a tiebreaker game; that was read only through a secondary summary and is
@@ -562,8 +575,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
-  is (`Move.progress` no longer uses its hypotheses: the batch Knock Out step exists in every state
-  that is not `Settled`, `KOBatch.exists_of`); before it, from other starts (e.g. no winner and an
+  is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that
+  is not `Settled`, `KOBatch.exists_of`); before it, from other starts (e.g. no winner and an
   empty Prize list) a pending Knock Out could be impossible to take. Start states are not required to
   be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`; `attacked`
   with `between`): from a start with `firstTurn` true and the player's `hadTurn` already true,
@@ -823,10 +836,11 @@ follows, until the state is `Settled` or the game is over: the check repeats. Th
 silent on this case (it describes one check after the attack and one after Checkup); the repetition
 is the model's reading of the rule it already uses for Knock Outs at other times, "Anytime a
 Pokémon's remaining HP becomes zero" (Pokémon Asia *Advanced Player's Rulebook*, survey S2; see the
-Known gaps). Each batch from a state with a pending Knock Out removes at least one Pokémon
-(`Move.knockOut_of_pending`: at least one Prize card's worth), and a batch from a state with none
-fills the empty Active Spots, so at most two batches in a row leave the number of Pokémon in play
-unchanged and the repetition ends (an argument in prose; no termination theorem is stated). -/
+Known gaps). The repetition ends: a batch from a state with a pending Knock Out removes at least
+one Pokémon, and a batch from a state with none fills an empty Active Spot, so a batch that does
+not end the game lowers twice the number of Pokémon in play plus the number of empty Active Spots
+(`KOBatch.koMeasure_lt`); every chain of batches is finite (`KOBatch.acc`) and every state has a
+`Resolve` result (`Resolve.exists`), in `Pokemon/Terminate.lean`. -/
 inductive KOBatch : GameState → GameState → Prop where
   | won {g : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none) : KOBatch g g.koStep
   | go {g : GameState} {ac ao : Option InPlay} {bc bo : List InPlay} (hu : ¬ Settled g)
