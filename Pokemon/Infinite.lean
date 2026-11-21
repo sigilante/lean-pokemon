@@ -61,6 +61,9 @@ theorem start_damageBounded : DamageBounded start := by
   · cases hp; decide
   · cases hp
 
+theorem start_settled : Settled start :=
+  ⟨start_damageBounded, by simp [start, side], by simp [start, side]⟩
+
 theorem run_iter_st : ∀ n u, Run (.iter (.poisonUp 1)) (st u) (st (u + n))
   | 0, u => .iterNil _ _
   | n + 1, u => by
@@ -75,7 +78,8 @@ theorem reach_st (n : Nat) : Reach start (st n) := by
       (st (0 + n)) :=
     .seq (.inflict .poisoned rfl) (run_iter_st n 0)
   rw [Nat.zero_add] at hr
-  exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl hr)
+  exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl
+    start_settled hr)
 
 theorem st_damageBounded (n : Nat) : DamageBounded (st n) := by
   intro p hp

@@ -12,7 +12,8 @@ constant) is a corollary.
 
 `counters_unbounded`: inside the resolution of a single effect (a statement about `Run`, not
 `Reach`), damage on the opponent's Active Pokémon is unbounded. `DamageBounded` therefore
-cannot be an invariant of all reachable states; `Damage` treats this with a clamp.
+cannot be an invariant of all reachable states: an effect can leave a Pokémon far above its
+HP, and the Knock Out is the next move. `Damage` treats this with a clamp.
 -/
 
 namespace Pokemon
@@ -69,6 +70,11 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | poisonUp n h hp => perm_count [h]
   | poisonUpSkip => exact .refl _
   | cure h => perm_count [h]
+  | iteT _ _ _ ih => exact ih
+  | iteF _ _ _ ih => exact ih
+  | scale w k hs h => perm_count [h]
+  | selfDamage n h => perm_count [h]
+  | healAll h => perm_count [h]
   | shuffle h =>
       have := fun x => h.count_eq x
       perm_count [this]
@@ -88,14 +94,14 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | playBasic hh hs hhp hb => perm_count [hh]
   | attach hh hf ha => perm_count [hh, ha]
   | evolve hh ha he hfr hf => perm_count [hh, ha]
-  | retreat ha hb hr he hp hk hs => perm_count [ha, hb, he]
-  | item hh hbt hr =>
+  | retreat ha hb hr he hp hs => perm_count [ha, hb, he]
+  | item hh hbt hst hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
-  | supporter hh hs hbt hr =>
+  | supporter hh hs hbt hst hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
-  | attack ha hm hc hs hn hf hbt hr => exact hr.perm
+  | attack ha hm hc hs hn hf hbt hst hr => exact hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | knockOut ha hk hp => perm_count [ha, hp]
   | promote ha hb => perm_count [ha, hb]

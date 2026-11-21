@@ -3,30 +3,33 @@ import Pokemon.Damage
 /-!
 # Finiteness
 
-`Reach.finite`: from a well-formed start state with no pending Knock Out, the clamps of all
-reachable states lie in one finite list. Since the kernel of `clamp` is a bisimulation
-(`Reach.clamp_sim`), the clamped game is a finite transition system that answers every
-question about legal play that does not read the damage above HP on the opponent's Active
-Pokémon nor the Poison strength above HP on either Active Pokémon.
+`Reach.finite`: from a well-formed start state, the clamps of all reachable states lie in one
+finite list. Since the kernel of `clamp` is a bisimulation for moves (`Reach.clamp_sim`), the
+clamped game is a finite transition system that answers every question about legal play that
+does not read the damage above HP or the Poison strength above HP on either Active Pokémon.
 
-The clamp is now needed even at turn boundaries. Inside one effect (a statement about `Run`,
+This holds for the effect language with state-reading effects (`ite` on damage thresholds,
+exact damage and Special Conditions; `scale`; `selfDamage`; `healAll`). Inside one effect these
+reads see damage above HP, so the HP clamp is not a simulation for `Run`
+(`Reads.run_clamp_not_sim`); but no move other than a Knock Out starts from a state with a
+Pokémon at or above its HP (`Settled`), and from such a state equal clamps mean equal damage.
+So the cap does not need to be larger than HP, and no constant from the cards' tests enters it.
+
+The clamp is needed even at turn boundaries. Inside one effect (a statement about `Run`,
 not `Reach`), `poisonUp_unbounded` raises the Poison strength of a Poisoned opposing Active
 Pokémon without bound, and no Knock Out check resets it, since it causes no damage until
-Checkup. The previous version of this file proved `Reach.finite_damageBounded` (the reachable
-states with no pending Knock Out, unclamped, lie in a finite list), before stacking Poison was
-added. In the current model that statement is false: `Pokemon/Infinite.lean` gives a
-well-formed start with no pending Knock Out from which one Item reaches a state with no pending
-Knock Out at every Poison strength `n` (`Infinite.not_finite_damageBounded`,
-`Reach.infinite_damageBounded`), so the unclamped reachable state space is infinite
-(`Infinite.not_finite`).
+Checkup. `Pokemon/Infinite.lean` gives a well-formed start with no pending Knock Out from which
+one Item reaches a state with no pending Knock Out at every Poison strength `n`
+(`Infinite.not_finite_damageBounded`, `Reach.infinite_damageBounded`), so the unclamped
+reachable state space is infinite (`Infinite.not_finite`).
 
 The list `states g₀.allCards` is a crude over-approximation, built from: lists of length at
 most `N` over the starting cards (`N` = the number of cards in the game), the Pokémon cards
-among them, damage and Poison strength up to `maxHp + 3`, and the finitely many values of each
+among them, damage and Poison strength up to `maxHp`, and the finitely many values of each
 flag. It is never computed; it witnesses finiteness only. The proof uses `Reach.perm` (cards
-are only permuted), `Reach.wellFormed` (Benched Pokémon are below HP and have no Special
-Condition) and `Reach.activeLe` (the player's own Active Pokémon has at most `maxHp + 3`
-damage counters).
+are only permuted) and `Reach.wellFormed` (Benched Pokémon are below HP and have no Special
+Condition); the clamp caps both Active Pokémon. Unlike the previous version, the start state
+need not be free of pending Knock Outs.
 -/
 
 namespace Pokemon.Enum
@@ -104,8 +107,8 @@ def cardLists (C : List Card) : List (List Card) := listsUpTo C C.length
 theorem mem_cardLists {C l : List Card} (h : Within C l) : l ∈ cardLists C :=
   mem_listsUpTo h.1 h.2
 
-/-- The bound used for damage and Poison strength: `maxHp C + 3`. -/
-def bound (C : List Card) : Nat := maxHp C + 3
+/-- The bound used for damage and Poison strength: `maxHp C`. -/
+def bound (C : List Card) : Nat := maxHp C
 
 /-- A finite list containing every Pokémon in play made of cards from `C` with damage and
 Poison strength at most `bound C`. -/
@@ -215,14 +218,14 @@ theorem optCardList_clamp (c : Bool) (o : Option InPlay) :
   cases o <;> rfl
 
 theorem GameState.allCards_clamp (g : GameState) : g.clamp.allCards = g.allCards := by
-  simp only [GameState.clamp, GameState.allCards, PlayerState.allCards, optCardList_clamp]
+  simp only [GameState.clamp, GameState.clampAt, GameState.allCards, PlayerState.allCards,
+    optCardList_clamp]
 
-/-- In the clamp of a reachable state from a well-formed start with no pending Knock Out,
-every Pokémon in play has damage and Poison strength at most `bound g₀.allCards`. -/
-theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h₀ : DamageBounded g₀)
-    (h : Reach g₀ g) :
+/-- In the clamp of a reachable state from a well-formed start, every Pokémon in play has damage
+and Poison strength at most `bound g₀.allCards`: the clamp caps both Active Pokémon at their HP,
+and Benched Pokémon are below HP with no Poison strength (`Reach.wellFormed`). -/
+theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h : Reach g₀ g) :
     SideDamageLe (bound g₀.allCards) g.clamp.cur ∧ SideDamageLe (bound g₀.allCards) g.clamp.opp := by
-  have hJ := h.activeLe h₀ hw
   have hW := h.wellFormed hw
   have hM : ∀ p, Card.pokemon p ∈ g.allCards → p.hp ≤ maxHp g₀.allCards :=
     fun p hp => hp_le_maxHp (h.perm.mem_iff.1 hp)
@@ -233,28 +236,25 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h₀ : 
     have h1 := hb.1
     have h2 := hb.2.2.2.2
     simp only [bound]; exact ⟨by omega, by omega⟩
+  have hA : ∀ q : InPlay, Card.pokemon q.top ∈ g.allCards →
+      (q.clampWith true).damage ≤ bound g₀.allCards ∧
+        (q.clampWith true).poisonUp ≤ bound g₀.allCards := by
+    intro q hq
+    have := hM _ hq
+    simp only [InPlay.clampWith, ite_true, bound]
+    exact ⟨by omega, by omega⟩
   refine ⟨⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_cur_bench hp) (hW.2.1 p hp)⟩,
     ⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_opp_bench hp) (hW.2.2 p hp)⟩⟩
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
-    have h2 := hM _ (GameState.top_mem_cur_active hq)
-    cases hb : g.between with
-    | false =>
-        have h1 := (hJ hb q hq).1
-        simp only [InPlay.clampWith, Bool.false_eq_true, ite_false, bound]
-        exact ⟨by omega, by omega⟩
-    | true =>
-        simp only [InPlay.clampWith, ite_true, bound]
-        exact ⟨by omega, by omega⟩
+    exact hA q (GameState.top_mem_cur_active hq)
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
-    have h2 := hM _ (GameState.top_mem_opp_active hq)
-    simp only [InPlay.clampWith, ite_true, bound]
-    exact ⟨by omega, by omega⟩
+    exact hA q (GameState.top_mem_opp_active hq)
 
-/-- **Finiteness.** From a well-formed start state with no pending Knock Out, there is a finite
-list of states containing the clamp (`GameState.clamp`) of every reachable state. -/
-theorem Reach.finite {g₀ : GameState} (hw : WellFormed g₀) (h₀ : DamageBounded g₀) :
+/-- **Finiteness.** From a well-formed start state, there is a finite list of states containing
+the clamp (`GameState.clamp`) of every reachable state. -/
+theorem Reach.finite {g₀ : GameState} (hw : WellFormed g₀) :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp ∈ L := by
-  refine ⟨states g₀.allCards, fun g h => mem_states ?_ (h.clamp_bounded hw h₀)⟩
+  refine ⟨states g₀.allCards, fun g h => mem_states ?_ (h.clamp_bounded hw)⟩
   rw [GameState.allCards_clamp]; exact h.perm
 
 end Pokemon
