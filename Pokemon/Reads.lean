@@ -73,6 +73,8 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
   | promoteOwn ha hb =>
       exact ⟨fun h _ => absurd (ha.symm.trans h) (by simp), fun h _ => ⟨.inl h, rfl⟩⟩
   | noPokemonOwn ha hb => exact ⟨fun h _ => ⟨.inl h, rfl⟩, fun h _ => ⟨.inl h, rfl⟩⟩
+  | knockOutBench hb hk hp => exact ⟨fun h _ => ⟨.inl h, rfl⟩, fun h _ => ⟨.inl h, rfl⟩⟩
+  | knockOutBenchOwn hb hk hp => exact ⟨fun h _ => ⟨.inl h, rfl⟩, fun h _ => ⟨.inl h, rfl⟩⟩
 
 namespace Reads
 
@@ -121,7 +123,7 @@ theorem run_clamp_not_sim (k : Nat) :
 /-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
 on itself. -/
 def hurter : PokemonCard :=
-  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9, false⟩], 1, none, none⟩
+  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9, false⟩], 1, none, none, .none, false⟩
 
 def start2 : GameState :=
   ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),

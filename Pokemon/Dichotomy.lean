@@ -133,7 +133,7 @@ theorem InPlay.clampWith_hp_idem (p : InPlay) :
 theorem xclamp_idem (g : GameState) : g.xclamp.xclamp = g.xclamp := by
   have hf : InPlay.clampWith .hp ∘ InPlay.clampWith .hp = InPlay.clampWith .hp :=
     funext InPlay.clampWith_hp_idem
-  simp only [GameState.xclamp, GameState.xclampAt, Option.map_map, hf]
+  simp only [GameState.xclamp, GameState.xclampAt, Option.map_map, List.map_map, hf]
 
 /-- States with the same `xclamp` encode the same configuration. -/
 theorem Encodes.inj_xclamp {M : Machine} {c c' : Config} {g g' : GameState} (h : Encodes M c g)

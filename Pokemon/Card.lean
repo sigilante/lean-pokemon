@@ -391,6 +391,31 @@ theorem Attack.script_oneHit {atk : Attack} (h : atk.wf = true) : atk.script.one
     · contradiction
     · simp only [Effect.oneHit, Effect.hitFree, hf, Bool.and_self, Bool.true_or]
 
+/-- The rule box of a Pokémon card, as far as it decides how many Prize cards its Knock Out gives
+(milestone M3; survey S8 C3, S9). The kinds are those of today's Standard (regulation marks H, I,
+J): no rule box (1 Prize, "take one of your Prize cards", rulebook 2023 p. 7); Pokémon ex, Tera
+Pokémon ex included ("Like other Pokémon ex, when a Tera Pokémon ex is Knocked Out, your opponent
+takes 2 Prize cards", p. 24; printed "Pokémon ex rule: When your Pokémon ex is Knocked Out, your
+opponent takes 2 Prize cards."); and Mega Evolution Pokémon ex ("Mega Evolution ex Rule: When
+your Mega Evolution Pokémon ex is Knocked Out, your opponent takes 3 Prize cards.", printed on the
+cards; the 2023 rulebook predates them, S9). In the card data every Standard card with the MEGA
+subtype is also ex, and 45 of its records print both rules; the Mega Evolution rule is the one
+that gives the number. Older kinds (EX, GX, V, VSTAR: 2; VMAX, TAG TEAM, V-UNION: 3; Radiant:
+1) give the same three numbers and are out of scope until the card pool needs them. -/
+inductive RuleBox where
+  | none | ex | megaEx
+  deriving DecidableEq
+
+/-- The number of Prize cards a Knock Out of a Pokémon with this rule box gives. -/
+def RuleBox.prizes : RuleBox → Nat
+  | .none => 1
+  | .ex => 2
+  | .megaEx => 3
+
+theorem RuleBox.prizes_pos (r : RuleBox) : 0 < r.prizes := by cases r <;> decide
+
+theorem RuleBox.prizes_le (r : RuleBox) : r.prizes ≤ 3 := by cases r <;> decide
+
 structure PokemonCard where
   name : String
   stage : Stage
@@ -410,7 +435,18 @@ structure PokemonCard where
   is 3, −20 is 2; "It takes less damage from a Pokémon if it has Resistance to that Pokémon's
   type", p. 14). Two Resistances on one card (54 older records) are out of scope. -/
   resistance : Option (EType × Nat)
+  /-- the rule box, which gives the number of Prize cards its Knock Out gives
+  (`PokemonCard.prizeCount`) -/
+  ruleBox : RuleBox
+  /-- a Tera Pokémon: "As long as this Pokémon is on your Bench, prevent all damage done to this
+  Pokémon by attacks (both yours and your opponent's)" (printed on every Tera card; rulebook 2023
+  p. 24: "a new effect that prevents all attack damage done to them while they're on your
+  Bench"). In today's Standard every Tera Pokémon is a Pokémon ex (101 card records). -/
+  tera : Bool
   deriving DecidableEq
+
+/-- How many Prize cards the opponent takes when this Pokémon is Knocked Out (1, 2 or 3). -/
+def PokemonCard.prizeCount (d : PokemonCard) : Nat := d.ruleBox.prizes
 
 /-- Is this Pokémon weak to Pokémon of type `t`? -/
 def PokemonCard.weakTo (d : PokemonCard) (t : EType) : Bool := decide (d.weakness = some t)

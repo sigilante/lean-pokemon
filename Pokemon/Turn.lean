@@ -53,6 +53,8 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | knockOutOwn h₁ h₂ h₃ => exact .inl (.knockOutOwn h₁ h₂ h₃)
   | promoteOwn h₁ h₂ => exact .inl (.promoteOwn h₁ h₂)
   | noPokemonOwn h₁ h₂ => exact .inl (.noPokemonOwn h₁ h₂)
+  | knockOutBench h₁ h₂ h₃ => exact .inl (.knockOutBench h₁ h₂ h₃)
+  | knockOutBenchOwn h₁ h₂ h₃ => exact .inl (.knockOutBenchOwn h₁ h₂ h₃)
   | endTurn => exact .inr ⟨rfl, rfl, rfl⟩
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
@@ -100,6 +102,8 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | knockOutOwn h₁ h₂ h₃ => exact .inl (.knockOutOwn h₁ h₂ h₃)
   | promoteOwn h₁ h₂ => exact .inl (.promoteOwn h₁ h₂)
   | noPokemonOwn h₁ h₂ => exact .inl (.noPokemonOwn h₁ h₂)
+  | knockOutBench h₁ h₂ h₃ => exact .inl (.knockOutBench h₁ h₂ h₃)
+  | knockOutBenchOwn h₁ h₂ h₃ => exact .inl (.knockOutBenchOwn h₁ h₂ h₃)
   | endTurn fa sa ca fb sb cb ha' hb' hk => exact .inr ⟨_, _, fa, sa, ca, fb, sb, cb, ha', hb', hk, rfl⟩
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)

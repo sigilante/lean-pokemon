@@ -137,7 +137,7 @@ namespace Trainer
 open Infinite (mon)
 
 /-- A Basic Pokémon with 100 HP (ten counters). -/
-def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1, none, none⟩
+def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1, none, none, .none, false⟩
 
 /-- A player with the given hand, Prizes, Active Pokémon and Bench. -/
 def side (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerState :=
@@ -156,8 +156,8 @@ theorem settled_of {g : GameState} {a b : InPlay} (hc : g.cur.active = some a)
   · rw [ho] at hp; cases hp; exact hb
   · exact hbo p hp
 
-theorem benched_ofBasic {c : PokemonCard} (h : 0 < c.hp) : Benched (InPlay.ofBasic c) :=
-  ⟨h, rfl, rfl, rfl, rfl⟩
+theorem benched_ofBasic {c : PokemonCard} (_h : 0 < c.hp) : Benched (InPlay.ofBasic c) :=
+  ⟨rfl, rfl, rfl, rfl⟩
 
 /-! ## A Knock Out after the first step of an Item -/
 

@@ -297,24 +297,18 @@ theorem optCardList_clamp (c : Cap) (o : Option InPlay) :
 
 theorem GameState.allCards_clamp (k : Nat) (g : GameState) : (g.clamp k).allCards = g.allCards := by
   simp only [GameState.clamp, GameState.clampAt, GameState.allCards, PlayerState.allCards,
-    optCardList_clamp]
+    optCardList_clamp, benchCardList_clamp]
 
-/-- In the clamp of a reachable state from a well-formed start, every Pokémon in play has damage
-and Poison strength at most `bound g₀.allCards`: the clamp caps both Active Pokémon at their HP,
-and Benched Pokémon are below HP with no Poison strength (`Reach.wellFormed`). -/
-theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h : Reach g₀ g) :
+/-- In the clamp of a reachable state, every Pokémon in play has damage and Poison strength at
+most `bound g₀.allCards`: the clamp caps every Pokémon in play, Active or Benched, at its HP.
+(Before milestone M3 the clamp capped only the Active Pokémon, and this used `Reach.wellFormed`:
+Benched Pokémon were below HP with no Poison strength. Benched Pokémon can now be damaged, and
+reach or pass their HP, so the clamp caps them too and well-formedness is not needed here.) -/
+theorem Reach.clamp_bounded {g₀ g : GameState} (h : Reach g₀ g) :
     SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).cur ∧
       SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).opp := by
-  have hW := h.wellFormed hw
   have hM : ∀ p, Card.pokemon p ∈ g.allCards → p.hp ≤ maxHp g₀.allCards :=
     fun p hp => hp_le_maxHp (h.perm.mem_iff.1 hp)
-  have hB : ∀ p, Card.pokemon p.top ∈ g.allCards → Benched p →
-      p.damage ≤ bound g₀.allCards ∧ p.poisonUp ≤ bound g₀.allCards := by
-    intro p hp hb
-    have := hM _ hp
-    have h1 := hb.1
-    have h2 := hb.2.2.2.2
-    simp only [bound]; exact ⟨by omega, by omega⟩
   have hA : ∀ q : InPlay, Card.pokemon q.top ∈ g.allCards →
       (q.clampWith .hp).damage ≤ bound g₀.allCards ∧
         (q.clampWith .hp).poisonUp ≤ bound g₀.allCards := by
@@ -322,14 +316,16 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h : Rea
     have := hM _ hq
     simp only [InPlay.clampWith, Cap.dmg, bound]
     exact ⟨by omega, by omega⟩
-  refine ⟨⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_cur_bench hp) (hW.2.1 p hp),
-      storeLe_cap _ _⟩,
-    ⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_opp_bench hp) (hW.2.2 p hp),
-      storeLe_cap _ _⟩⟩
+  refine ⟨⟨fun p hp => ?_, fun p hp => ?_, storeLe_cap _ _⟩,
+    ⟨fun p hp => ?_, fun p hp => ?_, storeLe_cap _ _⟩⟩
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
     exact hA q (GameState.top_mem_cur_active hq)
+  · obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
+    exact hA q (GameState.top_mem_cur_bench hq)
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
     exact hA q (GameState.top_mem_opp_active hq)
+  · obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
+    exact hA q (GameState.top_mem_opp_bench hq)
 
 /-- **The clamps of reachable states lie in a finite list.** From a well-formed start state,
 there is a finite list of states containing the clamp (`GameState.clamp`) of every reachable
@@ -341,9 +337,9 @@ which questions of play the finite list answers: for every cap `k ≥ 3` there i
 damage reduction (`Lingering.reduce_breaks_clamp`), and for every `k ≥ 2` a deck with `drain`
 (`Lingering.drain_breaks_clamp`), whose clamp kernel is not a simulation, and play can then
 separate states with the same clamp. -/
-theorem Reach.clamp_mem {g₀ : GameState} (hw : WellFormed g₀) :
+theorem Reach.clamp_mem {g₀ : GameState} (_hw : WellFormed g₀) :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L := by
-  refine ⟨states g₀.allCards, fun g h => mem_states ?_ (h.clamp_bounded hw)⟩
+  refine ⟨states g₀.allCards, fun g h => mem_states ?_ h.clamp_bounded⟩
   rw [GameState.allCards_clamp]; exact h.perm
 
 /-- A start state with tame cards (no damage reduction, no `drain`) and no damage reduction in

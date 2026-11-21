@@ -62,11 +62,11 @@ def Enum.xstates (C : List Card) (B : Nat) : List GameState :=
 From a well-formed start state `g₀`, for every `B` there is a finite list `L`, chosen before
 the reachable state (it depends only on `g₀` and `B`), containing `g.xclamp` for every state
 `g` reachable from `g₀` that satisfies `BoundedStores B`. -/
-theorem Reach.xclamp_mem_bounded {g₀ : GameState} (hw : WellFormed g₀) (B : Nat) :
+theorem Reach.xclamp_mem_bounded {g₀ : GameState} (_hw : WellFormed g₀) (B : Nat) :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp ∈ L := by
   refine ⟨xstates g₀.allCards B, fun g h hb => ?_⟩
   have hm : g.clamp (bound g₀.allCards) ∈ states g₀.allCards :=
-    mem_states (by rw [GameState.allCards_clamp]; exact h.perm) (h.clamp_bounded hw)
+    mem_states (by rw [GameState.allCards_clamp]; exact h.perm) h.clamp_bounded
   rw [GameState.xclamp_eq (bound g₀.allCards)]
   simp only [xstates, List.mem_flatMap, List.mem_map]
   exact ⟨_, hm, g.cur.mods, mem_stores hb.1, g.opp.mods, mem_stores hb.2, rfl⟩

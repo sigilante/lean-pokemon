@@ -21,6 +21,7 @@ import Pokemon.Faithful
 import Pokemon.Dichotomy
 import Pokemon.Turn
 import Pokemon.Calc
+import Pokemon.Bench
 
 /-! Axiom audit. `#audit_namespace` checks every theorem declared in the `Pokemon` modules
 (private and generated ones included) and fails the build unless each depends only on

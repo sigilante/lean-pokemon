@@ -394,10 +394,16 @@ theorem KOMove.keeps {g g' : GameState} (h : KOMove g g') :
   cases h with
   | knockOut =>
       refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
-      simp only [GameState.discAmt, cardsAmt_append]; omega
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
   | knockOutOwn =>
       refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
-      simp only [GameState.discAmt, cardsAmt_append]; omega
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
+  | knockOutBench =>
+      refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
+  | knockOutBenchOwn =>
+      refine ⟨⟨?_, rfl, rfl, rfl⟩, fun _ => rfl⟩
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
   | promote => exact ⟨⟨Nat.le_refl _, rfl, rfl, rfl⟩, fun _ => rfl⟩
   | noPokemon => exact ⟨⟨Nat.le_refl _, rfl, rfl, rfl⟩, fun _ => rfl⟩
   | promoteOwn => exact ⟨⟨Nat.le_refl _, rfl, rfl, rfl⟩, fun _ => rfl⟩
@@ -642,12 +648,18 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
       exact hi.frame (fun _ => Nat.le_refl _) (Nat.le_refl _) (atkT_le A g) (Nat.le_refl _)
   | knockOut =>
       refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append]; omega
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
   | promote => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
   | noPokemon => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
   | knockOutOwn =>
       refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append]; omega
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
+  | knockOutBench =>
+      refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
+  | knockOutBenchOwn =>
+      refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
+      simp only [GameState.discAmt, cardsAmt_append, PlayerState.takePrizes]; omega
   | promoteOwn => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
   | noPokemonOwn => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
   | endTurn =>

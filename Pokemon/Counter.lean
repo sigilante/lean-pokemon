@@ -338,10 +338,10 @@ theorem atkB_wf (M : Machine) : (atkB M).wf = true := by
 /-- The first player's Pokémon: its damage is the program counter, so its HP exceeds every
 value the counter takes. -/
 def clock (M : Machine) : PokemonCard :=
-  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0, none, none⟩
+  ⟨"Clock", .basic, none, 3 * V M + 1, .colorless, [atkA M], 0, none, none, .none, false⟩
 
 /-- The second player's Pokémon, the target of the first player's zero tests. -/
-def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0, none, none⟩
+def tape (M : Machine) : PokemonCard := ⟨"Tape", .basic, none, 2, .colorless, [atkB M], 0, none, none, .none, false⟩
 
 /-- The halt mark: an Imprison marker on the Clock. -/
 def haltMarks : Marks := Marks.set .imprison true Marks.empty
@@ -1083,6 +1083,8 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
       rw [hp] at ha; cases ha; rw [h5, h1] at hk; exact absurd hk (Nat.not_le.2 hc)
   | promoteOwn ha => rw [hp] at ha; cases ha
   | noPokemonOwn ha => rw [hp] at ha; cases ha
+  | knockOutBench hb => rw [hO.bench] at hb; exact absurd hb.symm (by simp)
+  | knockOutBenchOwn hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | endTurn fa sa ca fb sb cb ha hb =>
       exact .inr (.inl ⟨(hO.toCur ha hoc false fa sa ca).weak,
         (hC.toOpp hb hcc true fb sb cb).weak⟩)

@@ -58,6 +58,11 @@ theorem benchCardList_append (a b : List InPlay) :
 @[simp] theorem InPlay.inflict_tools (c : Condition) (p : InPlay) :
     (p.inflict c).tools = p.tools := by cases c <;> rfl
 
+/-- Taking Prize cards splits the Prize list into the cards taken and the cards left. -/
+theorem count_prizes (n : Nat) (l : List Card) (x : Card) :
+    List.count x l = List.count x (l.take n) + List.count x (l.drop n) := by
+  rw [← List.count_append, List.take_append_drop]
+
 /-- Close a goal `l₁.Perm l₂` by comparing counts after unfolding `allCards`. -/
 macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
   `(tactic| (
@@ -118,12 +123,18 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
 /-- A Knock Out move permutes the cards in the game. -/
 theorem KOMove.perm {g g' : GameState} (h : KOMove g g') : g'.allCards.Perm g.allCards := by
   cases h with
-  | knockOut ha hk hp => perm_count [ha, hp]
+  | @knockOut p _ _ ha hk hp =>
+      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
   | promote ha hb => perm_count [ha, hb]
   | noPokemon ha hb => exact .refl _
-  | knockOutOwn ha hk hp => perm_count [ha, hp]
+  | @knockOutOwn p _ _ ha hk hp =>
+      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
   | promoteOwn ha hb => perm_count [ha, hb]
   | noPokemonOwn ha hb => exact .refl _
+  | @knockOutBench p _ _ _ _ hb hk hp =>
+      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
+  | @knockOutBenchOwn p _ _ _ _ hb hk hp =>
+      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
 
 /-- Taking the Knock Outs permutes the cards in the game. -/
 theorem Resolve.perm {g g' : GameState} (h : Resolve g g') : g'.allCards.Perm g.allCards := by
@@ -162,12 +173,18 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
       perm_count [hh]
   | attack ha hm hc hs hn hf hbt hst hr => exact hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
-  | knockOut ha hk hp => perm_count [ha, hp]
+  | @knockOut p _ _ ha hk hp =>
+      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
   | promote ha hb => perm_count [ha, hb]
   | noPokemon ha hb => exact .refl _
-  | knockOutOwn ha hk hp => perm_count [ha, hp]
+  | @knockOutOwn p _ _ ha hk hp =>
+      perm_count [ha, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
   | promoteOwn ha hb => perm_count [ha, hb]
   | noPokemonOwn ha hb => exact .refl _
+  | @knockOutBench p _ _ _ _ hb hk hp =>
+      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
+  | @knockOutBenchOwn p _ _ _ _ hb hk hp =>
+      perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
   | endTurn fa sa ca fb sb cb ha hb hk hbt =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh,
         benchCardList_unfresh]
@@ -229,5 +246,34 @@ theorem poisonUp_unbounded (n : Nat) :
         ih { g with opp := { g.opp with active := some { p with poisonUp := p.poisonUp + 1 } } }
           { p with poisonUp := p.poisonUp + 1 } rfl hp
       exact ⟨g', p', .iterCons (.poisonUp 1 h hp) hr, hp', by simp at hd; omega⟩
+
+/-! ## Where the cards of the Pokémon in play are -/
+
+theorem GameState.top_mem_cur_active {g : GameState} {a : InPlay}
+    (ha : g.cur.active = some a) : Card.pokemon a.top ∈ g.allCards := by
+  simp [GameState.allCards, PlayerState.allCards, optCardList, ha, InPlay.cardList]
+
+theorem GameState.top_mem_opp_active {g : GameState} {a : InPlay}
+    (ha : g.opp.active = some a) : Card.pokemon a.top ∈ g.allCards := by
+  simp [GameState.allCards, PlayerState.allCards, optCardList, ha, InPlay.cardList]
+
+theorem mem_benchCardList {p : InPlay} {x : Card} (hx : x ∈ p.cardList) :
+    ∀ {b : List InPlay}, p ∈ b → x ∈ benchCardList b
+  | _ :: _, .head _ => List.mem_append_left _ hx
+  | _ :: _, .tail _ h => List.mem_append_right _ (mem_benchCardList hx h)
+
+theorem GameState.top_mem_cur_bench {g : GameState} {a : InPlay}
+    (ha : a ∈ g.cur.bench) : Card.pokemon a.top ∈ g.allCards := by
+  have := mem_benchCardList (x := Card.pokemon a.top) (.head _) ha
+  simp [GameState.allCards, PlayerState.allCards, this]
+
+theorem GameState.top_mem_opp_bench {g : GameState} {a : InPlay}
+    (ha : a ∈ g.opp.bench) : Card.pokemon a.top ∈ g.allCards := by
+  have := mem_benchCardList (x := Card.pokemon a.top) (.head _) ha
+  simp [GameState.allCards, PlayerState.allCards, this]
+
+theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.cur.hand) :
+    x ∈ g.allCards := by
+  simp [GameState.allCards, PlayerState.allCards, hx]
 
 end Pokemon

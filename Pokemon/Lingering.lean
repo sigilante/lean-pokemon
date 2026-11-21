@@ -99,7 +99,7 @@ namespace Lingering
 
 /-- A Basic Pokémon with `h` counters of HP and one free attack: base damage `d`, effect `e`. -/
 def mon (h d : Nat) (e : Effect) : PokemonCard :=
-  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none⟩
+  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none, .none, false⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], false, false, false,
@@ -269,6 +269,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
       simp [InPlay.ofBasic, hitter, mon] at hk
   | promoteOwn ha => simp [red, st, side] at ha
   | noPokemonOwn ha => simp [red, st, side] at ha
+  | knockOutBench hb => simp [red, st, side] at hb
+  | knockOutBenchOwn hb => simp [red, st, side] at hb
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt] at e
@@ -407,6 +409,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       simp [InPlay.ofBasic, drainer, mon] at hk
   | promoteOwn ha => simp [dr, st, side] at ha
   | noPokemonOwn ha => simp [dr, st, side] at ha
+  | knockOutBench hb => simp [dr, st, side] at hb
+  | knockOutBenchOwn hb => simp [dr, st, side] at hb
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt] at e
