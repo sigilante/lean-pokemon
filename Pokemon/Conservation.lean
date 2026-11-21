@@ -12,7 +12,7 @@ constant) is a corollary.
 
 `counters_unbounded`: inside the resolution of a single effect (a statement about `Run`, not
 `Reach`), damage on the opponent's Active Pokémon is unbounded. `DamageBounded` therefore
-cannot be an invariant of all reachable states.
+cannot be an invariant of all reachable states; `Damage` treats this with a clamp.
 -/
 
 namespace Pokemon
