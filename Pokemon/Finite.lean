@@ -232,27 +232,27 @@ def players (C : List Card) : List PlayerState :=
   (cardLists C).flatMap fun deck => (cardLists C).flatMap fun hand =>
   (cardLists C).flatMap fun discard => (cardLists C).flatMap fun prizes =>
   (cardLists C).flatMap fun lost => (opts (inPlays C)).flatMap fun active =>
-  (listsUpTo (inPlays C) C.length).flatMap fun bench => (opts C).flatMap fun stadium =>
+  (listsUpTo (inPlays C) C.length).flatMap fun bench =>
   bools.flatMap fun energyAttached => bools.flatMap fun supporterPlayed =>
   bools.flatMap fun retreated => bools.flatMap fun gxUsed => bools.flatMap fun vstarUsed =>
   (stores (bound C)).flatMap fun mods => bools.map fun hadTurn =>
-  ⟨deck, hand, discard, prizes, lost, active, bench, stadium, energyAttached, supporterPlayed,
+  ⟨deck, hand, discard, prizes, lost, active, bench, energyAttached, supporterPlayed,
     retreated, gxUsed, vstarUsed, mods, hadTurn⟩
 
 theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     (hd : SideDamageLe (bound C) s) : s ∈ players C := by
-  obtain ⟨deck, hand, discard, prizes, lost, active, bench, stadium, energyAttached,
+  obtain ⟨deck, hand, discard, prizes, lost, active, bench, energyAttached,
     supporterPlayed, retreated, gxUsed, vstarUsed, mods, hadTurn⟩ := s
   simp only [PlayerState.allCards] at hw
-  have hbench : Within C (benchCardList bench) := hw.left.right
-  have hactive : Within C (optCardList active) := hw.left.left.right
+  have hbench : Within C (benchCardList bench) := hw.right
+  have hactive : Within C (optCardList active) := hw.left.right
   simp only [players, List.mem_flatMap, List.mem_map]
-  refine ⟨deck, mem_cardLists hw.left.left.left.left.left.left.left,
-    hand, mem_cardLists hw.left.left.left.left.left.left.right,
-    discard, mem_cardLists hw.left.left.left.left.left.right,
-    prizes, mem_cardLists hw.left.left.left.left.right,
-    lost, mem_cardLists hw.left.left.left.right,
-    active, ?_, bench, ?_, stadium, ?_, energyAttached, mem_bools _,
+  refine ⟨deck, mem_cardLists hw.left.left.left.left.left.left,
+    hand, mem_cardLists hw.left.left.left.left.left.right,
+    discard, mem_cardLists hw.left.left.left.left.right,
+    prizes, mem_cardLists hw.left.left.left.right,
+    lost, mem_cardLists hw.left.left.right,
+    active, ?_, bench, ?_, energyAttached, mem_bools _,
     supporterPlayed, mem_bools _, retreated, mem_bools _, gxUsed, mem_bools _,
     vstarUsed, mem_bools _, mods, mem_stores hd.2.2, hadTurn, mem_bools _, rfl⟩
   · refine mem_opts fun p hp => ?_
@@ -261,26 +261,28 @@ theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
   · refine mem_listsUpTo (Nat.le_trans (length_le_benchCardList bench) hbench.1) ?_
     exact fun p hp => mem_inPlays (within_of_mem_bench hbench hp) (hd.2.1 p hp).1
       (hd.2.1 p hp).2
-  · refine mem_opts fun c hc => ?_
-    subst hc
-    exact hw.right.2 c (.head _)
 
 /-- A finite list containing every state whose cards are those of `C` (up to order) and
 whose Pokémon in play all have damage and Poison strength at most `bound C`. -/
 def states (C : List Card) : List GameState :=
   (players C).flatMap fun cur => (players C).flatMap fun opp =>
   bools.flatMap fun curIsFirst => bools.flatMap fun firstTurn =>
-  bools.flatMap fun attacked => bools.flatMap fun between => winners.map fun winner =>
-  ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner⟩
+  bools.flatMap fun attacked => bools.flatMap fun between => winners.flatMap fun winner =>
+  (opts (bools.flatMap fun b => C.map fun c => (b, c))).map fun stadium =>
+  ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium⟩
 
 theorem mem_states {C : List Card} {g : GameState} (hp : g.allCards.Perm C)
     (hd : SideDamageLe (bound C) g.cur ∧ SideDamageLe (bound C) g.opp) : g ∈ states C := by
-  have hw : Within C (g.cur.allCards ++ g.opp.allCards) := Within.of_perm hp
-  obtain ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner⟩ := g
+  have hw : Within C (g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium) :=
+    Within.of_perm hp
+  obtain ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium⟩ := g
   simp only [states, List.mem_flatMap, List.mem_map]
-  exact ⟨cur, mem_players hw.left hd.1, opp, mem_players hw.right hd.2,
+  refine ⟨cur, mem_players hw.left.left hd.1, opp, mem_players hw.left.right hd.2,
     curIsFirst, mem_bools _, firstTurn, mem_bools _, attacked, mem_bools _,
-    between, mem_bools _, winner, mem_winners _, rfl⟩
+    between, mem_bools _, winner, mem_winners _, stadium, ?_, rfl⟩
+  refine mem_opts fun ⟨b, c⟩ hc => ?_
+  subst hc
+  exact List.mem_flatMap.2 ⟨b, mem_bools _, List.mem_map.2 ⟨c, hw.right.2 c (.head _), rfl⟩⟩
 
 end Enum
 

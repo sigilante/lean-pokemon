@@ -191,9 +191,9 @@ theorem benchCards_eq_length (b : List InPlay) : benchCards b = (benchCardList b
   | cons p ps ih => simp [benchCards, benchCardList, ih, InPlay.cardList_length]
 
 theorem GameState.cards_eq_length (g : GameState) : g.cards = g.allCards.length := by
-  cases hc : g.cur.stadium <;> cases ho : g.opp.stadium <;>
+  cases hs : g.stadium <;>
     simp [GameState.cards, GameState.allCards, PlayerState.cards, PlayerState.allCards,
-      optCards_eq_length, benchCards_eq_length, stadiumCards, stadiumCardList, hc, ho] <;> omega
+      optCards_eq_length, benchCards_eq_length, stadiumCards, stadiumCardList, hs] <;> omega
 
 /-- Corollary of `Reach.perm`: legal play never changes the number of cards in the game. -/
 theorem Reach.cards_eq {g₀ g : GameState} (h : Reach g₀ g) : g.cards = g₀.cards := by

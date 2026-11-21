@@ -1117,14 +1117,15 @@ hand and one Prize card. Neither has a Bench. The inputs are rest-of-game damage
 `b` on the first player, `a` on the second. -/
 def start (M : Machine) (a b : Nat) : GameState where
   cur := ⟨[], [.energy .grass], [], [.energy .grass], [], some (onPlay (clock M)), [],
-    none, false, false, false, false, false, storeOf 0 b, true⟩
+    false, false, false, false, false, storeOf 0 b, true⟩
   opp := ⟨[.energy .grass], [], [], [.energy .grass], [], some (onPlay (tape M)), [],
-    none, false, false, false, false, false, storeOf 0 a, true⟩
+    false, false, false, false, false, storeOf 0 a, true⟩
   curIsFirst := true
   firstTurn := false
   attacked := false
   between := false
   winner := none
+  stadium := none
 
 /-- **The encoding of a configuration** `c` at the start of the first player's main phase
 (after the draw, before attacking): the abstract state has configuration `c`, the Tape is

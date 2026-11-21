@@ -155,7 +155,6 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`attackConfused`) only under the same condition, and a failed attempt (tails) does not use it
   up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
   ruling, and the model takes the answer "no"; VSTAR Powers are absent (`vstarUsed` is unused);
-* each player has their own Stadium slot;
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them only from the player's own Active Pokémon (`cure`); the variants with a number
   ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; a new Poison
@@ -185,7 +184,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `selfDamage` on the player's own): no effect damages the Bench;
 * `heal` and `healAll` remove damage from the player's own Active Pokémon only, not from the
   Bench nor from the opponent's Pokémon;
-* Stadium and Tool cards occupy state but have no move; Abilities are absent;
+* Stadium and Tool cards occupy state but have no move (survey S8 B9, B10: milestone M5): the
+  Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
+  as the rulebook has it, but it only holds a card of the start state; so the rules that come
+  with playing a Stadium (one per turn, no Stadium of the same name, the old one discarded) and
+  Tools (one per Pokémon) have nothing to act on yet; Abilities are absent;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
   an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
@@ -447,7 +450,7 @@ inductive Move : GameState → GameState → Prop where
             active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift,
             hadTurn := true },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
-          between := true, winner := g.winner }
+          between := true, winner := g.winner, stadium := g.stadium }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken
   and both Active Spots are filled -/
   | startTurn {g : GameState} {a b : InPlay} {c : Card} {d : List Card}

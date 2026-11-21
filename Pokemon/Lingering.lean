@@ -99,12 +99,12 @@ def mon (h d : Nat) (e : Effect) : PokemonCard :=
   ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
-  ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], none, false, false, false,
+  ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], false, false, false,
     false, false, t, true⟩
 
 /-- The player to move has `a` and the store `s`; the opponent has `b` and the store `t`. -/
 def st (hand discard : List Card) (a b : InPlay) (s t : Store) : GameState :=
-  ⟨side hand discard a s, side [] [] b t, true, false, false, false, none⟩
+  ⟨side hand discard a s, side [] [] b t, true, false, false, false, none, none⟩
 
 theorem settled_st (hand discard : List Card) (a b : InPlay) (s t : Store)
     (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp) :

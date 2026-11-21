@@ -178,7 +178,8 @@ def benchCards : List InPlay → Nat
   | [] => 0
   | p :: ps => p.cards + benchCards ps
 
-def stadiumCards : Option Card → Nat
+/-- The number of cards in the Stadium slot. -/
+def stadiumCards : Option (Bool × Card) → Nat
   | none => 0
   | some _ => 1
 
@@ -192,9 +193,10 @@ def benchCardList : List InPlay → List Card
   | [] => []
   | p :: ps => p.cardList ++ benchCardList ps
 
-def stadiumCardList : Option Card → List Card
+/-- The card in the Stadium slot, if any. -/
+def stadiumCardList : Option (Bool × Card) → List Card
   | none => []
-  | some c => [c]
+  | some (_, c) => [c]
 
 /-- The lingering modifiers on one player for one turn (or for the rest of the game). -/
 structure Mods where
@@ -263,8 +265,6 @@ structure PlayerState where
   lost : List Card
   active : Option InPlay
   bench : List InPlay
-  /-- the Stadium this player has in play, if any -/
-  stadium : Option Card
   energyAttached : Bool
   supporterPlayed : Bool
   retreated : Bool
@@ -283,14 +283,14 @@ namespace PlayerState
 /-- Number of physical cards this player owns, over all zones. -/
 def cards (s : PlayerState) : Nat :=
   s.deck.length + s.hand.length + s.discard.length + s.prizes.length + s.lost.length
-    + optCards s.active + benchCards s.bench + stadiumCards s.stadium
+    + optCards s.active + benchCards s.bench
 
-/-- Every physical card this player owns, over all zones: deck, hand, discard pile, Prizes,
-Lost Zone, the Active Pokémon and each Benched Pokémon (top card, the cards under it,
-attached Energy and Tools), and the Stadium. -/
+/-- Every physical card this player owns, over all zones except the Stadium slot (which both
+players share, `GameState.stadium`): deck, hand, discard pile, Prizes, Lost Zone, the Active
+Pokémon and each Benched Pokémon (top card, the cards under it, attached Energy and Tools). -/
 def allCards (s : PlayerState) : List Card :=
   s.deck ++ s.hand ++ s.discard ++ s.prizes ++ s.lost
-    ++ optCardList s.active ++ benchCardList s.bench ++ stadiumCardList s.stadium
+    ++ optCardList s.active ++ benchCardList s.bench
 
 def unfresh (s : PlayerState) : PlayerState :=
   { s with active := s.active.map InPlay.unfresh, bench := s.bench.map InPlay.unfresh }
@@ -316,6 +316,11 @@ structure GameState where
   between : Bool
   /-- `some b`: the game is over, won by the first player iff `b` -/
   winner : Option Bool
+  /-- the Stadium in play, if any, with its owner (`true`: the player who went first). There is
+  one Stadium slot for both players: "Only one Stadium can be in play at a time" (rulebook 2023
+  p. 12). No move plays a Stadium yet (survey S8 B9, milestone M5), so the slot only holds a
+  card of the start state. -/
+  stadium : Option (Bool × Card)
 
 /-- The Active Pokémon of the player to move (`own`) or of the opponent (`opp`). -/
 def GameState.activeOf : Whose → GameState → Option InPlay
@@ -346,10 +351,12 @@ def GameState.updSide : Whose → (PlayerState → PlayerState) → GameState �
   | .own, f, g => { g with cur := f g.cur }
   | .opp, f, g => { g with opp := f g.opp }
 
-def GameState.cards (g : GameState) : Nat := g.cur.cards + g.opp.cards
+def GameState.cards (g : GameState) : Nat :=
+  g.cur.cards + g.opp.cards + stadiumCards g.stadium
 
 /-- Every physical card in the game, in both players' zones. -/
-def GameState.allCards (g : GameState) : List Card := g.cur.allCards ++ g.opp.allCards
+def GameState.allCards (g : GameState) : List Card :=
+  g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium
 
 def benchLimit : Nat := 5
 

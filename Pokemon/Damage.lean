@@ -709,12 +709,12 @@ theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.
 def cxCard : PokemonCard := ⟨"", .basic, none, 1, .grass, [], 0⟩
 
 def cxSide (a : InPlay) : PlayerState :=
-  ⟨[], [], [], [], [], some a, [], none, false, false, false, false, false, Store.empty, true⟩
+  ⟨[], [], [], [], [], some a, [], false, false, false, false, false, Store.empty, true⟩
 
 /-- Both Active Pokémon have 10 HP and no damage; the opponent's is Poisoned. -/
 def cxState : GameState :=
   ⟨cxSide (InPlay.ofBasic cxCard), cxSide { InPlay.ofBasic cxCard with poisoned := true },
-    true, false, false, false, none⟩
+    true, false, false, false, none, none⟩
 
 /-- `Move.damageBounded_of_turn` (every move that passes the turn yields a state with no
 pending Knock Out) is false in the model with Checkup: ending the turn from a state with no
