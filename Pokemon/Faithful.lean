@@ -316,6 +316,8 @@ theorem Run.slot_nowrite {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @touchActive e w f g p he h => intro _ s; cases w <;> exact Nat.le_refl _
   | @touchBench e w f g q b₁ b₂ he h => intro _ s; cases w <;> exact Nat.le_refl _
   | unmark w m g => intro _ s; cases w <;> exact Nat.le_refl _
+  | benchCounters w n h => intro _ s; cases w <;> exact Nat.le_refl _
+  | spreadCounters w n g => intro _ s; cases w <;> exact Nat.le_refl _
   | linger w s m g =>
       intro hw s'
       rw [GameState.slotAmt_linger, Mod.amt_of_not_isAmt hw]
@@ -351,6 +353,8 @@ theorem Run.slot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @touchActive e w f g p he h => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | @touchBench e w f g q b₁ b₂ he h => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | unmark w m g => intro _ s; cases w <;> exact Nat.le_add_right _ _
+  | benchCounters w n h => intro _ s; cases w <;> exact Nat.le_add_right _ _
+  | spreadCounters w n g => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | linger w s m g =>
       intro _ s'
       rw [GameState.slotAmt_linger]
@@ -386,6 +390,8 @@ theorem Run.keeps {e : Effect} {g g' : GameState} (h : Run e g g') : Keeps g g' 
   | @touchActive e w f g p he h => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
   | @touchBench e w f g q b₁ b₂ he h => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
   | unmark w m g => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
+  | benchCounters w n h => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
+  | spreadCounters w n g => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
   | linger w s m g => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
   | _ => exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
 

@@ -7,10 +7,12 @@ import Pokemon.State
 nondeterministic: player choices, coin flips and shuffles are all branches of it. That is
 the right shape for reachability questions, and it is silent about probability.
 
-Effects read the state only through the two Active Pokémon: a test (`ite`) on the damage, the
+Effects read the state through the two Active Pokémon: a test (`ite`) on the damage, the
 Special Conditions, the markers or the type of either one; `scale`, which places counters in
 proportion to the damage on either one; and the amount of the damage step (`Amt.per`), which
-reads the damage on either one. The damage step also reads the two Active Pokémon's types,
+reads the damage on either one. Since milestone M3 effects also place damage counters on Benched
+Pokémon (`benchCounters`, `spreadCounters`) and heal one (`benchHeal`, the one read of a Benched
+Pokémon's damage, by truncated subtraction). The damage step also reads the two Active Pokémon's types,
 Weakness and Resistance, and both players' modifiers (`GameState.dealt`). Inside one `Run` nothing is Knocked Out, so damage may exceed HP and
 these reads see the excess. `Run` is the semantics of an attack's effect, where the rulebook
 checks for Knock Outs only at the end of the attack. The effect of an Item or Supporter card is
@@ -35,6 +37,9 @@ def Effect.touch : Effect → Option (Whose × (Marks → Marks))
   | .mark w m => some (w, Marks.set m true)
   | .color w t => some (w, fun k => { k with coloring := some t })
   | _ => none
+
+/-- Put `n` more damage counters on a Pokémon. -/
+def InPlay.addDamage (n : Nat) (p : InPlay) : InPlay := { p with damage := p.damage + n }
 
 /-- Remove the marker `m` from every Pokémon of one player. -/
 def PlayerState.unmark (m : Marker) (s : PlayerState) : PlayerState :=
@@ -159,6 +164,23 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.drain a) g
         { g with cur := { g.cur with active := some { q with damage := q.damage - g.dealt n } },
                  opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } }
+  /-- damage counters on one of the `w` player's Benched Pokémon (milestone M3) -/
+  | benchCounters {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)
+      (h : (g.side w).bench = b₁ ++ q :: b₂) :
+      Run (.benchCounters w n) g
+        (g.updSide w fun s => { s with bench := b₁ ++ { q with damage := q.damage + n } :: b₂ })
+  | benchCountersNone {g : GameState} (w : Whose) (n : Nat) (h : (g.side w).bench = []) :
+      Run (.benchCounters w n) g g
+  /-- damage counters on each of the `w` player's Benched Pokémon -/
+  | spreadCounters (w : Whose) (n : Nat) (g : GameState) :
+      Run (.spreadCounters w n) g
+        (g.updSide w fun s => { s with bench := s.bench.map (InPlay.addDamage n) })
+  /-- heal one of the player's own Benched Pokémon -/
+  | benchHeal {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (n : Nat)
+      (h : g.cur.bench = b₁ ++ q :: b₂) :
+      Run (.benchHeal n) g
+        { g with cur := { g.cur with bench := b₁ ++ { q with damage := q.damage - n } :: b₂ } }
+  | benchHealNone {g : GameState} (n : Nat) (h : g.cur.bench = []) : Run (.benchHeal n) g g
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

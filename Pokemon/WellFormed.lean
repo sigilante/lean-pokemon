@@ -16,14 +16,15 @@ winner, and that every Benched Pokémon is below its HP and has no Special Condi
 
 namespace Pokemon
 
-/-- A Pokémon with its markers removed. -/
-def InPlay.unmarked (p : InPlay) : InPlay := { p with marks := Marks.empty }
+/-- A Pokémon with its markers and damage counters removed. -/
+def InPlay.bare (p : InPlay) : InPlay := { p with marks := Marks.empty, damage := 0 }
 
-/-- What resolving an effect never changes: the Benches except for markers, the Prizes, the
-winner, who is first, and the phase of the turn. -/
+/-- What resolving an effect never changes: the Benches except for markers and damage counters
+(since milestone M3 effects damage and heal Benched Pokémon), the Prizes, the winner, who is
+first, and the phase of the turn. -/
 def Run.Frame (g g' : GameState) : Prop :=
-  g'.cur.bench.map InPlay.unmarked = g.cur.bench.map InPlay.unmarked ∧
-    g'.opp.bench.map InPlay.unmarked = g.opp.bench.map InPlay.unmarked ∧
+  g'.cur.bench.map InPlay.bare = g.cur.bench.map InPlay.bare ∧
+    g'.opp.bench.map InPlay.bare = g.opp.bench.map InPlay.bare ∧
     g'.cur.prizes = g.cur.prizes ∧ g'.opp.prizes = g.opp.prizes ∧
     g'.winner = g.winner ∧ g'.curIsFirst = g.curIsFirst ∧ g'.between = g.between
 
@@ -46,23 +47,33 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
   | @touchActive e w f g p he h => cases w <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | @touchBench e w f g q b₁ b₂ he h =>
       cases w <;> simp only [GameState.side] at h <;>
-        exact ⟨by simp [GameState.updSide, h, InPlay.unmarked, InPlay.setMarks],
-          by simp [GameState.updSide, h, InPlay.unmarked, InPlay.setMarks], rfl, rfl, rfl, rfl,
+        exact ⟨by simp [GameState.updSide, h, InPlay.bare, InPlay.setMarks],
+          by simp [GameState.updSide, h, InPlay.bare, InPlay.setMarks], rfl, rfl, rfl, rfl,
           rfl⟩
   | unmark w m g =>
       cases w <;>
-        exact ⟨by simp [GameState.updSide, PlayerState.unmark, InPlay.unmarked, InPlay.setMarks],
-          by simp [GameState.updSide, PlayerState.unmark, InPlay.unmarked, InPlay.setMarks],
+        exact ⟨by simp [GameState.updSide, PlayerState.unmark, InPlay.bare, InPlay.setMarks],
+          by simp [GameState.updSide, PlayerState.unmark, InPlay.bare, InPlay.setMarks],
           rfl, rfl, rfl, rfl, rfl⟩
   | linger w s m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | @benchCounters g q b₁ b₂ w n h =>
+      cases w <;> simp only [GameState.side] at h <;>
+        exact ⟨by simp [GameState.updSide, h, InPlay.bare],
+          by simp [GameState.updSide, h, InPlay.bare], rfl, rfl, rfl, rfl, rfl⟩
+  | spreadCounters w n g =>
+      cases w <;>
+        exact ⟨by simp [GameState.updSide, InPlay.bare, InPlay.addDamage],
+          by simp [GameState.updSide, InPlay.bare, InPlay.addDamage], rfl, rfl, rfl, rfl, rfl⟩
+  | benchHeal n h =>
+      exact ⟨by simp [h, InPlay.bare], rfl, rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/
 theorem benched_of_map {b b' : List InPlay}
-    (h : b'.map InPlay.unmarked = b.map InPlay.unmarked) (hb : ∀ p ∈ b, Benched p) :
+    (h : b'.map InPlay.bare = b.map InPlay.bare) (hb : ∀ p ∈ b, Benched p) :
     ∀ p ∈ b', Benched p := by
   intro p hp
-  have hm : p.unmarked ∈ b.map InPlay.unmarked := h ▸ List.mem_map_of_mem hp
+  have hm : p.bare ∈ b.map InPlay.bare := h ▸ List.mem_map_of_mem hp
   obtain ⟨q, hq, e⟩ := List.mem_map.1 hm
   obtain ⟨h2, h3, h4, h5⟩ := hb q hq
   have er : q.rot = p.rot := by

@@ -43,6 +43,12 @@ theorem benchCardList_setMarks (f : Marks → Marks) (b : List InPlay) :
   | nil => rfl
   | cons p ps ih => simp only [List.map, benchCardList, ih]; rfl
 
+theorem benchCardList_addDamage (n : Nat) (b : List InPlay) :
+    benchCardList (b.map (InPlay.addDamage n)) = benchCardList b := by
+  induction b with
+  | nil => rfl
+  | cons p ps ih => simp only [List.map, benchCardList, ih]; rfl
+
 theorem benchCardList_append (a b : List InPlay) :
     benchCardList (a ++ b) = benchCardList a ++ benchCardList b := by
   induction a with
@@ -105,6 +111,15 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | linger w s m g =>
       cases w <;> simp only [GameState.allCards, PlayerState.allCards, GameState.updSide] <;>
         exact .refl _
+  | @benchCounters g q b₁ b₂ w n h =>
+      cases w <;> simp only [GameState.side] at h <;> perm_count [h, GameState.updSide]
+  | benchCountersNone => exact .refl _
+  | spreadCounters w n g =>
+      cases w <;>
+        simp only [GameState.allCards, PlayerState.allCards, GameState.updSide,
+          benchCardList_addDamage] <;> exact .refl _
+  | benchHeal n h => perm_count [h]
+  | benchHealNone => exact .refl _
   | damage n h => perm_count [h]
   | drain n h hq => perm_count [h, hq]
   | shuffle h =>

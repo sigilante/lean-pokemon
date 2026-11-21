@@ -52,6 +52,8 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @touchActive e w f g p he h => intro _ hn; cases w <;> exact hn
   | @touchBench e w f g q b₁ b₂ he h => intro _ hn; cases w <;> exact hn
   | unmark w m g => intro _ hn; cases w <;> exact hn
+  | benchCounters w n h => intro _ hn; cases w <;> exact hn
+  | spreadCounters w n g => intro _ hn; cases w <;> exact hn
   | linger w s m g =>
       intro ht hn
       have hm : ∀ n, m ≠ .reduce n := by
@@ -365,6 +367,63 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
             hq.marks, by simp only [Cap.dmg]; omega, hq.poisonUp⟩
         simp only [GameState.rclamp, GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
           InPlay.clamp_of_agree hq', he₁, he₂]
+  | @benchCounters g q b₁ b₂ w n h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
+          have hr := InPlay.agree_of_clamp h2
+          exact ⟨_, .benchCounters (b₁ := d₁) .own n rfl, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂, he₂,
+              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.upd.2.1 n)]⟩
+      | opp =>
+          simp only [GameState.side] at h
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
+          have hr := InPlay.agree_of_clamp h2
+          exact ⟨_, .benchCounters (b₁ := d₁) .opp n rfl, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂, he₁,
+              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.upd.2.1 n)]⟩
+  | benchCountersNone w n h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₁
+          subst he₁
+          exact ⟨_, .benchCountersNone .own n rfl, hc⟩
+      | opp =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₂
+          subst he₂
+          exact ⟨_, .benchCountersNone .opp n rfl, hc⟩
+  | spreadCounters w n g =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w <;>
+        exact ⟨_, .spreadCounters _ n _, by
+          simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂, he₁, he₂,
+            bench_map_comm (InPlay.clampWith_exact_addDamage n) he₁,
+            bench_map_comm (InPlay.clampWith_exact_addDamage n) he₂]⟩
+  | @benchHeal g q b₁ b₂ n h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
+      have hr := InPlay.agree_of_clamp h2
+      have hr' : InPlay.Agree .exact { r with damage := r.damage - n }
+          { q with damage := q.damage - n } := by
+        rw [hr.damage_eq]; exact hr.setDamage _
+      exact ⟨_, .benchHeal n rfl, by
+        simp only [GameState.rclamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append, List.map_cons, h1, h3,
+          InPlay.clamp_of_agree hr']⟩
+  | benchHealNone n h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      rw [h, List.map_nil, List.map_eq_nil_iff] at he₁
+      subst he₁
+      exact ⟨_, .benchHealNone n rfl, hc⟩
   | drain => intro ht; simp [Effect.tame] at ht
   | shuffle h =>
       intro _ _ _ _ g₂ hc

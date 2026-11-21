@@ -987,6 +987,8 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @touchActive e w f g p he h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | @touchBench e w f g q b₁ b₂ he h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | unmark w m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | benchCounters w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | linger w s m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl⟩
 

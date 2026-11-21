@@ -577,6 +577,9 @@ theorem InPlay.clampWith_unfresh (c : Cap) (x : InPlay) :
   show { x.unfresh with damage := c.dmg x.unfresh, poisonUp := min x.poisonUp x.top.hp } = _
   rw [hd]; rfl
 
+theorem InPlay.clampWith_exact_addDamage (n : Nat) (x : InPlay) :
+    InPlay.clampWith .exact (x.addDamage n) = (InPlay.clampWith .exact x).addDamage n := rfl
+
 theorem InPlay.clampWith_setMarks' (c : Cap) (f : Marks → Marks) (x : InPlay) :
     InPlay.clampWith c (x.setMarks f) = (InPlay.clampWith c x).setMarks f := by
   have hd : c.dmg (x.setMarks f) = c.dmg x := InPlay.dmg_congr c rfl rfl

@@ -14,6 +14,8 @@ Knock Out wins.
 * `attachBench_reachable`, `benchKO_reachable`: Energy attached to a Benched Pokémon; a Benched
   Pokémon evolved into a card with less HP than its damage, which leaves a Knock Out pending on
   the Bench, and its Knock Out (the opponent takes a Prize card; nobody is promoted).
+* `doubleKO_reachable`: one step of an Item puts damage counters on each of the opponent's
+  Benched Pokémon; two Knock Outs are pending at once, and both are taken before the next step.
 -/
 
 namespace Pokemon.Bench
@@ -139,5 +141,47 @@ theorem benchKO_reachable :
     .step (.step (.refl _) rfl h₁) rfl h₂, fun hk => ?_, .head _, rfl, rfl, rfl, rfl⟩
   have := hk weakBenched (Or.inr (Or.inl (.head _)))
   exact absurd this (by decide)
+
+/-! ## Several Knock Outs from one step -/
+
+/-- Put 5 damage counters on each of the opponent's Benched Pokémon. -/
+def spread5 : Card := .trainer "Spread" .item (.spreadCounters .opp 5)
+
+/-- The opponent has `big` Active and two 50-HP Pokémon on the Bench; the player to move has three
+Prize cards and `spread5` in hand. -/
+def spreadStart : GameState :=
+  ⟨side [spread5] [.energy .fire, .energy .fire, .energy .fire] (InPlay.ofBasic big) [],
+    side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low, InPlay.ofBasic low],
+    true, false, false, false, none, none⟩
+
+theorem spreadStart_wellFormed : WellFormed spreadStart := by
+  refine ⟨fun _ => ⟨by simp [spreadStart, Trainer.side], by simp [spreadStart, Trainer.side]⟩,
+    (fun p hp => by cases hp), fun p hp => ?_⟩
+  simp only [spreadStart, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
+  rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
+
+theorem spreadStart_settled : Settled spreadStart :=
+  settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+    (fun p hp => by
+      simp only [spreadStart, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
+      rcases hp with rfl | rfl <;> decide)
+
+/-- **Witness: two Knock Outs from one step.** From a well-formed, `Settled` start, `spread5`
+puts 5 damage counters on both of the opponent's 50-HP Benched Pokémon in one step; both Knock
+Outs are taken (`Resolve`, two `knockOutBench` moves) before the effect ends, the player takes two
+Prize cards, and the opponent's Active Pokémon stays. -/
+theorem doubleKO_reachable :
+    ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g, Move g₀ g ∧ Reach g₀ g ∧ g.opp.bench = [] ∧
+      g.opp.active = g₀.opp.active ∧ g.cur.prizes.length + 2 = g₀.cur.prizes.length ∧
+      g.winner = none := by
+  have hm : Move spreadStart _ :=
+    .item (l₁ := []) (l₂ := []) (n := "Spread") rfl rfl spreadStart_settled
+      (.prim rfl rfl (.spreadCounters .opp 5 _)
+        (.step rfl (.knockOutBench (b₁ := []) rfl (by decide) rfl)
+          (.step rfl (.knockOutBench (b₁ := []) rfl (by decide) rfl)
+            (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+              (fun p hp => by cases hp))))))) rfl rfl rfl
+  exact ⟨spreadStart, spreadStart_wellFormed, spreadStart_settled, _, hm,
+    .step (.refl _) rfl hm, rfl, rfl, rfl, rfl⟩
 
 end Pokemon.Bench

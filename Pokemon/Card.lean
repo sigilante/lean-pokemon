@@ -304,6 +304,17 @@ inductive Effect where
   /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
   | drain (a : Amt)
+  /-- place `n` damage counters on one of the `w` player's Benched Pokémon, chosen when the effect
+  resolves ("Put 2 damage counters on 1 of your opponent's Benched Pokémon"); nothing if that
+  player has no Benched Pokémon. Damage counters, not damage: no Weakness, Resistance or other
+  modifier applies (rulebook 2023 p. 20, step 1). Milestone M3 -/
+  | benchCounters (w : Whose) (n : Nat)
+  /-- place `n` damage counters on each of the `w` player's Benched Pokémon -/
+  | spreadCounters (w : Whose) (n : Nat)
+  /-- remove up to `n` damage counters from one of the player's own Benched Pokémon, chosen when
+  the effect resolves ("Heal 30 damage from 1 of your Benched Pokémon"); nothing if the player has
+  no Benched Pokémon -/
+  | benchHeal (n : Nat)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -374,7 +385,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
-  | .linger _ _ _, _ => rfl
+  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

@@ -151,6 +151,8 @@ theorem Run.sameTurn {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameTu
   | @touchActive e w f g p he h => cases w <;> exact .refl _
   | @touchBench e w f g q b₁ b₂ he h => cases w <;> exact .refl _
   | unmark w m g => cases w <;> exact .refl _
+  | benchCounters w n h => cases w <;> exact .refl _
+  | spreadCounters w n g => cases w <;> exact .refl _
   | linger w s m g => cases w <;> exact .refl _
   | _ => exact .refl _
 

@@ -168,8 +168,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   payloads, delayed triggers, attack locks bound to one Pokémon, history flags, face-up Prizes);
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
   `Test.atLeast` and `Test.exactly`; the proportional write `scale`), their Special
-  Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); there
-  are no tests or counts on Benched Pokémon, on Energy, on
+  Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); the
+  only read of a Benched Pokémon is the truncated subtraction of `benchHeal` (milestone M3);
+  there are no tests or counts on Benched Pokémon (none was needed by the Standard texts S9
+  sampled), on Energy, on
   cards in hand, deck, discard pile or Prizes, on Poison strength, on HP ("if it has full HP",
   "remaining HP"), or on the lingering modifiers in effect; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
@@ -282,10 +284,19 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the printed card (Croagunk) raises Poison strength once per use of its attack; the model
   over-approximates it, and one Item can raise Poison strength without bound
   (`Infinite.not_finite_damageBounded`);
-* effects damage only the two Active Pokémon (`counters`, `scale` on the opponent's,
-  `selfDamage` on the player's own): no effect damages the Bench;
-* `heal` and `healAll` remove damage from the player's own Active Pokémon only, not from the
-  Bench nor from the opponent's Pokémon;
+* effects place damage counters on either Active Pokémon (`counters`, `scale` on the
+  opponent's, `selfDamage` on the player's own) and, since milestone M3, on one chosen Benched
+  Pokémon of either player (`benchCounters`) or on each of a player's Benched Pokémon
+  (`spreadCounters`); recoil and other self-damage are written as damage counters
+  (`selfDamage`), not as attack damage, so a printed recoil "This Pokémon also does 30 damage to
+  itself" escapes the attacker's own Weakness, Resistance and modifiers in the model; attack
+  damage (the damage step, `dealtBy`) reaches only the opponent's Active Pokémon; the damage
+  counters an effect places are not affected by Weakness, Resistance or any other effect, as the
+  rulebook says (2023 p. 20, step 1);
+* `heal` and `healAll` remove damage from the player's own Active Pokémon, and `benchHeal` from
+  one of the player's own Benched Pokémon (milestone M3); no effect heals the opponent's
+  Pokémon, and none heals each of a player's Benched Pokémon at once ("Heal 20 damage from
+  each of your Pokémon" is not expressible exactly);
 * Stadium and Tool cards occupy state but have no move (survey S8 B9, B10: milestone M5): the
   Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
   as the rulebook has it, but it only holds a card of the start state; so the rules that come
@@ -416,9 +427,9 @@ timing: from a state that is `Settled` or finished, every primitive step and eve
 resolution starts in a `Settled` state, so no step of a Trainer effect is executed while an
 Active Pokémon is at or above its HP.
 
-At most one Active Pokémon can reach its HP in one step (each damaging primitive damages one
-Active Pokémon and the step starts `Settled`), so the order of simultaneous Knock Outs does not
-arise inside a Trainer effect; `Resolve` nonetheless allows any order. -/
+Several Pokémon can reach their HP in one step (`spreadCounters` damages every Benched Pokémon of
+a player, milestone M3); `Resolve` takes all of their Knock Outs, in any order, before the next
+step (`Bench.doubleKO_reachable`). -/
 inductive TRun : Effect → GameState → GameState → Prop where
   | prim {e : Effect} {g g₁ g₂ : GameState} (he : e.isPrim = true) (hn : g.winner = none)
       (hr : Run e g g₁) (hk : Resolve g₁ g₂) : TRun e g g₂
