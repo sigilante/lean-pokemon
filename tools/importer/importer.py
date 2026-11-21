@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.3.1'
+VERSION = '0.4.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -43,8 +43,14 @@ MECHS = [
      r'^Ability: (?:once during your first turn|first-turn limit)'),
     ('Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms)',
      r'^Ability: (?!returns|condition on the history)|^Ability$|^Ancient Trait$'),
-    ('Pokémon Tool (card or text)', r'^Pokémon Tool$|Pokémon Tool|\bTools?\b'),
-    ('Stadium (card or text)', r'^Stadium$|Stadium'),
+    ('Pokémon Tool card: static or triggered text (the model would play it inert; refused)',
+     r'^Pokémon Tool: (?:static|triggered)'),
+    ('Stadium card: static or triggered text (the model would play it inert; refused)', r'^Stadium: (?:static|triggered|text of several)'),
+    ('Stadium card: activated effect the model cannot express', r'^Stadium: activated'),
+    ('Pokémon Tool card: other (attack grant not expressible, end-of-turn discard, Mega rule, unclassified record)',
+     r'^Pokémon Tool: '),
+    ('Pokémon Tool in other card text', r'Pokémon Tool|\bTools?\b'),
+    ('Stadium in other card text', r'Stadium'),
     ('Special Energy (card or text)', r'^Special Energy$|Special Energy'),
     ('Trainer played as a Pokémon', r'^Trainer played as a Pokémon$'),
     ('first-turn rules in text', r'first turn|go first|go second'),
@@ -261,6 +267,15 @@ def run(data, out, survey=None):
            '`Faithful` constrains. -/',
            'theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if free_rec(r['term'])]) + ' := by decide +kernel\n',
+           '/-- The imported Stadiums and Pokémon Tools, by name (milestone M5; none is `Card.inert`, `notInert`). -/',
+           'theorem stadiumsAndTools : (all.filter fun c => c.isStadium || c.isTool).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if r['term'][0] == 'tool'
+                     or (r['term'][0] == 'trainer' and r['term'][2] == ('stadium',))]) + ' := by decide +kernel\n',
+           '/-- The imported Stadiums whose effect can return a card from a discard pile (`Card.allRec`; not\n'
+           'free recyclers, `Card.freeRec`, since their uses are bounded per turn), by name. -/',
+           'theorem stadiumRecyclers : (all.filter fun c => c.isStadium && !c.allRec.isEmpty).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if r['term'][0] == 'trainer'
+                     and r['term'][2] == ('stadium',) and T.rec_filters(r['term'][3])]) + ' := by decide +kernel\n',
            '/-- Clause 3 of `Faithful` over the whole imported pool, decided. -/',
            'theorem recSafe : recSafeB all = ' + ('true' if not rs_pairs else 'false') + ' := by decide +kernel\n',
            ]
@@ -591,7 +606,7 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
     for recs, r in results:
         if r['ok']:
             continue
-        if any(a in CARD_LEVEL for a, _ in r['blockers']):
+        if any(a in CARD_LEVEL or a.startswith(('Pokémon Tool:', 'Stadium:')) for a, _ in r['blockers']):
             continue
         for a, b in r['blockers']:
             if a == 'unhandled sentence' or b:
