@@ -313,6 +313,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   player, not to a Pokémon, so there is nothing more to end (per-Pokémon effects are milestone
   M7). With no Benched Pokémon a switch does nothing. A switch that the rulebook makes a choice
   of a player other than the one the model lets choose is still in the relation;
+* absent after milestone M3: moving damage counters between Pokémon ("move 1 damage counter from
+  1 of your Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an Ability;
+  Gengar-style moves among the opponent's Pokémon), tests and counts on Benched Pokémon ("if any
+  of your Benched Pokémon have damage counters", "for each Benched Pokémon"), healing the
+  opponent's Pokémon, effects that put Pokémon onto the Bench from the deck or discard pile (S9:
+  68 Standard texts), moving Energy between Pokémon, and Bench damage whose amount the text
+  computes. Moving counters among the player's own Pokémon would keep both clamps (the player's
+  own damage is exact inside an attack); moving counters off the opponent's Active Pokémon would
+  read damage that the capped clamp `rclamp` knows only up to its cap inside an attack;
 * Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
   Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
   Underdepths, S8 L2) wait for the Stadium milestone (M5);

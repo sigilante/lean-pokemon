@@ -3,7 +3,8 @@ import Pokemon.Damage
 /-!
 # The clamp is a bisimulation (for tame decks)
 
-`GameState.clamp k` caps damage and Poison strength on both Active Pokémon at their HP, and every
+`GameState.clamp k` caps damage and Poison strength on every Pokémon in play (both Active Pokémon
+and, since milestone M3, every Benched Pokémon) at their HP, and every
 damage bonus and reduction in both players' stores at `2 * k`. This file proves that its kernel
 is a bisimulation for moves, for a deck whose cards are *tame* (no damage reduction, no `drain`),
 whose test constants are below `k`, and whose printed HP and Resistance are at most `k`

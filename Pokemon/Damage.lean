@@ -12,13 +12,14 @@ or reduction is added up without limit (`Effect.linger` inside `iter`).
 
 * `InPlay.clampWith c` caps `poisonUp` at the printed HP and treats damage as `c : Cap` says:
   exact, capped at the printed HP (`Cap.hp`), or capped at a constant (`Cap.upto k`).
-  `GameState.clampAt co cp k` applies `clampWith co` to the Active Pokémon of the player to move
-  and `clampWith cp` to the opponent's, and caps every damage bonus and reduction in both
-  players' stores at `k`; nothing else changes.
-* `GameState.clamp k` is `clampAt .hp .hp (2 * k)`: the clamp at move boundaries.
-  `GameState.rclamp k` is `clampAt .exact (.upto k) (2 * k)`: the relation used inside an
-  attack's effect (`Pokemon/Sim`), where the player's own damage is read exactly and the
-  opponent's above `k` is not. The stores are capped at twice the damage cap because Resistance
+  `GameState.clampAt co cp cbo cbp k` applies `clampWith co` to the Active Pokémon of the player
+  to move, `clampWith cp` to the opponent's, `clampWith cbo` and `clampWith cbp` to their Benched
+  Pokémon (milestone M3), and caps every damage bonus and reduction in both players' stores at
+  `k`; nothing else changes.
+* `GameState.clamp k` is `clampAt .hp .hp .hp .hp (2 * k)`: the clamp at move boundaries.
+  `GameState.rclamp k` is `clampAt .exact (.upto k) .exact (.upto k) (2 * k)`: the relation used
+  inside an attack's effect (`Pokemon/Sim`), where the player's own damage (Active and Bench) is
+  read exactly and the opponent's above `k` is not. The stores are capped at twice the damage cap because Resistance
   is subtracted after the bonus (`dealtBy_cap`; milestone M4).
 * `KOMove.clamp_sim`, `Resolve.clamp_sim`: the kernel of `clamp k` is a simulation for Knock
   Outs. The effect and move simulations are in `Pokemon/Sim.lean`.

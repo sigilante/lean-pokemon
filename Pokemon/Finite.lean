@@ -8,7 +8,8 @@ import Pokemon.Sim
 the clamps `clamp k` of all reachable states lie in one finite list, and the kernel of the clamp
 is a bisimulation for moves along reachable states. `bound C` is larger than every printed HP,
 every printed Resistance and every test constant in the cards `C`; the clamp caps damage and
-Poison strength on both Active Pokémon at HP and every damage bonus and reduction at
+Poison strength on every Pokémon in play (Active and, since milestone M3, Benched) at HP and every
+damage bonus and reduction at
 `2 * bound` (twice, because Resistance is subtracted after the bonus). So for tame decks the
 clamped game is a finite transition system that answers every question about legal play that
 does not read the damage or Poison strength above HP on either Active Pokémon, or a damage bonus
@@ -46,8 +47,8 @@ The list `states g₀.allCards` is a crude over-approximation, built from: lists
 most `N` over the starting cards (`N` = the number of cards in the game), the Pokémon cards
 among them, damage and Poison strength up to `bound`, the modifier stores with amounts up to
 `2 * bound`, and the finitely many values of each flag and marker. It is never computed; it witnesses finiteness only. The proof uses `Reach.perm` (cards
-are only permuted) and `Reach.wellFormed` (Benched Pokémon are below HP and have no Special
-Condition); the clamp caps both Active Pokémon. Unlike the previous version, the start state
+are only permuted); the clamp caps every Pokémon in play, Benched ones included (before milestone
+M3 it capped only the Active Pokémon, and the proof used that Benched Pokémon were below HP). Unlike the previous version, the start state
 need not be free of pending Knock Outs.
 -/
 

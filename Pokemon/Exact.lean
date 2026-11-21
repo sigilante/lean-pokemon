@@ -9,12 +9,13 @@ modifier stores (at `2 * k`), and that is why it fails for decks with damage red
 reach two states whose stores differ only above the cap. This file keeps every store exact and
 clamps only what Knock Outs make irrelevant.
 
-* `GameState.xclampAt co cp` applies `InPlay.clampWith co` to the Active Pokémon of the player
-  to move and `clampWith cp` to the opponent's (damage as the cap says, Poison strength capped
-  at the printed HP); nothing else changes, the modifier stores included.
+* `GameState.xclampAt co cp cb` applies `InPlay.clampWith co` to the Active Pokémon of the player
+  to move, `clampWith cp` to the opponent's, and `clampWith cb` to every Benched Pokémon
+  (milestone M3) (damage as the cap says, Poison strength capped at the printed HP); nothing else
+  changes, the modifier stores included.
 * `GameState.xclamp` is `xclampAt .hp .hp`, the clamp at move boundaries. It has no parameter.
   `GameState.xrclamp` is `xclampAt .exact .exact`, the relation used inside an attack's effect:
-  damage exact on both Active Pokémon, Poison strength capped at HP. (Before milestone M4 the
+  damage exact on every Pokémon in play, Poison strength capped at HP. (Before milestone M4 the
   opponent's damage was capped at a constant `k` inside attacks; since an attack's damage step
   can read that damage, `Amt.per`, and `drain` writes the amount to the attacker, it is kept
   exact.)
@@ -67,7 +68,7 @@ Pokémon in play (both Active Pokémon and, since milestone M3, every Benched Po
 printed HP; the modifier stores, and everything else, exact. -/
 def GameState.xclamp (g : GameState) : GameState := g.xclampAt .hp .hp .hp
 
-/-- The relation used inside an attack's effect: damage on both Active Pokémon exact, Poison
+/-- The relation used inside an attack's effect: damage on every Pokémon in play exact, Poison
 strength capped at HP, the stores exact. (Before milestone M4 the opponent's damage was capped
 at a constant `k` here. An attack's damage step can now read the opponent's damage (`Amt.per`)
 and, through `drain`, write the amount to the player's own Pokémon, so damage above any cap can
