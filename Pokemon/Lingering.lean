@@ -30,26 +30,37 @@ What is proved about finiteness.
   which adds it to the opponent's damage, and that damage is read only by tests against
   constants below `k` and by the Knock Out test at HP, so a bonus of `k` or more acts as `k`
   does.
-* `reduce_breaks_clamp`: with damage reduction, no cap `k ≥ 3` works (smaller caps are not
-  considered: `Fit k` asks for every printed HP to be at most `k`, and the witness has a 3-HP
-  Pokémon). Damage done is `(n + bonus) - reduction`, so a bonus above the cap matters when a
-  reduction above the cap offsets it: for every `k ≥ 3` there is a well-formed start, `Fit k`
-  except that one card adds a damage reduction, from which two states with the same clamp are
-  reachable whose attacks do 1 and 2 damage.
-* `drain_breaks_clamp`: with `drain` and in-attack self-damage, no cap `k ≥ 2` works either:
-  the heal reads the bonus exactly, and the attacker's own damage, raised above `k` by
+* `reduce_breaks_clamp`: for every cap `k ≥ 3` there is a deck with damage reduction for which
+  the clamp at `k` is not a simulation (smaller caps are not considered: `Fit k` asks for every
+  printed HP to be at most `k`, and the witness has a 3-HP Pokémon). Damage done is
+  `(n + bonus) - reduction`, so a bonus above the cap matters when a reduction above the cap
+  offsets it: the witness is a well-formed start, `Fit k` except that one card adds a damage
+  reduction, from which two states with the same clamp are reachable whose attacks do 1 and 2
+  damage.
+* `drain_breaks_clamp`: likewise, for every cap `k ≥ 2` there is a deck with `drain` and
+  in-attack self-damage for which the clamp is not a simulation: the heal reads the bonus exactly, and the attacker's own damage, raised above `k` by
   `selfDamage` earlier in the same attack, shows it.
 
-Beyond the clamp. For decks that are not tame the obstacle is not the choice of clamp. With
-modifiers for the rest of the game (`Slot.always`, which never expires), the differences
+Beyond the clamp. For some decks that are not tame the obstacle is not the choice of clamp.
+With modifiers for the rest of the game (`Slot.always`, which never expires), the differences
 between one player's damage reduction and the other's damage bonus are two persistent,
 unbounded counters: `linger` raises either side, and `seq (damage 1) (ite (exactly opp d) …)`
 tests one of them against zero exactly. `Pokemon/Counter.lean` turns this into a theorem: the
 model, so generalised, simulates every two-counter machine, and reachability of a halt mark is
-equivalent to halting (`Counter.universal`), so no finite quotient separating configurations
-exists for such decks (`Counter.not_finite_up_to`). The printed cards do not do this: S7 found that
-every lingering damage bonus or reduction is bounded by the copies of its card times a printed
-constant, and that the rest-of-game ones come from once-per-game GX attacks.
+equivalent to halting (`Counter.universal`). With Minsky's theorem (prose, not formalised) this
+rules out a uniform computable finite abstraction of the generalised model; for any single
+machine a finite quotient respecting the halt question exists, non-constructively. Separately,
+`Counter.not_finite_up_to` shows that for one witness deck (with a reduction, without `drain`)
+the reachable states are not finite up to any equivalence fine enough to recover the encoded
+configuration. That is a statement about representation, not play (its machine never reads
+its counter), and not the counterpart of `Reach.finite`. The construction never uses `drain`,
+and a deck whose reduction card is never played is unaffected. The printed cards do not do
+this: S7 found that the rest-of-game damage bonuses and reductions come from once-per-game GX
+attacks, and that same-turn ones are bounded by the copies of their card times a printed
+constant, provided no card-recycling loop replays them (an empirical claim about the card
+pool). A reduction carried into the opponent's turn does exist on a printed Item (Iron
+Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
+damage…").
 -/
 
 namespace Pokemon

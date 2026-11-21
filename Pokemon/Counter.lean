@@ -3,8 +3,8 @@ import Pokemon.Rules
 /-!
 # The generalised model simulates a two-counter machine
 
-`Pokemon/Lingering.lean` shows that with damage reduction no cap on the damage bonus makes the
-clamp a simulation. This file shows more: the model, with lingering modifiers generalised beyond
+`Pokemon/Lingering.lean` shows that for every cap `k ≥ 3` there is a deck with a damage
+reduction for which the clamp at `k` is not a simulation. This file shows more: the model, with lingering modifiers generalised beyond
 what printed cards allow, simulates every two-counter (Minsky) machine, and reachability of a
 designated halt mark from the constructed start state holds exactly when the machine halts.
 
@@ -35,14 +35,17 @@ each deck-and-hand; one Prize card each.
 * Clean-up. The Clock's zero test damages the Tape (2 HP) by at most 1; the Tape's attack heals
   it (`healAll`) first, and the Clock runs nothing while the Tape is damaged. No Pokémon ever
   reaches its HP, so there is no Knock Out.
-* Decks never run out: each attack begins with `handToBottom`, which returns the drawn card.
-* Halt mark: in a halting state the Clock's attack puts an Imprison marker on the Clock
+* Decks. On the intended line decks never run out: each attack begins with `handToBottom`,
+  which returns the drawn card. A player who declines to attack, or who attaches the Energy
+  card, decks out at their next draw, and the game ends (`deckOut`) without a halt mark.
+* Halt mark: in a halting state the Clock's attack puts an Imprison marker on the Clock itself
   (`HaltMarked`).
 
 **Results.**
 * `start_wellFormed`, `start_encodes`: the start is well formed and encodes `init a b`.
-* `simulate`: if `M` steps from `c` to `c'` and `g` encodes `c`, six fixed moves (Clock attacks,
-  end turn, draw, Tape attacks, end turn, draw) reach a state encoding `c'`;
+* `simulate`: if `M` steps from `c` to `c'` and `g` encodes `c`, a state encoding `c'` is
+  reachable from `g` (the proof uses six fixed moves: Clock attacks, end turn, draw, Tape
+  attacks, end turn, draw);
   `reach_of_reaches`: every reachable configuration is encoded by a reachable state;
   `Encodes.inj`: a state encodes at most one configuration.
 * `haltMarked_of_halts`: if `M` halts, a halt-marked state is reachable.
@@ -52,25 +55,52 @@ each deck-and-hand; one Prize card each.
   leads to such a state. Attacks run the machine or do nothing; attaching Energy, drawing and
   ending the turn change nothing abstract; decking out ends the game; and no other move is legal
   (hands hold only Energy, Benches are empty, nothing is Confused or at its HP). A player who
-  declines to attack only stalls the machine.
+  declines to attack, or who attaches the Energy card, decks out at their next draw, and the
+  game ends with a winner and no halt mark; the invariant covers `deckOut`, so this does not
+  affect the converse.
 * `universal`: all of this for every machine; so `M ↦ start M a b` reduces the halting problem
   for two-counter machines to reachability of the halt mark. With Minsky's theorem (1967) that
   this halting problem is undecidable, reachability in the generalised model is undecidable.
   That last step is prose: undecidability is not stated as a Lean theorem.
-* `not_finite_up_to`, `reachable_le`: no finite list of states covers, up to an equivalence that
-  separates encodings of different configurations, the states reachable from
-  `start countUp 0 0` (a machine that counts up for ever); `not_finite`, the case of equality.
+* `not_finite_up_to`, `reachable_le`: the states reachable from `start countUp 0 0` (a machine
+  that counts up for ever) are not finite up to any equivalence fine enough to recover the
+  encoded configuration; `not_finite`, the case of equality. This is a statement about how
+  states are represented, not about play: `countUp` never reads its counter, so the extra
+  states differ only in a reduction that nothing observes. It is not the counterpart of
+  `Reach.finite` (a finite bisimulation quotient) for decks that are not tame. The behavioural
+  counterpart is `universal` together with Minsky's theorem (prose): it rules out a uniform,
+  computable finite abstraction of the generalised model, although for any single machine a
+  finite quotient that respects the halt question exists, non-constructively.
 
-**Generality used.** (1) Damage bonuses and reductions for the rest of the game that add up
-without limit, placed by an attack's effect that is used every turn (`linger` is a general
-primitive here). Printed cards give rest-of-game modifiers only through once-per-game attacks
-(GX attacks; survey S7 §C), and same-turn ones are bounded by copies of their cards. (2) The
-`damage` effect inside an attack's effect, read by an exact damage test (`Test.exactly`) on the
-damage it placed. (3) Arbitrary printed HP: the Clock's HP grows with the machine. (4) The
-model's other generalisations of card text that the construction relies on: `ite`, `healAll`,
-`selfDamage`, `counters`, `mark` and `handToBottom` as general primitives combined in one
-attack. So the construction is about this generalisation of the model, not about the printed
-game: it does not show that the printed card pool is Turing complete.
+**Generality used.** The construction relies on these departures from printed cards and from
+legal play.
+1. Damage bonuses and reductions for the rest of the game that add up without limit, placed by
+   an attack's effect that is used every turn (`linger` is a general primitive here), including
+   an attack that grants the *opponent* a rest-of-game damage reduction
+   (`linger .opp .always (reduce 1)`). Printed cards give rest-of-game modifiers only through
+   once-per-game attacks (GX attacks; survey S7 §C).
+2. `damage` read by a test later in the same attack (`ite (exactly opp v)` after `damage 1`):
+   this uses the model's freedom to order primitives inside one effect.
+3. Arbitrary printed HP: the Clock's HP, `3 · span + 1`, grows with the machine.
+4. The halt mark is a marker the Clock places on itself (`mark .own .imprison`); printed
+   markers target the opponent. This affects only the observable, not the simulation.
+5. A hand-built start: each player has an Active Pokémon and one Energy card, plus one Prize
+   card, with no set-up. It is not shown to be reachable from a legal set-up, and padding the
+   decks to legal size is not proved harmless.
+6. The model's other generalisations of card text: `ite`, `healAll`, `selfDamage`, `counters`,
+   `mark` and `handToBottom` as general primitives combined in one attack.
+
+It does not rely on an attack not ending the turn (each round ends the turn right after
+attacking); on attack costs being counted rather than typed (both attacks cost nothing); on
+modifiers belonging to a player rather than to one Pokémon (each player has one Pokémon and no
+Bench); or on the absence of Weakness and Resistance.
+
+So the construction is about this generalisation of the model, not about the printed game: it
+does not show that the printed card pool is Turing complete. On the printed side, same-turn
+bonuses and reductions are bounded by copies of their cards times a printed constant only if
+no card-recycling loop replays them, which is an empirical claim about the card pool; and a
+reduction carried into the opponent's turn exists on a printed Item (Iron Defender: "During
+your opponent's next turn, all of your Metal Pokémon take 30 less damage…").
 -/
 
 namespace Pokemon.Counter
@@ -1123,9 +1153,10 @@ theorem Encodes.inj {M : Machine} {c c' : Config} {g : GameState} (h : Encodes M
 
 /-! ## Forward simulation -/
 
-/-- **Forward simulation.** If the machine steps from `c` to `c'` and `g` encodes `c`, then six
-moves reach a state encoding `c'`: the first player attacks with the Clock and ends the turn;
-the second player draws, attacks with the Tape and ends the turn; the first player draws. -/
+/-- **Forward simulation.** If the machine steps from `c` to `c'` and `g` encodes `c`, then a
+state encoding `c'` is reachable from `g`. (The statement says only `Reach`; the proof uses six
+moves: the first player attacks with the Clock and ends the turn; the second player draws,
+attacks with the Tape and ends the turn; the first player draws.) -/
 theorem simulate {M : Machine} {c c' : Config} {g : GameState} (hst : M.Step c c')
     (he : Encodes M c g) : ∃ g', Reach g g' ∧ Encodes M c' g' := by
   obtain ⟨s, rfl, hg, hb, hh, hsh, hbt, hat, hft, hw⟩ := he
@@ -1270,13 +1301,21 @@ reachable if and only if the machine halts.
 So `M ↦ start M a b` reduces the halting problem for two-counter machines to reachability of
 the halt mark in the model. With Minsky's theorem (1967) that halting is undecidable for
 two-counter machines, reachability in the model so generalised is undecidable; that last step
-is not formalised here. The construction uses three generalisations of the printed cards:
-damage bonuses and reductions for the rest of the game that add up without limit (`linger … .always`,
-inside attacks used every turn; printed cards give rest-of-game modifiers only through
-once-per-game attacks, survey S7 §C); `damage` read by an exact test on the damage it placed
-(`ite (exactly opp v)` after `damage 1`); and a printed HP chosen for the machine (the Clock has
-HP `3 · span + 1`). It is a theorem about this generalisation of the model, not about the
-printed game. -/
+is not formalised here. The construction uses these generalisations (the module docstring
+gives details): (1) damage bonuses and reductions for the rest of the game that add up without
+limit (`linger … .always`, inside attacks used every turn), including a reduction granted to the
+opponent (printed cards give rest-of-game modifiers only through once-per-game attacks, survey
+S7 §C); (2) `damage` read by a test later in the same attack (`ite (exactly opp v)` after
+`damage 1`), using the model's freedom to order primitives; (3) a printed HP chosen for the
+machine (the Clock has HP `3 · span + 1`); (4) a halt mark placed on the player's own Pokémon
+(printed markers target the opponent; this affects only the observable); (5) a hand-built start
+(an Active Pokémon and one Energy each, one Prize, no set-up), not shown reachable from a legal
+set-up, with padding to legal deck size not proved harmless; and (6) `ite`, `healAll`,
+`selfDamage`, `counters`, `mark` and `handToBottom` as general primitives combined in one
+attack. It does not rely on an attack not ending the turn, on costs being counted rather than
+typed (costs are empty), on modifiers being per player rather than per Pokémon (one Pokémon
+each, no Bench), or on the absence of Weakness and Resistance. It is a theorem about this
+generalisation of the model, not about the printed game. -/
 theorem universal (M : Machine) (a b : Nat) :
     WellFormed (start M a b) ∧ Encodes M (Machine.init a b) (start M a b) ∧
       (∀ c, M.Reaches (Machine.init a b) c → ∃ g, Reach (start M a b) g ∧ Encodes M c g) ∧
@@ -1304,10 +1343,12 @@ theorem pigeon {α : Type} (R : Nat → α → Prop) (hu : ∀ i j x, R i x → 
       simp only [List.length_append, List.length_cons] at this ⊢
       omega
 
-/-- **No finite quotient of play separates configurations.** Let `E` be an equivalence on game
+/-- **A finite cover must tell reached configurations apart.** Let `E` be an equivalence on game
 states under which encodings of different configurations are never equivalent. If every state
 reachable from `start M a b` is `E`-equivalent to a member of a list `L`, then `L` is at least
-as long as any list of distinct configurations that the machine reaches. -/
+as long as any list of distinct configurations that the machine reaches. This is about how
+states are represented: `E` is required to recover the encoded configuration, whether or not
+play can observe it. -/
 theorem reachable_le {M : Machine} {a b : Nat} (E : GameState → GameState → Prop)
     (hE : Equivalence E) (hsep : ∀ c c' g g', Encodes M c g → Encodes M c' g' → E g g' → c = c')
     (L : List GameState) (hL : ∀ g, Reach (start M a b) g → ∃ h ∈ L, E g h)
@@ -1329,10 +1370,18 @@ theorem countUp_reaches (n : Nat) : countUp.Reaches (Machine.init 0 0) ⟨0, n, 
   | zero => exact .refl
   | succ n ih => exact .step ih (.incOne rfl)
 
-/-- **The generalised model is not finite up to any equivalence that tells encodings apart.**
-From the well-formed start `start countUp 0 0`, no finite list of states contains, up to such an
-equivalence, every reachable state. (Compare `Reach.finite`: for tame decks the clamp's kernel
-is such a finite quotient; this deck is not tame, since it adds damage reductions.) -/
+/-- **The reachable states are not finite up to any equivalence fine enough to recover the
+encoded configuration.** From the well-formed start `start countUp 0 0`, no finite list of
+states contains, up to such an equivalence, every reachable state.
+
+This is a statement about how states are represented, not about play. The hypothesis `hsep`
+asks `E` to separate encodings of different configurations, and `countUp` never reads its
+counter, so the extra states differ only in a damage reduction that nothing observes. So this is
+not the counterpart, for decks that are not tame, of `Reach.finite` (a finite bisimulation
+quotient), and it does not show that no finite bisimulation quotient exists. The behavioural
+counterpart is `universal` together with Minsky's theorem (prose): no uniform, computable finite
+abstraction of the generalised model answers the halt question, although for any single
+machine a finite quotient respecting it exists, non-constructively. -/
 theorem not_finite_up_to (E : GameState → GameState → Prop) (hE : Equivalence E)
     (hsep : ∀ c c' g g', Encodes countUp c g → Encodes countUp c' g' → E g g' → c = c') :
     ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g → ∃ h ∈ L, E g h := by
@@ -1343,7 +1392,8 @@ theorem not_finite_up_to (E : GameState → GameState → Prop) (hE : Equivalenc
 
 /-- In particular, the states reachable from `start countUp 0 0` do not lie in any finite list
 (the case of `not_finite_up_to` where the equivalence is equality, which separates encodings
-of different configurations by `Encodes.inj`). -/
+of different configurations by `Encodes.inj`). Like `not_finite_up_to`, this concerns the
+representation of states, not what play can observe. -/
 theorem not_finite : ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g → g ∈ L := by
   intro ⟨L, hL⟩
   refine not_finite_up_to Eq ⟨fun _ => rfl, Eq.symm, Eq.trans⟩ ?_ ⟨L, fun g h => ⟨g, hL g h, rfl⟩⟩

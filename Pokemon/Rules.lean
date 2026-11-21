@@ -85,8 +85,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   locks on attacking, retreating and playing Items, for this turn, the next turn, the turn
   after, or the rest of the game; `endTurn` shifts the turns (`Store.shift`). Amounts add up
   without limit: `linger` is a general primitive, usable any number of times and inside
-  `iter` (printed bonuses and reductions are bounded by copies times a constant, and
-  rest-of-game ones come from once-per-game GX attacks; the model over-approximates them).
+  `iter` (printed same-turn bonuses and reductions are bounded by copies times a constant if no
+  card-recycling loop replays them, an empirical claim about the card pool; rest-of-game ones
+  come from once-per-game GX attacks; a reduction carried into the opponent's turn exists on a
+  printed Item, Iron Defender; the model over-approximates them).
   Modifiers belong to a player, not to one Pokémon: "this Pokémon takes 30 less damage during
   your opponent's next turn" protects whichever Pokémon that player has Active, and does not
   end when the Pokémon leaves the Active Spot or follow it to the Bench. Damage done by an
@@ -100,14 +102,18 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   twice" and "take another turn", and "that much more damage" (damage taken last turn).
   **Finiteness is proved only for tame decks** (`Reach.finite`): the clamp, which caps every
   bonus, is a bisimulation when no card adds a damage reduction or uses `drain` and no
-  reduction is in effect at the start (`GameState.Fit`); with a reduction no cap `k ≥ 3` makes
-  the clamp a simulation (`Lingering.reduce_breaks_clamp`), with `drain` no cap `k ≥ 2`
-  (`Lingering.drain_breaks_clamp`); for such decks the model is not finite up to any
-  equivalence that separates configurations of a two-counter machine: the rest-of-game
-  modifiers give two unbounded counters with an exact zero test, and the model simulates every
-  two-counter machine (`Counter.universal`, `Counter.not_finite_up_to`; this rests on the
-  over-approximation of rest-of-game modifiers just described, on `damage` read by an exact test,
-  and on a printed HP chosen for the machine);
+  reduction is in effect at the start (`GameState.Fit`); for every cap `k ≥ 3` there is a deck
+  with a reduction for which the clamp is not a simulation (`Lingering.reduce_breaks_clamp`),
+  and for every `k ≥ 2` a deck with `drain` (`Lingering.drain_breaks_clamp`); for some such
+  decks (one witness deck, with a reduction and without `drain`) the reachable states are not
+  finite up to any equivalence fine enough to recover the configuration of a two-counter
+  machine, a statement about representation, not play (`Counter.not_finite_up_to`). The
+  rest-of-game modifiers give two unbounded counters with an exact zero test, and the model
+  simulates every two-counter machine (`Counter.universal`; this rests on the
+  over-approximation of rest-of-game modifiers just described, on `damage` read by a test later
+  in the same attack, on a printed HP chosen for the machine, and on the other departures listed
+  in `Pokemon/Counter.lean`); with Minsky's theorem (prose) this rules out a uniform computable
+  finite abstraction of the generalised model;
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending

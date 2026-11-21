@@ -63,28 +63,45 @@ Sleep, Paralysis, then Knock Outs). For that model it proves:
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
   `Reach.clamp_sim`), so the excesses the clamp removes cannot be observed by play. This holds
   with the Trainer timing above. The list half alone (`Reach.clamp_mem`) holds from every
-  well-formed start, but without tameness it says nothing about play: for decks that are not
-  tame the clamp is not a simulation, for any cap `k ≥ 3` with a damage reduction
-  (`Lingering.reduce_breaks_clamp`) and any cap `k ≥ 2` with `drain`
+  well-formed start, but without tameness it says nothing about play: for every cap `k ≥ 3`
+  there is a deck with a damage reduction for which the clamp is not a simulation
+  (`Lingering.reduce_breaks_clamp`), and for every cap `k ≥ 2` a deck with `drain`
   (`Lingering.drain_breaks_clamp`); with rest-of-game modifiers, a reduction on one player and a
   bonus on the other are two persistent unbounded counters with an exact zero test, and the
   model then simulates two-counter machines (next item).
-* **universality, for the generalisation** (`Counter.universal`, `Pokemon/Counter.lean`): for
-  every two-counter (Minsky) machine `M` and inputs `a`, `b` there is a well-formed start state
-  `start M a b`, built from cards in the existing effect language with no change to the rules,
-  such that every configuration `M` reaches is encoded by a reachable state
-  (`Counter.simulate`: six fixed moves per machine step), and a state with the halt mark (an
-  Imprison marker) is reachable if and only if `M` halts. The converse direction
-  (`Counter.halts_of_haltMarked`) covers every line of play, not only the intended one. So the
-  halting problem for two-counter machines reduces to reachability in the model, which is
-  therefore undecidable by Minsky's theorem (1967); that last step is prose, not a Lean
-  theorem. Consequently no finite list covers the reachable states up to any equivalence that
-  separates encodings of different configurations (`Counter.not_finite_up_to`). The
-  construction uses the model's generalisations, not printed cards: rest-of-game damage bonuses
-  and reductions that add up without limit and are placed by an attack used every turn (printed
-  cards give rest-of-game modifiers only through once-per-game attacks, survey S7 §C);
-  `damage` read by an exact damage test; and a printed HP that grows with the machine. It says
-  nothing about whether the printed card pool is Turing complete.
+* **universality, for the generalisation** (`Counter.universal`, `Pokemon/Counter.lean`):
+  generalised beyond printed cards so that rest-of-game damage bonuses and reductions
+  accumulate without limit and can be granted by an ordinary attack every turn, the model
+  admits, for every two-counter machine `M`, a well-formed game state from which a designated
+  marker is reachable under legal play by both players if and only if `M` halts; with Minsky's
+  theorem, reachability in this generalised model is undecidable (the reduction is
+  machine-checked, the appeal to Minsky's theorem is not), and nothing follows for the printed
+  card pool. The start `start M a b` uses cards in the existing effect language with no change
+  to the rules; every configuration `M` reaches is encoded by a reachable state
+  (`Counter.simulate`, whose proof uses six fixed moves per machine step), and the converse
+  direction (`Counter.halts_of_haltMarked`) covers every line of play, not only the intended
+  one (a player who declines to attack, or attaches the Energy, decks out at their next draw,
+  and the game ends without the mark). The construction relies on: (1) rest-of-game damage
+  bonuses and reductions that add up without limit and are placed by an attack used every
+  turn, including an attack that grants the *opponent* a reduction (printed cards give
+  rest-of-game modifiers only through once-per-game attacks, survey S7 §C); (2) `damage` read
+  by a test later in the same attack, using the model's freedom to order primitives; (3) a
+  printed HP that grows with the machine; (4) a halt mark placed on the player's own Pokémon,
+  whereas printed markers target the opponent (this affects only the observable); (5) a
+  hand-built start (an Active Pokémon and one Energy each, one Prize, no set-up), not shown
+  reachable from a legal set-up, with padding to legal deck size not proved harmless; and (6)
+  `ite`, `healAll`, `selfDamage`, `counters`, `mark` and `handToBottom` as general primitives
+  combined in one attack. It does not rely on an attack not ending the turn, on attack costs
+  being counted rather than typed (costs are empty), on modifiers being per player rather than
+  per Pokémon (one Pokémon each, no Bench), or on the absence of Weakness and Resistance.
+  Separately, `Counter.not_finite_up_to` shows that for one witness deck the reachable states
+  are not finite up to any equivalence fine enough to recover the encoded configuration. That
+  is a statement about how states are represented, not about play: its machine never reads its
+  counter, so the extra states differ only in a reduction nothing observes, and it is not the
+  counterpart of `Reach.finite` (a finite bisimulation quotient). The behavioural counterpart
+  is `Counter.universal` with Minsky's theorem (prose), which rules out a uniform computable
+  finite abstraction; for any single machine a finite quotient respecting the halt question
+  exists, non-constructively.
 
 Markers alone did not change the statements: they are finitely many flags per Pokémon, not
 clamped, and enumerated by the list of `Reach.clamp_mem`. Printed Imprison and Shock-wave markers are uncapped counts; a flag
@@ -101,10 +118,14 @@ cap `k ≥ 3`). So does `drain` after in-attack
 self-damage, which reads the bonus exactly through the heal (`Lingering.drain_breaks_clamp`, for
 every `k ≥ 2`). Expiry follows the turn structure:
 `endTurn` shifts both stores, and `Store.add_now_shift` .. `Store.add_always_shift` state when
-each kind of modifier is in effect. Printed bonuses and reductions are bounded by copies of their
-cards times printed constants, and rest-of-game ones come only from once-per-game attacks
-(survey S7), so the printed game does not reach the unbounded case; the model over-approximates
-them on purpose, and the finiteness theorem covers only the tame decks.
+each kind of modifier is in effect. Printed rest-of-game bonuses and reductions come only from
+once-per-game attacks (survey S7), and same-turn ones are bounded by copies of their cards times
+printed constants provided no card-recycling loop replays them, which is an empirical claim
+about the card pool, not a theorem; on that claim the printed game does not reach the
+unbounded case. A reduction carried into the opponent's turn does exist on a printed Item (Iron
+Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
+damage…"), so printed decks are not all tame. The model over-approximates modifiers on purpose,
+and the finiteness theorem covers only the tame decks.
 
 For tame decks, effects that read damage do not break finiteness, but they change why it holds. Inside an
 attack's effect the clamp is not a simulation: a test against 6 counters separates 5 from 6
@@ -129,9 +150,10 @@ computed, depends on the start state, and gives no size bound. For tame decks, t
 quotient with the same moves (`Reach.finite`) means that reachability questions that depend only
 on the clamp could be decided by exploring it, given a computable successor function for the
 quotient; neither that function nor the decision procedure is formalized. For decks that are not
-tame no such procedure exists in general: by the reduction of `Pokemon/Counter.lean` and
-Minsky's theorem, reachability of the halt mark is undecidable for its decks (the reduction is
-proved; the appeal to Minsky's theorem is not formalized). These are theorems about the model, not yet about
+tame no such procedure exists uniformly: by the reduction of `Pokemon/Counter.lean` and
+Minsky's theorem, reachability of the halt mark, as a problem over the family of its start
+states, is undecidable in the generalised model (the reduction is proved; the appeal to
+Minsky's theorem is not formalized). These are theorems about the model, not yet about
 the printed game: they cover only decks whose card text is expressible in `Pokemon.Effect`,
 and the model's departures from the rulebook are listed at the top of `Pokemon/Rules.lean`.
 For Knock Out timing inside Trainer effects the remaining simplifications are these: Knock

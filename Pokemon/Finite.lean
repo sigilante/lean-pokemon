@@ -14,11 +14,12 @@ does not read the damage or Poison strength above HP on either Active Pokémon, 
 above `bound`.
 
 `Reach.clamp_mem` is the list-membership half alone, from a well-formed start with no tameness
-hypothesis. On its own it says nothing about play: for decks that are not tame the clamp is not
-a bisimulation (`Lingering.reduce_breaks_clamp`, for every cap `k ≥ 3`;
-`Lingering.drain_breaks_clamp`, for every `k ≥ 2`), and for some such decks the reachable states
-are not finite up to any equivalence that separates configurations of a two-counter machine
-(`Counter.not_finite_up_to`).
+hypothesis. On its own it says nothing about play: for every cap `k ≥ 3` there is a deck with
+a damage reduction for which the clamp is not a bisimulation (`Lingering.reduce_breaks_clamp`),
+and for every `k ≥ 2` a deck with `drain` (`Lingering.drain_breaks_clamp`); and for some such
+decks the reachable states are not finite up to any equivalence fine enough to recover the
+configuration of a two-counter machine (`Counter.not_finite_up_to`, a statement about
+representation, not play).
 
 This holds for the effect language with state-reading effects (`ite` on damage thresholds,
 exact damage and Special Conditions; `scale`; `selfDamage`; `healAll`), and for the
@@ -331,10 +332,10 @@ state.
 
 This is a statement about the clamp, not about play. Without a hypothesis that makes the clamp
 a bisimulation (the tameness hypothesis `GameState.Fit` of `Reach.finite`) it says nothing about
-which questions of play the finite list answers: for decks with damage reduction or `drain` the
-kernel of the clamp is not a simulation (`Lingering.reduce_breaks_clamp` for every cap `k ≥ 3`,
-`Lingering.drain_breaks_clamp` for every `k ≥ 2`), and play can then separate states with the
-same clamp. -/
+which questions of play the finite list answers: for every cap `k ≥ 3` there is a deck with
+damage reduction (`Lingering.reduce_breaks_clamp`), and for every `k ≥ 2` a deck with `drain`
+(`Lingering.drain_breaks_clamp`), whose clamp kernel is not a simulation, and play can then
+separate states with the same clamp. -/
 theorem Reach.clamp_mem {g₀ : GameState} (hw : WellFormed g₀) :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L := by
   refine ⟨states g₀.allCards, fun g h => mem_states ?_ (h.clamp_bounded hw)⟩
