@@ -30,7 +30,8 @@ attack, and 3 damage counters on itself); the rulebook's turn (milestone M1): an
 failed Confused attempt, ends the turn, so only its Knock Outs and the end of the turn follow
 (`Move.after_attack`); the starting player cannot attack or play a Supporter on the first turn
 of the game, and neither player can evolve on their own first turn (`PlayerState.hadTurn`) or
-evolve a Pokémon put into play or evolved that turn; one Energy attachment, one Supporter and
+evolve a Pokémon put into play or evolved that turn (these bans assume a start state whose
+turn flags are consistent, which the model does not require); one Energy attachment, one Supporter and
 one retreat per turn; a new Poison replaces the old one, resetting its strength; Basic Energy
 cards of the nine Basic types; one Stadium slot shared by both players (state only: no move
 plays a Stadium yet); the Knock Out timing: once a move

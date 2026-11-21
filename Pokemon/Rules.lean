@@ -141,8 +141,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage) is not modified, as in the rulebook. The rulebook computes one damage per attack;
   the model applies the modifiers to each `damage` primitive of the attack, so an effect with
   several `damage` steps (written for "flip N coins, 20 damage for each heads", say) adds the
-  bonus once per step and stops at 0 per step rather than once for the attack's total (an
-  over-approximation for attacks whose text computes their damage in several parts). `damage`
+  bonus once per step and stops at 0 per step rather than once for the attack's total. The
+  two differ in both directions, so the model can lose printed outcomes as well as add some:
+  the bonus counts once per step (more damage), and each step's reduction is cut off at 0
+  separately (two `damage 2` steps against a reduction of 3 do 0 in total, where one
+  calculation with base 4 does 1). `damage`
   and `drain` are also usable in Trainer effects, where the printed game has no attack damage
   (an over-approximation). Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
@@ -181,8 +184,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Pokémon", Jynx base1-31) is written with base damage 0 and the damage in the effect
   (`seq (scale opp 1) (damage 2)`, so that the damage bonus applies to its 20 damage, as the
   stop at base damage 0 requires of a printed base of 20; `counters 2` would take no bonus);
-  the rulebook computes an attack's damage and then places it all at once, so the order of the
-  model's primitives is a representation choice;
+  the rulebook computes an attack's damage and then places it all at once. This encoding is
+  not only a choice of order: the part placed by `scale` takes neither bonus nor reduction
+  (with a reduction of 3 and 3 damage counters on the target the model places 3, where one
+  calculation gives (2 + 3) - 3 = 2), so it changes the damage done;
 * `ite`, `scale`, `selfDamage` and `healAll` are general primitives, usable in any effect,
   any number of times and inside `iter`, whereas printed cards use them once, in fixed forms;
   the model over-approximates the printed texts;
@@ -229,7 +234,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
   an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
-  be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`);
+  be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`; `attacked`
+  with `between`): from a start with `firstTurn` true and the player's `hadTurn` already true,
+  that player could evolve on the game's first turn. No theorem needs consistency, and every
+  witness start is consistent;
 * first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
   starting player cannot attack or play a Supporter on the first turn of the game
   (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
