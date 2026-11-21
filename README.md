@@ -45,10 +45,14 @@ step, whose amount its text may compute from the damage on either Active Pokémo
 Item and Supporter effects have none); one Stadium slot shared by both players (milestone M5,
 below); the Knock Out timing: once a move
 leaves a Pokémon at or above its HP, it must be Knocked Out and replaced before any other
-move (`Settled`); inside an attack's effect damage may exceed HP and be read, and the Knock
-Out comes after the attack; inside an Item or Supporter card's effect (`TRun`) every Knock
-Out is taken at once after the step that causes it (a Prize card, which may win the game;
-promotion of a Benched Pokémon; or a loss), the rest of the effect acts on the new board,
+move (`Settled`); every Knock Out is taken by the batch Knock Out step (`KOBatch`, milestone
+batch-KO), the rulebook's single check: every Pokémon in play of both players is tested against
+its derived HP once, before any removal, all those at or above it leave play together, both
+players take their Prize cards, the game is decided (a win, or Sudden Death when both players win
+in as many ways, `Outcome`), and then empty Active Spots are filled; if that leaves another
+Pokémon at or above its HP the check repeats; inside an attack's effect damage may exceed HP and be read, and the Knock
+Out comes after the attack; inside an Item or Supporter card's effect (`TRun`) the batch step
+is taken at once after the step that causes a Knock Out, the rest of the effect acts on the new board,
 and a finished game stops the effect (Knock Outs after an attack and after Checkup are the
 English rulebook's; the immediate Knock Outs at other times come from the Pokémon Asia
 *Advanced Player's Rulebook*, and survey S9 found no English rule for them, a provenance
@@ -69,11 +73,12 @@ player's Active Pokémon, `Effect.switchSafe`, so the attacker stays the attacke
 `Attack.attacker_at_hit`, which since milestone MV keeps the attacker's Pokémon cards, not its
 attached Energy; printed switch-out attacks do their damage first), Energy attachment
 and evolution on the Bench, Char counters acting on Benched Pokémon between turns, Knock Outs of
-any Pokémon in play (a Benched one goes to the discard pile with no promotion; several pending
-Knock Outs are all taken, in any order, before play continues, since no rule fixing the order was
-found; the order can decide the winner: one attack that leaves both Active Pokémon pending with
-each player on their last Prize card has two orders with opposite winners, where the rulebook
-would apply its simultaneous-win rule, which the model lacks), and
+any Pokémon in play (a Benched one goes to the discard pile with no promotion; until milestone
+batch-KO several pending Knock Outs were taken one at a time in any order, and the order could
+decide the winner and, with derived HP, which Pokémon were Knocked Out; since batch-KO they are
+taken together, and when both players take their last Prize card the rulebook's simultaneous-win
+rule applies: Sudden Death, unless one player wins in both ways, `Bench.suddenDeath_forced`,
+`Bench.bothWays_wins`), and
 Prize values by rule box (1; 2 for Pokémon ex; 3 for Mega Evolution Pokémon ex), taking the top
 Prize cards and winning when the last one is taken in the middle of a multi-Prize Knock Out
 (witnesses in `Pokemon/Bench.lean`). The Bench holds at most 5 Pokémon. Milestone MV (effect
@@ -154,7 +159,13 @@ count of cards), and the clamps now cap damage and Poison strength at that bound
 printed HP. Witnesses in `Pokemon/StaticWitness.lean` (a Pokémon surviving above its printed HP on
 a Tool and Knocked Out when the Tool is discarded; a Stadium replacement Knocking Out a Benched
 Pokémon; an Energy-scaled HP bonus raising HP in mid-effect; two Knock Outs in a chain from one
-removal; a static reduction applied after Weakness); for decks without static effects every derived
+removal, by two batches; a static reduction applied after Weakness). With derived HP the order of
+one-at-a-time Knock Outs changed outcomes, a departure from the rulebook recorded at milestone M6;
+the batch Knock Out step removed it: a Benched Pokémon at its HP can no longer be promoted and
+survive, and two Pokémon that lower each other's HP are Knocked Out together, on every line of play
+(`StaticWitness.guard_knocked_out`, `StaticWitness.double_knockOut_taken`; the old departure
+statements are now false, `StaticWitness.promotion_rescues_false`,
+`StaticWitness.double_knockOut_lost_false`); for decks without static effects every derived
 quantity is the printed one (`Pokemon/NoStatics.lean`). Not expressible: circular HP (Ditto copying
 HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and its order against
 "+", stacking rules, Bench size, locks and prevention, cost changes and every triggered effect
@@ -178,14 +189,16 @@ HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and
   rest of it is not resolved (`Trainer.winMidEffect_reachable`);
 * from a well-formed start (`WellFormed`: both players have Prizes while there is no winner;
   Benched Pokémon have no Special Condition; since M3 a Benched Pokémon may be at or above its HP,
-  which is a pending Knock Out, and `Settled` excludes it before every move but the Knock Out
-  moves), no reachable state without a winner is stuck (`Reach.progress`), and if a Knock Out is
-  pending, a Knock Out move is legal that Knocks Out a Pokémon in play (Active or Benched, of
-  either player) at or above its HP, and the taker's Prize list shrinks by exactly that
-  Pokémon's Prize count, or by all that are left, which is at least one card
-  (`Reach.knockOut_of_pending`; with every Prize count 1 this is the earlier statement "exactly
-  one"); a move never changes an Active Pokémon at or above its HP
-  except by Knocking it Out (`Move.pending_untouched`);
+  which is a pending Knock Out, and `Settled` excludes it before every move but the batch Knock
+  Out step), no reachable state without a winner is stuck (`Reach.progress`; since milestone
+  batch-KO no state at all is), and if a Knock Out is pending the batch Knock Out step is legal: it
+  Knocks Out every Pokémon in play (Active or Benched, of either player) at or above its HP at once,
+  each player's Prize list shrinks by exactly the Prize value of the opponent's Knocked Out
+  Pokémon, or by all that are left, and every Pokémon in play afterwards was below its HP
+  (`Reach.knockOut_of_pending`; restated by milestone batch-KO, the earlier one-Pokémon statement
+  is the case of a single pending Knock Out); a move from a state with an Active Pokémon at or
+  above its HP is the batch step, which Knocks it Out (`Move.pending_untouched`, restated by
+  batch-KO: the same move may now fill the Active Spot again by a promotion);
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at `bound` the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and
@@ -464,8 +477,9 @@ and the model's departures from the rulebook are listed at the top of `Pokemon/R
 For Knock Out timing inside Trainer effects the remaining simplifications are these: Knock
 Outs are checked after each primitive of the model's effect language (a printed sentence
 written as several primitives gets a check between them); the replacement is promoted at once,
-before the next step (no ruling on its timing was found); the Prize cards are the top ones; and
-several Knock Outs caused by one step (`spreadCounters`) are taken in any order. Up to these, the model's
+before the next step (no ruling on its timing was found); and the Prize cards are the top ones
+(several Knock Outs caused by one step, `spreadCounters`, are taken together by the batch
+Knock Out step, as after an attack, since milestone batch-KO). Up to these, the model's
 Trainer timing is that of the Advanced Player's Rulebook (Pokémon Asia, 2025; the English
 rulebook states no rule for it, see above) (an earlier version resolved a Trainer effect as a whole and
 could read and heal damage above HP; that defect is gone). Two of these simplifications can

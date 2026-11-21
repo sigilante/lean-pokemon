@@ -150,7 +150,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
     (`StaticWitness.chain_knock_out`), until the state is `Settled` or the game is over. The 2023
     rulebook describes one check after an attack and one after Checkup and is silent on this case;
     the repetition is the model's reading of the rule it uses for Knock Outs at other times (the
-    Asia rule, next item), and it ends (each batch from a pending state removes a Pokémon);
+    Asia rule, next item), and it ends (each batch from a pending state removes a Pokémon; argued
+    in `KOBatch`, not stated as a theorem);
   - Sudden Death is a new game, which the model does not play: `Outcome.suddenDeath` is a terminal
     outcome of the model's game. The 2026 rules (Professor Program post, survey S8 J4) replaced
     Sudden Death by a tiebreaker game; that was read only through a secondary summary and is
@@ -822,8 +823,10 @@ follows, until the state is `Settled` or the game is over: the check repeats. Th
 silent on this case (it describes one check after the attack and one after Checkup); the repetition
 is the model's reading of the rule it already uses for Knock Outs at other times, "Anytime a
 Pokémon's remaining HP becomes zero" (Pokémon Asia *Advanced Player's Rulebook*, survey S2; see the
-Known gaps). Each batch from a state with a pending Knock Out removes at least one Pokémon, and a
-batch from a state with none fills the empty Active Spots, so the repetition ends. -/
+Known gaps). Each batch from a state with a pending Knock Out removes at least one Pokémon
+(`Move.knockOut_of_pending`: at least one Prize card's worth), and a batch from a state with none
+fills the empty Active Spots, so at most two batches in a row leave the number of Pokémon in play
+unchanged and the repetition ends (an argument in prose; no termination theorem is stated). -/
 inductive KOBatch : GameState → GameState → Prop where
   | won {g : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none) : KOBatch g g.koStep
   | go {g : GameState} {ac ao : Option InPlay} {bc bo : List InPlay} (hu : ¬ Settled g)
