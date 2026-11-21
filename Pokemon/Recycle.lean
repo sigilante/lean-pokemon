@@ -130,7 +130,7 @@ theorem st_not_recycleSafe : ¬ (st 0).RecycleSafe := by
 /-- The carried reduction of the player to move. -/
 def red (g : GameState) : Nat := g.cur.mods.next.reduce
 
-theorem red_xclamp (g : GameState) : red g.xclamp = red g := rfl
+theorem red_xclamp (g : GameState) : red (g.xclamp K) = red g := rfl
 
 /-- **Recycling breaks the store bound** (milestone MV). There is a well-formed start satisfying
 clauses 1 and 2 of `Faithful` (`LoopFree`, `GXOnly`: the whole of `Faithful` before milestone MV)
@@ -142,7 +142,7 @@ docstring). So clause 3, or some other condition on recycling, is needed for
 theorem recycling_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ ¬ g₀.RecycleSafe ∧
       (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
-      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L := by
+      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨st 0, st_wellFormed, st_loopFree, st_gxOnly, st_not_recycleSafe, fun B => ?_, ?_⟩
   · refine ⟨st (6 * (B + 1)), reach_st _, fun hb => ?_⟩
     have := hb.1.2.1.2
@@ -151,7 +151,7 @@ theorem recycling_breaks_bound :
   · intro ⟨L, hL⟩
     let n := (L.map red).sum + 1
     have hm := hL (st (6 * n)) (reach_st n)
-    have : red (st (6 * n)).xclamp ≤ (L.map red).sum := Infinite.le_sum (List.mem_map_of_mem hm)
+    have : red ((st (6 * n)).xclamp K) ≤ (L.map red).sum := Infinite.le_sum (List.mem_map_of_mem hm)
     rw [red_xclamp] at this
     simp only [red, st, gs, pl, store, n] at this
     omega

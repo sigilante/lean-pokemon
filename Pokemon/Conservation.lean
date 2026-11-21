@@ -110,7 +110,7 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
 
 /-- Moving a damage counter moves no card (milestone M8a). -/
 theorem CMove.cardLists {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
-    (h : CMove f noKO a b a' b') :
+    (h : CMove f noKO hp a b a' b') :
     optCardList a' = optCardList a ∧ benchCardList b' = benchCardList b := by
   cases h with
   | ab => exact ⟨rfl, by simp only [benchCardList_append, benchCardList, InPlay.cardList,

@@ -89,7 +89,7 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
 
 /-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
 theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
-    (h : CMove f noKO a b a' b') (hb : BenchOk b) : BenchOk b' := by
+    (h : CMove f noKO hp a b a' b') (hb : BenchOk b) : BenchOk b' := by
   have mem : ∀ {b₁ b₂ : List InPlay} {q : InPlay}, q ∈ b₁ ++ q :: b₂ :=
     List.mem_append_right _ (.head _)
   cases h with
@@ -364,27 +364,37 @@ HP are unchanged. -/
 theorem UseAt.settled {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
     (hs : Settled g) : Settled g₁ := by
   obtain ⟨hk, h1, h2⟩ := hs
+  have hsv : x.markUsed.sv = x.sv := rfl
   cases h with
   | active ha =>
-      refine ⟨fun p hp => ?_, by simp, h2⟩
-      rcases hp with hp | hp | hp | hp
-      · simp only [Option.some.injEq] at hp; subst hp; exact hk x (.inl ha)
-      · exact hk p (.inr (.inl hp))
-      · exact hk p (.inr (.inr (.inl hp)))
-      · exact hk p (.inr (.inr (.inr hp)))
-  | bench hb =>
-      refine ⟨fun p hp => ?_, h1, h2⟩
-      rcases hp with hp | hp | hp | hp
-      · exact hk p (.inl hp)
-      · simp only at hp
+      have hsf : GameState.SameField g { g with cur := { g.cur with active := some x.markUsed } } :=
+        ⟨by simp only [PlayerState.field, fieldOf, ha, hsv], rfl, rfl, rfl⟩
+      refine ⟨fun w sp p hp => ?_, by simp, h2⟩
+      rw [hsf.hpOf w sp rfl]
+      cases w <;> cases sp
+      · simp only [GameState.In, GameState.side, Option.some.injEq] at hp
+        subst hp; exact hk .own .active x ha
+      · exact hk .own .bench p hp
+      · exact hk .opp .active p hp
+      · exact hk .opp .bench p hp
+  | @bench b₁ b₂ hb =>
+      have hsf : GameState.SameField g
+          { g with cur := { g.cur with bench := b₁ ++ x.markUsed :: b₂ } } :=
+        ⟨by simp only [PlayerState.field, fieldOf, hb, List.map_append, List.map_cons, hsv], rfl,
+          rfl, rfl⟩
+      refine ⟨fun w sp p hp => ?_, h1, h2⟩
+      rw [hsf.hpOf w sp rfl]
+      cases w <;> cases sp
+      · exact hk .own .active p hp
+      · simp only [GameState.In, GameState.side] at hp
         rcases List.mem_append.1 hp with hp | hp
-        · exact hk p (.inr (.inl (by rw [hb]; exact List.mem_append_left _ hp)))
+        · exact hk .own .bench p (by show p ∈ g.cur.bench; rw [hb]; exact List.mem_append_left _ hp)
         · cases hp with
-          | head => exact hk x (.inr (.inl (by rw [hb]; exact List.mem_append_right _ (.head _))))
+          | head => exact hk .own .bench x (by show x ∈ g.cur.bench; rw [hb]; exact List.mem_append_right _ (.head _))
           | tail _ hp =>
-              exact hk p (.inr (.inl (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))))
-      · exact hk p (.inr (.inr (.inl hp)))
-      · exact hk p (.inr (.inr (.inr hp)))
+              exact hk .own .bench p (by show p ∈ g.cur.bench; rw [hb]; exact List.mem_append_right _ (.tail _ hp))
+      · exact hk .opp .active p hp
+      · exact hk .opp .bench p hp
 
 /-- Marking a Pokémon as having used an Ability keeps well-formedness (milestone M8a). -/
 theorem UseAt.wellFormed {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
@@ -498,23 +508,24 @@ theorem Reach.wellFormed {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reac
   | refl => exact h₀
   | step _ _ hm ih => exact hm.wellFormed ih
 
-/-- An Active spot is empty, holds a Pokémon below its HP, or holds one at or above its HP. -/
-theorem active_split (o : Option InPlay) :
-    (∃ a, o = some a ∧ a.top.hp ≤ a.damage) ∨ ∀ a, o = some a → a.damage < a.top.hp := by
+/-- An Active spot is empty, holds a Pokémon below its HP `H`, or holds one at or above it
+(milestone M6: `H` is any function, the derived HP of the state). -/
+theorem active_split (H : InPlay → Nat) (o : Option InPlay) :
+    (∃ a, o = some a ∧ H a ≤ a.damage) ∨ ∀ a, o = some a → a.damage < H a := by
   cases o with
   | none => exact .inr fun _ h => by cases h
   | some a =>
-      rcases Nat.lt_or_ge a.damage a.top.hp with h | h
+      rcases Nat.lt_or_ge a.damage (H a) with h | h
       · exact .inr fun a' h' => by cases h'; exact h
       · exact .inl ⟨a, rfl, h⟩
 
-/-- A Bench has a Pokémon at or above its HP, or every Pokémon on it is below its HP. -/
-theorem bench_split : ∀ l : List InPlay,
-    (∃ b₁ p b₂, l = b₁ ++ p :: b₂ ∧ p.top.hp ≤ p.damage) ∨ ∀ p ∈ l, p.damage < p.top.hp
+/-- A Bench has a Pokémon at or above its HP `H`, or every Pokémon on it is below it. -/
+theorem bench_split (H : InPlay → Nat) : ∀ l : List InPlay,
+    (∃ b₁ p b₂, l = b₁ ++ p :: b₂ ∧ H p ≤ p.damage) ∨ ∀ p ∈ l, p.damage < H p
   | [] => .inr fun _ h => nomatch h
   | q :: qs => by
-      rcases Nat.lt_or_ge q.damage q.top.hp with h | h
-      · rcases bench_split qs with ⟨b₁, p, b₂, e, hk⟩ | hall
+      rcases Nat.lt_or_ge q.damage (H q) with h | h
+      · rcases bench_split H qs with ⟨b₁, p, b₂, e, hk⟩ | hall
         · exact .inl ⟨q :: b₁, p, b₂, by rw [e]; rfl, hk⟩
         · exact .inr fun p hp => by
             cases hp with
@@ -558,36 +569,39 @@ that are left; the other player's Prize list is unchanged. Since the taker has a
 Milestone M3 changed the statement. Before it, every Knock Out gave exactly one Prize card and the
 conclusion was that the total of both Prize lists drops by exactly one; that is the case
 `x.top.prizeCount = 1` of this statement. The Knock Out move may now be one of a Benched Pokémon
-(`Move.knockOutBench`, `Move.knockOutBenchOwn`), and it is also a `KOMove`. -/
+(`Move.knockOutBench`, `Move.knockOutBenchOwn`), and it is also a `KOMove`. Milestone M6 changed
+"at or above its HP" from the printed HP (`x.top.hp ≤ x.damage`) to the derived HP of the place
+`x` is at (`g.hpOf w sp x ≤ x.damage`). -/
 theorem Move.knockOut_of_pending {g : GameState} (hw : WellFormed g) (hn : g.winner = none)
     (hk : ¬ DamageBounded g) :
-    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧ x.top.hp ≤ x.damage ∧
+    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧
+      (∃ w sp, g.In w sp x ∧ g.hpOf w sp x ≤ x.damage) ∧
       (((g.opp.active = some x ∨ x ∈ g.opp.bench) ∧
           g'.cur.prizes.length + min x.top.prizeCount g.cur.prizes.length =
             g.cur.prizes.length ∧ g'.opp.prizes = g.opp.prizes) ∨
         ((g.cur.active = some x ∨ x ∈ g.cur.bench) ∧
           g'.opp.prizes.length + min x.top.prizeCount g.opp.prizes.length =
             g.opp.prizes.length ∧ g'.cur.prizes = g.cur.prizes)) := by
-  rcases active_split g.opp.active with ⟨a, ho, hka⟩ | hoa
+  rcases active_split (g.hpOf .opp .active) g.opp.active with ⟨a, ho, hka⟩ | hoa
   · obtain ⟨c, ps, hp⟩ := hw.curPrizes hn
-    exact ⟨_, a, .knockOut ho hka hp, .knockOut ho hka hp, hka,
+    exact ⟨_, a, .knockOut ho hka hp, .knockOut ho hka hp, ⟨.opp, .active, ho, hka⟩,
       .inl ⟨.inl ho, takePrizes_length _ _, rfl⟩⟩
-  rcases active_split g.cur.active with ⟨b, hc, hkb⟩ | hca
+  rcases active_split (g.hpOf .own .active) g.cur.active with ⟨b, hc, hkb⟩ | hca
   · obtain ⟨c, ps, hp⟩ := hw.oppPrizes hn
-    exact ⟨_, b, .knockOutOwn hc hkb hp, .knockOutOwn hc hkb hp, hkb,
+    exact ⟨_, b, .knockOutOwn hc hkb hp, .knockOutOwn hc hkb hp, ⟨.own, .active, hc, hkb⟩,
       .inr ⟨.inl hc, takePrizes_length _ _, rfl⟩⟩
-  rcases bench_split g.opp.bench with ⟨b₁, q, b₂, e, hkq⟩ | hob
+  rcases bench_split (g.hpOf .opp .bench) g.opp.bench with ⟨b₁, q, b₂, e, hkq⟩ | hob
   · have hm : q ∈ g.opp.bench := by rw [e]; exact List.mem_append_right _ (.head _)
     obtain ⟨c, ps, hp⟩ := hw.curPrizes hn
-    exact ⟨_, q, .knockOutBench e hkq hp, .knockOutBench e hkq hp, hkq,
+    exact ⟨_, q, .knockOutBench e hkq hp, .knockOutBench e hkq hp, ⟨.opp, .bench, hm, hkq⟩,
       .inl ⟨.inr hm, takePrizes_length _ _, rfl⟩⟩
-  rcases bench_split g.cur.bench with ⟨b₁, q, b₂, e, hkq⟩ | hcb
+  rcases bench_split (g.hpOf .own .bench) g.cur.bench with ⟨b₁, q, b₂, e, hkq⟩ | hcb
   · have hm : q ∈ g.cur.bench := by rw [e]; exact List.mem_append_right _ (.head _)
     obtain ⟨c, ps, hp⟩ := hw.oppPrizes hn
-    exact ⟨_, q, .knockOutBenchOwn e hkq hp, .knockOutBenchOwn e hkq hp, hkq,
+    exact ⟨_, q, .knockOutBenchOwn e hkq hp, .knockOutBenchOwn e hkq hp, ⟨.own, .bench, hm, hkq⟩,
       .inr ⟨.inr hm, takePrizes_length _ _, rfl⟩⟩
-  refine absurd (fun p hp => ?_) hk
-  rcases hp with hp | hp | hp | hp
+  refine absurd (fun w sp p hp => ?_) hk
+  cases w <;> cases sp
   · exact hca p hp
   · exact hcb p hp
   · exact hoa p hp
@@ -599,7 +613,8 @@ above its HP, whose taker's Prize list shrinks by exactly that Pokémon's Prize 
 are left, as in `Move.knockOut_of_pending` (statement changed by milestone M3, see there). -/
 theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g)
     (hn : g.winner = none) (hk : ¬ DamageBounded g) :
-    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧ x.top.hp ≤ x.damage ∧
+    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧
+      (∃ w sp, g.In w sp x ∧ g.hpOf w sp x ≤ x.damage) ∧
       (((g.opp.active = some x ∨ x ∈ g.opp.bench) ∧
           g'.cur.prizes.length + min x.top.prizeCount g.cur.prizes.length =
             g.cur.prizes.length ∧ g'.opp.prizes = g.opp.prizes) ∨
@@ -611,18 +626,18 @@ theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) 
 /-- Whether a Knock Out is pending is decided by looking at the Pokémon in play (no choice
 principle is used). -/
 theorem damageBounded_or_pending (g : GameState) : DamageBounded g ∨ ¬ DamageBounded g := by
-  rcases active_split g.cur.active with ⟨a, ha, hka⟩ | hca
-  · exact .inr fun hk => absurd (hk a (Or.inl ha)) (Nat.not_lt.2 hka)
-  rcases active_split g.opp.active with ⟨a, ha, hka⟩ | hoa
-  · exact .inr fun hk => absurd (hk a (Or.inr (Or.inr (Or.inl ha)))) (Nat.not_lt.2 hka)
-  rcases bench_split g.cur.bench with ⟨b₁, q, b₂, e, hkq⟩ | hcb
+  rcases active_split (g.hpOf .own .active) g.cur.active with ⟨a, ha, hka⟩ | hca
+  · exact .inr fun hk => absurd (hk .own .active a ha) (Nat.not_lt.2 hka)
+  rcases active_split (g.hpOf .opp .active) g.opp.active with ⟨a, ha, hka⟩ | hoa
+  · exact .inr fun hk => absurd (hk .opp .active a ha) (Nat.not_lt.2 hka)
+  rcases bench_split (g.hpOf .own .bench) g.cur.bench with ⟨b₁, q, b₂, e, hkq⟩ | hcb
   · have hm : q ∈ g.cur.bench := by rw [e]; exact List.mem_append_right _ (.head _)
-    exact .inr fun hk => absurd (hk q (Or.inr (Or.inl hm))) (Nat.not_lt.2 hkq)
-  rcases bench_split g.opp.bench with ⟨b₁, q, b₂, e, hkq⟩ | hob
+    exact .inr fun hk => absurd (hk .own .bench q hm) (Nat.not_lt.2 hkq)
+  rcases bench_split (g.hpOf .opp .bench) g.opp.bench with ⟨b₁, q, b₂, e, hkq⟩ | hob
   · have hm : q ∈ g.opp.bench := by rw [e]; exact List.mem_append_right _ (.head _)
-    exact .inr fun hk => absurd (hk q (Or.inr (Or.inr (Or.inr hm)))) (Nat.not_lt.2 hkq)
-  refine .inl fun p hp => ?_
-  rcases hp with hp | hp | hp | hp
+    exact .inr fun hk => absurd (hk .opp .bench q hm) (Nat.not_lt.2 hkq)
+  refine .inl fun w sp p hp => ?_
+  cases w <;> cases sp
   · exact hca p hp
   · exact hcb p hp
   · exact hoa p hp

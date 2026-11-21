@@ -99,7 +99,7 @@ theorem Move.item_guarded {g g' : GameState} {l₁ l₂ : List Card} {n : String
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g') :
     TRunG e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g' :=
-  hr.guarded (.inl hst)
+  hr.guarded (.inl (hst.congr rfl rfl rfl rfl rfl rfl))
 
 theorem Move.supporter_guarded {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
     (hst : Settled g)
@@ -109,7 +109,7 @@ theorem Move.supporter_guarded {g g' : GameState} {l₁ l₂ : List Card} {n : S
     TRunG e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g' :=
-  hr.guarded (.inl hst)
+  hr.guarded (.inl (hst.congr rfl rfl rfl rfl rfl rfl))
 
 /-- **A finished game stops the effect.** From a state with a winner, the only resolution of
 any effect leaves the state unchanged. -/
@@ -144,17 +144,20 @@ def side (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerSt
   ⟨[.energy .grass], hand, [], prizes, [], some a, bench, false, false, false, false,
     false, Store.empty, true⟩
 
-/-- A state is `Settled` if both Active Pokémon, and every Benched Pokémon, are below HP. -/
+/-- A state is `Settled` if both Active Pokémon, and every Benched Pokémon, are below HP, when no
+static effect has a source in play (`GameState.Plain`, milestone M6: then HP is the printed HP;
+decided by `plainB` for the witnesses). -/
 theorem settled_of {g : GameState} {a b : InPlay} (hc : g.cur.active = some a)
     (ho : g.opp.active = some b) (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp)
     (hbc : ∀ p ∈ g.cur.bench, p.damage < p.top.hp)
-    (hbo : ∀ p ∈ g.opp.bench, p.damage < p.top.hp) : Settled g := by
-  refine ⟨fun p hp => ?_, by rw [hc]; simp, by rw [ho]; simp⟩
-  rcases hp with hp | hp | hp | hp
-  · rw [hc] at hp; cases hp; exact ha
-  · exact hbc p hp
-  · rw [ho] at hp; cases hp; exact hb
-  · exact hbo p hp
+    (hbo : ∀ p ∈ g.opp.bench, p.damage < p.top.hp)
+    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl) : Settled g := by
+  refine ⟨DamageBounded.intro' (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_)
+    (fun p hp => ?_), by rw [hc]; simp, by rw [ho]; simp⟩
+  · rw [hpl.hpOf (w := .own) (sp := .active) hp]; rw [hc] at hp; cases hp; exact ha
+  · rw [hpl.hpOf (w := .own) (sp := .bench) hp]; exact hbc p hp
+  · rw [hpl.hpOf (w := .opp) (sp := .active) hp]; rw [ho] at hp; cases hp; exact hb
+  · rw [hpl.hpOf (w := .opp) (sp := .bench) hp]; exact hbo p hp
 
 theorem benched_ofBasic {c : PokemonCard} (_h : 0 < c.hp) : Benched (InPlay.ofBasic c) :=
   ⟨rfl, rfl, rfl, rfl⟩

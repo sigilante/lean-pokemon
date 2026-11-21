@@ -264,22 +264,23 @@ Pokémon in play (Active Pokémon `a`, Bench `b`) whose card passes `f` to anoth
 `a'` and `b'`: from the Active Pokémon to a Benched one (`ab`), from a Benched one to the Active
 Pokémon (`ba`), or from a Benched one to another Benched one (`bb`; the counter is taken off
 first, and the target is at another place of the Bench). With `noKO` the target stays below its
-HP. -/
-inductive CMove (f : Filter) (noKO : Bool) :
+HP, `hp` (milestone M6: the derived HP in the state the step starts from, `GameState.hpOf`; moving
+a counter changes no HP). -/
+inductive CMove (f : Filter) (noKO : Bool) (hp : Spot → InPlay → Nat) :
     Option InPlay → List InPlay → Option InPlay → List InPlay → Prop where
   | ab {x q : InPlay} {b₁ b₂ : List InPlay} (hx : f.eval (.pokemon x.top) = true)
-      (hd : 0 < x.damage) (hk : noKO = true → q.damage + 1 < q.top.hp) :
-      CMove f noKO (some x) (b₁ ++ q :: b₂) (some { x with damage := x.damage - 1 })
+      (hd : 0 < x.damage) (hk : noKO = true → q.damage + 1 < hp .bench q) :
+      CMove f noKO hp (some x) (b₁ ++ q :: b₂) (some { x with damage := x.damage - 1 })
         (b₁ ++ q.addDamage 1 :: b₂)
   | ba {x q : InPlay} {b₁ b₂ : List InPlay} (hq : f.eval (.pokemon q.top) = true)
-      (hd : 0 < q.damage) (hk : noKO = true → x.damage + 1 < x.top.hp) :
-      CMove f noKO (some x) (b₁ ++ q :: b₂) (some (x.addDamage 1))
+      (hd : 0 < q.damage) (hk : noKO = true → x.damage + 1 < hp .active x) :
+      CMove f noKO hp (some x) (b₁ ++ q :: b₂) (some (x.addDamage 1))
         (b₁ ++ { q with damage := q.damage - 1 } :: b₂)
   | bb {a : Option InPlay} {q r : InPlay} {b₁ b₂ c₁ c₂ : List InPlay}
       (hq : f.eval (.pokemon q.top) = true) (hd : 0 < q.damage)
       (hc : b₁ ++ { q with damage := q.damage - 1 } :: b₂ = c₁ ++ r :: c₂)
-      (hne : c₁.length ≠ b₁.length) (hk : noKO = true → r.damage + 1 < r.top.hp) :
-      CMove f noKO a (b₁ ++ q :: b₂) a (c₁ ++ r.addDamage 1 :: c₂)
+      (hne : c₁.length ≠ b₁.length) (hk : noKO = true → r.damage + 1 < hp .bench r) :
+      CMove f noKO hp a (b₁ ++ q :: b₂) a (c₁ ++ r.addDamage 1 :: c₂)
 
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g
@@ -388,7 +389,7 @@ inductive Run : Effect → GameState → GameState → Prop where
       (h : ZStep e (g.side w) s') : Run e g (g.updSide w fun s => s.setZones s')
   /-- move a damage counter between the player's own Pokémon (milestone M8a) -/
   | moveCounter {g : GameState} {f : Filter} {noKO : Bool} {a' : Option InPlay}
-      {b' : List InPlay} (h : CMove f noKO g.cur.active g.cur.bench a' b') :
+      {b' : List InPlay} (h : CMove f noKO (g.hpOf .own) g.cur.active g.cur.bench a' b') :
       Run (.moveCounter f noKO) g { g with cur := { g.cur with active := a', bench := b' } }
   /-- discard the Stadium in play to its owner's discard pile (milestone M5) -/
   | discardStadium (g : GameState) :

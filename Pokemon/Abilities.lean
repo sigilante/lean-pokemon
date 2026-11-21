@@ -102,7 +102,7 @@ theorem wgs_not_abilitySafe : ¬ (wgs 0 false).AbilitySafe := by
 /-- The carried reduction of the player to move. -/
 def red (g : GameState) : Nat := g.cur.mods.next.reduce
 
-theorem red_xclamp (g : GameState) : red g.xclamp = red g := rfl
+theorem red_xclamp (g : GameState) : red (g.xclamp K) = red g := rfl
 
 /-- **An "as often as you like" Ability that writes a damage reduction breaks the store bound**
 (milestone M8a). There is a well-formed start satisfying clauses 1, 2 and 3 of `Faithful` and
@@ -113,7 +113,7 @@ again in one turn. So clause 4, or some other condition on unlimited Abilities, 
 theorem unlimited_writer_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧
       ¬ g₀.AbilitySafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
-      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L := by
+      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨wgs 0 false, wgs_wellFormed, wgs_loopFree, wgs_gxOnly, wgs_recycleSafe,
     wgs_not_abilitySafe, fun B => ?_, ?_⟩
   · refine ⟨_, reach_wgs (B + 1), fun hb => ?_⟩
@@ -123,7 +123,7 @@ theorem unlimited_writer_breaks_bound :
   · intro ⟨L, hL⟩
     let n := (L.map red).sum + 1
     have hm := hL _ (reach_wgs n)
-    have : red (wgs (3 * n) (decide (0 < n))).xclamp ≤ (L.map red).sum :=
+    have : red ((wgs (3 * n) (decide (0 < n))).xclamp K) ≤ (L.map red).sum :=
       Infinite.le_sum (List.mem_map_of_mem hm)
     rw [red_xclamp] at this
     simp only [red, wgs, wpl, store, n] at this
@@ -148,10 +148,17 @@ def kpl (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : Playe
 def kgs (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : GameState :=
   ⟨kpl u hand discard r b, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false⟩
 
-theorem kgs_settled (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) :
+theorem kgs_settled (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool)
+    (hu : (retrieve u).statics = [] := by rfl) :
     Settled (kgs u hand discard r b) :=
   Trainer.settled_of rfl rfl (show 0 < 10 by decide) (by decide) (fun p hp => by cases hp)
     (fun p hp => by cases hp)
+    (GameState.Plain.intro
+      (fun p hp => by
+        cases hp
+        simp only [kAt, InPlay.sv, SView.statics, InPlay.ofBasic, keeper, List.flatMap_cons,
+          List.flatMap_nil, hu, List.append_nil])
+      (fun p hp => by cases hp) (fun p hp => by cases hp; rfl) (fun p hp => by cases hp) rfl)
 
 /-- Play Iron Defender. -/
 theorem kmove1 (r : Nat) (b : Bool) :
@@ -204,7 +211,7 @@ Ability, and play it again. -/
 theorem unlimited_recycler_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ ¬ g₀.RecycleSafe ∧
       g₀.AbilitySafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
-      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L := by
+      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨kgs .unlimited [ironDefender] [] 0 false, kgs_wellFormed _,
     by unfold GameState.LoopFree; rw [kgs_allCards]; decide, kgs_gxOnly _, fun h => ?_,
     by unfold GameState.AbilitySafe; rw [kgs_allCards]; decide, fun B => ?_, ?_⟩
@@ -218,7 +225,7 @@ theorem unlimited_recycler_breaks_bound :
   · intro ⟨L, hL⟩
     let n := (L.map red).sum + 1
     have hm := hL _ (reach_kgs n)
-    have : red (kgs .unlimited [ironDefender] [] (3 * n) (decide (0 < n))).xclamp ≤
+    have : red ((kgs .unlimited [ironDefender] [] (3 * n) (decide (0 < n))).xclamp K) ≤
         (L.map red).sum := Infinite.le_sum (List.mem_map_of_mem hm)
     rw [red_xclamp] at this
     simp only [red, kgs, kpl, store, n] at this
@@ -240,8 +247,10 @@ theorem unlimited_twice : Reach (wgs 0 false) (wgs 6 true) := reach_wgs 2
 
 theorem settled_two {g : GameState} {a b : InPlay} (hc : g.cur.active = some a)
     (ho : g.opp.active = some b) (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp)
-    (h1 : g.cur.bench = []) (h2 : g.opp.bench = []) : Settled g :=
+    (h1 : g.cur.bench = []) (h2 : g.opp.bench = [])
+    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl) : Settled g :=
   Trainer.settled_of hc ho ha hb (by rw [h1]; intro p hp; cases hp) (by rw [h2]; intro p hp; cases hp)
+    hpl
 
 /-- "Once during your turn, you may use this Ability. During this turn, your attacks do 10 more
 damage": a once-per-turn Ability whose use is visible in the store. -/

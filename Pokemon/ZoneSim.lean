@@ -16,26 +16,26 @@ namespace Pokemon
 
 /-- Two player states with the same zones, their Pokémon in play agreeing at the caps `c`
 (Active) and `cb` (Bench). -/
-structure PlayerState.ZAgree (c cb : Cap) (s₁ s₂ : PlayerState) : Prop where
+structure PlayerState.ZAgree (K : Nat) (c cb : Cap) (s₁ s₂ : PlayerState) : Prop where
   deck : s₂.deck = s₁.deck
   hand : s₂.hand = s₁.hand
   discard : s₂.discard = s₁.discard
-  active : s₂.active.map (InPlay.clampWith c) = s₁.active.map (InPlay.clampWith c)
-  bench : s₂.bench.map (InPlay.clampWith cb) = s₁.bench.map (InPlay.clampWith cb)
+  active : s₂.active.map (InPlay.clampWith K c) = s₁.active.map (InPlay.clampWith K c)
+  bench : s₂.bench.map (InPlay.clampWith K cb) = s₁.bench.map (InPlay.clampWith K cb)
 
-theorem Src.get_congr {c cb : Cap} {s₁ s₂ : PlayerState} (h : PlayerState.ZAgree c cb s₁ s₂)
+theorem Src.get_congr {c cb : Cap} {s₁ s₂ : PlayerState} (h : PlayerState.ZAgree K c cb s₁ s₂)
     (src : Src) : src.get s₂ = src.get s₁ := by
   cases src <;> simp only [Src.get, h.deck, h.hand, h.discard]
 
-theorem Src.set_agree {c cb : Cap} {s₁ s₂ : PlayerState} (h : PlayerState.ZAgree c cb s₁ s₂)
-    (src : Src) (r : List Card) : PlayerState.ZAgree c cb (src.set r s₁) (src.set r s₂) := by
+theorem Src.set_agree {c cb : Cap} {s₁ s₂ : PlayerState} (h : PlayerState.ZAgree K c cb s₁ s₂)
+    (src : Src) (r : List Card) : PlayerState.ZAgree K c cb (src.set r s₁) (src.set r s₂) := by
   cases src <;>
     exact ⟨by simp only [Src.set, h.deck], by simp only [Src.set, h.hand],
       by simp only [Src.set, h.discard], h.active, h.bench⟩
 
 theorem Put.sim {c cb : Cap} {d : Dst} {t : List Card} {x₁ y₁ x₂ : PlayerState}
-    (hp : Put d t x₁ y₁) (h : PlayerState.ZAgree c cb x₁ x₂) :
-    ∃ y₂, Put d t x₂ y₂ ∧ PlayerState.ZAgree c cb y₁ y₂ := by
+    (hp : Put d t x₁ y₁) (h : PlayerState.ZAgree K c cb x₁ x₂) :
+    ∃ y₂, Put d t x₂ y₂ ∧ PlayerState.ZAgree K c cb y₁ y₂ := by
   cases hp with
   | hand => exact ⟨_, .hand t x₂, ⟨h.deck, by simp only [h.hand], h.discard, h.active, h.bench⟩⟩
   | discard =>
@@ -48,18 +48,18 @@ theorem Put.sim {c cb : Cap} {d : Dst} {t : List Card} {x₁ y₁ x₂ : PlayerS
       exact ⟨_, .shuffle x₂ (by rw [h.deck]; exact hq), ⟨rfl, h.hand, h.discard, h.active, h.bench⟩⟩
 
 /-- Attaching an Energy card keeps two agreeing Pokémon agreeing. -/
-theorem InPlay.Agree.addEnergy {c : Cap} {q p : InPlay} (h : InPlay.Agree c q p) (x : Card) :
-    InPlay.Agree c (q.addEnergy x) (p.addEnergy x) := by
+theorem InPlay.Agree.addEnergy {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q p) (x : Card) :
+    InPlay.Agree K c (q.addEnergy x) (p.addEnergy x) := by
   unfold InPlay.addEnergy; rw [h.energy]; exact h.upd.1 _
 
 /-- Replacing the attached Energy keeps two agreeing Pokémon agreeing. -/
-theorem InPlay.Agree.setEnergy {c : Cap} {q p : InPlay} (h : InPlay.Agree c q p) (e : List Card) :
-    InPlay.Agree c { q with energy := e } { p with energy := e } := h.upd.1 e
+theorem InPlay.Agree.setEnergy {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q p) (e : List Card) :
+    InPlay.Agree K c { q with energy := e } { p with energy := e } := h.upd.1 e
 
 /-- **The kernel of every clamp is a simulation for zone steps**, at any caps. -/
 theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h : ZStep e s₁ s₁')
-    (ha : PlayerState.ZAgree c cb s₁ s₂) :
-    ∃ s₂', ZStep e s₂ s₂' ∧ PlayerState.ZAgree c cb s₁' s₂' := by
+    (ha : PlayerState.ZAgree K c cb s₁ s₂) :
+    ∃ s₂', ZStep e s₂ s₂' ∧ PlayerState.ZAgree K c cb s₁' s₂' := by
   cases h with
   | @move w src dst f q s s' t r hs hq hp =>
       obtain ⟨y₂, hp₂, hy⟩ := hp.sim (Src.set_agree ha src r)
@@ -130,8 +130,8 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
   | @moveBB w f s q q' b₁ b₂ c₁ c₂ e₁ e₂ x hb he hx hc =>
       obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
       have hq := InPlay.agree_of_clamp h2
-      have hm : (d₁ ++ { q₂ with energy := e₁ ++ e₂ } :: d₂).map (InPlay.clampWith cb) =
-          (c₁ ++ q' :: c₂).map (InPlay.clampWith cb) := by
+      have hm : (d₁ ++ { q₂ with energy := e₁ ++ e₂ } :: d₂).map (InPlay.clampWith K cb) =
+          (c₁ ++ q' :: c₂).map (InPlay.clampWith K cb) := by
         rw [← hc]
         simp only [List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hq.setEnergy _)]
       obtain ⟨k₁, q₃, k₂, hk, g1, g2, g3⟩ := map_eq_split hm

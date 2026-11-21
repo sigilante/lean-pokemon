@@ -538,16 +538,43 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 
 namespace Pokemon
 
-/-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP.
-Every move except the Knock Out moves requires it (through `Settled`, or directly). It is NOT
+/-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP, its
+derived HP (`GameState.hpOf`, milestone M6: printed HP changed by the static effects in force in
+`g`). Every move except the Knock Out moves requires it (through `Settled`, or directly). It is NOT
 an invariant of all reachable states: an attack or Trainer card can leave a Pokémon at or above
 its HP (then the Knock Out must be taken next), and so can Checkup
-(`Infinite.endTurn_pending_ko_reachable`); it holds when the turn proper begins
+(`Infinite.endTurn_pending_ko_reachable`), and since milestone M6 so can any move that removes a
+source of HP (a Tool discarded, a Stadium replaced, Energy removed, a Pokémon with a static Ability
+Knocked Out, a Pokémon moved out of the place its bonus needs); it holds when the turn proper begins
 (`Move.damageBounded_of_startTurn`). -/
 def DamageBounded (g : GameState) : Prop :=
-  ∀ p : InPlay,
-    (g.cur.active = some p ∨ p ∈ g.cur.bench ∨ g.opp.active = some p ∨ p ∈ g.opp.bench) →
-      p.damage < p.top.hp
+  ∀ (w : Whose) (sp : Spot) (p : InPlay), g.In w sp p → p.damage < g.hpOf w sp p
+
+/-- `DamageBounded`, place by place. -/
+theorem DamageBounded.intro' {g : GameState}
+    (h1 : ∀ p, g.cur.active = some p → p.damage < g.hpOf .own .active p)
+    (h2 : ∀ p ∈ g.cur.bench, p.damage < g.hpOf .own .bench p)
+    (h3 : ∀ p, g.opp.active = some p → p.damage < g.hpOf .opp .active p)
+    (h4 : ∀ p ∈ g.opp.bench, p.damage < g.hpOf .opp .bench p) : DamageBounded g := by
+  intro w sp p hp
+  cases w <;> cases sp
+  · exact h1 p hp
+  · exact h2 p hp
+  · exact h3 p hp
+  · exact h4 p hp
+
+/-- `DamageBounded` depends only on the Pokémon in play, the Stadium and who goes first (milestone
+M6: derived HP reads them). -/
+theorem DamageBounded.congr {g g' : GameState} (h : DamageBounded g)
+    (hc : g'.cur.active = g.cur.active) (hcb : g'.cur.bench = g.cur.bench)
+    (ho : g'.opp.active = g.opp.active) (hob : g'.opp.bench = g.opp.bench)
+    (hs : g'.stadium = g.stadium) (hf : g'.curIsFirst = g.curIsFirst) : DamageBounded g' := by
+  have hsf : GameState.SameField g g' :=
+    ⟨by simp only [PlayerState.field, hc, hcb], by simp only [PlayerState.field, ho, hob], hs, hf⟩
+  intro w sp p hp
+  rw [hsf.hpOf w sp rfl]
+  cases w <;> cases sp <;> simp only [GameState.In, GameState.side, hc, hcb, ho, hob] at hp <;>
+    exact h _ _ p hp
 
 /-- A Benched Pokémon as the rules leave it: with no Special Condition ("When a Pokémon evolves
 or moves to the Bench, it recovers from all Special Conditions", rulebook 2023 p. 16) and so with
@@ -574,13 +601,20 @@ Knock Out is taken, and the Active Pokémon replaced, before any other move. -/
 def Settled (g : GameState) : Prop :=
   DamageBounded g ∧ g.cur.active ≠ none ∧ g.opp.active ≠ none
 
+/-- `Settled` depends only on the Pokémon in play, the Stadium and who goes first. -/
+theorem Settled.congr {g g' : GameState} (h : Settled g)
+    (hc : g'.cur.active = g.cur.active) (hcb : g'.cur.bench = g.cur.bench)
+    (ho : g'.opp.active = g.opp.active) (hob : g'.opp.bench = g.opp.bench)
+    (hs : g'.stadium = g.stadium) (hf : g'.curIsFirst = g.curIsFirst) : Settled g' :=
+  ⟨h.1.congr hc hcb ho hob hs hf, by rw [hc]; exact h.2.1, by rw [ho]; exact h.2.2⟩
+
 /-- The eight moves that resolve a Knock Out, as a relation of their own: they are the moves
 `Move.knockOut`, `Move.knockOutBench`, `Move.promote`, `Move.noPokemon` and their `Own` versions,
 with the same premises and results (`KOMove.move`). `Resolve` uses them to take Knock Outs in
 the middle of a Trainer card's effect. -/
 inductive KOMove : GameState → GameState → Prop where
   | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.opp.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.opp.active = some p) (hk : g.hpOf .opp .active p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       KOMove g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
@@ -592,7 +626,7 @@ inductive KOMove : GameState → GameState → Prop where
   | noPokemon {g : GameState} (ha : g.opp.active = none) (hb : g.opp.bench = []) :
       KOMove g { g with winner := some g.curIsFirst }
   | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.cur.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.cur.active = some p) (hk : g.hpOf .own .active p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       KOMove g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
@@ -604,14 +638,14 @@ inductive KOMove : GameState → GameState → Prop where
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
       KOMove g { g with winner := some (!g.curIsFirst) }
   | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
-      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : g.hpOf .opp .bench p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       KOMove g { g with
         opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
         cur := g.cur.takePrizes p.top.prizeCount,
         winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
   | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
-      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       KOMove g { g with
         cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
@@ -818,7 +852,7 @@ inductive Move : GameState → GameState → Prop where
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
       (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
-      (hp : paid.length = a.top.retreat)
+      (hp : paid.length = g.retreatOf a)
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
@@ -973,7 +1007,7 @@ inductive Move : GameState → GameState → Prop where
   /-- Knock Out the opponent's Active Pokémon and take a Prize card (during the turn or
   between turns) -/
   | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.opp.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.opp.active = some p) (hk : g.hpOf .opp .active p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       Move g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
@@ -990,7 +1024,7 @@ inductive Move : GameState → GameState → Prop where
   after Confusion, after an effect that damages it, or after Checkup); the opponent takes a
   Prize card -/
   | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.cur.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.cur.active = some p) (hk : g.hpOf .own .active p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       Move g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
@@ -1006,7 +1040,7 @@ inductive Move : GameState → GameState → Prop where
   /-- Knock Out one of the opponent's Benched Pokémon and take its Prize cards; no promotion
   follows (milestone M3) -/
   | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
-      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : g.hpOf .opp .bench p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       Move g { g with
         opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
@@ -1014,7 +1048,7 @@ inductive Move : GameState → GameState → Prop where
         winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
   /-- Knock Out one of the player's own Benched Pokémon; the opponent takes its Prize cards -/
   | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
-      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       Move g { g with
         cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },

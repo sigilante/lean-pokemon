@@ -146,9 +146,11 @@ theorem mem_cardLists {C l : List Card} (h : Within C l) : l ∈ cardLists C :=
   mem_listsUpTo h.1 h.2
 
 /-- The bound used for damage and Poison strength (and, doubled, for damage bonuses and
-reductions, `GameState.clamp`): larger than every printed HP, every printed Resistance and every
-test constant in the cards of `C`. -/
-def bound (C : List Card) : Nat := maxHp C + maxResist C + cardsTmax C + 1
+reductions, `GameState.clamp`): larger than every HP a Pokémon made of the cards of `C` can have
+(`hpBound`: since milestone M6 HP is derived, and can exceed the printed HP; before it this term
+was the largest printed HP, `maxHp C`, which `hpBound C` is for cards with no static effect), every
+printed Resistance and every test constant in the cards of `C`. -/
+def bound (C : List Card) : Nat := hpBound C + maxResist C + cardsTmax C + 1
 
 /-- Every value of one turn's modifiers with amounts at most `M`. -/
 def modss (M : Nat) : List Mods :=
@@ -298,7 +300,7 @@ end Enum
 open Enum
 
 theorem optCardList_clamp (c : Cap) (o : Option InPlay) :
-    optCardList (o.map (InPlay.clampWith c)) = optCardList o := by
+    optCardList (o.map (InPlay.clampWith K c)) = optCardList o := by
   cases o <;> rfl
 
 theorem GameState.allCards_clamp (k : Nat) (g : GameState) : (g.clamp k).allCards = g.allCards := by
@@ -310,28 +312,22 @@ most `bound g₀.allCards`: the clamp caps every Pokémon in play, Active or Ben
 (Before milestone M3 the clamp capped only the Active Pokémon, and this used `Reach.wellFormed`:
 Benched Pokémon were below HP with no Poison strength. Benched Pokémon can now be damaged, and
 reach or pass their HP, so the clamp caps them too and well-formedness is not needed here.) -/
-theorem Reach.clamp_bounded {g₀ g : GameState} (h : Reach g₀ g) :
+theorem Reach.clamp_bounded {g₀ g : GameState} (_h : Reach g₀ g) :
     SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).cur ∧
       SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).opp := by
-  have hM : ∀ p, Card.pokemon p ∈ g.allCards → p.hp ≤ maxHp g₀.allCards :=
-    fun p hp => hp_le_maxHp (h.perm.mem_iff.1 hp)
-  have hA : ∀ q : InPlay, Card.pokemon q.top ∈ g.allCards →
-      (q.clampWith .hp).damage ≤ bound g₀.allCards ∧
-        (q.clampWith .hp).poisonUp ≤ bound g₀.allCards := by
-    intro q hq
-    have := hM _ hq
-    simp only [InPlay.clampWith, Cap.dmg, bound]
-    exact ⟨by omega, by omega⟩
+  have hA : ∀ q : InPlay, (q.clampWith (bound g₀.allCards) .hp).damage ≤ bound g₀.allCards ∧
+      (q.clampWith (bound g₀.allCards) .hp).poisonUp ≤ bound g₀.allCards :=
+    fun _ => ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩
   refine ⟨⟨fun p hp => ?_, fun p hp => ?_, storeLe_cap _ _⟩,
     ⟨fun p hp => ?_, fun p hp => ?_, storeLe_cap _ _⟩⟩
-  · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
-    exact hA q (GameState.top_mem_cur_active hq)
-  · obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
-    exact hA q (GameState.top_mem_cur_bench hq)
-  · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
-    exact hA q (GameState.top_mem_opp_active hq)
-  · obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
-    exact hA q (GameState.top_mem_opp_bench hq)
+  · obtain ⟨q, _, rfl⟩ := Option.map_eq_some_iff.1 hp
+    exact hA q
+  · obtain ⟨q, _, rfl⟩ := List.mem_map.1 hp
+    exact hA q
+  · obtain ⟨q, _, rfl⟩ := Option.map_eq_some_iff.1 hp
+    exact hA q
+  · obtain ⟨q, _, rfl⟩ := List.mem_map.1 hp
+    exact hA q
 
 /-- **The clamps of reachable states lie in a finite list.** From any start state (well-formed
 or not),
@@ -349,13 +345,14 @@ theorem Reach.clamp_mem {g₀ : GameState} :
   refine ⟨states g₀.allCards, fun g h => mem_states ?_ h.clamp_bounded⟩
   rw [GameState.allCards_clamp]; exact h.perm
 
-/-- A start state with tame cards (no damage reduction, no `drain`) and no damage reduction in
-effect is `Fit` at `bound`, so `Reach.finite` applies to it. -/
+/-- A start state with tame cards (no damage reduction, no `drain`), no static damage reduction
+(milestone M6 added `hs`; every deck without static effects satisfies it) and no damage reduction
+in effect is `Fit` at `bound`, so `Reach.finite` applies to it. -/
 theorem GameState.fit_bound {g₀ : GameState} (ht : ∀ x ∈ g₀.allCards, x.tame = true)
-    (hn : g₀.NoReduce) : g₀.Fit (bound g₀.allCards) := by
-  refine ⟨by simp only [bound]; omega, fun p hp => ?_, fun x hx => ⟨ht x hx, ?_⟩, hn⟩
-  · have := hp_le_maxHp hp; have := resist_le_maxResist hp; simp only [bound]
-    exact ⟨by omega, by omega⟩
+    (hn : g₀.NoReduce) (hs : g₀.StaticTame) : g₀.Fit (bound g₀.allCards) := by
+  refine ⟨by simp only [bound]; omega, ⟨by simp only [bound]; omega, fun p hp => ?_⟩,
+    fun x hx => ⟨ht x hx, ?_⟩, hn, hs⟩
+  · have := resist_le_maxResist hp; simp only [bound]; omega
   · have := tmax_le_cardsTmax hx; simp only [bound]; omega
 
 /-- **Finiteness, for tame decks.** Let `g₀` be any start state (well-formed or not) that is

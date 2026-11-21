@@ -1112,6 +1112,22 @@ def Card.inert : Card → Bool
   | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty && gr.statics.isEmpty
   | _ => false
 
+/-- **The static effects printed on a card** (milestone M6): a Pokémon card's static Abilities; a
+Tool's static text and static Abilities; a Stadium's static text. Items and Supporters have none
+(they are never in play). -/
+def Card.statics : Card → List Static
+  | .pokemon p => p.abilities.flatMap Ability.statics
+  | .tool _ gr => gr.statics ++ gr.abilities.flatMap Ability.statics
+  | .trainer _ .stadium _ ss => ss
+  | _ => []
+
+/-- A static damage reduction (milestone M6): like a stored one, it breaks the capped clamp
+(`Pokemon/Lingering.lean`), so `GameState.Fit` excludes it. -/
+def Static.reduces (s : Static) : Bool :=
+  match s.eff with
+  | .reduce _ _ => true
+  | _ => false
+
 /-- Is the card a Stadium? (milestone M5) -/
 def Card.isStadium : Card → Bool
   | .trainer _ .stadium _ _ => true

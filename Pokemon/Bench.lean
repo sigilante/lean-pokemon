@@ -157,7 +157,7 @@ theorem benchKO_reachable :
   have h₂ : Move benchMid _ := .knockOutBenchOwn (b₁ := []) (b₂ := []) rfl (by decide) rfl
   refine ⟨benchStart, benchStart_wellFormed, benchStart_settled, _, _, h₁, h₂,
     .step (.step (.refl _) rfl h₁) rfl h₂, fun hk => ?_, .head _, rfl, rfl, rfl, rfl⟩
-  have := hk weakBenched (Or.inr (Or.inl (.head _)))
+  have := hk .own .bench weakBenched (List.Mem.head _)
   exact absurd this (by decide)
 
 /-! ## Several Knock Outs from one step -/
@@ -245,7 +245,7 @@ theorem charBench_reachable :
     .knockOutBench (b₁ := []) (b₂ := []) (p := charred.unfresh.addDamage 2) rfl (by decide) rfl
   refine ⟨charStart, charStart_wellFormed, hs, _, _, h₁, h₂, .step (.step (.refl _) rfl h₁) rfl h₂,
     fun hk => ?_, rfl, .head _⟩
-  exact absurd (hk (charred.unfresh.addDamage 2) (Or.inr (Or.inr (Or.inr (.head _)))))
+  exact absurd (hk .opp .bench (charred.unfresh.addDamage 2) (List.Mem.head _))
     (by decide)
 
 /-! ## Switching -/
@@ -529,7 +529,7 @@ def InPlay.pokemonCards (p : InPlay) : List Card := Card.pokemon p.top :: p.unde
 
 /-- Moving a damage counter leaves the same Pokémon in the Active Spot (milestone M8a). -/
 theorem CMove.active_pokemonCards {f : Filter} {noKO : Bool} {a a' : Option InPlay}
-    {b b' : List InPlay} (h : CMove f noKO a b a' b') :
+    {b b' : List InPlay} (h : CMove f noKO hp a b a' b') :
     a'.map InPlay.pokemonCards = a.map InPlay.pokemonCards := by
   cases h <;> rfl
 
@@ -704,7 +704,7 @@ theorem teraBench_reachable :
       (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl
   refine ⟨snipeStart, snipeStart_wellFormed, snipeStart_settled, _, hm, .step (.refl _) rfl hm,
     rfl, fun hk => ?_⟩
-  exact absurd (hk ((InPlay.ofBasic low).addDamage 5) (Or.inr (Or.inr (Or.inr (.head _)))))
+  exact absurd (hk .opp .bench ((InPlay.ofBasic low).addDamage 5) (List.Mem.head _))
     (by decide)
 
 /-- 50 damage to one of the opponent's Benched Pokémon. -/
@@ -741,7 +741,7 @@ theorem benchDamage_reachable :
       (.benchDamage (b₁ := []) .opp 5 rfl) rfl (fun h => nomatch h) rfl
   refine ⟨pokeStart, pokeStart_wellFormed, pokeStart_settled, _, hm, .step (.refl _) rfl hm,
     rfl, fun hk => ?_⟩
-  exact absurd (hk ((InPlay.ofBasic low).addDamage 5) (Or.inr (Or.inr (Or.inr (.head _)))))
+  exact absurd (hk .opp .bench ((InPlay.ofBasic low).addDamage 5) (List.Mem.head _))
     (by decide)
 
 end Pokemon.Bench

@@ -56,15 +56,6 @@ what its Tools give it. -/
 def SView.statics (v : SView) : List Static :=
   v.top.abilities.flatMap Ability.statics ++ v.tools.flatMap (Card.grantStatics v.top)
 
-/-- **The static effects printed on a card** (milestone M6): a Pokémon card's static Abilities; a
-Tool's static text and static Abilities; a Stadium's static text. Items and Supporters have none
-(they are never in play). -/
-def Card.statics : Card → List Static
-  | .pokemon p => p.abilities.flatMap Ability.statics
-  | .tool _ gr => gr.statics ++ gr.abilities.flatMap Ability.statics
-  | .trainer _ .stadium _ ss => ss
-  | _ => []
-
 /-- The static effects of the Stadium in play. -/
 def stadiumStatics : Option (Bool × Card) → List Static
   | none => []
@@ -231,6 +222,30 @@ def GameState.In (g : GameState) : Whose → Spot → InPlay → Prop
   | w, .active, p => (g.side w).active = some p
   | w, .bench, p => p ∈ (g.side w).bench
 
+/-- The damage an attack with base damage `n` does to the opponent's Active Pokémon in state
+`g`: `dealtBy` with the Active Pokémon's Weakness and Resistance and both players' modifiers
+in effect, the static ones included (milestone M6): the attacker's static bonus (`sBonus`) is added
+with its stored bonus at step 2, the defender's static reduction (`sReduce`) subtracted with its
+stored reduction at step 5 (as rest-of-game amounts of a copy of the stores, so `dealtBy` is
+unchanged). Weakness and Resistance apply to the Active Pokémon only ("Don't apply Weakness and
+Resistance for Benched Pokémon!", p. 14); attack damage to Benched Pokémon (`InPlay.hitBench`,
+milestone M3) skips the calculation. -/
+def GameState.dealt (n : Nat) (g : GameState) : Nat :=
+  dealtBy n g.weak g.resist (g.cur.mods.add .always (.bonus g.sBonus))
+    (g.opp.mods.add .always (.reduce g.sReduce))
+
+@[simp] theorem Store.add_bonus_zero (t : Store) : t.add .always (.bonus 0) = t := rfl
+
+@[simp] theorem Store.add_reduce_zero (t : Store) : t.add .always (.reduce 0) = t := rfl
+
+/-- Every Pokémon in play has derived HP at most `K`. -/
+def GameState.HpBelow (K : Nat) (g : GameState) : Prop :=
+  ∀ w sp p, g.In w sp p → g.hpOf w sp p ≤ K
+
+/-- No card of the game has a static damage reduction. -/
+def GameState.StaticTame (g : GameState) : Prop :=
+  ∀ c ∈ g.allCards, ∀ s ∈ c.statics, s.reduces = false
+
 /-! ## What derived quantities read -/
 
 /-- Two states whose Pokémon in play have the same views, at the same places, with the same Stadium
@@ -259,20 +274,69 @@ theorem GameState.SameField.retreatOf {g₁ g₂ : GameState} (h : GameState.Sam
   have ht : q.top = p.top := congrArg SView.top hv
   simp only [GameState.retreatOf, h.inForce, hv, ht]
 
-/-- Updating the Pokémon in play by a map that keeps their views keeps the field. -/
-theorem fieldOf_map {F : InPlay → InPlay} (hF : ∀ p, (F p).sv = p.sv) (a : Option InPlay)
-    (b : List InPlay) : fieldOf (a.map F) (b.map F) = fieldOf a b := by
-  have hb : (b.map F).map (fun p => (Spot.bench, p.sv)) = b.map fun p => (Spot.bench, p.sv) := by
+/-- The field determines the view of the Active Pokémon (it is the entry tagged `active`). -/
+theorem fieldOf_active {a₁ a₂ : Option InPlay} {b₁ b₂ : List InPlay}
+    (h : fieldOf a₁ b₁ = fieldOf a₂ b₂) : a₁.map InPlay.sv = a₂.map InPlay.sv := by
+  cases a₁ with
+  | none =>
+      cases a₂ with
+      | none => rfl
+      | some p =>
+          cases b₁ with
+          | nil => simp [fieldOf] at h
+          | cons x xs => simp [fieldOf] at h
+  | some p =>
+      cases a₂ with
+      | none =>
+          cases b₂ with
+          | nil => simp [fieldOf] at h
+          | cons x xs => simp [fieldOf] at h
+      | some q =>
+          simp only [fieldOf, List.singleton_append, List.cons.injEq, Prod.mk.injEq] at h
+          simp only [Option.map_some, h.1.2]
+
+/-- Updating the Pokémon in play by maps that keep their views keeps the field. -/
+theorem fieldOf_map {F G : InPlay → InPlay} (hF : ∀ p, (F p).sv = p.sv) (hG : ∀ p, (G p).sv = p.sv)
+    (a : Option InPlay) (b : List InPlay) : fieldOf (a.map F) (b.map G) = fieldOf a b := by
+  have hb : (b.map G).map (fun p => (Spot.bench, p.sv)) = b.map fun p => (Spot.bench, p.sv) := by
     rw [List.map_map]
-    exact List.map_congr_left fun p _ => by simp only [Function.comp, hF]
+    exact List.map_congr_left fun p _ => by simp only [Function.comp, hG]
   cases a with
   | none => simp only [fieldOf, Option.map_none, hb]
   | some p => simp only [fieldOf, Option.map_some, hF, hb]
+
+theorem GameState.SameField.sBonus {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
+    g₂.sBonus = g₁.sBonus := by
+  have hc := fieldOf_active h.cur
+  have ho := fieldOf_active h.opp
+  unfold GameState.sBonus
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;> cases h3 : g₁.opp.active <;>
+    cases h4 : g₂.opp.active <;>
+    simp only [h1, h2, h3, h4, Option.map_none, Option.map_some,
+      reduceCtorEq, Option.some.injEq] at hc ho ⊢
+  next a₁ a₂ d₁ d₂ =>
+    rw [h.inForce, hc, show d₂.top = d₁.top from congrArg SView.top ho]
+
+theorem GameState.SameField.sReduce {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
+    g₂.sReduce = g₁.sReduce := by
+  have hc := fieldOf_active h.cur
+  have ho := fieldOf_active h.opp
+  unfold GameState.sReduce
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;> cases h3 : g₁.opp.active <;>
+    cases h4 : g₂.opp.active <;>
+    simp only [h1, h2, h3, h4, Option.map_none, Option.map_some,
+      reduceCtorEq, Option.some.injEq] at hc ho ⊢
+  next a₁ a₂ d₁ d₂ =>
+    rw [h.inForce, ho, show a₂.top = a₁.top from congrArg SView.top hc]
 
 /-! ## Decks with no static effects -/
 
 /-- No card in the game has a static effect. -/
 def GameState.NoStatics (g : GameState) : Prop := ∀ c ∈ g.allCards, c.statics = []
+
+theorem GameState.NoStatics.of_perm {g g' : GameState} (h : g.NoStatics)
+    (hp : g'.allCards.Perm g.allCards) : g'.NoStatics :=
+  fun c hc => h c (hp.mem_iff.1 hc)
 
 theorem Card.grantStatics_nil {p : PokemonCard} {c : Card} (h : c.statics = []) :
     c.grantStatics p = [] := by
@@ -354,6 +418,158 @@ theorem GameState.inForce_noStatics {g : GameState} (hn : g.NoStatics) {w : Whos
   simp only [GameState.inForce, staticsInForce, hv, hst, List.filter_nil, hm, List.append_nil]
 
 theorem sumOf_nil (f : Static → Nat) : sumOf f [] = 0 := rfl
+/-- **No static effect has a source in play** (milestone M6): every Pokémon in play is the source of
+none, and the Stadium in play (if any) has none. A property of a state, for witnesses whose start
+is built by hand; `GameState.NoStatics` (no card of the game has one) implies it. -/
+def GameState.Plain (g : GameState) : Prop :=
+  (∀ (u : Whose) (e : Spot × SView), e ∈ (g.side u).field → e.2.statics = []) ∧
+    stadiumStatics g.stadium = []
+
+/-- `Plain`, decided (for witnesses: `GameState.plain_of_plainB rfl`). -/
+def GameState.plainB (g : GameState) : Bool :=
+  ((g.cur.field ++ g.opp.field).all fun e => e.2.statics.isEmpty) &&
+    (stadiumStatics g.stadium).isEmpty
+
+theorem GameState.plain_of_plainB {g : GameState} (h : g.plainB = true) : g.Plain := by
+  simp only [GameState.plainB, Bool.and_eq_true, List.all_eq_true, List.isEmpty_iff,
+    List.mem_append] at h
+  refine ⟨fun u e he => ?_, h.2⟩
+  cases u
+  · exact h.1 e (.inl he)
+  · exact h.1 e (.inr he)
+
+/-- With no source in play, no static effect is in force on a Pokémon that is the source of
+none. -/
+theorem GameState.Plain.inForce {g : GameState} (h : g.Plain) {v : SView} (hv : v.statics = [])
+    (w : Whose) (sp : Spot) : g.inForce w sp v = [] := by
+  have hm : ∀ (u : Whose) (f : Spot × SView → Static → Bool),
+      ((g.side u).field.flatMap fun e => e.2.statics.filter (f e)) = [] := by
+    intro u f
+    rw [List.flatMap_eq_nil_iff]
+    intro e he
+    rw [h.1 u e he]
+    rfl
+  simp only [GameState.inForce, staticsInForce, hv, h.2, List.filter_nil, hm, List.append_nil]
+
+theorem GameState.Plain.sv {g : GameState} (h : g.Plain) {w : Whose} {sp : Spot} {p : InPlay}
+    (hp : g.In w sp p) : p.sv.statics = [] := by
+  cases sp
+  · exact h.1 w (.active, p.sv) (by
+      simp only [GameState.In] at hp
+      simp only [PlayerState.field, fieldOf, hp, List.mem_append, List.mem_singleton, true_or])
+  · exact h.1 w (.bench, p.sv) (by
+      simp only [GameState.In] at hp
+      simp only [PlayerState.field, fieldOf, List.mem_append, List.mem_map]
+      exact .inr ⟨p, hp, rfl⟩)
+
+/-- With no source in play, HP is the printed HP. -/
+theorem GameState.Plain.hpOf {g : GameState} (h : g.Plain) {w : Whose} {sp : Spot} {p : InPlay}
+    (hp : g.In w sp p) : g.hpOf w sp p = p.top.hp := by
+  simp only [GameState.hpOf, h.inForce (h.sv hp), sumOf, List.map_nil, List.sum_nil,
+    Nat.add_zero, Nat.sub_zero]
+
+theorem GameState.Plain.retreatOf {g : GameState} (h : g.Plain) {a : InPlay}
+    (ha : g.cur.active = some a) : g.retreatOf a = a.top.retreat := by
+  simp only [GameState.retreatOf, h.inForce (h.sv (w := .own) (sp := .active) ha), sumOf,
+    List.map_nil, List.sum_nil, Nat.add_zero, Nat.sub_zero]
+
+theorem GameState.Plain.sBonus {g : GameState} (h : g.Plain) : g.sBonus = 0 := by
+  unfold GameState.sBonus
+  split
+  · next a d ha hd => rw [h.inForce (h.sv (w := .own) (sp := .active) ha)]; rfl
+  · rfl
+
+theorem GameState.Plain.sReduce {g : GameState} (h : g.Plain) : g.sReduce = 0 := by
+  unfold GameState.sReduce
+  split
+  · next a d ha hd => rw [h.inForce (h.sv (w := .opp) (sp := .active) hd)]; rfl
+  · rfl
+
+/-- The field of a side whose Pokémon in play are the source of no static effect. -/
+theorem fieldOf_plain {a : Option InPlay} {b : List InPlay}
+    (ha : ∀ p, a = some p → p.sv.statics = []) (hb : ∀ p ∈ b, p.sv.statics = []) :
+    ∀ e ∈ fieldOf a b, e.2.statics = [] := by
+  intro e he
+  obtain ⟨q, hq, he2⟩ := mem_fieldOf he
+  rw [he2]
+  rcases hq with hq | hq
+  · exact ha q hq
+  · exact hb q hq
+
+/-- `Plain`, side by side. -/
+theorem GameState.Plain.intro {g : GameState}
+    (hca : ∀ p, g.cur.active = some p → p.sv.statics = []) (hcb : ∀ p ∈ g.cur.bench, p.sv.statics = [])
+    (hoa : ∀ p, g.opp.active = some p → p.sv.statics = []) (hob : ∀ p ∈ g.opp.bench, p.sv.statics = [])
+    (hs : stadiumStatics g.stadium = []) : g.Plain :=
+  ⟨fun u => by cases u <;> exact fieldOf_plain ‹_› ‹_›, hs⟩
+
+
+theorem sumOf_eq_zero {f : Static → Nat} : ∀ {l : List Static}, (∀ s ∈ l, f s = 0) → sumOf f l = 0
+  | [], _ => rfl
+  | s :: l, h => by
+      have := sumOf_eq_zero (l := l) fun x hx => h x (.tail _ hx)
+      simp only [sumOf, List.map_cons, List.sum_cons] at this ⊢
+      rw [h s (.head _), this]
+
+theorem Card.mem_grantStatics {p : PokemonCard} {c : Card} {s : Static}
+    (h : s ∈ c.grantStatics p) : s ∈ c.statics := by
+  cases c with
+  | tool n gr =>
+      simp only [Card.grantStatics] at h
+      split at h
+      · exact h
+      · nomatch h
+  | _ => nomatch h
+
+/-- A static effect a Pokémon in play is the source of is printed on one of its cards. -/
+theorem InPlay.mem_sv_statics {p : InPlay} {s : Static} (h : s ∈ p.sv.statics) :
+    ∃ c ∈ p.cardList, s ∈ c.statics := by
+  simp only [InPlay.sv, SView.statics, List.mem_append] at h
+  rcases h with h | h
+  · exact ⟨.pokemon p.top, .head _, h⟩
+  · obtain ⟨c, hc, hs⟩ := List.mem_flatMap.1 h
+    exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.mem_grantStatics hs⟩
+
+/-- **Every static effect in force is printed on a card of the game.** -/
+theorem GameState.mem_inForce {g : GameState} {w : Whose} {sp : Spot} {p : InPlay}
+    (hp : g.In w sp p) {w' : Whose} {sp' : Spot} {s : Static} (hs : s ∈ g.inForce w' sp' p.sv) :
+    ∃ c ∈ g.allCards, s ∈ c.statics := by
+  have hfield : ∀ (u : Whose) (e : Spot × SView), e ∈ (g.side u).field → s ∈ e.2.statics →
+      ∃ c ∈ g.allCards, s ∈ c.statics := by
+    intro u e he hse
+    obtain ⟨q, hq, he2⟩ := mem_fieldOf he
+    rw [he2] at hse
+    obtain ⟨c, hc, hsc⟩ := InPlay.mem_sv_statics hse
+    exact ⟨c, GameState.cardList_sub hq hc, hsc⟩
+  simp only [GameState.inForce, staticsInForce, List.mem_append, List.mem_filter,
+    List.mem_flatMap] at hs
+  rcases hs with ((⟨h, -⟩ | ⟨e, he, h, -⟩) | ⟨e, he, h, -⟩) | ⟨h, -⟩
+  · obtain ⟨c, hc, hsc⟩ := InPlay.mem_sv_statics h
+    exact ⟨c, hp.cardList_sub hc, hsc⟩
+  · exact hfield _ e he h
+  · exact hfield _ e he h
+  · unfold stadiumStatics at h
+    split at h
+    · nomatch h
+    · next o c hst =>
+        exact ⟨c, by simp only [GameState.allCards, hst, stadiumCardList, List.mem_append,
+          List.mem_singleton, or_true], h⟩
+
+/-- **No static reduction in the cards, none in force** (milestone M6). -/
+theorem GameState.sReduce_of_staticTame {g : GameState} (h : g.StaticTame) : g.sReduce = 0 := by
+  unfold GameState.sReduce
+  split
+  · next a d ha hd =>
+      refine sumOf_eq_zero fun s hs => ?_
+      obtain ⟨c, hc, hsc⟩ := g.mem_inForce (w := .opp) (sp := .active) hd hs
+      have := h c hc s hsc
+      unfold Static.reduceFrom
+      unfold Static.reduces at this
+      split
+      · next n fr he => rw [he] at this; cases this
+      · rfl
+  · rfl
+
 
 /-- **With no static effects, HP is the printed HP.** -/
 theorem GameState.hpOf_noStatics {g : GameState} (hn : g.NoStatics) {w : Whose} {sp : Spot}
@@ -634,5 +850,48 @@ theorem GameState.hpOf_le_hpBound {g : GameState} {w : Whose} {sp : Spot} {p : I
       (g.allCards.length + 1) * (2 * csum Card.hpGain g.allCards) := by
     rw [Nat.mul_comm 2, Nat.mul_assoc]
   omega
+
+/-- Derived HP is below `K` everywhere when `hpBound` of the cards is. -/
+theorem GameState.hpBelow_of_hpBound {g : GameState} {K : Nat} (h : hpBound g.allCards ≤ K) :
+    g.HpBelow K :=
+  fun _ _ _ hp => Nat.le_trans (g.hpOf_le_hpBound hp) h
+
+theorem csum_perm (f : Card → Nat) {C D : List Card} (h : C.Perm D) : csum f C = csum f D := by
+  induction h with
+  | nil => rfl
+  | cons x _ ih => simp only [csum_cons, ih]
+  | swap x y l => simp only [csum_cons]; omega
+  | trans _ _ ih₁ ih₂ => exact ih₁.trans ih₂
+
+theorem maxHp_le {M : Nat} : ∀ {C : List Card}, (∀ p, Card.pokemon p ∈ C → p.hp ≤ M) → maxHp C ≤ M
+  | [], _ => Nat.zero_le _
+  | c :: cs, h => by
+      have ih := maxHp_le (C := cs) fun p hp => h p (.tail _ hp)
+      cases c with
+      | pokemon p => have := h p (.head _); simp only [maxHp]; omega
+      | _ => simpa only [maxHp] using ih
+
+theorem maxHp_perm {C D : List Card} (h : C.Perm D) : maxHp C = maxHp D :=
+  Nat.le_antisymm (maxHp_le fun _ hp => hp_le_maxHp (h.mem_iff.1 hp))
+    (maxHp_le fun _ hp => hp_le_maxHp (h.mem_iff.2 hp))
+
+/-- `hpBound` depends only on the multiset of cards, which play permutes. -/
+theorem hpBound_perm {C D : List Card} (h : C.Perm D) : hpBound C = hpBound D := by
+  simp only [hpBound, maxHp_perm h, csum_perm _ h, h.length_eq]
+
+/-- A card list with no static effect has `hpBound` its largest printed HP. -/
+theorem hpBound_le_of {C : List Card} {k : Nat} (hs : ∀ c ∈ C, c.statics = [])
+    (hh : ∀ p, Card.pokemon p ∈ C → p.hp ≤ k) : hpBound C ≤ k := by
+  have h0 : csum Card.hpGain C = 0 := by
+    have : ∀ D : List Card, (∀ c ∈ D, c.statics = []) → csum Card.hpGain D = 0 := by
+      intro D hD
+      induction D with
+      | nil => rfl
+      | cons c cs ih =>
+          rw [csum_cons, ih fun x hx => hD x (.tail _ hx)]
+          simp only [Card.hpGain, hD c (.head _), sumOf_nil]
+    exact this C hs
+  simp only [hpBound, h0, Nat.mul_zero, Nat.add_zero]
+  exact maxHp_le hh
 
 end Pokemon

@@ -1408,7 +1408,7 @@ theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
 
 /-- Moving a damage counter keeps the weights and the number of Pokémon in play. -/
 theorem CMove.abPot {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
-    (h : CMove f noKO a b a' b') :
+    (h : CMove f noKO hp a b a' b') :
     abWo a' + abWs b' = abWo a + abWs b ∧ optN a' + b'.length = optN a + b.length := by
   cases h with
   | @ab x q b₁ b₂ =>
@@ -2587,13 +2587,18 @@ So the quotient of the reachable states by `xclamp` is a finite transition syste
 moves. Unlike `Reach.finite`, this allows damage reduction, `drain`, and carried and
 rest-of-game modifiers (the latter only from GX attacks and Item and Supporter cards); unlike
 `Reach.finite`, it forbids amounts under `iter`. The bisimulation half holds for all pairs of
-states with equal `xclamp` (`GameState.xclamp_bisim`). The list is not computed and the quotient's moves are not shown
+states with equal `xclamp` (`GameState.xclamp_bisim`). Since milestone M6 the clamp takes its bound,
+`Enum.bound g₀.allCards`, which bounds every derived HP; before it the clamp capped at the printed HP
+and had no parameter. The list is not computed and the quotient's moves are not shown
 computable. -/
 theorem xfinite {g₀ : GameState} (hF : g₀.Faithful) :
-    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧
-      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
-        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
-        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) := by
+    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧
+      ∀ g₁ g₂, Reach g₀ g₁ →
+        g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →
+        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧
+          g₁'.xclamp (Enum.bound g₀.allCards) = g₂'.xclamp (Enum.bound g₀.allCards)) ∧
+        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧
+          g₂'.xclamp (Enum.bound g₀.allCards) = g₁'.xclamp (Enum.bound g₀.allCards)) := by
   obtain ⟨L, hL⟩ := Reach.xclamp_mem_bounded (storeBound g₀)
   exact ⟨⟨L, fun g h => hL g h (reach_boundedStores hF h)⟩,
     fun _ _ h hc => Reach.xclamp_bisim h hc⟩
