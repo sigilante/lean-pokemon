@@ -88,22 +88,24 @@ Prize cards and winning when the last one is taken in the middle of a multi-Priz
   Benched Pokémon have no Special Condition; since M3 a Benched Pokémon may be at or above its HP,
   which is a pending Knock Out, and `Settled` excludes it before every move but the Knock Out
   moves), no reachable state without a winner is stuck (`Reach.progress`), and if a Knock Out is
-  pending, a Knock Out move is legal that takes at least one Prize card and at most the Knocked
-  Out card's Prize count (`Reach.knockOut_of_pending`; with every Prize count 1 this is the
-  earlier statement "exactly one"); a move never changes an Active Pokémon at or above its HP
+  pending, a Knock Out move is legal that Knocks Out a Pokémon in play (Active or Benched, of
+  either player) at or above its HP, and the taker's Prize list shrinks by exactly that
+  Pokémon's Prize count, or by all that are left, which is at least one card
+  (`Reach.knockOut_of_pending`; with every Prize count 1 this is the earlier statement "exactly
+  one"); a move never changes an Active Pokémon at or above its HP
   except by Knocking it Out (`Move.pending_untouched`);
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at the Pokémon's HP the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and
   reduction at `2 · bound` (`bound` is a constant computed from the cards: more than every
   printed HP, every Resistance and every test constant; the factor 2 absorbs Resistance, which is
-  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From a well-formed start whose cards are *tame* (no damage reduction, no
+  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no damage reduction, no
   `drain`) and with no reduction in effect (`GameState.Fit` at `bound`, which
   `GameState.fit_bound` gives), the clamps of all reachable states lie in one finite list, and
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
   `Reach.clamp_sim`), so the excesses the clamp removes cannot be observed by play. This holds
   with the Trainer timing above. The list half alone (`Reach.clamp_mem`) holds from every
-  well-formed start, but without tameness it says nothing about play: for every cap `k ≥ 3`
+  start, but without tameness it says nothing about play: for every cap `k ≥ 3`
   there is a deck with a damage reduction for which the clamp is not a simulation
   (`Lingering.reduce_breaks_clamp`), and for every cap `k ≥ 2` a deck with `drain`
   (`Lingering.drain_breaks_clamp`); with rest-of-game modifiers, a reduction on one player and a
@@ -196,8 +198,8 @@ finiteness; the deck condition `Faithful` buys it back:
   hypothesis on the cards; it holds for all pairs of states with equal `xclamp`, reachable or
   not (the reachability premise of `Reach.xclamp_bisim` is vacuous: take the start to be the
   state itself);
-* **finiteness on bounded stores** (`Reach.xfinite_bounded`, `Pokemon/Bounded.lean`): from a
-  well-formed start, for every `B` one finite list (depending only on the start and `B`)
+* **finiteness on bounded stores** (`Reach.xfinite_bounded`, `Pokemon/Bounded.lean`): from
+  any start, for every `B` one finite list (depending only on the start and `B`)
   contains the `xclamp` of every reachable state satisfying `BoundedStores B` (every slot's
   bonus and reduction at most `B`). The bounded part is not closed under moves, so on its own
   this gives a finite set of classes and a bisimulation that may leave that set, not a finite
@@ -207,7 +209,7 @@ finiteness; the deck condition `Faithful` buys it back:
   only GX attacks write rest-of-game bonuses or reductions (`GXOnly`). Then every reachable state
   satisfies `BoundedStores (storeBound g₀)` (`Faithful.reach_boundedStores`), where `storeBound`
   adds the start stores, the amounts of every Trainer card in the game, and three times the
-  largest amount of one attack; so from a well-formed faithful start the `xclamp`s of all
+  largest amount of one attack; so from any faithful start (well-formed or not) the `xclamp`s of all
   reachable states lie in one finite list, with the two-way bisimulation. The bound rests on
   three facts of the model: no card ever leaves a discard pile (no effect or move returns one),
   so each Item and Supporter is played at most once per game, with no assumption about

@@ -44,7 +44,7 @@ every reachable state, with `storeBound g₀ = storeTotal g₀ + cardsAmt C + 3 
 **Results.**
 * `Faithful.reach_boundedStores`: for a start satisfying `Faithful`, every reachable state has
   stores bounded by `storeBound g₀`.
-* `Faithful.xfinite`: from a well-formed `Faithful` start, the `xclamp`s of all reachable states
+* `Faithful.xfinite`: from any `Faithful` start (well-formed or not), the `xclamp`s of all reachable states
   lie in one finite list, and the kernel of `xclamp` is a two-way bisimulation along reachable
   states. No tameness: damage reduction (Iron Defender), `drain`, carried bonuses and
   reductions, and rest-of-game modifiers from GX attacks are all allowed.
@@ -725,8 +725,8 @@ theorem reach_boundedStores {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach
       modsLe_of (hc .always)⟩,
     ⟨modsLe_of (ho .now), modsLe_of (ho .next), modsLe_of (ho .after), modsLe_of (ho .always)⟩⟩
 
-/-- **Finiteness for faithful decks.** Let `g₀` be a well-formed start state whose cards
-satisfy `Faithful` (no damage bonus or reduction under `iter`; rest-of-game bonuses and
+/-- **Finiteness for faithful decks.** Let `g₀` be any start state (well-formed or not) whose
+cards satisfy `Faithful` (no damage bonus or reduction under `iter`; rest-of-game bonuses and
 reductions only from GX attacks, which the rules make once per player per game). Then
 
 * the `xclamp`s of all states reachable from `g₀` lie in one finite list `L`; and
@@ -740,12 +740,12 @@ rest-of-game modifiers (the latter only from GX attacks and Trainer cards); unli
 `Reach.finite`, it forbids amounts under `iter`. The bisimulation half holds for all pairs of
 states with equal `xclamp` (`GameState.xclamp_bisim`). The list is not computed and the quotient's moves are not shown
 computable. -/
-theorem xfinite {g₀ : GameState} (hw : WellFormed g₀) (hF : g₀.Faithful) :
+theorem xfinite {g₀ : GameState} (hF : g₀.Faithful) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧
       ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
         (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
         (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) := by
-  obtain ⟨L, hL⟩ := Reach.xclamp_mem_bounded hw (storeBound g₀)
+  obtain ⟨L, hL⟩ := Reach.xclamp_mem_bounded (storeBound g₀)
   exact ⟨⟨L, fun g h => hL g h (reach_boundedStores hF h)⟩,
     fun _ _ h hc => Reach.xclamp_bisim h hc⟩
 

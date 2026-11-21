@@ -4,14 +4,17 @@ import Pokemon.Conservation
 # Well-formed states, and no deadlock
 
 `WellFormed` (defined in `Rules`) asks that both players have Prize cards while there is no
-winner, and that every Benched Pokémon is below its HP and has no Special Condition.
+winner, and that every Benched Pokémon has no Special Condition (since milestone M3 a Benched
+Pokémon may be at or above its HP: that is a pending Knock Out, excluded by `Settled`).
 
 * `Move.wellFormed`, `Reach.wellFormed`: legal play preserves it.
 * `Move.progress`, `Reach.progress`: from a well-formed state with no winner some move is
   legal. In particular a pending Knock Out can always be taken: the player who takes the Prize
   has one, and the Pokémon that must be promoted afterwards is on the Bench or the game is won.
 * `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`: with no winner and a pending Knock
-  Out (as after Checkup), a move that Knocks Out an Active Pokémon and takes a Prize is legal.
+  Out (as after Checkup or an attack), a move is legal that Knocks Out a Pokémon in play (Active
+  or Benched, of either player) at or above its HP, and the taker's Prize list shrinks by exactly
+  that Pokémon's Prize count, or by all that are left.
 -/
 
 namespace Pokemon
@@ -408,13 +411,11 @@ theorem PokemonCard.prizeCount_pos (d : PokemonCard) : 0 < d.prizeCount := RuleB
 
 theorem PokemonCard.prizeCount_le (d : PokemonCard) : d.prizeCount ≤ 3 := RuleBox.prizes_le _
 
-/-- Taking `n ≥ 1` Prize cards from a nonempty Prize list leaves fewer, and at most `n` fewer. -/
-theorem takePrizes_length {s : PlayerState} {c : Card} {ps : List Card} (hp : s.prizes = c :: ps)
-    {n : Nat} (hn : 0 < n) :
-    (s.takePrizes n).prizes.length < s.prizes.length ∧
-      s.prizes.length ≤ (s.takePrizes n).prizes.length + n := by
-  simp only [PlayerState.takePrizes, List.length_drop, hp, List.length_cons]
-  exact ⟨by omega, by omega⟩
+/-- Taking `n` Prize cards shrinks the Prize list by exactly `min n` (its length). -/
+theorem takePrizes_length (s : PlayerState) (n : Nat) :
+    (s.takePrizes n).prizes.length + min n s.prizes.length = s.prizes.length := by
+  simp only [PlayerState.takePrizes, List.length_drop]
+  omega
 
 /-- In a well-formed state with no winner, the player to move has a Prize card left. -/
 theorem WellFormed.curPrizes {g : GameState} (hw : WellFormed g) (hn : g.winner = none) :
@@ -432,43 +433,44 @@ theorem WellFormed.oppPrizes {g : GameState} (hw : WellFormed g) (hn : g.winner 
 
 /-- **A pending Knock Out can be taken.** In a well-formed state with no winner and a pending
 Knock Out (for instance between turns, after Checkup, or after an attack that damaged a Benched
-Pokémon), some Knock Out move is legal: it Knocks Out a Pokémon in play (Active or Benched) whose
-card `p` is in the game, and takes at least one Prize card and at most `p.prizeCount` (1, 2 or
-3; fewer only if fewer are left).
+Pokémon), some Knock Out move is legal. It Knocks Out a Pokémon `x` in play whose damage is at
+least its HP: the opponent's Active or Benched Pokémon, and then the player to move takes Prize
+cards, or the player's own, and then the opponent does. The taker's Prize list shrinks by exactly
+`min x.top.prizeCount` (its length): the Knocked Out Pokémon's Prize count (1, 2 or 3), or all
+that are left; the other player's Prize list is unchanged. Since the taker has a Prize card
+(`WellFormed`) and every Prize count is at least 1, at least one Prize card is taken.
 
 Milestone M3 changed the statement. Before it, every Knock Out gave exactly one Prize card and the
 conclusion was that the total of both Prize lists drops by exactly one; that is the case
-`p.prizeCount = 1` of this statement (strictly less, and at most one less), so for decks whose
-Pokémon all give one Prize card the old statement follows. The Knock Out move may now be one of
-a Benched Pokémon (`Move.knockOutBench`, `Move.knockOutBenchOwn`), and it is also a `KOMove`. -/
+`x.top.prizeCount = 1` of this statement. The Knock Out move may now be one of a Benched Pokémon
+(`Move.knockOutBench`, `Move.knockOutBenchOwn`), and it is also a `KOMove`. -/
 theorem Move.knockOut_of_pending {g : GameState} (hw : WellFormed g) (hn : g.winner = none)
     (hk : ¬ DamageBounded g) :
-    ∃ (g' : GameState) (p : PokemonCard), Move g g' ∧ KOMove g g' ∧ Card.pokemon p ∈ g.allCards ∧
-      g'.cur.prizes.length + g'.opp.prizes.length < g.cur.prizes.length + g.opp.prizes.length ∧
-      g.cur.prizes.length + g.opp.prizes.length ≤
-        g'.cur.prizes.length + g'.opp.prizes.length + p.prizeCount := by
+    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧ x.top.hp ≤ x.damage ∧
+      (((g.opp.active = some x ∨ x ∈ g.opp.bench) ∧
+          g'.cur.prizes.length + min x.top.prizeCount g.cur.prizes.length =
+            g.cur.prizes.length ∧ g'.opp.prizes = g.opp.prizes) ∨
+        ((g.cur.active = some x ∨ x ∈ g.cur.bench) ∧
+          g'.opp.prizes.length + min x.top.prizeCount g.opp.prizes.length =
+            g.opp.prizes.length ∧ g'.cur.prizes = g.cur.prizes)) := by
   rcases active_split g.opp.active with ⟨a, ho, hka⟩ | hoa
   · obtain ⟨c, ps, hp⟩ := hw.curPrizes hn
-    have h := takePrizes_length hp a.top.prizeCount_pos
-    exact ⟨_, a.top, .knockOut ho hka hp, .knockOut ho hka hp,
-      GameState.top_mem_opp_active ho, by dsimp only; omega, by dsimp only; omega⟩
+    exact ⟨_, a, .knockOut ho hka hp, .knockOut ho hka hp, hka,
+      .inl ⟨.inl ho, takePrizes_length _ _, rfl⟩⟩
   rcases active_split g.cur.active with ⟨b, hc, hkb⟩ | hca
   · obtain ⟨c, ps, hp⟩ := hw.oppPrizes hn
-    have h := takePrizes_length hp b.top.prizeCount_pos
-    exact ⟨_, b.top, .knockOutOwn hc hkb hp, .knockOutOwn hc hkb hp,
-      GameState.top_mem_cur_active hc, by dsimp only; omega, by dsimp only; omega⟩
+    exact ⟨_, b, .knockOutOwn hc hkb hp, .knockOutOwn hc hkb hp, hkb,
+      .inr ⟨.inl hc, takePrizes_length _ _, rfl⟩⟩
   rcases bench_split g.opp.bench with ⟨b₁, q, b₂, e, hkq⟩ | hob
   · have hm : q ∈ g.opp.bench := by rw [e]; exact List.mem_append_right _ (.head _)
     obtain ⟨c, ps, hp⟩ := hw.curPrizes hn
-    have h := takePrizes_length hp q.top.prizeCount_pos
-    exact ⟨_, q.top, .knockOutBench e hkq hp, .knockOutBench e hkq hp,
-      GameState.top_mem_opp_bench hm, by dsimp only; omega, by dsimp only; omega⟩
+    exact ⟨_, q, .knockOutBench e hkq hp, .knockOutBench e hkq hp, hkq,
+      .inl ⟨.inr hm, takePrizes_length _ _, rfl⟩⟩
   rcases bench_split g.cur.bench with ⟨b₁, q, b₂, e, hkq⟩ | hcb
   · have hm : q ∈ g.cur.bench := by rw [e]; exact List.mem_append_right _ (.head _)
     obtain ⟨c, ps, hp⟩ := hw.oppPrizes hn
-    have h := takePrizes_length hp q.top.prizeCount_pos
-    exact ⟨_, q.top, .knockOutBenchOwn e hkq hp, .knockOutBenchOwn e hkq hp,
-      GameState.top_mem_cur_bench hm, by dsimp only; omega, by dsimp only; omega⟩
+    exact ⟨_, q, .knockOutBenchOwn e hkq hp, .knockOutBenchOwn e hkq hp, hkq,
+      .inr ⟨.inr hm, takePrizes_length _ _, rfl⟩⟩
   refine absurd (fun p hp => ?_) hk
   rcases hp with hp | hp | hp | hp
   · exact hca p hp
@@ -477,14 +479,18 @@ theorem Move.knockOut_of_pending {g : GameState} (hw : WellFormed g) (hn : g.win
   · exact hob p hp
 
 /-- **A pending Knock Out can be taken**, for play: from a well-formed start, every reachable
-state with no winner and a pending Knock Out has a Knock Out move, as in
-`Move.knockOut_of_pending` (statement changed by milestone M3, see there). -/
+state with no winner and a pending Knock Out has a Knock Out move of a Pokémon in play at or
+above its HP, whose taker's Prize list shrinks by exactly that Pokémon's Prize count or all that
+are left, as in `Move.knockOut_of_pending` (statement changed by milestone M3, see there). -/
 theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g)
     (hn : g.winner = none) (hk : ¬ DamageBounded g) :
-    ∃ (g' : GameState) (p : PokemonCard), Move g g' ∧ KOMove g g' ∧ Card.pokemon p ∈ g.allCards ∧
-      g'.cur.prizes.length + g'.opp.prizes.length < g.cur.prizes.length + g.opp.prizes.length ∧
-      g.cur.prizes.length + g.opp.prizes.length ≤
-        g'.cur.prizes.length + g'.opp.prizes.length + p.prizeCount :=
+    ∃ (g' : GameState) (x : InPlay), Move g g' ∧ KOMove g g' ∧ x.top.hp ≤ x.damage ∧
+      (((g.opp.active = some x ∨ x ∈ g.opp.bench) ∧
+          g'.cur.prizes.length + min x.top.prizeCount g.cur.prizes.length =
+            g.cur.prizes.length ∧ g'.opp.prizes = g.opp.prizes) ∨
+        ((g.cur.active = some x ∨ x ∈ g.cur.bench) ∧
+          g'.opp.prizes.length + min x.top.prizeCount g.opp.prizes.length =
+            g.opp.prizes.length ∧ g'.cur.prizes = g.cur.prizes)) :=
   Move.knockOut_of_pending (h.wellFormed h₀) hn hk
 
 /-- Whether a Knock Out is pending is decided by looking at the Pokémon in play (no choice

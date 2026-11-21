@@ -177,7 +177,9 @@ starts only: a deck that is not `Faithful` need not be universal or infinite (ta
 violate clause 2 are finite by `Reach.finite`), and nothing is claimed about other
 non-faithful decks.
 
-1. *Finite side.* For every well-formed start whose cards satisfy `Faithful` (clause 1,
+1. *Finite side.* For every well-formed start whose cards satisfy `Faithful` (well-formedness is
+   not used: `Faithful.xfinite` holds from any start; the premise is kept so the statement is
+   unchanged) (clause 1,
    `LoopFree`: no damage bonus or reduction under `iter`; clause 2, `GXOnly`: rest-of-game
    bonuses and reductions only in GX attacks, which are once per player per game), the
    `xclamp`s of the reachable states lie in one finite list and the kernel of `xclamp` is a
@@ -200,7 +202,7 @@ theorem dichotomy :
       WellFormed (start M a b) ∧ (start M a b).LoopFree ∧ ¬ (start M a b).GXOnly ∧
       ((∃ g, Reach (start M a b) g ∧ HaltMarked g) ↔ M.Halts (Machine.init a b))) ∧
     ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g → g.xclamp ∈ L :=
-  ⟨fun _ hw hF => xfinite hw hF,
+  ⟨fun _ _ hF => xfinite hF,
     fun M a b h => ⟨start_wellFormed M a b, counter_loopFree M a b, counter_not_gxOnly M a b h,
       (universal M a b).2.2.2⟩,
     xclamp_not_finite⟩

@@ -3,7 +3,7 @@ import Pokemon.Sim
 /-!
 # Finiteness
 
-`Reach.finite`, the headline: from a well-formed start state that is `Fit` at
+`Reach.finite`, the headline: from any start state (well-formed or not) that is `Fit` at
 `k = bound g₀.allCards` (tame cards: no damage reduction, no `drain`; no reduction in effect),
 the clamps `clamp k` of all reachable states lie in one finite list, and the kernel of the clamp
 is a bisimulation for moves along reachable states. `bound C` is larger than every printed HP,
@@ -15,7 +15,7 @@ clamped game is a finite transition system that answers every question about leg
 does not read the damage or Poison strength above HP on either Active Pokémon, or a damage bonus
 above `2 * bound`.
 
-`Reach.clamp_mem` is the list-membership half alone, from a well-formed start with no tameness
+`Reach.clamp_mem` is the list-membership half alone, from any start with no tameness
 hypothesis. On its own it says nothing about play: for every cap `k ≥ 3` there is a deck with
 a damage reduction for which the clamp is not a bisimulation (`Lingering.reduce_breaks_clamp`),
 and for every `k ≥ 2` a deck with `drain` (`Lingering.drain_breaks_clamp`); and for some such
@@ -328,7 +328,8 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (h : Reach g₀ g) :
   · obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
     exact hA q (GameState.top_mem_opp_bench hq)
 
-/-- **The clamps of reachable states lie in a finite list.** From a well-formed start state,
+/-- **The clamps of reachable states lie in a finite list.** From any start state (well-formed
+or not),
 there is a finite list of states containing the clamp (`GameState.clamp`) of every reachable
 state.
 
@@ -338,7 +339,7 @@ which questions of play the finite list answers: for every cap `k ≥ 3` there i
 damage reduction (`Lingering.reduce_breaks_clamp`), and for every `k ≥ 2` a deck with `drain`
 (`Lingering.drain_breaks_clamp`), whose clamp kernel is not a simulation, and play can then
 separate states with the same clamp. -/
-theorem Reach.clamp_mem {g₀ : GameState} (_hw : WellFormed g₀) :
+theorem Reach.clamp_mem {g₀ : GameState} :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L := by
   refine ⟨states g₀.allCards, fun g h => mem_states ?_ h.clamp_bounded⟩
   rw [GameState.allCards_clamp]; exact h.perm
@@ -352,7 +353,8 @@ theorem GameState.fit_bound {g₀ : GameState} (ht : ∀ x ∈ g₀.allCards, x.
     exact ⟨by omega, by omega⟩
   · have := tmax_le_cardsTmax hx; simp only [bound]; omega
 
-/-- **Finiteness, for tame decks.** Let `g₀` be a well-formed start state that is `Fit` at
+/-- **Finiteness, for tame decks.** Let `g₀` be any start state (well-formed or not) that is
+`Fit` at
 `k = bound g₀.allCards` (every card tame, that is without damage reduction or `drain`; no damage
 reduction in effect; `GameState.fit_bound` gives this). Then
 
@@ -366,14 +368,14 @@ moves, and any question about play whose answer depends only on the clamp (every
 does not read damage or Poison strength above HP on an Active Pokémon, or a damage bonus above
 `2 * k`) has the same answer in it. The list is not computed, and the move relation of the quotient
 is not shown to be computable, so decidability of such questions is not formalized. -/
-theorem Reach.finite {g₀ : GameState} (hw : WellFormed g₀) (hF : g₀.Fit (bound g₀.allCards)) :
+theorem Reach.finite {g₀ : GameState} (hF : g₀.Fit (bound g₀.allCards)) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L) ∧
       ∀ g₁ g₂, Reach g₀ g₁ → g₁.clamp (bound g₀.allCards) = g₂.clamp (bound g₀.allCards) →
         (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧
             g₁'.clamp (bound g₀.allCards) = g₂'.clamp (bound g₀.allCards)) ∧
         (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧
             g₂'.clamp (bound g₀.allCards) = g₁'.clamp (bound g₀.allCards)) := by
-  refine ⟨Reach.clamp_mem hw, fun g₁ g₂ h hc => ⟨fun g₁' hm => ?_, fun g₂' hm => ?_⟩⟩
+  refine ⟨Reach.clamp_mem, fun g₁ g₂ h hc => ⟨fun g₁' hm => ?_, fun g₂' hm => ?_⟩⟩
   · exact hm.clamp_sim (h.fit hF) hc
   · exact hm.clamp_sim ((h.fit hF).of_clamp hc) hc.symm
 
