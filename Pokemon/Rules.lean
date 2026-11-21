@@ -100,20 +100,30 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, Weakness and type changes, "attack
   twice" and "take another turn", and "that much more damage" (damage taken last turn).
-  **Finiteness is proved only for tame decks** (`Reach.finite`): the clamp, which caps every
-  bonus, is a bisimulation when no card adds a damage reduction or uses `drain` and no
-  reduction is in effect at the start (`GameState.Fit`); for every cap `k ≥ 3` there is a deck
-  with a reduction for which the clamp is not a simulation (`Lingering.reduce_breaks_clamp`),
-  and for every `k ≥ 2` a deck with `drain` (`Lingering.drain_breaks_clamp`); for some such
-  decks (one witness deck, with a reduction and without `drain`) the reachable states are not
-  finite up to any equivalence fine enough to recover the configuration of a two-counter
-  machine, a statement about representation, not play (`Counter.not_finite_up_to`). The
-  rest-of-game modifiers give two unbounded counters with an exact zero test, and the model
+  Finiteness is proved for two classes of decks. *Tame decks* (`Reach.finite`): the clamp
+  `GameState.clamp k`, which caps every bonus and reduction, is a bisimulation when no card adds
+  a damage reduction or uses `drain` and no reduction is in effect at the start
+  (`GameState.Fit`); for every cap `k ≥ 3` there is a deck with a reduction for which that clamp
+  is not a simulation (`Lingering.reduce_breaks_clamp`), and for every `k ≥ 2` a deck with
+  `drain` (`Lingering.drain_breaks_clamp`). *Faithful decks* (`Faithful.xfinite`): the clamp
+  with exact stores, `GameState.xclamp`, is a bisimulation for every deck
+  (`Reach.xclamp_bisim`), and its reachable values are finite when the stores stay bounded
+  (`Reach.xfinite_bounded`), which holds for decks with no damage bonus or reduction under
+  `iter` (`LoopFree`) and rest-of-game bonuses and reductions only in GX attacks (`GXOnly`;
+  `Faithful.reach_boundedStores`). Faithful decks may use damage reduction, `drain`, and
+  carried bonuses and reductions in attacks and Trainers. The bound uses that no card ever
+  leaves a discard pile in this model, so each Trainer card is played at most once per game; a
+  card-recycling effect, "attack twice" or extra turns would break it. The rest-of-game
+  modifiers of non-GX attacks give two unbounded counters with an exact zero test, and the model
   simulates every two-counter machine (`Counter.universal`; this rests on the
   over-approximation of rest-of-game modifiers just described, on `damage` read by a test later
   in the same attack, on a printed HP chosen for the machine, and on the other departures listed
-  in `Pokemon/Counter.lean`); with Minsky's theorem (prose) this rules out a uniform computable
-  finite abstraction of the generalised model;
+  in `Pokemon/Counter.lean`); its start states satisfy `LoopFree` and violate `GXOnly`
+  (`Faithful.dichotomy`); with Minsky's theorem (prose) this rules out a uniform computable
+  finite abstraction of the generalised model; for one such deck the reachable states are not
+  finite up to the exact-store clamp, nor up to any equivalence fine enough to recover the
+  machine's configuration, a statement about representation, not play
+  (`Faithful.xclamp_not_finite`, `Counter.not_finite_up_to`);
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending

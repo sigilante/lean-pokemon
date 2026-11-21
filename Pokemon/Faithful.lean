@@ -22,16 +22,18 @@ permutes cards, so it holds all game):
 `e.amtAt s` to the amounts in slot `s` (`Run.slot_le`, `TRun.slot_le`). The writers are:
 * Item and Supporter cards. A played Trainer goes to the discard pile, and **nothing in this
   model moves a card out of a discard pile**: no effect primitive, Knock Out or other move takes
-  a card from a discard pile to the hand, deck or play (cards move from deck to hand, hand to
-  deck bottom, Prizes to hand, and hand, play and Energy to the discard pile). So every Trainer
-  card is played at most once per game, and the amounts written by Trainers over a whole game
-  are at most the sum `cardsAmt` of their effects' amounts over the cards of the game. This uses
-  no assumption about recycling loops: the model has none.
+  a card from a discard pile to the hand, deck or play (cards move from deck to hand, from hand
+  to deck, play or discard pile, from Prizes to hand, and from play to the discard pile). So
+  every Trainer card is played at most once per game, and the amounts written by Trainers over
+  a whole game are at most the sum `cardsAmt` of their effects' amounts over the cards of the
+  game (the proof tracks the Trainer amounts in the discard piles, which never decrease,
+  `Keeps.disc`). This uses no assumption about recycling loops: the model has none.
 * Attacks. At most one attack per turn (`GameState.attacked`, reset only by `endTurn`), each
   writing at most `A = cardsAtkAmt` (the largest attack amount among the cards). Amounts written
   for this turn, the next or the one after expire within three turn boundaries (`Store.shift`),
-  so at most three attacks' carried amounts are live at once. Rest-of-game amounts come only
-  from GX attacks (clause 2), and the rule change below makes those once per player per game.
+  so at most three attacks' carried amounts are live at once. Rest-of-game amounts written by
+  attacks come only from GX attacks (clause 2), and the rule change below makes those once per
+  player per game.
 
 The invariant (`Faithful.Inv`) bounds, for each slot, the sum over both players by the start
 stores, plus the Trainer amounts already discarded, plus `A` for each attack that can still be

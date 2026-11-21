@@ -41,6 +41,13 @@ What is proved about finiteness.
   in-attack self-damage for which the clamp is not a simulation: the heal reads the bonus exactly, and the attacker's own damage, raised above `k` by
   `selfDamage` earlier in the same attack, shows it.
 
+* Both counterexamples reach two states whose stores differ only above the cap. The clamp with
+  exact stores, `GameState.xclamp` (`Pokemon/Exact.lean`), does not identify them; its kernel is
+  a bisimulation for every deck (`Reach.xclamp_bisim`), and its reachable values are finite for
+  decks with no damage bonus or reduction under `iter` and rest-of-game bonuses and reductions
+  only in GX attacks (`Faithful.xfinite`, `Pokemon/Faithful.lean`); such decks may use damage
+  reduction and `drain`.
+
 Beyond the clamp. For some decks that are not tame the obstacle is not the choice of clamp.
 With modifiers for the rest of the game (`Slot.always`, which never expires), the differences
 between one player's damage reduction and the other's damage bonus are two persistent,

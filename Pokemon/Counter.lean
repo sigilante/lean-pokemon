@@ -14,7 +14,8 @@ to `q`; `jz r q₁ q₂`: if counter `r` is zero go to `q₁`, else decrement it
 two counters, `Machine.Step` the (deterministic) step relation, `Machine.Reaches` its
 reflexive-transitive closure, `Machine.Halts c₀` reachability of a halted configuration.
 
-**The construction** (`start M a b`, cards `clock M` and `tape M`, no change to the rules). The
+**The construction** (`start M a b`, cards `clock M` and `tape M`; the rules as they are: neither
+attack is a GX attack, so the once-per-game rule for GX attacks does not apply). The
 first player has one Pokémon, the Clock, the second one, the Tape; no Bench; one Energy card in
 each deck-and-hand; one Prize card each.
 * Counters. The rest-of-game slot (`Slot.always`) never expires. Counter one is the second
@@ -78,7 +79,9 @@ legal play.
    an attack's effect that is used every turn (`linger` is a general primitive here), including
    an attack that grants the *opponent* a rest-of-game damage reduction
    (`linger .opp .always (reduce 1)`). Printed cards give rest-of-game modifiers only through
-   once-per-game attacks (GX attacks; survey S7 §C).
+   once-per-game attacks (GX attacks; survey S7 §C). Neither attack here is a GX attack
+   (`Attack.gx = false`); this is exactly the clause `GXOnly` of `GameState.Faithful` that the
+   construction violates (`Faithful.counter_not_gxOnly`, in `Pokemon/Dichotomy.lean`).
 2. `damage` read by a test later in the same attack (`ite (exactly opp v)` after `damage 1`):
    this uses the model's freedom to order primitives inside one effect.
 3. Arbitrary printed HP: the Clock's HP, `3 · span + 1`, grows with the machine.
@@ -1312,8 +1315,9 @@ two-counter machines, reachability in the model so generalised is undecidable; t
 is not formalised here. The construction uses these generalisations (the module docstring
 gives details): (1) damage bonuses and reductions for the rest of the game that add up without
 limit (`linger … .always`, inside attacks used every turn), including a reduction granted to the
-opponent (printed cards give rest-of-game modifiers only through once-per-game attacks, survey
-S7 §C); (2) `damage` read by a test later in the same attack (`ite (exactly opp v)` after
+opponent, by attacks that are not GX attacks (printed cards give rest-of-game modifiers only
+through once-per-game attacks, survey S7 §C; the model's GX rule would allow one such attack per
+player per game); (2) `damage` read by a test later in the same attack (`ite (exactly opp v)` after
 `damage 1`), using the model's freedom to order primitives; (3) a printed HP chosen for the
 machine (the Clock has HP `3 · span + 1`); (4) a halt mark placed on the player's own Pokémon
 (printed markers target the opponent; this affects only the observable); (5) a hand-built start
