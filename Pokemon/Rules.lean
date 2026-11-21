@@ -123,10 +123,27 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the same attack or Checkup the first Knock Out taken decides the game: there is no Sudden
   Death (2023 rulebook p. 21), no tiebreaker game (2026, S8 J4), and no "if you win in both ways
   and your opponent wins in only one way, you are the victor" (p. 21). A promotion may also be
-  made while a Benched Pokémon's Knock Out is pending, and may promote that Pokémon, which is
-  then Knocked Out from the Active Spot: the cards and Prize cards are the same, but the model
-  has orders of Knock Outs and promotions that the rulebook's "Knock Outs, then a new Active
-  Pokémon" does not. A player with no Pokémon to promote loses at once. A Knock Out gives the
+  made while a Benched Pokémon's Knock Out is pending, and may promote that Pokémon.
+  DEPARTURE (since milestone M6): with derived HP the order of Knock Outs and promotions changes
+  the outcome, and the model's one-at-a-time Knock Outs depart from the rulebook's single check
+  ("check to see if any Pokémon were Knocked Out by the attack … check every Pokémon that was
+  affected", and only then is a new Active Pokémon chosen; 2023 rulebook p. 14) in both
+  directions. (i) A Pokémon the rule Knocks Out can survive in the model: a Benched Pokémon with
+  printed HP 3 and a static "+3 HP while in the Active Spot" takes 3 counters from the attack that
+  Knocks Out its owner's Active Pokémon; the model takes the Active Pokémon's Knock Out first and
+  promotes the Benched Pokémon while its own Knock Out is pending, and in the Active Spot its HP
+  is 6, so it is no longer pending (`StaticWitness.promotion_rescues`). (ii) A double Knock Out
+  the rule takes is unreachable in the model: two Pokémon of one player each carry a static "your
+  Pokémon get −1 HP" (own selector) and are at HP 2 with 2 counters; whichever Knock Out is taken
+  first raises the other's HP to 3, so it is never Knocked Out by that attack
+  (`StaticWitness.double_knockOut_lost`, proved for both orders; that no other move intervenes is
+  read off the state, not proved). So in this respect the model is neither a
+  superset nor a subset of rulebook play. The finiteness and bisimulation theorems
+  (`Reach.finite`, `Faithful.xfinite`, `Reach.xclamp_bisim` and the rest) are statements about the
+  model's moves and are unaffected; what they do not cover is play the model lacks, and they
+  include play the rulebook lacks. The planned repair is a batch Knock Out step: compute the set
+  of pending Knock Outs once, remove those Pokémon together, and promote only afterwards. A
+  player with no Pokémon to promote loses at once. A Knock Out gives the
   Prize cards of the Knocked Out Pokémon's rule box (`PokemonCard.prizeCount`: 1, 2 for
   Pokémon ex, 3 for Mega Evolution Pokémon ex), the top ones of the Prize list
   (`PlayerState.takePrizes`); with fewer left, all are taken and the taker wins
@@ -152,7 +169,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   owner's choice, but outcomes in which later steps of the effect find an empty Active Spot
   are absent from the model); when a Prize ends the game, or its owner has no Pokémon to promote, the
   game ends and the rest of the effect is not resolved. Several Knock Outs after one step are
-  taken by `Resolve` in any order, as after an attack;
+  taken by `Resolve` in any order, as after an attack (with the same departure from a single
+  check);
 * a Knock Out takes the top Prize cards of the Prize list, whereas the rulebook lets the player
   choose which Prize cards to take (a finite choice);
 * HP is derived (milestone M6; the survey's loophole L1): `GameState.hpOf` is the printed HP plus
@@ -176,7 +194,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   or per named Pokémon in play (Brambleghast, Pangoro, Nidoking), effects that read "remaining HP"
   (Rescue Board), and Special Energy HP bonuses (no Special Energy). Before milestone M6 HP was the
   printed value, and the clamps capped damage there; they now cap at a bound on every derived HP
-  (`hpBound`, `Enum.bound`);
+  (`hpBound`, `Enum.bound`). A Pokémon whose derived HP is 0 (its `hpMinus` effects reach its
+  printed HP plus its `hpPlus` effects) is a pending Knock Out at once, with no damage on it;
 * markers (`Marks`): Imprison, Shock-wave, Lightning Rod and Char are flags, and the Coloring
   counter is a type. The printed Imprison and Shock-wave counts are uncapped, but only "has
   any" is read and removal takes them all, so a flag is exact for them (`Markers.flag_exact`;
@@ -279,9 +298,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   finiteness easier than the real game's was HP modifiers: the clamps capped damage at printed HP,
   and `Settled` forced a Knock Out at printed HP. Since M6 HP is derived (item above): the clamps
   cap damage and Poison strength at a bound `K` on every derived HP (`hpBound`, a function of the
-  cards of the game), and `Reach.finite` and `Faithful.xfinite` hold with the clamp at that bound;
-  `Fit` (for `Reach.finite`) also excludes static damage reductions, which break the capped clamp
-  as stored ones do. The other static
+  cards of the game), and `Reach.finite` and `Faithful.xfinite` hold with the clamp at that bound
+  (`GameState.xclamp_bisim` is stated at `K = Enum.bound` of the state's cards, and holds at any
+  larger `K`, `GameState.xclamp_bisim_of_le`);
+  for `Reach.finite` the bound also exceeds every Resistance plus the static damage reductions the
+  cards can put in force (`sReduceBound`): unlike a stored reduction, a static one is bounded by the
+  cards (`GameState.sReduce_le`), so tame decks may have them. The other static
   omissions are milder: static damage bonuses and reductions, Bench-size and cost changes are
   constants of a card, not stored amounts; Ability and Tool locks only remove behaviour; triggered
   Tools add behaviour. The

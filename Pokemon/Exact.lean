@@ -30,12 +30,13 @@ clamps only what Knock Outs make irrelevant.
 * `Reach.xclamp_bisim`, `GameState.xclamp_bisim`: with `k` computed from the cards, the kernel
   of `xclamp` is a two-way bisimulation for every deck. The first is stated along states
   reachable from a start `g₀`; that premise is vacuous (take `g₀ = g₁`), and the second states
-  it for all pairs of states with equal `xclamp`.
+  it for all pairs of states with equal `xclamp`; `GameState.xclamp_bisim_of_le` states it at any
+  bound at least `Enum.bound` of the cards.
 
 Why this works, reader by reader. Two states with the same `xrclamp` have identical stores,
 hands, decks, discard piles, flags and markers, and the same Pokémon in play (both Active
 Pokémon and, since milestone M3, every Benched Pokémon, which effects can damage, heal and switch
-into the Active Spot) except in Poison strength above HP.
+into the Active Spot) except in Poison strength above the bound `K`.
 * The damage step (`damage a`, `drain a`): the amount evaluates the same (`Amt.Val.of_xrclamp`),
   Weakness and Resistance are read from the same cards and types, and the stores are equal, so
   `dealtBy` is the same in both states, however large and whether or not a reduction offsets a
@@ -45,7 +46,8 @@ into the Active Spot) except in Poison strength above HP.
 * Locks and prevention are flags in the stores, which are equal: the same attacks, retreats and
   Items are legal, and prevention zeroes damage in both states alike.
 * Checkup reads damage only from `Settled` states (`endTurn` requires `DamageBounded`), where
-  capping at HP loses nothing, and Poison strength above HP adds at least HP either way.
+  every damage is below its HP and so below `K`, and capping at `K` loses nothing; Poison strength
+  at or above `K` adds at least `K`, so at least the derived HP, either way.
 * Store shifting at `endTurn` acts on equal stores.
 * Every move that resolves an effect (an attack, an Item, a Supporter, each step of a Trainer
   effect under `TRun`) starts `Settled`, where `xclamp` and `xrclamp` agree; Knock Outs read
@@ -72,7 +74,7 @@ everything else, exact. -/
 def GameState.xclamp (K : Nat) (g : GameState) : GameState := g.xclampAt K .hp .hp .hp
 
 /-- The relation used inside an attack's effect: damage on every Pokémon in play exact, Poison
-strength capped at HP, the stores exact. (Before milestone M4 the opponent's damage was capped
+strength capped at `K` (milestone M6: before it, at the printed HP), the stores exact. (Before milestone M4 the opponent's damage was capped
 at a constant `k` here. An attack's damage step can now read the opponent's damage (`Amt.per`)
 and, through `drain`, write the amount to the player's own Pokémon, so damage above any cap can
 reach the attacker's exact damage; inside an attack damage is therefore kept exact. Every move
@@ -772,9 +774,9 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
 
 /-! ## Moves -/
 
-/-- The conditions under which the kernel of `xclamp` is a bisimulation for moves: every
-Pokémon card has HP and Resistance at most `k` (`GameState.HpLe`), and every card's test
-constants are below `k`. Nothing about modifiers, damage reduction or `drain`. (Since milestone
+/-- The conditions under which the kernel of `xclamp` is a bisimulation for moves: `hpBound` of
+the cards, which bounds every derived HP, and every Resistance are at most `k` (`GameState.HpLe`;
+milestone M6: before it, every printed HP), and every card's test constants are below `k`. Nothing about modifiers, damage reduction or `drain`. (Since milestone
 M4 damage inside an attack is kept exact, so the proof of `Move.xclamp_sim` no longer needs the
 bound on HP and Resistance; the definition keeps it, and the statements are unchanged.) -/
 def GameState.XFit (k : Nat) (g : GameState) : Prop :=
@@ -1224,7 +1226,8 @@ theorem Reach.xclamp_bisim {g₀ g₁ g₂ : GameState} (h : Reach g₀ g₁)
 two states with the same `xclamp`, reachable or not, every move from either is matched by a
 move from the other to a state with the same `xclamp`. The reachability premise of
 `Reach.xclamp_bisim` is vacuous: take the start to be `g₁` itself (`Reach.refl`). The clamp's
-bound is `Enum.bound g₁.allCards` (milestone M6; see `Reach.xclamp_bisim`). -/
+bound is `Enum.bound g₁.allCards` (milestone M6; see `Reach.xclamp_bisim`); the same holds at any
+larger bound (`GameState.xclamp_bisim_of_le`). -/
 theorem GameState.xclamp_bisim {g₁ g₂ : GameState}
     (hc : g₁.xclamp (Enum.bound g₁.allCards) = g₂.xclamp (Enum.bound g₁.allCards)) :
     (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧
@@ -1232,5 +1235,21 @@ theorem GameState.xclamp_bisim {g₁ g₂ : GameState}
       (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧
         g₂'.xclamp (Enum.bound g₁.allCards) = g₁'.xclamp (Enum.bound g₁.allCards)) :=
   Reach.xclamp_bisim (.refl g₁) hc
+
+/-- `XFit` is monotone in its bound. -/
+theorem GameState.XFit.mono {k K : Nat} {g : GameState} (h : g.XFit k) (hK : k ≤ K) : g.XFit K :=
+  ⟨⟨Nat.le_trans h.1.1 hK, fun p hp => Nat.le_trans (h.1.2 p hp) hK⟩,
+    fun x hx => Nat.lt_of_lt_of_le (h.2 x hx) hK⟩
+
+/-- **`GameState.xclamp_bisim` at any larger bound.** The exact-store clamp at any `K` at least
+`Enum.bound g₁.allCards` is a two-way bisimulation on all pairs of states with the same `xclamp K`:
+`XFit` is monotone in its bound (`GameState.XFit.mono`). -/
+theorem GameState.xclamp_bisim_of_le {K : Nat} {g₁ g₂ : GameState}
+    (hK : Enum.bound g₁.allCards ≤ K) (hc : g₁.xclamp K = g₂.xclamp K) :
+    (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp K = g₂'.xclamp K) ∧
+      (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp K = g₁'.xclamp K) := by
+  have hF := (GameState.xfit_bound g₁).mono hK
+  exact ⟨fun g₁' hm => hm.xclamp_sim hF hc,
+    fun g₂' hm => hm.xclamp_sim (hF.of_xclamp hc) hc.symm⟩
 
 end Pokemon
