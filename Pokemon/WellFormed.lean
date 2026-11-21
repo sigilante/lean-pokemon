@@ -16,9 +16,14 @@ winner, and that every Benched Pokémon is below its HP and has no Special Condi
 
 namespace Pokemon
 
-/-- What resolving an effect never changes. -/
+/-- A Pokémon with its markers removed. -/
+def InPlay.unmarked (p : InPlay) : InPlay := { p with marks := Marks.empty }
+
+/-- What resolving an effect never changes: the Benches except for markers, the Prizes, the
+winner, who is first, and the phase of the turn. -/
 def Run.Frame (g g' : GameState) : Prop :=
-  g'.cur.bench = g.cur.bench ∧ g'.opp.bench = g.opp.bench ∧
+  g'.cur.bench.map InPlay.unmarked = g.cur.bench.map InPlay.unmarked ∧
+    g'.opp.bench.map InPlay.unmarked = g.opp.bench.map InPlay.unmarked ∧
     g'.cur.prizes = g.cur.prizes ∧ g'.opp.prizes = g.opp.prizes ∧
     g'.winner = g.winner ∧ g'.curIsFirst = g.curIsFirst ∧ g'.between = g.between
 
@@ -38,15 +43,48 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
       obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := ih₂
       exact ⟨b1.trans a1, b2.trans a2, b3.trans a3, b4.trans a4, b5.trans a5, b6.trans a6,
         b7.trans a7⟩
+  | @touchActive e w f g p he h => cases w <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | @touchBench e w f g q b₁ b₂ he h =>
+      cases w <;> simp only [GameState.side] at h <;>
+        exact ⟨by simp [GameState.updSide, h, InPlay.unmarked, InPlay.setMarks],
+          by simp [GameState.updSide, h, InPlay.unmarked, InPlay.setMarks], rfl, rfl, rfl, rfl,
+          rfl⟩
+  | unmark w m g =>
+      cases w <;>
+        exact ⟨by simp [GameState.updSide, PlayerState.unmark, InPlay.unmarked, InPlay.setMarks],
+          by simp [GameState.updSide, PlayerState.unmark, InPlay.unmarked, InPlay.setMarks],
+          rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- Markers do not matter to `Benched`. -/
+theorem benched_of_map {b b' : List InPlay}
+    (h : b'.map InPlay.unmarked = b.map InPlay.unmarked) (hb : ∀ p ∈ b, Benched p) :
+    ∀ p ∈ b', Benched p := by
+  intro p hp
+  have hm : p.unmarked ∈ b.map InPlay.unmarked := h ▸ List.mem_map_of_mem hp
+  obtain ⟨q, hq, e⟩ := List.mem_map.1 hm
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hb q hq
+  have ed : q.damage = p.damage := by
+    have := congrArg InPlay.damage e; exact this
+  have et : q.top = p.top := by
+    have := congrArg InPlay.top e; exact this
+  have er : q.rot = p.rot := by
+    have := congrArg InPlay.rot e; exact this
+  have ep : q.poisoned = p.poisoned := by
+    have := congrArg InPlay.poisoned e; exact this
+  have eb : q.burned = p.burned := by
+    have := congrArg InPlay.burned e; exact this
+  have eu : q.poisonUp = p.poisonUp := by
+    have := congrArg InPlay.poisonUp e; exact this
+  exact ⟨ed ▸ et ▸ h1, er ▸ h2, ep ▸ h3, eb ▸ h4, eu ▸ h5⟩
 
 theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Frame g g') :
     WellFormed g' := by
   obtain ⟨f1, f2, f3, f4, f5, _, _⟩ := hf
   refine ⟨fun hn => ?_, ?_, ?_⟩
   · rw [f3, f4]; exact hw.1 (f5 ▸ hn)
-  · rw [f1]; exact hw.2.1
-  · rw [f2]; exact hw.2.2
+  · exact benched_of_map f1 hw.2.1
+  · exact benched_of_map f2 hw.2.2
 
 theorem mem_append_cons_of_mem {α : Type} {x : α} {b₁ b₂ : List α} (y : α)
     (h : x ∈ b₁ ++ b₂) : x ∈ b₁ ++ y :: b₂ := by
@@ -176,7 +214,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
       refine ⟨hw.1, fun p hp => hw.2.1 p ?_, hw.2.2⟩
       rw [hb]; exact mem_append_cons_of_mem _ hp
   | noPokemonOwn ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
-  | endTurn fa sa fb sb ha hb hk hbt =>
+  | endTurn fa sa ca fb sb cb ha hb hk hbt =>
       refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hw.2.2, fun p hp => ?_⟩
       obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
       exact hw.2.1 q hq
@@ -215,7 +253,7 @@ theorem Move.progress {g : GameState} (hw : WellFormed g) (hn : g.winner = none)
         · rw [ho] at hp; cases hp; exact hka
         · exact (hw.2.2 p hp).1
       match hbt : g.between with
-      | false => exact ⟨_, .endTurn false false false false ho hc hk hbt⟩
+      | false => exact ⟨_, .endTurn false false false false false false ho hc hk hbt⟩
       | true =>
           match hd : g.cur.deck with
           | [] => exact ⟨_, .deckOut hbt ho hc hk hd⟩

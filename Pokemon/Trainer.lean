@@ -215,7 +215,9 @@ theorem selfKO_reachable :
 
 /-! ## A Knock Out, a promotion, and a hit on the new Active Pokémon, within one Item -/
 
-/-- Flip until tails, 5 damage counters on the opponent's Active Pokémon for each heads. -/
+/-- As often as you like, put 5 damage counters on the opponent's Active Pokémon. (Read as
+"flip until tails, 5 counters for each heads", the outcome of `koThenHit_reachable` is an
+artefact of the check between primitives, since the printed card places its counters at once.) -/
 def hitItem : Card := .trainer "Hit" .item (.iter (.counters 5))
 
 /-- The opponent has a 50-HP Active Pokémon and a 100-HP Pokémon on the Bench; the player to

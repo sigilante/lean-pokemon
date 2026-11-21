@@ -7,8 +7,8 @@ import Pokemon.State
 nondeterministic: player choices, coin flips and shuffles are all branches of it. That is
 the right shape for reachability questions, and it is silent about probability.
 
-Effects read the state only through the two Active Pokémon: a test (`ite`) on the damage or
-the Special Conditions of either one, and `scale`, which places counters in proportion to the
+Effects read the state only through the two Active Pokémon: a test (`ite`) on the damage, the
+Special Conditions, the markers or the type of either one, and `scale`, which places counters in proportion to the
 damage on either one. Inside one `Run` nothing is Knocked Out, so damage may exceed HP and
 these reads see the excess. `Run` is the semantics of an attack's effect, where the rulebook
 checks for Knock Outs only at the end of the attack. The effect of an Item or Supporter card is
@@ -26,6 +26,18 @@ def Effect.isPrim : Effect → Bool
   | .choice .. => false
   | .iter .. => false
   | _ => true
+
+/-- The effects that change the markers of one Pokémon in play: whose Pokémon, and how
+(`mark` sets a marker; `color` replaces the Coloring counter). -/
+def Effect.touch : Effect → Option (Whose × (Marks → Marks))
+  | .mark w m => some (w, Marks.set m true)
+  | .color w t => some (w, fun k => { k with coloring := some t })
+  | _ => none
+
+/-- Remove the marker `m` from every Pokémon of one player. -/
+def PlayerState.unmark (m : Marker) (s : PlayerState) : PlayerState :=
+  { s with active := s.active.map (InPlay.setMarks (Marks.set m false)),
+           bench := s.bench.map (InPlay.setMarks (Marks.set m false)) }
 
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g
@@ -69,6 +81,16 @@ inductive Run : Effect → GameState → GameState → Prop where
         { g with cur := { g.cur with active := some { p with damage := p.damage + n } } }
   | healAll {g : GameState} {p : InPlay} (h : g.cur.active = some p) :
       Run .healAll g { g with cur := { g.cur with active := some { p with damage := 0 } } }
+  /-- `mark` or `color` on the `w` player's Active Pokémon -/
+  | touchActive {e : Effect} {w : Whose} {f : Marks → Marks} {g : GameState} {p : InPlay}
+      (he : e.touch = some (w, f)) (h : (g.side w).active = some p) :
+      Run e g (g.updSide w fun s => { s with active := some (p.setMarks f) })
+  /-- `mark` or `color` on one of the `w` player's Benched Pokémon -/
+  | touchBench {e : Effect} {w : Whose} {f : Marks → Marks} {g : GameState} {q : InPlay}
+      {b₁ b₂ : List InPlay} (he : e.touch = some (w, f)) (h : (g.side w).bench = b₁ ++ q :: b₂) :
+      Run e g (g.updSide w fun s => { s with bench := b₁ ++ q.setMarks f :: b₂ })
+  | unmark (w : Whose) (m : Marker) (g : GameState) :
+      Run (.unmark w m) g (g.updSide w (PlayerState.unmark m))
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

@@ -4,10 +4,14 @@ A Lean 4 model of the Pokémon Trading Card Game, built to settle whether the ga
 complete. The working hypothesis is that it is not: the game has no token generation, and a
 Pokémon whose damage reaches its HP is Knocked Out, so no usable unbounded store exists.
 
-Status: early. The model covers a core of the rules: state; an effect language of seventeen
-primitives, including the five Special Conditions, a cure, Croagunk's stacking Poison ("This
-effect can be applied more than once"), and effects that read the state: a test on either
-Active Pokémon (at least `n` damage counters, exactly `n`, a Special Condition), placing `k`
+Status: early. The model covers a core of the rules: state; an effect language of sixteen
+primitive effects and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
+once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
+type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
+Active Pokémon at Checkup), and effects that read the state: a test on either
+Active Pokémon (at least `n` damage counters, exactly `n`, a Special Condition, a marker, a
+type), placing `k`
 counters on the opponent's Active Pokémon for each damage counter on either Active Pokémon
 (Lunala's doubling is the case `k = 1` on the opponent's), damage to the player's own Active
 Pokémon, and healing all of its damage; a move relation in which an Asleep or Paralyzed
@@ -47,6 +51,11 @@ Sleep, Paralysis, then Knock Outs). For that model it proves:
   clamps of all reachable states lie in one finite list. The clamp is a bisimulation for moves
   (`Move.clamp_sim`, `Reach.clamp_sim`), so these excesses cannot be observed by play. Both hold
   with the Trainer timing above.
+
+Markers do not change the statements: they are finitely many flags per Pokémon, not clamped, and
+enumerated by `Reach.finite`. Printed Imprison and Shock-wave markers are uncapped counts; a flag
+is exact for them because the cards only place one, remove all, and test for any
+(`Markers.flag_exact`), and this is a stated assumption about the card pool.
 
 Effects that read damage do not break finiteness, but they change why it holds. Inside an
 attack's effect the clamp is not a simulation: a test against 6 counters separates 5 from 6

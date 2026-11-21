@@ -33,6 +33,16 @@ theorem benchCardList_unfresh (b : List InPlay) :
   | nil => rfl
   | cons p ps ih => simp only [List.map, benchCardList, ih]; rfl
 
+theorem optCardList_setMarks (f : Marks → Marks) (o : Option InPlay) :
+    optCardList (o.map (InPlay.setMarks f)) = optCardList o := by
+  cases o <;> rfl
+
+theorem benchCardList_setMarks (f : Marks → Marks) (b : List InPlay) :
+    benchCardList (b.map (InPlay.setMarks f)) = benchCardList b := by
+  induction b with
+  | nil => rfl
+  | cons p ps ih => simp only [List.map, benchCardList, ih]; rfl
+
 theorem benchCardList_append (a b : List InPlay) :
     benchCardList (a ++ b) = benchCardList a ++ benchCardList b := by
   induction a with
@@ -77,6 +87,16 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | scale w k hs h => perm_count [h]
   | selfDamage n h => perm_count [h]
   | healAll h => perm_count [h]
+  | @touchActive e w f g p he h =>
+      cases w <;> simp only [GameState.side] at h <;>
+        perm_count [h, GameState.updSide, InPlay.setMarks]
+  | @touchBench e w f g q b₁ b₂ he h =>
+      cases w <;> simp only [GameState.side] at h <;>
+        perm_count [h, GameState.updSide, InPlay.setMarks]
+  | unmark w m g =>
+      cases w <;>
+        simp only [GameState.allCards, PlayerState.allCards, GameState.updSide,
+          PlayerState.unmark, optCardList_setMarks, benchCardList_setMarks] <;> exact .refl _
   | shuffle h =>
       have := fun x => h.count_eq x
       perm_count [this]
@@ -143,7 +163,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | knockOutOwn ha hk hp => perm_count [ha, hp]
   | promoteOwn ha hb => perm_count [ha, hb]
   | noPokemonOwn ha hb => exact .refl _
-  | endTurn fa sa fb sb ha hb hk hbt =>
+  | endTurn fa sa ca fb sb cb ha hb hk hbt =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh,
         benchCardList_unfresh]
       perm_count [ha, hb, InPlay.checkup, InPlay.unfresh]

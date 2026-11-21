@@ -96,6 +96,7 @@ structure Agree (c : Bool) (q p : InPlay) : Prop where
   poisoned : q.poisoned = p.poisoned
   burned : q.burned = p.burned
   fresh : q.fresh = p.fresh
+  marks : q.marks = p.marks
   damage : (if c then min q.damage q.top.hp else q.damage)
     = (if c then min p.damage p.top.hp else p.damage)
   poisonUp : min q.poisonUp q.top.hp = min p.poisonUp p.top.hp
@@ -112,14 +113,15 @@ theorem agree_of_clamp {c : Bool} {q p : InPlay} (h : q.clampWith c = p.clampWit
   have h8 := congrArg InPlay.fresh h
   have h9 := congrArg InPlay.damage h
   have h10 := congrArg InPlay.poisonUp h
-  exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩
+  have h11 := congrArg InPlay.marks h
+  exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h9, h10⟩
 
 theorem clamp_of_agree {c : Bool} {q p : InPlay} (h : Agree c q p) :
     q.clampWith c = p.clampWith c := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := h
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h9, h10⟩ := h
   cases q; cases p
-  simp only at h1 h2 h3 h4 h5 h6 h7 h8 h9 h10
-  subst h1 h2 h3 h4 h5 h6 h7 h8
+  simp only at h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11
+  subst h1 h2 h3 h4 h5 h6 h7 h8 h11
   simp only [clampWith, h9, h10]
 
 theorem Agree.damage_eq_of_lt {c : Bool} {q p : InPlay} (h : Agree c q p)
@@ -146,23 +148,24 @@ theorem Agree.cardList {c : Bool} {q p : InPlay} (h : Agree c q p) : q.cardList 
 /-- Agreement with equal damage, at any cap. -/
 theorem Agree.recap {c c' : Bool} {q p : InPlay} (h : Agree c q p) (hd : q.damage = p.damage) :
     Agree c' q p :=
-  ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
+  ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks,
     by rw [hd, h.top], h.poisonUp⟩
 
 theorem Agree.of_eq {c : Bool} {q p : InPlay} (h1 : q.top = p.top) (h2 : q.under = p.under)
     (h3 : q.energy = p.energy) (h4 : q.tools = p.tools) (h5 : q.rot = p.rot)
     (h6 : q.poisoned = p.poisoned) (h7 : q.burned = p.burned) (h8 : q.fresh = p.fresh)
+    (h11 : q.marks = p.marks)
     (hd : q.damage = p.damage) (hu : min q.poisonUp q.top.hp = min p.poisonUp p.top.hp) :
     Agree c q p :=
-  ⟨h1, h2, h3, h4, h5, h6, h7, h8, by rw [hd, h1], hu⟩
+  ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, by rw [hd, h1], hu⟩
 
 /-- With equal damage, agreeing Pokémon differ at most in Poison strength. -/
 theorem Agree.eq_upd {c : Bool} {q p : InPlay} (h : Agree c q p) (hd : q.damage = p.damage) :
     q = { p with poisonUp := q.poisonUp } := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, _, _⟩ := h
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, _, _⟩ := h
   cases q; cases p
-  simp only at h1 h2 h3 h4 h5 h6 h7 h8 hd
-  subst h1 h2 h3 h4 h5 h6 h7 h8 hd
+  simp only at h1 h2 h3 h4 h5 h6 h7 h8 h11 hd
+  subst h1 h2 h3 h4 h5 h6 h7 h8 h11 hd
   rfl
 
 theorem clampWith_setPoisonUp {c : Bool} (x : InPlay) (u : Nat)
@@ -200,14 +203,15 @@ theorem InPlay.Agree.upd {c : Bool} {q p : InPlay} (h : Agree c q p) :
   have hu := h.poisonUp
   rw [h.top] at hd hu
   refine ⟨fun e => ⟨h.top, h.under, rfl, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
-      h.damage, h.poisonUp⟩,
-    fun n => ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, ?_,
-      h.poisonUp⟩,
-    fun n => ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
+      h.marks, h.damage, h.poisonUp⟩,
+    fun n => ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks,
+      ?_, h.poisonUp⟩,
+    fun n => ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks,
       h.damage, ?_⟩,
     fun k => ?_,
-    ⟨h.top, h.under, h.energy, h.tools, rfl, rfl, rfl, h.fresh, h.damage, by simp [InPlay.cure]⟩,
-    ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, rfl, h.damage,
+    ⟨h.top, h.under, h.energy, h.tools, rfl, rfl, rfl, h.fresh, h.marks, h.damage,
+      by simp [InPlay.cure]⟩,
+    ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, rfl, h.marks, h.damage,
       h.poisonUp⟩⟩
   · show (if c then min (q.damage + n) q.top.hp else q.damage + n)
       = (if c then min (p.damage + n) p.top.hp else p.damage + n)
@@ -217,32 +221,50 @@ theorem InPlay.Agree.upd {c : Bool} {q p : InPlay} (h : Agree c q p) :
     rw [h.top]; omega
   · cases k <;>
       exact ⟨h.top, h.under, h.energy, h.tools, by first | rfl | exact h.rot,
-        by first | rfl | exact h.poisoned, by first | rfl | exact h.burned, h.fresh,
+        by first | rfl | exact h.poisoned, by first | rfl | exact h.burned, h.fresh, h.marks,
         h.damage, h.poisonUp⟩
+
+/-- Agreement survives a change of markers. -/
+theorem InPlay.Agree.setMarks {c : Bool} {q p : InPlay} (h : Agree c q p) (f : Marks → Marks) :
+    Agree c (q.setMarks f) (p.setMarks f) :=
+  ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
+    by simp only [InPlay.setMarks, h.marks], h.damage, h.poisonUp⟩
+
+theorem InPlay.clampWith_setMarks (c : Bool) (f : Marks → Marks) :
+    InPlay.clampWith c ∘ InPlay.setMarks f = InPlay.setMarks f ∘ InPlay.clampWith c := rfl
+
+/-- Removing markers from an Active Spot commutes with agreement. -/
+theorem map_clamp_setMarks {c : Bool} (f : Marks → Marks) {o₁ o₂ : Option InPlay}
+    (h : o₂.map (InPlay.clampWith c) = o₁.map (InPlay.clampWith c)) :
+    (o₂.map (InPlay.setMarks f)).map (InPlay.clampWith c) =
+      (o₁.map (InPlay.setMarks f)).map (InPlay.clampWith c) := by
+  rw [Option.map_map, Option.map_map, InPlay.clampWith_setMarks, ← Option.map_map,
+    ← Option.map_map, h]
 
 /-- Checkup preserves agreement when the damage is equal, and then the results agree with
 damage capped. -/
 theorem InPlay.Agree.checkup {c : Bool} {q p : InPlay} (h : Agree c q p)
-    (hd : q.damage = p.damage) (o f s : Bool) :
-    Agree true (q.checkup o f s) (p.checkup o f s) := by
+    (hd : q.damage = p.damage) (o f s t : Bool) :
+    Agree true (q.checkup o f s t) (p.checkup o f s t) := by
   have hu := h.poisonUp
   rw [h.top] at hu
-  refine ⟨h.top, h.under, h.energy, h.tools, ?_, h.poisoned, ?_, h.fresh, ?_, h.poisonUp⟩
+  refine ⟨h.top, h.under, h.energy, h.tools, ?_, h.poisoned, ?_, h.fresh, h.marks, ?_,
+    h.poisonUp⟩
   · simp only [InPlay.checkup, h.rot]
   · simp only [InPlay.checkup, h.burned]
   · show min (q.damage + (if q.poisoned then 1 + q.poisonUp else 0) +
-        (if q.burned then 2 else 0)) q.top.hp
+        (if q.burned then 2 else 0) + (if q.marks.char && t then 2 else 0)) q.top.hp
       = min (p.damage + (if p.poisoned then 1 + p.poisonUp else 0) +
-        (if p.burned then 2 else 0)) p.top.hp
-    rw [h.top, hd, h.poisoned, h.burned]
-    cases p.poisoned <;> cases p.burned <;>
+        (if p.burned then 2 else 0) + (if p.marks.char && t then 2 else 0)) p.top.hp
+    rw [h.top, hd, h.poisoned, h.burned, h.marks]
+    cases p.poisoned <;> cases p.burned <;> cases (p.marks.char && t) <;>
       simp only [Bool.false_eq_true, ite_false, ite_true] <;> omega
 
 
 /-- Agreeing Pokémon given the same damage still agree. -/
 theorem InPlay.Agree.setDamage {c : Bool} {q p : InPlay} (h : Agree c q p) (d : Nat) :
     Agree c { q with damage := d } { p with damage := d } :=
-  ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
+  ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks,
     by show (if c then min d q.top.hp else d) = (if c then min d p.top.hp else d); rw [h.top],
     h.poisonUp⟩
 
@@ -254,6 +276,11 @@ theorem Test.eval_agree (t : Test) {q p : InPlay} (h : InPlay.Agree false q p) :
   | atLeast w n => simp only [Test.eval, hd]
   | exactly w n => simp only [Test.eval, hd]
   | cond w c => cases c <;> simp only [Test.eval, InPlay.has, h.poisoned, h.burned, h.rot]
+  | marked w m => simp only [Test.eval, h.marks]
+  | isType w t =>
+      have e : q.type = p.type := by simp only [InPlay.type, h.marks, h.top]
+      show decide (q.type = t) = decide (p.type = t)
+      rw [e]
 
 /-- The state with both Active Spots replaced. -/
 theorem GameState.clampAt_upd (c : Bool) (g : GameState) (c₂ a₂ : Option InPlay) :
@@ -430,6 +457,36 @@ theorem Run.exact_sim {e : Effect} {g₁ g₁' : GameState} (h : Run e g₁ g₁
       exact ⟨_, .healAll rfl, by
         simp only [GameState.clampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.setDamage 0)]⟩
+  | @touchActive e w f g p he h =>
+      intro g₂ hc
+      obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          rw [h] at hc₂
+          obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+          exact ⟨_, .touchActive he rfl, by
+            simp only [GameState.clampAt, GameState.updSide, Option.map_some, ha₂,
+              InPlay.clamp_of_agree (hq.setMarks f)]⟩
+      | opp =>
+          simp only [GameState.side] at h
+          rw [h] at ha₂
+          obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
+          exact ⟨_, .touchActive he rfl, by
+            simp only [GameState.clampAt, GameState.updSide, Option.map_some, hc₂,
+              InPlay.clamp_of_agree (hq.setMarks f)]⟩
+  | @touchBench e w f g q b₁ b₂ he h =>
+      intro g₂ hc
+      obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
+      cases w <;>
+        exact ⟨_, .touchBench he h, by simp only [GameState.clampAt, GameState.updSide, hc₂, ha₂]⟩
+  | unmark w m g =>
+      intro g₂ hc
+      obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
+      cases w <;>
+        exact ⟨_, .unmark _ m _, by
+          simp only [GameState.clampAt, GameState.updSide, PlayerState.unmark, hc₂, ha₂,
+            map_clamp_setMarks _ hc₂, map_clamp_setMarks _ ha₂]⟩
   | shuffle h =>
       intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
@@ -728,16 +785,17 @@ theorem Move.clamp_sim {g₁ g₁' g₂ : GameState} (h : Move g₁ g₁')
       subst this
       exact ⟨_, .noPokemonOwn rfl hb, by
         simp only [GameState.clamp, GameState.clampAt, ha₂, ha, Option.map_none]⟩
-  | endTurn fa sa fb sb ha hb hk hbt =>
+  | endTurn fa sa ca fb sb cb ha hb hk hbt =>
       have hk' := hk₂ hk
       subst hg
       rw [ha] at ha₂
       rw [hb] at hc₂
       obtain ⟨qa, rfl, hqa⟩ := agree_of_map ha₂
       obtain ⟨qb, rfl, hqb⟩ := agree_of_map hc₂
-      have h1 := hqa.checkup (hqa.damage_eq_of_lt (hk _ (Or.inr (Or.inr (Or.inl ha))))) false fa sa
-      have h2 := hqb.upd.2.2.2.2.2.checkup (hqb.damage_eq_of_lt (hk _ (Or.inl hb))) true fb sb
-      refine ⟨_, .endTurn fa sa fb sb rfl rfl hk' hbt, ?_⟩
+      have h1 := hqa.checkup (hqa.damage_eq_of_lt (hk _ (Or.inr (Or.inr (Or.inl ha))))) false
+        fa sa ca
+      have h2 := hqb.upd.2.2.2.2.2.checkup (hqb.damage_eq_of_lt (hk _ (Or.inl hb))) true fb sb cb
+      refine ⟨_, .endTurn fa sa ca fb sb cb rfl rfl hk' hbt, ?_⟩
       simp only [GameState.clamp, GameState.clampAt, PlayerState.unfresh, Option.map_some, hb,
         InPlay.clamp_of_agree h1, InPlay.clamp_of_agree h2]
   | startTurn hbt ha hb hk hd =>
@@ -847,7 +905,7 @@ theorem Move.endTurn_pending_ko :
     · cases hp
     · cases hp; decide
     · cases hp
-  refine ⟨cxState, _, .endTurn false false false false rfl rfl hk rfl, hk, by decide, ?_⟩
+  refine ⟨cxState, _, .endTurn false false false false false false rfl rfl hk rfl, hk, by decide, ?_⟩
   intro hk'
   have := hk' _ (Or.inl rfl)
   exact absurd this (by decide)
