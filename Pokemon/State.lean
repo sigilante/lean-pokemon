@@ -313,7 +313,8 @@ structure GameState where
   bans on attacking and on Supporters, which apply to the starting player's first turn only
   (rulebook 2023 pp. 12–13). The per-player first turn is `PlayerState.hadTurn`; in play from
   the start of a game the two agree (`firstTurn` holds exactly when the player to move went
-  first and has not had a turn), but start states are not required to be consistent. -/
+  first and has not had a turn), but start states are not required to be consistent
+(`GameState.FlagsOk`, preserved by play: `Reach.flagsOk`). -/
   firstTurn : Bool
   /-- has the player to move attacked this turn? -/
   attacked : Bool

@@ -279,8 +279,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
   be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`; `attacked`
   with `between`): from a start with `firstTurn` true and the player's `hadTurn` already true,
-  that player could evolve on the game's first turn. No theorem needs consistency, and every
-  witness start is consistent;
+  that player could evolve on the game's first turn. Consistency is `GameState.FlagsOk`
+  (`Pokemon/Turn.lean`); play preserves it (`Reach.flagsOk`), and the first-turn bans are
+  theorems under it (`Move.firstTurn_no_attack`, `GameState.FlagsOk.firstTurn_no_evolve`);
 * first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
   starting player cannot attack or play a Supporter on the first turn of the game
   (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text

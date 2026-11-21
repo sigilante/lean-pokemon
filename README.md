@@ -30,7 +30,10 @@ failed Confused attempt, ends the turn, so only its Knock Outs and the end of th
 (`Move.after_attack`); the starting player cannot attack or play a Supporter on the first turn
 of the game, and neither player can evolve on their own first turn (`PlayerState.hadTurn`) or
 evolve a Pokémon put into play or evolved that turn (these bans assume a start state whose
-turn flags are consistent, which the model does not require); one Energy attachment, one Supporter and
+turn flags are consistent, `GameState.FlagsOk`, which the model does not require of a start
+state but which play preserves, `Reach.flagsOk`; the bans are theorems under it,
+`Move.firstTurn_no_attack` and the like; after an attack a move either takes Knock Outs or
+gives exactly the state that ending the turn gives, `Move.after_attack_passTurn`); one Energy attachment, one Supporter and
 one retreat per turn; a new Poison replaces the old one, resetting its strength; Basic Energy
 cards of the nine Basic types; typed attack costs, each typed symbol paid by Energy of its type
 and each Colorless symbol by any Energy (`Pays`, a matching, decided by `payable`);
