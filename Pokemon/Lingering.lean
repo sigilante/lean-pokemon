@@ -223,6 +223,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | playBasic hh => simp [red, st, side] at hh
   | attach hh => simp [red, st, side] at hh
   | evolve hh => simp [red, st, side] at hh
+  | attachBench hh => simp [red, st, side] at hh
+  | evolveBench hh => simp [red, st, side] at hh
   | retreat ha hb => simp [red, st, side] at hb
   | item hh => simp [red, st, side] at hh
   | supporter hh => simp [red, st, side] at hh
@@ -361,6 +363,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | playBasic hh => simp [dr, st, side] at hh
   | attach hh => simp [dr, st, side] at hh
   | evolve hh => simp [dr, st, side] at hh
+  | attachBench hh => simp [dr, st, side] at hh
+  | evolveBench hh => simp [dr, st, side] at hh
   | retreat ha hb => simp [dr, st, side] at hb
   | item hh => simp [dr, st, side] at hh
   | supporter hh => simp [dr, st, side] at hh

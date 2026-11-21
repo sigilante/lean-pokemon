@@ -1068,6 +1068,8 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
         · exact List.mem_append_left _ h
         · exact List.mem_append_right _ (.tail _ h))
   | evolve hh => exact (not_mem_hand hC hh rfl).elim
+  | attachBench _ _ hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
+  | evolveBench hh => exact (not_mem_hand hC hh rfl).elim
   | retreat ha hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim

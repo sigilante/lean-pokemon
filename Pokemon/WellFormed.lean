@@ -89,6 +89,16 @@ theorem mem_append_cons_of_mem {α : Type} {x : α} {b₁ b₂ : List α} (y : �
   · exact List.mem_append_left _ h
   · exact List.mem_append_right _ (.tail _ h)
 
+/-- Replacing one Benched Pokémon by a `Benched` one keeps the Bench `Benched`. -/
+theorem benched_update {b b₁ b₂ : List InPlay} {q x : InPlay} (hb : b = b₁ ++ q :: b₂)
+    (hw : ∀ p ∈ b, Benched p) (hx : Benched x) : ∀ p ∈ b₁ ++ x :: b₂, Benched p := by
+  intro p hp
+  rcases List.mem_append.1 hp with hp | hp
+  · exact hw p (by rw [hb]; exact List.mem_append_left _ hp)
+  · cases hp with
+    | head => exact hx
+    | tail _ hp => exact hw p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
+
 /-- A player who has not taken their last Prize card has Prize cards left. -/
 theorem prizes_of_not_out {n : Nat} {s : PlayerState} (h : s.prizesOut n = false) :
     (s.takePrizes n).prizes ≠ [] := by
@@ -193,6 +203,10 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         exact ⟨rfl, rfl, rfl, rfl⟩
   | attach hh hf ha => exact hw
   | evolve hh ha he hfr hf => exact hw
+  | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb =>
+      exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 q (hb ▸ List.mem_append_right _
+        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
+  | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2⟩
   | retreat ha hb hr he hp hs hbt hst hl hat =>
       rename_i a q b₁ b₂ _ _
       refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩

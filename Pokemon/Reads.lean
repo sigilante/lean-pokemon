@@ -57,6 +57,8 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
   | playBasic _ _ _ _ _ hst => exact bounded hst.1 _ _
   | attach _ _ _ _ hst => exact bounded hst.1 _ _
   | evolve _ _ _ _ _ _ hst => exact bounded hst.1 _ _
+  | attachBench _ _ _ _ hst => exact bounded hst.1 _ _
+  | evolveBench _ _ _ _ _ _ hst => exact bounded hst.1 _ _
   | retreat _ _ _ _ _ _ _ hst => exact bounded hst.1 _ _
   | item _ _ hst _ => exact bounded hst.1 _ _
   | supporter _ _ _ hst _ => exact bounded hst.1 _ _

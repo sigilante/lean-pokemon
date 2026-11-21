@@ -86,7 +86,10 @@ word on the damage steps, survey S9 against S8 F2; S8 records no later change to
 
 Known gaps (each is a place where this model is simpler than the rulebook):
 * setup, mulligans and the opening coin flip are not modelled; start from a set-up state;
-* Energy is attached to, and evolution applied to, the Active Pokémon only;
+* Energy is attached, and evolution applied, to the Active Pokémon (`attach`, `evolve`) or to a
+  Benched one (`attachBench`, `evolveBench`; milestone M3, rulebook 2023 p. 11); the "had in
+  play at the beginning of your turn" condition of evolution is read as `InPlay.fresh` (not
+  put into play or evolved this turn);
 * attack costs are typed (milestone M4; rulebook 2023 p. 13): each typed symbol is paid by a
   unit of attached Energy of that type and each Colorless symbol by any unit, every unit paying
   one symbol (`Pays`, decided by `payable`); only Basic Energy exists, one unit of its type
@@ -466,6 +469,32 @@ inductive Move : GameState → GameState → Prop where
         active := some { a with
           top := p, under := Card.pokemon a.top :: a.under,
           rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } } }
+  /-- attach one Energy card from hand to one of the player's Benched Pokémon; the same
+  once-per-turn attachment as `attach` ("Take an Energy card from your hand and put it under your
+  Active Pokémon or one of your Benched Pokémon … You can attach Energy just once each turn!",
+  rulebook 2023 p. 11; milestone M3) -/
+  | attachBench {g : GameState} {l₁ l₂ : List Card} {t : BasicEnergy} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
+      (hf : g.cur.energyAttached = false) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂, energyAttached := true,
+        bench := b₁ ++ { q with energy := Card.energy t :: q.energy } :: b₂ } }
+  /-- evolve one of the player's Benched Pokémon ("You can evolve any Pokémon you have in play,
+  whether it's Active or Benched", rulebook 2023 p. 11; milestone M3), with the premises of
+  `evolve`; Special Conditions are removed (a Benched Pokémon has none) -/
+  | evolveBench {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (he : p.evolvesFrom = some q.top.name) (hfr : q.fresh = false)
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂,
+        bench := b₁ ++ { q with
+          top := p, under := Card.pokemon q.top :: q.under,
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true } :: b₂ } }
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)

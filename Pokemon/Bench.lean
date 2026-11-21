@@ -11,6 +11,9 @@ Knock Out wins.
   mid-effect; the player takes two Prize cards and the game goes on.
 * `lastPrize_reachable`: the same Knock Out with one Prize card left: the player takes it, has
   taken their last Prize card, and wins.
+* `attachBench_reachable`, `benchKO_reachable`: Energy attached to a Benched Pokémon; a Benched
+  Pokémon evolved into a card with less HP than its damage, which leaves a Knock Out pending on
+  the Bench, and its Knock Out (the opponent takes a Prize card; nobody is promoted).
 -/
 
 namespace Pokemon.Bench
@@ -71,5 +74,70 @@ theorem lastPrize_reachable :
       (.prim rfl rfl (.counters 5 rfl)
         (.step rfl (.knockOut rfl (by decide) rfl) (.done (.inr (by decide))))) rfl rfl rfl
   exact ⟨_, hm, .step (.refl _) rfl hm, rfl, rfl, rfl⟩
+
+/-! ## Energy and evolution on the Bench, and a Knock Out on the Bench -/
+
+/-- A Basic Pokémon with 50 HP. -/
+def low : PokemonCard := ⟨"Low", .basic, none, 5, .grass, [], 1, none, none, .none, false⟩
+
+/-- A Stage 1 Pokémon that evolves from `low` and has 20 HP. -/
+def weak : PokemonCard := ⟨"Weak", .stage1, some "Low", 2, .grass, [], 1, none, none, .none, false⟩
+
+/-- `low` on the Bench since an earlier turn, with 3 damage counters. -/
+def lowBenched : InPlay := { InPlay.ofBasic low with damage := 3, fresh := false }
+
+/-- The player to move has `big` Active, `lowBenched` on the Bench, and a Grass Energy and
+`weak` in hand; the opponent has two Prize cards. -/
+def benchStart : GameState :=
+  ⟨side [.energy .grass, .pokemon weak] [.energy .fire] (InPlay.ofBasic big) [lowBenched],
+    side [] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
+    true, false, false, false, none, none⟩
+
+theorem benchStart_wellFormed : WellFormed benchStart := by
+  refine ⟨fun _ => ⟨by simp [benchStart, Trainer.side], by simp [benchStart, Trainer.side]⟩,
+    fun p hp => ?_, fun p hp => by cases hp⟩
+  simp only [benchStart, Trainer.side, List.mem_singleton] at hp
+  subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
+
+theorem benchStart_settled : Settled benchStart :=
+  settled_of rfl rfl (by decide) (by decide)
+    (fun p hp => by simp only [benchStart, Trainer.side, List.mem_singleton] at hp; subst hp; decide)
+    (fun p hp => by cases hp)
+
+/-- **Witness: Energy attached to a Benched Pokémon.** The turn's Energy attachment goes to
+`lowBenched` on the Bench. -/
+theorem attachBench_reachable :
+    ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g q, Move g₀ g ∧ Reach g₀ g ∧ g.cur.bench = [q] ∧
+      q.energy = [.energy .grass] ∧ g.cur.energyAttached = true := by
+  have hm : Move benchStart _ :=
+    .attachBench (l₁ := []) (b₁ := []) rfl rfl rfl rfl benchStart_settled rfl
+  exact ⟨benchStart, benchStart_wellFormed, benchStart_settled, _, _, hm, .step (.refl _) rfl hm,
+    rfl, rfl, rfl⟩
+
+/-- `lowBenched` evolved into `weak`. -/
+def weakBenched : InPlay :=
+  { lowBenched with top := weak, under := [.pokemon low], fresh := true }
+
+/-- The board after evolving `lowBenched`: the Grass Energy is still in hand. -/
+def benchMid : GameState :=
+  { benchStart with cur := { benchStart.cur with hand := [.energy .grass], bench := [weakBenched] } }
+
+/-- **Witness: a Knock Out on the Bench.** Evolving `lowBenched` (3 damage counters) into `weak`
+(20 HP) is legal and leaves a Knock Out pending on the Bench; the next move Knocks it Out: its
+cards go to the discard pile, the opponent takes a Prize card, and the Active Pokémon stays. -/
+theorem benchKO_reachable :
+    ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g₁ g₂, Move g₀ g₁ ∧ Move g₁ g₂ ∧ Reach g₀ g₂ ∧
+      ¬ DamageBounded g₁ ∧ Card.pokemon weak ∈ g₂.cur.discard ∧ g₂.cur.bench = [] ∧
+      g₂.cur.active = g₀.cur.active ∧ g₂.opp.prizes.length + 1 = g₀.opp.prizes.length ∧
+      g₂.winner = none := by
+  have h₁ : Move benchStart benchMid :=
+    .evolveBench (l₁ := [.energy .grass]) (l₂ := []) (p := weak) (q := lowBenched) (b₁ := [])
+      (b₂ := []) rfl rfl rfl rfl rfl rfl
+      benchStart_settled rfl
+  have h₂ : Move benchMid _ := .knockOutBenchOwn (b₁ := []) (b₂ := []) rfl (by decide) rfl
+  refine ⟨benchStart, benchStart_wellFormed, benchStart_settled, _, _, h₁, h₂,
+    .step (.step (.refl _) rfl h₁) rfl h₂, fun hk => ?_, .head _, rfl, rfl, rfl, rfl⟩
+  have := hk weakBenched (Or.inr (Or.inl (.head _)))
+  exact absurd this (by decide)
 
 end Pokemon.Bench

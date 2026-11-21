@@ -609,6 +609,26 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       refine ⟨_, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt hs' hat, ?_⟩
       rw [e]
       simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₁, he₂]
+  | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
+      have hr := InPlay.agree_of_clamp h2
+      exact ⟨_, .attachBench hh hf rfl hbt hs' hat, by
+        simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append, List.map_cons, h1, h3,
+          hr.energy, InPlay.clamp_of_agree (hr.upd.1 (Card.energy t :: q.energy))]⟩
+  | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr hf hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      have hlt : q.damage < q.top.hp :=
+        hst.1 q (Or.inr (Or.inl (by rw [hb]; exact List.mem_append_right _ (.head _))))
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
+      have hr := InPlay.agree_of_clamp h2
+      have e := hr.eq_upd (hr.damage_eq_of_lt hlt)
+      refine ⟨_, .evolveBench hh rfl (by rw [hr.top]; exact he) (hr.fresh.trans hfr) hf hbt hs'
+        hat, ?_⟩
+      rw [e]
+      simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append, List.map_cons, h1, h3]
   | @retreat a q' b₁ b₂ paid rest ha hb hr he hp hs hbt hst hl hat =>
       have hs' := hs₂ hst
       subst hg

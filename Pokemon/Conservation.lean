@@ -164,6 +164,8 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | playBasic hh hs hhp hb => perm_count [hh]
   | attach hh hf ha => perm_count [hh, ha]
   | evolve hh ha he hfr hf => perm_count [hh, ha]
+  | attachBench hh hf hb => perm_count [hh, hb]
+  | evolveBench hh hb => perm_count [hh, hb]
   | retreat ha hb hr he hp hs => perm_count [ha, hb, he]
   | item hh hbt hst hr =>
       refine hr.perm.trans ?_
