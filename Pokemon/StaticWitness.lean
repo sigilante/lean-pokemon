@@ -197,9 +197,8 @@ theorem discard_tool_knocks_out : Reach tg0 tg2 := by
   refine .step (.step (.refl _) rfl survives_above_printed.1) rfl
     (.item (l₁ := []) (l₂ := []) rfl rfl tg1_settled
       (.prim rfl rfl (.zone rfl (.toolsActive rfl))
-        (.step rfl (.knockOutOwn rfl (by decide) rfl)
-          (.step rfl (.promoteOwn (b₁ := []) (b₂ := []) rfl rfl)
-            (.done (.inl (settled_of_dbB rfl rfl (by decide)))))))
+        (.step rfl (.go (by decide) rfl (.pick (b₁ := []) (b₂ := [])) .keep)
+          (.done (.inl (settled_of_dbB rfl rfl (by decide))))))
       rfl rfl rfl rfl)
 
 /-! ## A Stadium's replacement Knocks Out a Benched Pokémon -/
@@ -230,7 +229,7 @@ theorem stadium_replacement_knocks_out :
       ∃ g, Move sg1 g ∧ g.cur.bench = [] ∧ g.cur.discard = [.pokemon small] :=
   ⟨.stadium (l₁ := []) (l₂ := []) rfl rfl rfl rfl sg0_settled rfl,
     not_damageBounded_of_dbB (by decide),
-    _, .knockOutBenchOwn (b₁ := []) (b₂ := []) rfl (by decide) rfl, rfl, rfl⟩
+    _, .knockOuts (.go (by decide) rfl .keep .keep), rfl, rfl⟩
 
 /-! ## Attaching Energy raises HP in mid-effect -/
 
@@ -279,8 +278,8 @@ theorem energy_raises_hp_none :
   ⟨_, .item (l₁ := []) (l₂ := [mt]) rfl rfl eg0_settled
       (.seq (.prim rfl rfl (.zone rfl (.attachNone _ _ _ _ _ _))
           (.done (.inl (settled_of_dbB rfl rfl (by decide)))))
-        (.prim rfl rfl (.selfDamage 2 rfl) (.step rfl (.knockOutOwn rfl (by decide) rfl)
-          (.step rfl (.noPokemonOwn rfl rfl) (.done (.inr (by decide)))))))
+        (.prim rfl rfl (.selfDamage 2 rfl) (.step rfl (.won (by decide) (by decide))
+          (.done (.inr (by decide))))))
       rfl rfl rfl rfl, rfl, by decide, by decide⟩
 
 /-! ## One removal, two Knock Outs in a chain -/
@@ -315,9 +314,9 @@ theorem chain_knock_out :
   ⟨settled_of_dbB rfl rfl (by decide),
     .stadium (l₁ := []) (l₂ := []) rfl rfl rfl rfl (settled_of_dbB rfl rfl (by decide)) rfl,
     by decide, by decide,
-    _, _, .knockOutBenchOwn (b₁ := []) (b₂ := [at_ small 5 [] []]) rfl (by decide) rfl,
+    _, _, .knockOuts (.go (by decide) rfl .keep .keep),
     not_damageBounded_of_dbB (by decide), rfl,
-    .knockOutBenchOwn (b₁ := []) (b₂ := []) rfl (by decide) rfl, rfl,
+    .knockOuts (.go (by decide) rfl .keep .keep), rfl,
     damageBounded_of_dbB (by decide)⟩
 
 /-! ## A static reduction comes after Weakness -/
@@ -341,15 +340,18 @@ less damage): (3 × 2) − 2 = 4 counters, not (3 − 2) × 2 = 2. -/
 theorem reduction_after_weakness : wg.sReduce = 2 ∧ wg.weak = true ∧ wg.dealt 3 = 4 :=
   ⟨by decide, by decide, by decide⟩
 
-/-! ## DEPARTURES: the order of Knock Outs changes the outcome
+/-! ## Batch Knock Outs: the order of Knock Outs no longer changes the outcome
 
 The rulebook (2023, p. 14): "check to see if any Pokémon were Knocked Out by the attack … check
 every Pokémon that was affected", and only then does a player whose Active Pokémon was Knocked Out
-choose a new one. The model takes pending Knock Outs as separate moves, one at a time, in any order,
-and allows a promotion while a Benched Pokémon's Knock Out is pending. With derived HP (milestone
-M6) a Knock Out or a promotion can change another Pokémon's HP, so the model and the rulebook part
-ways, in both directions. The planned repair is a batch Knock Out step: compute the set of pending
-Knock Outs once, remove them together, and promote only afterwards. -/
+choose a new one. Until milestone batch-KO the model took pending Knock Outs as separate moves, one
+at a time, in any order, with promotions in between; with derived HP (milestone M6) a Knock Out or
+a promotion could change another Pokémon's HP, and the model parted ways with the rulebook in both
+directions (`promotion_rescues`, `double_knockOut_lost`, recorded here as DEPARTURES). The batch
+Knock Out step (`KOBatch`) evaluates every Pokémon's HP once, before any removal, and promotes
+afterwards. The two starts of those witnesses now give the rulebook's outcome on every line of play
+(`guard_knocked_out`, `double_knockOut_taken`), and the two departure statements are false
+(`promotion_rescues_false`, `double_knockOut_lost_false`). -/
 
 /-- "+30 HP while this Pokémon is in the Active Spot" (a `self` static effect with a place
 condition on its source). -/
@@ -378,37 +380,158 @@ theorem r0_wellFormed : WellFormed r0 :=
 
 theorem r0_settled : Settled r0 := settled_of_dbB rfl rfl (by decide)
 
-/-- **A Pokémon the rulebook Knocks Out survives in the model.** This is a DEPARTURE from the
-rulebook, recorded so that it cannot be forgotten.
+/-- `[x] = b₁ ++ q :: b₂` splits only one way. -/
+theorem singleton_split {α : Type} {x q : α} {b₁ b₂ : List α} (h : [x] = b₁ ++ q :: b₂) :
+    b₁ = [] ∧ q = x ∧ b₂ = [] := by
+  cases b₁ with
+  | nil =>
+      simp only [List.nil_append, List.cons.injEq] at h
+      exact ⟨rfl, h.1.symm, h.2.symm⟩
+  | cons y ys => simp at h
 
-From the well-formed, `Settled` start `r0` the player attacks with `blast`: the opponent's Active
-`small` (HP 3) and Benched `guard` (HP 3 on the Bench) each take 3 counters. In the resulting state
-`g₁` both are at their HP, and the rulebook's single check after the attack Knocks Out both. In the
-model the Active Pokémon's Knock Out is taken first, then `guard` is promoted while its own Knock
-Out is pending; in the Active Spot its HP is 6, so with 3 counters it is no longer pending: the state
-`g₃` has no pending Knock Out and `guard` is still in play. (The model also allows the rulebook's
-outcome: the Bench Knock Out can be taken first, `promotion_rescues_alt`.) So the model has an
-outcome the rulebook does not. -/
-theorem promotion_rescues :
-    ∃ g₁ g₂ g₃, Move r0 g₁ ∧ g₁.opp.bench = [at_ guard 3 [] []] ∧
+/-- The state after `blast` from `r0`: 3 counters on the opponent's Active `small` and 3 on the
+Benched `guard`. -/
+def rA : GameState :=
+  let g₂ : GameState := { r0 with opp := { r0.opp with
+    active := some { at_ small 0 [] [] with damage := (at_ small 0 [] []).damage + 3 } } }
+  let g₃ : GameState := g₂.updSide .opp fun s => { s with
+    bench := [] ++ { at_ guard 0 [] [] with damage := (at_ guard 0 [] []).damage + 3 } :: [] }
+  { g₃ with attacked := true, cur := { g₃.cur with gxUsed := blast.gx || g₃.cur.gxUsed } }
+
+theorem move_r0_rA : Move r0 rA :=
+  .attack (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
+    (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl
+
+/-- The attack is the only move from `r0` that leaves `guard` on the Bench with 3 counters: `r0`
+has no card in hand, no Benched Pokémon of the player to move, no Stadium, no Ability and no
+Confused Pokémon, its only attack resolves one way, and the end of the turn swaps the players
+(the new opponent has no Bench). -/
+theorem move_r0 {g₁ : GameState} (hm : Move r0 g₁) (hb : g₁.opp.bench = [at_ guard 3 [] []]) :
+    g₁ = rA := by
+  cases hm with
+  | playBasic hh => simp [r0, gs, pl] at hh
+  | attach hh => simp [r0, gs, pl] at hh
+  | evolve hh => simp [r0, gs, pl] at hh
+  | attachBench hh => simp [r0, gs, pl] at hh
+  | evolveBench hh => simp [r0, gs, pl] at hh
+  | retreat _ hb' => simp [r0, gs, pl] at hb'
+  | item hh => simp [r0, gs, pl] at hh
+  | supporter hh => simp [r0, gs, pl] at hh
+  | stadium hh => simp [r0, gs, pl] at hh
+  | tool hh => simp [r0, gs, pl] at hh
+  | toolBench hh => simp [r0, gs, pl] at hh
+  | stadiumUse hs => simp [r0, gs] at hs
+  | ability hu hm' =>
+      cases hu with
+      | active ha =>
+          simp only [r0, gs, pl, Option.some.injEq] at ha; subst ha
+          simp [InPlay.abilities, at_, InPlay.ofBasic, blaster] at hm'
+      | bench hb' => simp [r0, gs, pl] at hb'
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      simp [r0, gs, pl] at hh
+  | @attack g' a atk ha hm' _ _ _ _ _ _ hr =>
+      simp only [r0, gs, pl, Option.some.injEq] at ha; subst ha
+      have e : atk = blast := by simpa [InPlay.attacks, at_, InPlay.ofBasic, blaster] using hm'
+      subst e
+      change Run (.seq (.counters 3) (.benchCounters .opp 3)) r0 g' at hr
+      cases hr with
+      | seq h1 h2 =>
+          cases h1 with
+          | counters _ h =>
+              simp only [r0, gs, pl, Option.some.injEq] at h; subst h
+              cases h2 with
+              | benchCounters _ _ h =>
+                  obtain ⟨rfl, rfl, rfl⟩ := singleton_split h
+                  rfl
+              | benchCountersNone _ _ h => simp [GameState.side, r0, gs, pl] at h
+              | touchActive he => simp [Effect.touch] at he
+              | touchBench he => simp [Effect.touch] at he
+              | zone hw => simp [Effect.zSide] at hw
+          | touchActive he => simp [Effect.touch] at he
+          | touchBench he => simp [Effect.touch] at he
+          | zone hw => simp [Effect.zSide] at hw
+      | touchActive he => simp [Effect.touch] at he
+      | touchBench he => simp [Effect.touch] at he
+      | zone hw => simp [Effect.zSide] at hw
+  | attackConfused ha _ _ hs =>
+      simp only [r0, gs, pl, Option.some.injEq] at ha; subst ha
+      simp [at_, InPlay.ofBasic] at hs
+  | knockOuts h => exact absurd r0_settled h.not_settled
+  | endTurn _ _ _ _ _ _ _ _ _ _ _ hcc =>
+      simp only [r0, gs, pl, List.map_nil] at hcc
+      cases hcc
+      simp at hb
+  | startTurn hbt => simp [r0, gs] at hbt
+  | deckOut hbt => simp [r0, gs] at hbt
+
+/-- From a state whose check ends the game, every move is the check. -/
+theorem move_eq_koStep {g g' : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none)
+    (hm : Move g g') : g' = g.koStep :=
+  (hm.batch_of_not_settled hu).eq_of_won hw
+
+/-- Reachability from a state whose check ends the game. -/
+theorem reach_of_won {g g' : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none)
+    (hn : g.winner = none) (h : Reach g g') : g' = g ∨ g' = g.koStep := by
+  induction h with
+  | refl => exact .inl rfl
+  | step _ hn' hm ih =>
+      rcases ih with rfl | rfl
+      · exact .inr (move_eq_koStep hu hw hm)
+      · exact absurd hn' hw
+
+/-- **The Benched Pokémon cannot be promoted and survive** (milestone batch-KO; it replaces the
+DEPARTURE `promotion_rescues`). From the well-formed, `Settled` start `r0` the player attacks with
+`blast`, the only move that puts the blast's 3 counters on `guard` (`move_r0`): the opponent's
+Active `small` (HP 3) and Benched `guard` (HP 3 on the Bench, 6 in the Active Spot) are both at
+their HP in `rA`. Every move from `rA` is the batch Knock Out step `rA.koStep` (no promotion: the
+game is over), which Knocks Out both, as the rulebook's single check does: the opponent has no
+Pokémon left, both cards are in their discard pile, and the player, who took their last two Prize
+cards and left the opponent no Pokémon, has won. Every line of play from `rA` is `rA` itself or
+that state. -/
+theorem guard_knocked_out :
+    Move r0 rA ∧ rA.opp.bench = [at_ guard 3 [] []] ∧
+      rA.hpOf .opp .bench (at_ guard 3 [] []) = 3 ∧ ¬ DamageBounded rA ∧
+      (∀ g₁, Move r0 g₁ → g₁.opp.bench = [at_ guard 3 [] []] → g₁ = rA) ∧
+      (∀ g₂, Move rA g₂ → g₂ = rA.koStep) ∧
+      rA.koStep.opp.active = none ∧ rA.koStep.opp.bench = [] ∧
+      rA.koStep.opp.discard = [.pokemon small, .pokemon guard] ∧
+      rA.koStep.winner = some (.win true) ∧
+      (∀ g, Reach rA g → g = rA ∨ g = rA.koStep) := by
+  have hk : ¬ DamageBounded rA := not_damageBounded_of_dbB (by decide)
+  have hu : ¬ Settled rA := fun hs => hk hs.1
+  have hw : rA.koStep.winner ≠ none := by decide
+  exact ⟨move_r0_rA, rfl, by decide, hk, fun _ hm hb => move_r0 hm hb,
+    fun _ hm => move_eq_koStep hu hw hm, rfl, rfl, rfl, by decide,
+    fun _ h => reach_of_won hu hw rfl h⟩
+
+/-- **`promotion_rescues` is false** with batch Knock Outs. That theorem (milestones M6 to
+batch-KO) stated a line of play from `r0` in which `guard`, Knocked Out by the rulebook, is
+promoted while its Knock Out is pending and survives in the Active Spot with HP 6; this is its
+negation. -/
+theorem promotion_rescues_false :
+    ¬ ∃ g₁ g₂ g₃, Move r0 g₁ ∧ g₁.opp.bench = [at_ guard 3 [] []] ∧
       g₁.hpOf .opp .bench (at_ guard 3 [] []) = 3 ∧ ¬ DamageBounded g₁ ∧
       Move g₁ g₂ ∧ Move g₂ g₃ ∧ Reach r0 g₃ ∧ g₃.opp.active = some (at_ guard 3 [] []) ∧
       g₃.hpOf .opp .active (at_ guard 3 [] []) = 6 ∧ DamageBounded g₃ := by
-  have m1 : Move r0 _ :=
-    .attack (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
-      (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl
-  refine ⟨_, _, _, m1, rfl, by decide, not_damageBounded_of_dbB (by decide),
-    .knockOut rfl (by decide) rfl, .promote (b₁ := []) rfl rfl, ?_, rfl, by decide,
-    damageBounded_of_dbB (by decide)⟩
-  exact .step (.step (.step (.refl _) rfl m1) rfl (.knockOut rfl (by decide) rfl)) rfl
-    (.promote (b₁ := []) rfl rfl)
+  rintro ⟨g₁, g₂, g₃, h1, hb, -, -, h2, h3, -, ha, -, -⟩
+  obtain ⟨-, -, -, hk, hr0, hrA, -⟩ := guard_knocked_out
+  have e1 := hr0 g₁ h1 hb
+  subst e1
+  have e2 := hrA g₂ h2
+  subst e2
+  have e3 := move_eq_koStep (g := rA.koStep) (fun hs => by
+    have : rA.koStep.opp.active ≠ none := hs.2.2
+    exact this rfl) (by decide) h3
+  subst e3
+  exact absurd ha (by simp [show rA.koStep.koStep.opp.active = none from rfl])
 
-/-- The rulebook's outcome is also reachable from the same state: the Bench Knock Out first. -/
-theorem promotion_rescues_alt : ∃ g₁ g₂, Move r0 g₁ ∧ Move g₁ g₂ ∧ g₂.opp.bench = [] := by
-  have m1 : Move r0 _ :=
-    .attack (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
-      (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl
-  exact ⟨_, _, m1, .knockOutBench (b₁ := []) (b₂ := []) rfl (by decide) rfl, rfl⟩
+/-- The rulebook's outcome is reachable from `r0`: both Knock Outs, the Bench left empty. (Before
+milestone batch-KO this was the companion of the departure `promotion_rescues`, one of two orders;
+it is now the only outcome, `guard_knocked_out`.) -/
+theorem promotion_rescues_alt : ∃ g₁ g₂, Move r0 g₁ ∧ Move g₁ g₂ ∧ g₂.opp.bench = [] :=
+  ⟨rA, rA.koStep, move_r0_rA, .knockOuts (.won (fun hs => (not_damageBounded_of_dbB (by decide)) hs.1)
+    (by decide)), rfl⟩
 
 /-- "Each of your Pokémon gets −10 HP" (a static effect on its owner's side, the source included;
 no printed card is claimed). -/
@@ -435,30 +558,119 @@ theorem m0_wellFormed : WellFormed m0 :=
 
 theorem m0_settled : Settled m0 := settled_of_dbB rfl rfl (by decide)
 
-/-- **A double Knock Out the rulebook takes is lost in the model.** This is a DEPARTURE from the
-rulebook, recorded so that it cannot be forgotten.
+/-- The state after `hit2` from `m0`: 2 counters on each of the opponent's `gm`. -/
+def mA : GameState :=
+  let g₂ : GameState := { m0 with opp := { m0.opp with
+    active := some { at_ gm 0 [] [] with damage := (at_ gm 0 [] []).damage + 2 } } }
+  let g₃ : GameState := g₂.updSide .opp fun s => { s with
+    bench := [] ++ { at_ gm 0 [] [] with damage := (at_ gm 0 [] []).damage + 2 } :: [] }
+  { g₃ with attacked := true, cur := { g₃.cur with gxUsed := hit2.gx || g₃.cur.gxUsed } }
 
-From the well-formed, `Settled` start `m0` the player attacks with `hit2`: each of the opponent's
-two `gm` (HP 2 each, since each carries "your Pokémon get −10 HP") takes 2 counters. In the
-resulting state `g₁` both are at their HP, and the rulebook's single check after the attack
-Knocks Out both. In the model they are Knocked Out one at a time, and either Knock Out removes one
-source of −1 HP: the other `gm` then has HP 3 with 2 counters, and is no longer pending. Proved here
-for both orders: taking the Active Knock Out first, and taking the Bench Knock Out first. (That
-these are the only Knock Out moves from `g₁` — no other Pokémon is pending there — is read off the
-state, not proved.) So the rulebook has an outcome the model does not. -/
-theorem double_knockOut_lost :
-    ∃ g₁, Move m0 g₁ ∧ g₁.opp.active = some (at_ gm 2 [] []) ∧
+theorem move_m0_mA : Move m0 mA :=
+  .attack (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
+    (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl (fun h => nomatch h) rfl
+
+/-- The attack is the only move from `m0` that leaves a `gm` with 2 counters on the opponent's
+Bench. -/
+theorem move_m0 {g₁ : GameState} (hm : Move m0 g₁) (hb : g₁.opp.bench = [at_ gm 2 [] []]) :
+    g₁ = mA := by
+  cases hm with
+  | playBasic hh => simp [m0, gs, pl] at hh
+  | attach hh => simp [m0, gs, pl] at hh
+  | evolve hh => simp [m0, gs, pl] at hh
+  | attachBench hh => simp [m0, gs, pl] at hh
+  | evolveBench hh => simp [m0, gs, pl] at hh
+  | retreat _ hb' => simp [m0, gs, pl] at hb'
+  | item hh => simp [m0, gs, pl] at hh
+  | supporter hh => simp [m0, gs, pl] at hh
+  | stadium hh => simp [m0, gs, pl] at hh
+  | tool hh => simp [m0, gs, pl] at hh
+  | toolBench hh => simp [m0, gs, pl] at hh
+  | stadiumUse hs => simp [m0, gs] at hs
+  | ability hu hm' =>
+      cases hu with
+      | active ha =>
+          simp only [m0, gs, pl, Option.some.injEq] at ha; subst ha
+          simp [InPlay.abilities, at_, InPlay.ofBasic, hitter2] at hm'
+      | bench hb' => simp [m0, gs, pl] at hb'
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      simp [m0, gs, pl] at hh
+  | @attack g' a atk ha hm' _ _ _ _ _ _ hr =>
+      simp only [m0, gs, pl, Option.some.injEq] at ha; subst ha
+      have e : atk = hit2 := by simpa [InPlay.attacks, at_, InPlay.ofBasic, hitter2] using hm'
+      subst e
+      change Run (.seq (.counters 2) (.benchCounters .opp 2)) m0 g' at hr
+      cases hr with
+      | seq h1 h2 =>
+          cases h1 with
+          | counters _ h =>
+              simp only [m0, gs, pl, Option.some.injEq] at h; subst h
+              cases h2 with
+              | benchCounters _ _ h =>
+                  obtain ⟨rfl, rfl, rfl⟩ := singleton_split h
+                  rfl
+              | benchCountersNone _ _ h => simp [GameState.side, m0, gs, pl] at h
+              | touchActive he => simp [Effect.touch] at he
+              | touchBench he => simp [Effect.touch] at he
+              | zone hw => simp [Effect.zSide] at hw
+          | touchActive he => simp [Effect.touch] at he
+          | touchBench he => simp [Effect.touch] at he
+          | zone hw => simp [Effect.zSide] at hw
+      | touchActive he => simp [Effect.touch] at he
+      | touchBench he => simp [Effect.touch] at he
+      | zone hw => simp [Effect.zSide] at hw
+  | attackConfused ha _ _ hs =>
+      simp only [m0, gs, pl, Option.some.injEq] at ha; subst ha
+      simp [at_, InPlay.ofBasic] at hs
+  | knockOuts h => exact absurd m0_settled h.not_settled
+  | endTurn _ _ _ _ _ _ _ _ _ _ _ hcc =>
+      simp only [m0, gs, pl, List.map_nil] at hcc
+      cases hcc
+      simp at hb
+  | startTurn hbt => simp [m0, gs] at hbt
+  | deckOut hbt => simp [m0, gs] at hbt
+
+/-- **A double Knock Out is taken together** (milestone batch-KO; it replaces the DEPARTURE
+`double_knockOut_lost`). From the well-formed, `Settled` start `m0` the player attacks with `hit2`,
+the only move that leaves a `gm` with 2 counters on the opponent's Bench (`move_m0`): each of the
+opponent's two `gm` (HP 2 each, since each carries "your Pokémon get −10 HP") is at its HP in `mA`.
+Every move from `mA` is the batch Knock Out step `mA.koStep`, which evaluates both HPs before
+removing either and Knocks Out both, as the rulebook's single check does: the opponent has no
+Pokémon left, both cards are in their discard pile, the player has taken two Prize cards (one is
+left) and has won (the opponent has no Pokémon to promote). -/
+theorem double_knockOut_taken :
+    Move m0 mA ∧ mA.opp.active = some (at_ gm 2 [] []) ∧ mA.opp.bench = [at_ gm 2 [] []] ∧
+      mA.hpOf .opp .active (at_ gm 2 [] []) = 2 ∧ mA.hpOf .opp .bench (at_ gm 2 [] []) = 2 ∧
+      ¬ DamageBounded mA ∧
+      (∀ g₁, Move m0 g₁ → g₁.opp.bench = [at_ gm 2 [] []] → g₁ = mA) ∧
+      (∀ g₂, Move mA g₂ → g₂ = mA.koStep) ∧
+      mA.koStep.opp.active = none ∧ mA.koStep.opp.bench = [] ∧
+      mA.koStep.opp.discard = [.pokemon gm, .pokemon gm] ∧ mA.koStep.cur.prizes.length = 1 ∧
+      mA.koStep.winner = some (.win true) := by
+  have hk : ¬ DamageBounded mA := not_damageBounded_of_dbB (by decide)
+  have hu : ¬ Settled mA := fun hs => hk hs.1
+  have hw : mA.koStep.winner ≠ none := by decide
+  exact ⟨move_m0_mA, rfl, rfl, by decide, by decide, hk, fun _ hm hb => move_m0 hm hb,
+    fun _ hm => move_eq_koStep hu hw hm, rfl, rfl, rfl, rfl, by decide⟩
+
+/-- **`double_knockOut_lost` is false** with batch Knock Outs. That theorem (milestones M6 to
+batch-KO) stated that from the state after `hit2` either Knock Out could be taken first and left the
+other `gm` in play, no longer pending; this is its negation. -/
+theorem double_knockOut_lost_false :
+    ¬ ∃ g₁, Move m0 g₁ ∧ g₁.opp.active = some (at_ gm 2 [] []) ∧
       g₁.opp.bench = [at_ gm 2 [] []] ∧ g₁.hpOf .opp .active (at_ gm 2 [] []) = 2 ∧
       g₁.hpOf .opp .bench (at_ gm 2 [] []) = 2 ∧ ¬ DamageBounded g₁ ∧
       (∃ g₂, Move g₁ g₂ ∧ g₂.opp.active = none ∧ g₂.opp.bench = [at_ gm 2 [] []] ∧
         g₂.hpOf .opp .bench (at_ gm 2 [] []) = 3) ∧
       (∃ g₂, Move g₁ g₂ ∧ g₂.opp.bench = [] ∧ g₂.opp.active = some (at_ gm 2 [] []) ∧
         g₂.hpOf .opp .active (at_ gm 2 [] []) = 3) := by
-  have m1 : Move m0 _ :=
-    .attack (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
-      (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl (fun h => nomatch h) rfl
-  exact ⟨_, m1, rfl, rfl, by decide, by decide, not_damageBounded_of_dbB (by decide),
-    ⟨_, .knockOut rfl (by decide) rfl, rfl, rfl, by decide⟩,
-    ⟨_, .knockOutBench (b₁ := []) (b₂ := []) rfl (by decide) rfl, rfl, rfl, by decide⟩⟩
+  rintro ⟨g₁, h1, -, hb, -, -, -, ⟨g₂, h2, -, hb₂, -⟩, -⟩
+  obtain ⟨-, -, -, -, -, -, hm0, hmA, -⟩ := double_knockOut_taken
+  have e1 := hm0 g₁ h1 hb
+  subst e1
+  have e2 := hmA g₂ h2
+  subst e2
+  exact absurd hb₂ (by simp [show mA.koStep.opp.bench = [] from rfl])
 
 end Pokemon.StaticWitness

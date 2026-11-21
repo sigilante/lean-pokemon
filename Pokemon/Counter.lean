@@ -1163,20 +1163,19 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
       exact .inr (.inr ⟨atk, g'', by rw [← h1, ← (InPlay.attacks_of_noTool (hts.tools hp)).1]; exact hm',
         hr, rfl⟩)
   | attackConfused ha _ _ hs' => rw [hp] at ha; cases ha; rw [h2] at hs'; cases hs'
-  | knockOut ha hk =>
-      rw [hp'] at ha; cases ha
-      rw [g.hpOf_noStatics hts.noStatics (w := .opp) (sp := .active) hp', h5', h1'] at hk
-      exact absurd hk (Nat.not_le.2 ho)
-  | promote ha => rw [hp'] at ha; cases ha
-  | noPokemon ha => rw [hp'] at ha; cases ha
-  | knockOutOwn ha hk =>
-      rw [hp] at ha; cases ha
-      rw [g.hpOf_noStatics hts.noStatics (w := .own) (sp := .active) hp, h5, h1] at hk
-      exact absurd hk (Nat.not_le.2 hc)
-  | promoteOwn ha => rw [hp] at ha; cases ha
-  | noPokemonOwn ha => rw [hp] at ha; cases ha
-  | knockOutBench hb => rw [hO.bench] at hb; exact absurd hb.symm (by simp)
-  | knockOutBenchOwn hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
+  | knockOuts h =>
+      have hs' : Settled g := by
+        refine ⟨DamageBounded.intro' (fun q hq => ?_) (fun q hq => ?_) (fun q hq => ?_)
+          (fun q hq => ?_), by rw [hp]; simp, by rw [hp']; simp⟩
+        · rw [hp] at hq; cases hq
+          rw [g.hpOf_noStatics hts.noStatics (w := .own) (sp := .active) hp, h5, h1]; exact hc
+        · rw [hC.bench] at hq; cases hq
+        · rw [hp'] at hq; cases hq
+          rw [g.hpOf_noStatics hts.noStatics (w := .opp) (sp := .active) hp', h5', h1']; exact ho
+        · rw [hO.bench] at hq; cases hq
+      cases h with
+      | won hu => exact absurd hs' hu
+      | go hu => exact absurd hs' hu
   | endTurn fa sa ca fb sb cb ha hb _ _ hco hcc =>
       rw [hO.bench] at hco
       rw [hC.bench, List.map_nil] at hcc

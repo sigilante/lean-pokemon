@@ -75,7 +75,8 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | drain => intro ht; simp [Effect.tame] at ht
   | _ => intro _ hn; exact hn
 
-theorem KOMove.noReduce {g g' : GameState} (h : KOMove g g') (hn : g.NoReduce) : g'.NoReduce := by
+theorem KOBatch.noReduce {g g' : GameState} (h : KOBatch g g') (hn : g.NoReduce) :
+    g'.NoReduce := by
   cases h <;> exact hn
 
 theorem Resolve.noReduce {g g' : GameState} (h : Resolve g g') (hn : g.NoReduce) :
@@ -969,6 +970,7 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
       simp only [Card.tame, Bool.and_eq_true] at h1
       exact hr.noReduce (abilitiesTame_mem h1.2 hm _ (ab.script_mem _)) (by cases hp <;> exact hn)
   | endTurn => exact ⟨hn.2.shift, hn.1.shift⟩
+  | knockOuts h => exact h.noReduce hn
   | _ => exact hn
 
 /-- Play preserves `Fit k`: the cards are permuted, and no stored damage reduction comes into
@@ -1182,82 +1184,10 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl) hgx hw, by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩
-  | @knockOut p c ps ha hk hp =>
+  | knockOuts h =>
       subst hg
-      rw [ha] at ha₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-      exact ⟨_, .knockOut rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, Option.map_none, hc₂, hm₁, hm₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promote ha hb =>
-      subst hg
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      exact ⟨_, .promote rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, hc₂, hm₁, hm₂, he₁, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemon ha hb =>
-      subst hg
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₂
-      subst he₂
-      exact ⟨_, .noPokemon rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, hc₂, hm₁, hm₂, he₁, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutOwn p c ps ha hk hp =>
-      subst hg
-      rw [ha] at hc₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .knockOutOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, Option.map_none, ha₂, hm₁, hm₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promoteOwn ha hb =>
-      subst hg
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      exact ⟨_, .promoteOwn rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₂, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemonOwn ha hb =>
-      subst hg
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₁
-      subst he₁
-      exact ⟨_, .noPokemonOwn rfl rfl, by
-        simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₂, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutBench p b₁ b₂ c ps hb hk hp =>
-      subst hg
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.opp.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBench rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
-      subst hg
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.cur.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBenchOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
+      obtain ⟨g₂', h₂, e⟩ := h.clamp_sim hc hH
+      exact ⟨g₂', .knockOuts h₂, e⟩
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       have hk' := hk₂ hk
       subst hg

@@ -296,24 +296,11 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
       simp [InPlay.ofBasic] at hs
-  | knockOut ha hk =>
-      simp only [red, st, side, Option.some.injEq] at ha
-      subst ha
-      rw [GameState.Plain.hpOf (g := red k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
-        (w := .opp) (sp := .active) rfl] at hk
-      simp [InPlay.ofBasic, target, mon] at hk
-  | promote ha => simp [red, st, side] at ha
-  | noPokemon ha => simp [red, st, side] at ha
-  | knockOutOwn ha hk =>
-      simp only [red, st, side, Option.some.injEq] at ha
-      subst ha
-      rw [GameState.Plain.hpOf (g := red k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
-        (w := .own) (sp := .active) rfl] at hk
-      simp [InPlay.ofBasic, hitter, mon] at hk
-  | promoteOwn ha => simp [red, st, side] at ha
-  | noPokemonOwn ha => simp [red, st, side] at ha
-  | knockOutBench hb => simp [red, st, side] at hb
-  | knockOutBenchOwn hb => simp [red, st, side] at hb
+  | knockOuts h =>
+      have hs : Settled (red k (2 * k + 2)) := settled_st _ _ _ _ _ _ (by decide) (by decide)
+      cases h with
+      | won hu => exact hu hs
+      | go hu => exact hu hs
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt] at e
@@ -469,24 +456,11 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha
       simp [InPlay.ofBasic] at hs
-  | knockOut ha hk =>
-      simp only [dr, st, side, Option.some.injEq] at ha
-      subst ha
-      rw [GameState.Plain.hpOf (g := dr k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
-        (w := .opp) (sp := .active) rfl] at hk
-      simp [InPlay.ofBasic, prey, mon] at hk
-  | promote ha => simp [dr, st, side] at ha
-  | noPokemon ha => simp [dr, st, side] at ha
-  | knockOutOwn ha hk =>
-      simp only [dr, st, side, Option.some.injEq] at ha
-      subst ha
-      rw [GameState.Plain.hpOf (g := dr k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
-        (w := .own) (sp := .active) rfl] at hk
-      simp [InPlay.ofBasic, drainer, mon] at hk
-  | promoteOwn ha => simp [dr, st, side] at ha
-  | noPokemonOwn ha => simp [dr, st, side] at ha
-  | knockOutBench hb => simp [dr, st, side] at hb
-  | knockOutBenchOwn hb => simp [dr, st, side] at hb
+  | knockOuts h =>
+      have hs : Settled (dr k (2 * k + 2)) := settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)
+      cases h with
+      | won hu => exact hu hs
+      | go hu => exact hu hs
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt] at e

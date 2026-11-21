@@ -16,7 +16,8 @@ Knock Out wins.
   Pokémon evolved into a card with less HP than its damage, which leaves a Knock Out pending on
   the Bench, and its Knock Out (the opponent takes a Prize card; nobody is promoted).
 * `doubleKO_reachable`: one step of an Item puts damage counters on each of the opponent's
-  Benched Pokémon; two Knock Outs are pending at once, and both are taken before the next step.
+  Benched Pokémon; two Knock Outs are pending at once, and both are taken together, by one batch
+  Knock Out step, before the next step.
 * `charBench_reachable`: a Char counter on a Benched Pokémon puts 2 damage counters on it
   between turns (tails), which Knocks it Out on the Bench.
 * `gust_reachable`: an Item switches the opponent's 50-HP Benched Pokémon into the Active Spot
@@ -75,10 +76,9 @@ theorem twoPrizes_reachable :
   have hm : Move (exStart [.energy .fire, .energy .fire, .energy .fire]) _ :=
     .item (l₁ := []) (l₂ := []) (n := "Hit5") rfl rfl (exStart_settled _)
       (.prim rfl rfl (.counters 5 rfl)
-        (.step rfl (.knockOut rfl (by decide) rfl)
-          (.step rfl (.promote (b₁ := []) rfl rfl)
-            (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
-              (fun p hp => by cases hp))))))) rfl rfl rfl rfl
+        (.step rfl (.go (by decide) rfl .keep (.pick (b₁ := [])))
+          (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+            (fun p hp => by cases hp)))))) rfl rfl rfl rfl
   exact ⟨_, hm, .step (.refl _) rfl hm, rfl, rfl, .head _, rfl⟩
 
 /-- **Witness: the last Prize card in the middle of a multi-Prize Knock Out wins.** With one
@@ -92,7 +92,7 @@ theorem lastPrize_reachable :
   have hm : Move (exStart [.energy .fire]) _ :=
     .item (l₁ := []) (l₂ := []) (n := "Hit5") rfl rfl (exStart_settled _)
       (.prim rfl rfl (.counters 5 rfl)
-        (.step rfl (.knockOut rfl (by decide) rfl) (.done (.inr (by decide))))) rfl rfl rfl rfl
+        (.step rfl (.won (by decide) (by decide)) (.done (.inr (by decide))))) rfl rfl rfl rfl
   exact ⟨_, hm, .step (.refl _) rfl hm, rfl, rfl, rfl⟩
 
 /-! ## Energy and evolution on the Bench, and a Knock Out on the Bench -/
@@ -154,7 +154,7 @@ theorem benchKO_reachable :
     .evolveBench (l₁ := [.energy .grass]) (l₂ := []) (p := weak) (q := lowBenched) (b₁ := [])
       (b₂ := []) rfl rfl rfl rfl rfl rfl
       benchStart_settled rfl
-  have h₂ : Move benchMid _ := .knockOutBenchOwn (b₁ := []) (b₂ := []) rfl (by decide) rfl
+  have h₂ : Move benchMid _ := .knockOuts (.go (by decide) rfl .keep .keep)
   refine ⟨benchStart, benchStart_wellFormed, benchStart_settled, _, _, h₁, h₂,
     .step (.step (.refl _) rfl h₁) rfl h₂, fun hk => ?_, .head _, rfl, rfl, rfl, rfl⟩
   have := hk .own .bench weakBenched (List.Mem.head _)
@@ -186,8 +186,9 @@ theorem spreadStart_settled : Settled spreadStart :=
 
 /-- **Witness: two Knock Outs from one step.** From a well-formed, `Settled` start, `spread5`
 puts 5 damage counters on both of the opponent's 50-HP Benched Pokémon in one step; both Knock
-Outs are taken (`Resolve`, two `knockOutBench` moves) before the effect ends, the player takes two
-Prize cards, and the opponent's Active Pokémon stays. -/
+Outs are taken together (`Resolve`, one batch Knock Out step; before milestone batch-KO, two
+`knockOutBench` moves) before the effect ends, the player takes two Prize cards, and the opponent's
+Active Pokémon stays. -/
 theorem doubleKO_reachable :
     ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g, Move g₀ g ∧ Reach g₀ g ∧ g.opp.bench = [] ∧
       g.opp.active = g₀.opp.active ∧ g.cur.prizes.length + 2 = g₀.cur.prizes.length ∧
@@ -195,10 +196,9 @@ theorem doubleKO_reachable :
   have hm : Move spreadStart _ :=
     .item (l₁ := []) (l₂ := []) (n := "Spread") rfl rfl spreadStart_settled
       (.prim rfl rfl (.spreadCounters .opp 5 _)
-        (.step rfl (.knockOutBench (b₁ := []) rfl (by decide) rfl)
-          (.step rfl (.knockOutBench (b₁ := []) rfl (by decide) rfl)
-            (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
-              (fun p hp => by cases hp))))))) rfl rfl rfl rfl
+        (.step rfl (.go (by decide) rfl .keep .keep)
+          (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+            (fun p hp => by cases hp)))))) rfl rfl rfl rfl
   exact ⟨spreadStart, spreadStart_wellFormed, spreadStart_settled, _, hm,
     .step (.refl _) rfl hm, rfl, rfl, rfl, rfl⟩
 
@@ -241,8 +241,7 @@ theorem charBench_reachable :
   have h₁ : Move charStart charMid :=
     .endTurn (bo := []) (bc := [charred.unfresh.addDamage 2]) false false false false false false
       rfl rfl hs.1 rfl .nil (.cons (.burn rfl) .nil)
-  have h₂ : Move charMid _ :=
-    .knockOutBench (b₁ := []) (b₂ := []) (p := charred.unfresh.addDamage 2) rfl (by decide) rfl
+  have h₂ : Move charMid _ := .knockOuts (.won (by decide) (by decide))
   refine ⟨charStart, charStart_wellFormed, hs, _, _, h₁, h₂, .step (.step (.refl _) rfl h₁) rfl h₂,
     fun hk => ?_, rfl, .head _⟩
   exact absurd (hk .opp .bench (charred.unfresh.addDamage 2) (List.Mem.head _))
@@ -284,10 +283,9 @@ theorem gust_reachable :
             simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
             subst hp; decide)))))
         (.prim rfl rfl (.counters 5 rfl)
-          (.step rfl (.knockOut rfl (by decide) rfl)
-            (.step rfl (.promote (b₁ := []) rfl rfl)
-              (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
-                (fun p hp => by cases hp)))))))) rfl rfl rfl rfl
+          (.step rfl (.go (by decide) rfl .keep (.pick (b₁ := [])))
+            (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+              (fun p hp => by cases hp))))))) rfl rfl rfl rfl
   exact ⟨gustStart, gustStart_wellFormed, gustStart_settled, _, hm, .step (.refl _) rfl hm,
     .head _, rfl, rfl, rfl⟩
 
@@ -407,10 +405,9 @@ theorem threePrizes_reachable :
   have hm : Move (megaStart [.energy .fire, .energy .fire, .energy .fire, .energy .fire]) _ :=
     .item (l₁ := []) (l₂ := []) (n := "Hit5") rfl rfl (megaStart_settled _)
       (.prim rfl rfl (.counters 5 rfl)
-        (.step rfl (.knockOut rfl (by decide) rfl)
-          (.step rfl (.promote (b₁ := []) rfl rfl)
-            (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
-              (fun p hp => by cases hp))))))) rfl rfl rfl rfl
+        (.step rfl (.go (by decide) rfl .keep (.pick (b₁ := [])))
+          (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+            (fun p hp => by cases hp)))))) rfl rfl rfl rfl
   exact ⟨_, hm, .step (.refl _) rfl hm, rfl, .head _, rfl⟩
 
 /-- The opponent has `big` Active and the 50-HP Pokémon ex `exMon` on the Bench; the player to
@@ -440,7 +437,7 @@ theorem benchTwoPrizes_reachable :
   have hm : Move exBenchStart _ :=
     .item (l₁ := []) (l₂ := []) (n := "Spread") rfl rfl exBenchStart_settled
       (.prim rfl rfl (.spreadCounters .opp 5 _)
-        (.step rfl (.knockOutBench (b₁ := []) rfl (by decide) rfl)
+        (.step rfl (.go (by decide) rfl .keep .keep)
           (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
             (fun p hp => by cases hp)))))) rfl rfl rfl rfl
   exact ⟨exBenchStart, exBenchStart_wellFormed, exBenchStart_settled, _, hm,

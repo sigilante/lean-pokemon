@@ -216,82 +216,39 @@ theorem GameState.winner_of_xclamp {g₁ g₂ : GameState} (h : g₁.xclamp K = 
 
 /-! ## Knock Outs -/
 
-/-- The kernel of `xclamp` is a simulation for Knock Out moves. -/
-theorem KOMove.xclamp_sim {g₁ g₁' g₂ : GameState} (h : KOMove g₁ g₁')
+/-- **The check commutes with the clamp with exact stores**, when every derived HP is at most the
+cap. -/
+theorem GameState.koStep_xclamp {g : GameState} (hH : g.HpBelow K) :
+    (g.xclamp K).koStep = g.koStep.xclamp K :=
+  GameState.koStep_mapPlay (f := InPlay.clampWith K .hp) (m := id) (g := g)
+    (fun _ => rfl) (fun _ => rfl) (fun w sp p hp => decide_le_min (hH w sp p hp))
+
+/-- **The kernel of `xclamp` is a simulation for the batch Knock Out step**, when every derived HP
+is at most `K`. -/
+theorem KOBatch.xclamp_sim {g₁ g₁' g₂ : GameState} (h : KOBatch g₁ g₁')
     (hc : g₁.xclamp K = g₂.xclamp K) (hH : g₁.HpBelow K) :
-    ∃ g₂', KOMove g₂ g₂' ∧ g₁'.xclamp K = g₂'.xclamp K := by
-  have hsf := GameState.sameField_of_xclampAt hc
-  obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
-  subst hg
+    ∃ g₂', KOBatch g₂ g₂' ∧ g₁'.xclamp K = g₂'.xclamp K := by
+  have hH₂ := GameState.hpBelow_of_clamp (GameState.clamp_of_xclamp hc) hH
+  have hks : g₁.koStep.xclamp K = g₂.koStep.xclamp K := by
+    rw [← GameState.koStep_xclamp hH, hc, GameState.koStep_xclamp hH₂]
+  have hwk := GameState.winner_of_xclamp hks
   cases h with
-  | @knockOut p c ps ha hk hp =>
-      rw [ha] at ha₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-      exact ⟨_, .knockOut rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, Option.map_none, hc₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promote ha hb =>
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      exact ⟨_, .promote rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, he₁, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemon ha hb =>
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₂
-      subst he₂
-      exact ⟨_, .noPokemon rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, he₁, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutOwn p c ps ha hk hp =>
-      rw [ha] at hc₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .knockOutOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, Option.map_none, ha₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promoteOwn ha hb =>
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      exact ⟨_, .promoteOwn rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₂, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemonOwn ha hb =>
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₁
-      subst he₁
-      exact ⟨_, .noPokemonOwn rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₂, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutBench p b₁ b₂ c ps hb hk hp =>
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.opp.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBench rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.cur.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBenchOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
+  | won hu hw =>
+      exact ⟨_, .won (fun hs => hu (GameState.settled_of_xclamp hc.symm hs hH₂))
+        (by rw [hwk]; exact hw), hks⟩
+  | @go ac ao bc bo hu hw hpc hpo =>
+      obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hks
+      obtain ⟨ac', bc', hpc', hac, hbc⟩ := hpc.sim (a₂ := g₂.koStep.cur.active)
+        (b₂ := g₂.koStep.cur.bench) (by rw [hg]; exact hc₂) (by rw [hg]; exact he₁)
+      obtain ⟨ao', bo', hpo', hao, hbo⟩ := hpo.sim (a₂ := g₂.koStep.opp.active)
+        (b₂ := g₂.koStep.opp.bench) (by rw [hg]; exact ha₂) (by rw [hg]; exact he₂)
+      refine ⟨_, .go (fun hs => hu (GameState.settled_of_xclamp hc.symm hs hH₂))
+        (by rw [hwk]; exact hw) hpc' hpo', ?_⟩
+      have e : ∀ X : GameState, ∀ a b c d, (X.withPlay a b c d).xclamp K =
+          (X.xclamp K).withPlay (a.map (InPlay.clampWith K .hp)) (b.map (InPlay.clampWith K .hp))
+            (c.map (InPlay.clampWith K .hp)) (d.map (InPlay.clampWith K .hp)) :=
+        fun _ _ _ _ _ => rfl
+      rw [e, e, hks, hac, hbc, hao, hbo]
 
 /-- The kernel of `xclamp` is a simulation for taking the Knock Outs. -/
 theorem Resolve.xclamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
@@ -307,7 +264,7 @@ theorem Resolve.xclamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
   | step hn hm _ ih =>
       intro g₂ hH hc
       obtain ⟨m₂, hm₂, hcm⟩ := hm.xclamp_sim hc (GameState.hpBelow_of_hpBound hH)
-      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm hm.move.perm]; exact hH) hcm
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm hm.perm]; exact hH) hcm
       exact ⟨g₂', .step (by rw [GameState.winner_of_xclamp hc]; exact hn) hm₂ hr₂, hc'⟩
 
 /-! ## Inside an attack's effect -/
@@ -1072,82 +1029,10 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx hw, by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩
-  | @knockOut p c ps ha hk hp =>
+  | knockOuts h =>
       subst hg
-      rw [ha] at ha₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-      exact ⟨_, .knockOut rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, Option.map_none, hc₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promote ha hb =>
-      subst hg
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      exact ⟨_, .promote rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, he₁, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemon ha hb =>
-      subst hg
-      rw [ha] at ha₂
-      have := none_of_map ha₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₂
-      subst he₂
-      exact ⟨_, .noPokemon rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, he₁, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutOwn p c ps ha hk hp =>
-      subst hg
-      rw [ha] at hc₂
-      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .knockOutOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p ha) hk) hp, by
-        rw [show q.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, Option.map_none, ha₂, he₁, he₂,
-          hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | promoteOwn ha hb =>
-      subst hg
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      exact ⟨_, .promoteOwn rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₂, Option.map_some,
-          List.map_append, h1, h2, h3]⟩
-  | noPokemonOwn ha hb =>
-      subst hg
-      rw [ha] at hc₂
-      have := none_of_map hc₂
-      subst this
-      rw [hb, List.map_nil, List.map_eq_nil_iff] at he₁
-      subst he₁
-      exact ⟨_, .noPokemonOwn rfl rfl, by
-        simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₂, ha, hb,
-          Option.map_none, List.map_nil]⟩
-  | @knockOutBench p b₁ b₂ c ps hb hk hp =>
-      subst hg
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₂)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.opp.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBench rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
-  | @knockOutBenchOwn p b₁ b₂ c ps hb hk hp =>
-      subst hg
-      obtain ⟨c₁, q', c₂', rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      have hq := InPlay.agree_of_clamp h2
-      have hm : p ∈ g₁.cur.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
-      exact ⟨_, .knockOutBenchOwn rfl (by rw [hsf.hpOf _ _ hq.sv]; exact hq.ko (hH _ _ p hm) hk) hp, by
-        rw [show q'.top.prizeCount = p.top.prizeCount by rw [hq.top]]
-        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
-          h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
-        rfl⟩
+      obtain ⟨g₂', h₂, e⟩ := h.xclamp_sim hc hH
+      exact ⟨g₂', .knockOuts h₂, e⟩
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       have hk' := hk₂ hk
       subst hg
