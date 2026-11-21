@@ -1572,7 +1572,7 @@ def translate_pokemon(c, res):
         return res
     fields = {'name': name, 'stage': stage, 'evolvesFrom': ('some', c['evolvesFrom']) if c.get('evolvesFrom') else None,
               'hp': hp, 'type': ptype, 'attacks': attacks, 'retreat': retreat, 'weakness': weak,
-              'resistance': res_, 'ruleBox': (rb,), 'tera': tera}
+              'resistance': res_, 'ruleBox': (rb,), 'tera': tera, 'abilities': []}
     res['term'] = ('pokemon', fields)
     res['ok'] = True
     return res

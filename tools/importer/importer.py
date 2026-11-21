@@ -224,8 +224,8 @@ def run(data, out, survey=None):
            'theorem recSafe : recSafeB all = ' + ('true' if not rs_pairs else 'false') + ' := by decide +kernel\n',
            ]
     if not rs_pairs:
-        src += ['/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly` and\n'
-                '`RecycleSafe`), so `Faithful.xfinite` applies to it. -/',
+        src += ['/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly`,\n'
+                '`RecycleSafe` and `AbilitySafe`), so `Faithful.xfinite` applies to it. -/',
                 'theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=\n'
                 '  faithful_of all_ok recSafe g hg\n',
                 '/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged. -/',
@@ -276,8 +276,10 @@ def first_reason(r):
 
 
 def card_effects(term):
+    """Every effect of the card: attacks, the scripts of its Abilities, or a Trainer's effect."""
     if term[0] == 'pokemon':
-        return [a['effect'] for a in term[1]['attacks']]
+        return ([a['effect'] for a in term[1]['attacks']]
+                + [e for ab in term[1]['abilities'] for e in T.ability_scripts(ab)])
     if term[0] == 'trainer':
         return [term[3]]
     return []
@@ -302,17 +304,27 @@ def al_amt(term):
     return T.amt_at('always', term[3]) if term[0] == 'trainer' else 0
 
 
+def free_rec(term):
+    """`Card.freeRec`: the recycling filters of a Trainer's effect and of a Pokémon's "as often as you
+    like" Abilities."""
+    if term[0] == 'trainer':
+        return T.rec_filters(term[3])
+    if term[0] == 'pokemon':
+        return [f for ab in term[1]['abilities'] if ab['use'] == ('unlimited',)
+                for e in T.ability_scripts(ab) for f in T.rec_filters(e)]
+    return []
+
+
 def recycle_pairs(terms):
-    """Violations of `RecycleSafe` over the pool: (recycler, filter, writer) triples."""
+    """Violations of `RecycleSafe` over the pool: (recycler, filter, writer, clause) tuples."""
     out = []
     W = [y for y in terms if w_amt(y)]
     A = [y for y in terms if al_amt(y)]
     for x in terms:
-        if x[0] == 'trainer':
-            for f in T.rec_filters(x[3]):
-                for y in W:
-                    if T.filter_eval(f, y):
-                        out.append((x, f, y, 'a'))
+        for f in free_rec(x):
+            for y in W:
+                if T.filter_eval(f, y):
+                    out.append((x, f, y, 'a'))
         for e in card_effects(x):
             for f in T.rec_filters(e):
                 for y in A:

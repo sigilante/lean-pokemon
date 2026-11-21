@@ -1286,8 +1286,8 @@ theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = 
 /-- Clause 3 of `Faithful` over the whole imported pool, decided. -/
 theorem recSafe : recSafeB all = true := by decide +kernel
 
-/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly` and
-`RecycleSafe`), so `Faithful.xfinite` applies to it. -/
+/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly`,
+`RecycleSafe` and `AbilitySafe`), so `Faithful.xfinite` applies to it. -/
 theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=
   faithful_of all_ok recSafe g hg
 

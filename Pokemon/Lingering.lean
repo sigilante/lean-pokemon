@@ -99,7 +99,7 @@ namespace Lingering
 
 /-- A Basic Pokémon with `h` counters of HP and one free attack: base damage `d`, effect `e`. -/
 def mon (h d : Nat) (e : Effect) : PokemonCard :=
-  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none, .none, false⟩
+  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none, .none, false, []⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], false, false, false,
@@ -193,7 +193,7 @@ theorem tmax_red₀ {k : Nat} (hk : 3 ≤ k) : ∀ x ∈ (red₀ k).allCards, x.
   simp [red₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
     stadiumCardList, InPlay.cardList, InPlay.ofBasic] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp [Card.tmax, attacksTmax, Effect.tmax, redItem, hitter, target, mon] <;> omega
+    simp [Card.tmax, attacksTmax, abilitiesTmax, Effect.tmax, redItem, hitter, target, mon] <;> omega
 
 /-- **Damage reduction breaks every cap on the damage bonus.** For every `k ≥ 3` there is a
 well-formed, `Settled` start with no damage reduction in effect, every HP (and Resistance) at
@@ -228,6 +228,16 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | retreat ha hb => simp [red, st, side] at hb
   | item hh => simp [red, st, side] at hh
   | supporter hh => simp [red, st, side] at hh
+  | ability hu hm =>
+      cases hu with
+      | active ha =>
+          simp only [red, st, side, Option.some.injEq] at ha
+          subst ha
+          simp [InPlay.ofBasic, hitter, mon] at hm
+      | bench hb => simp [red, st, side] at hb
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      simp [red, st, side] at hh
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
@@ -334,7 +344,7 @@ theorem tmax_dr₀ {k : Nat} (hk : 2 ≤ k) : ∀ x ∈ (dr₀ k).allCards, x.tm
   simp [dr₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
     stadiumCardList, InPlay.cardList, InPlay.ofBasic] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp [Card.tmax, attacksTmax, Effect.tmax, bonusItem, drainer, prey, mon] <;> omega
+    simp [Card.tmax, attacksTmax, abilitiesTmax, Effect.tmax, bonusItem, drainer, prey, mon] <;> omega
 
 /-- **`drain` breaks every cap on the damage bonus.** For every `k ≥ 2` there is a well-formed,
 `Settled` start with no damage reduction anywhere, every HP (and Resistance) at most `k` and
@@ -371,6 +381,16 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | retreat ha hb => simp [dr, st, side] at hb
   | item hh => simp [dr, st, side] at hh
   | supporter hh => simp [dr, st, side] at hh
+  | ability hu hm =>
+      cases hu with
+      | active ha =>
+          simp only [dr, st, side, Option.some.injEq] at ha
+          subst ha
+          simp [InPlay.ofBasic, drainer, mon] at hm
+      | bench hb => simp [dr, st, side] at hb
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      simp [dr, st, side] at hh
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha

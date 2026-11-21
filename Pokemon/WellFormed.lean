@@ -83,6 +83,20 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
       exact benched_update rfl h1 ((h1 q' (mem rfl)).of_eq rfl rfl rfl rfl)
   | moveNone => exact hb
 
+/-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
+theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
+    (h : CMove f noKO a b a' b') (hb : BenchOk b) : BenchOk b' := by
+  have mem : ∀ {b₁ b₂ : List InPlay} {q : InPlay}, q ∈ b₁ ++ q :: b₂ :=
+    List.mem_append_right _ (.head _)
+  cases h with
+  | @ab x q b₁ b₂ => exact benched_update rfl hb ((hb q mem).of_eq rfl rfl rfl rfl)
+  | @ba x q b₁ b₂ => exact benched_update rfl hb ((hb q mem).of_eq rfl rfl rfl rfl)
+  | @bb _ q r b₁ b₂ c₁ c₂ hq hd hc =>
+      have h1 : BenchOk (b₁ ++ { q with damage := q.damage - 1 } :: b₂) :=
+        benched_update rfl hb ((hb q mem).of_eq rfl rfl rfl rfl)
+      rw [hc] at h1
+      exact benched_update rfl h1 ((h1 r mem).of_eq rfl rfl rfl rfl)
+
 /-- What resolving an effect never changes: that every Benched Pokémon is `Benched` (effects
 change Benched Pokémon only in markers and damage counters, and a Pokémon that a switch puts on
 the Bench is cured, milestone M3), the Prizes, the winner, who is first, and the phase of the
@@ -200,6 +214,7 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
       cases w with
       | own => exact ⟨fun hb => hz.benchOk hb, id, rfl, rfl, rfl, rfl, rfl⟩
       | opp => exact ⟨id, fun hb => hz.benchOk hb, rfl, rfl, rfl, rfl, rfl⟩
+  | moveCounter h => exact ⟨fun hb => h.benchOk hb, id, rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/
@@ -340,6 +355,55 @@ theorem TRun.settled_or_won {e : Effect} {g g' : GameState} (h : TRun e g g')
   | iterNil => exact hs
   | iterCons _ _ ih₁ ih₂ => exact ih₂ (ih₁ hs)
 
+/-- Marking a Pokémon as having used an Ability keeps `Settled` (milestone M8a): damage and
+HP are unchanged. -/
+theorem UseAt.settled {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
+    (hs : Settled g) : Settled g₁ := by
+  obtain ⟨hk, h1, h2⟩ := hs
+  cases h with
+  | active ha =>
+      refine ⟨fun p hp => ?_, by simp, h2⟩
+      rcases hp with hp | hp | hp | hp
+      · simp only [Option.some.injEq] at hp; subst hp; exact hk x (.inl ha)
+      · exact hk p (.inr (.inl hp))
+      · exact hk p (.inr (.inr (.inl hp)))
+      · exact hk p (.inr (.inr (.inr hp)))
+  | bench hb =>
+      refine ⟨fun p hp => ?_, h1, h2⟩
+      rcases hp with hp | hp | hp | hp
+      · exact hk p (.inl hp)
+      · simp only at hp
+        rcases List.mem_append.1 hp with hp | hp
+        · exact hk p (.inr (.inl (by rw [hb]; exact List.mem_append_left _ hp)))
+        · cases hp with
+          | head => exact hk x (.inr (.inl (by rw [hb]; exact List.mem_append_right _ (.head _))))
+          | tail _ hp =>
+              exact hk p (.inr (.inl (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))))
+      · exact hk p (.inr (.inr (.inl hp)))
+      · exact hk p (.inr (.inr (.inr hp)))
+
+/-- Marking a Pokémon as having used an Ability keeps well-formedness (milestone M8a). -/
+theorem UseAt.wellFormed {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
+    (hw : WellFormed g) : WellFormed g₁ := by
+  cases h with
+  | active ha => exact hw
+  | bench hb =>
+      exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 x (hb ▸ List.mem_append_right _
+        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
+
+/-- A play from the hand keeps well-formedness (milestone M8a). -/
+theorem PlayFromHand.wellFormed {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) (hw : WellFormed g) : WellFormed g₁ := by
+  cases h with
+  | basic hh hs hhp hb =>
+      refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩
+      rcases List.mem_append.1 hp with hp | hp
+      · exact hw.2.1 p hp
+      · rw [List.mem_singleton] at hp; subst hp
+        exact ⟨rfl, rfl, rfl, rfl⟩
+  | evolve => exact hw
+  | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2⟩
+
 /-- Legal play preserves well-formedness. -/
 theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
     WellFormed g' := by
@@ -367,6 +431,8 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
   | item hh hbt hst hr => exact hr.wellFormed hw
   | supporter hh hs hbt hst hr => exact hr.wellFormed hw
+  | ability hu _ _ _ _ _ _ _ _ hr => exact hr.wellFormed (hu.wellFormed hw)
+  | onPlay hp _ _ _ _ _ hr => exact hr.wellFormed (hp.wellFormed hw)
   | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | @knockOut p c ps ha hk hp =>

@@ -124,6 +124,8 @@ def own_free(e):
         return False
     if h == 'moveEnergy' and e[1] == OWN:
         return False
+    if h == 'moveCounter':
+        return False
     if h == 'ite':
         return not test_on_own(e[1]) and own_free(e[2]) and own_free(e[3])
     return all(own_free(s) for s in subs(e))
@@ -202,6 +204,90 @@ def prims(e):
             out += prims(s)
         return out
     return [e]
+
+
+# ---------------------------------------------------------------- Abilities (mirrors of Pokemon/Card.lean, M8a)
+#
+# An Ability is a dict {'name', 'use', 'spot', 'cond', 'effect'}; `use` is ('once',), ('unlimited',)
+# or ('onPlay', ('bench',) | ('evolve',) | ('either',)); `spot` is None or ('some', ('active',) |
+# ('bench',)); `cond` is None or ('some', test); `effect` is an `AbEff`: ('fx', e), ('self', op),
+# ('seq', a, b), ('choice', a, b); a `SelfOp` is ('heal', n), ('counters', n), ('attach', src, f),
+# ('switchIn',) or ('energyTo', f).
+
+ACTIVE, BENCH = ('active',), ('bench',)
+
+
+def selfop_at_s(sp, o):
+    """`SelfOp.atS`."""
+    h = o[0]
+    if h == 'heal':
+        return ('heal', o[1]) if sp == ACTIVE else ('benchHeal', o[1])
+    if h == 'counters':
+        return ('selfDamage', o[1]) if sp == ACTIVE else ('benchCounters', OWN, o[1])
+    if h == 'attach':
+        return ('attach', OWN, o[1], o[2], sp, ('any',))
+    if h == 'switchIn':
+        return SKIP if sp == ACTIVE else ('switch', OWN)
+    if h == 'energyTo':
+        return ('moveEnergy', OWN, o[1])
+    raise AssertionError(o)
+
+
+def selfop_at(p, o):
+    """`SelfOp.at`: p is ACTIVE, BENCH or None (not tracked)."""
+    if p is None:
+        return ('choice', selfop_at_s(ACTIVE, o), selfop_at_s(BENCH, o))
+    return selfop_at_s(p, o)
+
+
+def selfop_after(p, o):
+    if o[0] == 'switchIn':
+        return ACTIVE if p == ACTIVE else None
+    return p
+
+
+def abeff_after(p, a):
+    h = a[0]
+    if h == 'fx':
+        return None if switches_own(a[1]) else p
+    if h == 'self':
+        return selfop_after(p, a[1])
+    if h == 'seq':
+        return abeff_after(abeff_after(p, a[1]), a[2])
+    if h == 'choice':
+        x, y = abeff_after(p, a[1]), abeff_after(p, a[2])
+        return x if x == y else None
+    raise AssertionError(a)
+
+
+def abeff_compile(p, a):
+    """`AbEff.compile`."""
+    h = a[0]
+    if h == 'fx':
+        return a[1]
+    if h == 'self':
+        return selfop_at(p, a[1])
+    if h == 'seq':
+        return ('seq', abeff_compile(p, a[1]), abeff_compile(abeff_after(p, a[1]), a[2]))
+    if h == 'choice':
+        return ('choice', abeff_compile(p, a[1]), abeff_compile(p, a[2]))
+    raise AssertionError(a)
+
+
+def ability_scripts(ab):
+    """`Ability.scripts`: the script with "this Pokémon" Active, Benched, and not tracked."""
+    return [abeff_compile(ACTIVE, ab['effect']), abeff_compile(BENCH, ab['effect']),
+            abeff_compile(None, ab['effect'])]
+
+
+def amt(e):
+    return sum(amt_at(s, e) for s in ('now', 'next', 'after', 'always'))
+
+
+def ability_safe(ab):
+    """`Card.abilitySafe` for one Ability."""
+    return all((ab['use'] != ('unlimited',) or amt(e) == 0) and amt_at('always', e) == 0
+               for e in ability_scripts(ab))
 
 
 # ---------------------------------------------------------------- filters, evaluated in Python

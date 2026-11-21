@@ -16,6 +16,7 @@ def sv9_118 : Card := .pokemon
   { name := "Sentret", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Smack", cost := [.colorless], damage := 2,
         effect := .skip,
@@ -26,6 +27,7 @@ def sv9_119 : Card := .pokemon
   { name := "Furret", stage := .stage1, evolvesFrom := some "Sentret",
     hp := 12, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Scratch", cost := [.colorless], damage := 4,
         effect := .skip,
@@ -39,6 +41,7 @@ def sv9_120 : Card := .pokemon
   { name := "Dunsparce", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Trading Places", cost := [.colorless], damage := 0,
         effect := .switch .own,
@@ -52,6 +55,7 @@ def sv9_124 : Card := .pokemon
   { name := "Audino", stage := .basic, evolvesFrom := none,
     hp := 11, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Beckon", cost := [.colorless], damage := 0,
         effect := .ite (.countGe (.pile .own .discard (.kind .supporter)) 1) (.move .own .discard .hand (.kind .supporter) (.exactly 1)) .skip,
@@ -65,6 +69,7 @@ def sv9_125 : Card := .pokemon
   { name := "Minccino", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Slap", cost := [.colorless], damage := 2,
         effect := .skip,
@@ -75,6 +80,7 @@ def sv9_126 : Card := .pokemon
   { name := "Cinccino", stage := .stage1, evolvesFrom := some "Minccino",
     hp := 10, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tail Smack", cost := [.colorless], damage := 5,
         effect := .skip,
@@ -85,6 +91,7 @@ def sv9_127 : Card := .pokemon
   { name := "Noibat", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rapid Draw", cost := [.colorless], damage := 1,
         effect := .move .own (.top 1) .hand .any .all,
@@ -95,6 +102,7 @@ def sv9_130 : Card := .pokemon
   { name := "Drampa", stage := .basic, evolvesFrom := none,
     hp := 12, type := .colorless, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ram", cost := [.colorless], damage := 3,
         effect := .skip,
@@ -108,6 +116,7 @@ def sv9_131 : Card := .pokemon
   { name := "Skwovet", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Collect", cost := [.colorless], damage := 0,
         effect := .move .own (.top 1) .hand .any .all,
@@ -121,6 +130,7 @@ def sv9_132 : Card := .pokemon
   { name := "Greedent", stage := .stage1, evolvesFrom := some "Skwovet",
     hp := 12, type := .colorless, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gluttonous Tail", cost := [.colorless, .colorless], damage := 6,
         effect := .move .own (.top 2) .hand .any .all,
@@ -131,6 +141,7 @@ def sv9_134 : Card := .pokemon
   { name := "Hop's Corvisquire", stage := .stage1, evolvesFrom := some "Hop's Rookidee",
     hp := 9, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Speed Dive", cost := [.colorless], damage := 3,
         effect := .skip,
@@ -144,6 +155,7 @@ def sv9_135 : Card := .pokemon
   { name := "Hop's Wooloo", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Smash Kick", cost := [.colorless, .colorless, .colorless], damage := 5,
         effect := .skip,
@@ -154,6 +166,7 @@ def sv9_137 : Card := .pokemon
   { name := "Cramorant", stage := .basic, evolvesFrom := none,
     hp := 11, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ceaseless Spitting", cost := [.colorless, .colorless], damage := 0,
         effect := .damage (.many (.const 5)),
@@ -164,6 +177,7 @@ def sv9_139 : Card := .pokemon
   { name := "Lechonk", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ram", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -174,6 +188,7 @@ def sv9_140 : Card := .pokemon
   { name := "Oinkologne", stage := .stage1, evolvesFrom := some "Lechonk",
     hp := 12, type := .colorless, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Aromatic Stomps", cost := [.colorless, .colorless], damage := 5,
         effect := .choice (.linger .opp .next (.lock .attack)) .skip,
@@ -187,6 +202,7 @@ def sv9_141 : Card := .pokemon
   { name := "Squawkabilly", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Add On", cost := [.colorless], damage := 0,
         effect := .move .own (.top 2) .hand .any .all,
@@ -204,6 +220,7 @@ def sv10_2 : Card := .pokemon
   { name := "Yanma", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Whirlwind", cost := [.colorless], damage := 0,
         effect := .switch .opp,
@@ -217,6 +234,7 @@ def sv10_4 : Card := .pokemon
   { name := "Pineco", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 2, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hang Down", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -227,6 +245,7 @@ def sv10_5 : Card := .pokemon
   { name := "Shroomish", stage := .basic, evolvesFrom := none,
     hp := 6, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rolling Tackle", cost := [.colorless, .colorless], damage := 3,
         effect := .skip,
@@ -237,6 +256,7 @@ def sv10_6 : Card := .pokemon
   { name := "Breloom", stage := .stage1, evolvesFrom := some "Shroomish",
     hp := 12, type := .grass, retreat := 2, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Damage Rush", cost := [.colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 3) (.many (.const 5))),
@@ -250,6 +270,7 @@ def sv10_7 : Card := .pokemon
   { name := "Cynthia's Roselia", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Spike Sting", cost := [.colorless], damage := 2,
         effect := .skip,
@@ -260,6 +281,7 @@ def sv10_13 : Card := .pokemon
   { name := "Fomantis", stage := .basic, evolvesFrom := none,
     hp := 6, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Cut Up", cost := [.grass], damage := 2,
         effect := .skip,
@@ -270,6 +292,7 @@ def sv10_16 : Card := .pokemon
   { name := "Applin", stage := .basic, evolvesFrom := none,
     hp := 4, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Mini Drain", cost := [.grass], damage := 1,
         effect := .heal 1,
@@ -280,6 +303,7 @@ def sv10_19 : Card := .pokemon
   { name := "Team Rocket's Tarountula", stage := .basic, evolvesFrom := none,
     hp := 5, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Take Down", cost := [.grass], damage := 3,
         effect := .selfDamage 1,
@@ -290,6 +314,7 @@ def sv10_21 : Card := .pokemon
   { name := "Smoliv", stage := .basic, evolvesFrom := none,
     hp := 6, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ram", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -300,6 +325,7 @@ def sv10_22 : Card := .pokemon
   { name := "Dolliv", stage := .stage1, evolvesFrom := some "Smoliv",
     hp := 9, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Nutrients", cost := [.grass], damage := 0,
         effect := .ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 4) (.benchHeal 4)) (.heal 4),
@@ -313,6 +339,7 @@ def sv10_27 : Card := .pokemon
   { name := "Growlithe", stage := .basic, evolvesFrom := none,
     hp := 8, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Live Coal", cost := [.fire], damage := 1,
         effect := .skip,
@@ -326,6 +353,7 @@ def sv10_28 : Card := .pokemon
   { name := "Arcanine", stage := .stage1, evolvesFrom := some "Growlithe",
     hp := 14, type := .fire, retreat := 3, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Flare", cost := [.colorless, .colorless], damage := 5,
         effect := .skip,
@@ -339,6 +367,7 @@ def sv10_29 : Card := .pokemon
   { name := "Ponyta", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Double Headbutt", cost := [.colorless], damage := 0,
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.damage (.const 2))),
@@ -349,6 +378,7 @@ def sv10_32 : Card := .pokemon
   { name := "Ethan's Cyndaquil", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ember", cost := [.fire], damage := 3,
         effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
@@ -359,6 +389,7 @@ def sv10_35 : Card := .pokemon
   { name := "Ethan's Slugma", stage := .basic, evolvesFrom := none,
     hp := 8, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Steady Firebreathing", cost := [.fire], damage := 2,
         effect := .skip,
@@ -369,6 +400,7 @@ def sv10_37 : Card := .pokemon
   { name := "Team Rocket's Houndour", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Steady Firebreathing", cost := [.fire], damage := 2,
         effect := .skip,
@@ -379,6 +411,7 @@ def sv10_38 : Card := .pokemon
   { name := "Team Rocket's Houndoom", stage := .stage1, evolvesFrom := some "Team Rocket's Houndour",
     hp := 13, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Cruel Coal", cost := [.fire], damage := 0,
         effect := .seq (.inflict .burned) (.inflict .confused),
@@ -392,6 +425,7 @@ def sv10_40 : Card := .pokemon
   { name := "Torchic", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Collect", cost := [.colorless], damage := 0,
         effect := .move .own (.top 1) .hand .any .all,
@@ -405,6 +439,7 @@ def sv10_41 : Card := .pokemon
   { name := "Combusken", stage := .stage1, evolvesFrom := some "Torchic",
     hp := 10, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Combustion", cost := [.colorless], damage := 2,
         effect := .skip,
@@ -418,6 +453,7 @@ def sv10_42 : Card := .pokemon
   { name := "Blaziken", stage := .stage2, evolvesFrom := some "Combusken",
     hp := 17, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Heat Blast", cost := [.colorless, .colorless], damage := 7,
         effect := .skip,
@@ -431,6 +467,7 @@ def sv10_44 : Card := .pokemon
   { name := "Hearthflame Mask Ogerpon", stage := .basic, evolvesFrom := none,
     hp := 11, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Fire Kagura", cost := [.colorless], damage := 0,
         effect := .seq (.choice (.attach .own .deck (.energyOf .fire) .active .any) (.attach .own .deck (.energyOf .fire) .bench .any)) .shuffle,
@@ -444,6 +481,7 @@ def sv10_46 : Card := .pokemon
   { name := "Misty's Staryu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Bubble Beam", cost := [.water], damage := 2,
         effect := .choice (.inflict .paralyzed) .skip,
@@ -454,6 +492,7 @@ def sv10_54 : Card := .pokemon
   { name := "Clamperl", stage := .basic, evolvesFrom := none,
     hp := 6, type := .water, retreat := 2, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Shell Press", cost := [.water], damage := 1,
         effect := .linger .own .next (.reduce 1),
@@ -464,6 +503,7 @@ def sv10_57 : Card := .pokemon
   { name := "Buizel", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tail Whap", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -477,6 +517,7 @@ def sv10_58 : Card := .pokemon
   { name := "Floatzel", stage := .stage1, evolvesFrom := some "Buizel",
     hp := 12, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Whirlpool", cost := [.colorless, .colorless], damage := 3,
         effect := .ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip,
@@ -490,6 +531,7 @@ def sv10_59 : Card := .pokemon
   { name := "Snover", stage := .basic, evolvesFrom := none,
     hp := 9, type := .water, retreat := 3, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Light Punch", cost := [.colorless, .colorless], damage := 2,
         effect := .skip,
@@ -503,6 +545,7 @@ def sv10_60 : Card := .pokemon
   { name := "Abomasnow", stage := .stage1, evolvesFrom := some "Snover",
     hp := 15, type := .water, retreat := 4, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Lunge Out", cost := [.colorless, .colorless, .colorless], damage := 9,
         effect := .skip,
@@ -516,6 +559,7 @@ def sv10_62 : Card := .pokemon
   { name := "Arrokuda", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Reckless Charge", cost := [.water], damage := 3,
         effect := .selfDamage 1,
@@ -526,6 +570,7 @@ def sv10_64 : Card := .pokemon
   { name := "Cetoddle", stage := .basic, evolvesFrom := none,
     hp := 10, type := .water, retreat := 3, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gentle Slap", cost := [.water, .colorless], damage := 3,
         effect := .skip,
@@ -539,6 +584,7 @@ def sv10_67 : Card := .pokemon
   { name := "Wellspring Mask Ogerpon", stage := .basic, evolvesFrom := none,
     hp := 11, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Water Kagura", cost := [.colorless], damage := 0,
         effect := .seq (.choice (.attach .own .deck (.energyOf .water) .active .any) (.attach .own .deck (.energyOf .water) .bench .any)) .shuffle,
@@ -552,6 +598,7 @@ def sv10_68 : Card := .pokemon
   { name := "Electabuzz", stage := .basic, evolvesFrom := none,
     hp := 9, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Electroslug", cost := [.lightning, .colorless], damage := 5,
         effect := .skip,
@@ -562,6 +609,7 @@ def sv10_71 : Card := .pokemon
   { name := "Ethan's Pichu", stage := .basic, evolvesFrom := none,
     hp := 3, type := .lightning, retreat := 0, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Zapping Draw", cost := [], damage := 3,
         effect := .move .own (.top 1) .hand .any .all,
@@ -572,6 +620,7 @@ def sv10_72 : Card := .pokemon
   { name := "Team Rocket's Mareep", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Procurement", cost := [.colorless], damage := 0,
         effect := .seq (.move .own .deck .hand (.kind .item) (.upTo 1)) .shuffle,
@@ -585,6 +634,7 @@ def sv10_73 : Card := .pokemon
   { name := "Team Rocket's Flaaffy", stage := .stage1, evolvesFrom := some "Team Rocket's Mareep",
     hp := 9, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Thunder Shock", cost := [.lightning, .colorless], damage := 5,
         effect := .choice (.inflict .paralyzed) .skip,
@@ -595,6 +645,7 @@ def sv10_75 : Card := .pokemon
   { name := "Electrike", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rear Kick", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -608,6 +659,7 @@ def sv10_76 : Card := .pokemon
   { name := "Manectric", stage := .stage1, evolvesFrom := some "Electrike",
     hp := 12, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Zap Kick", cost := [.colorless], damage := 3,
         effect := .skip,
@@ -621,6 +673,7 @@ def sv10_79 : Card := .pokemon
   { name := "Team Rocket's Drowzee", stage := .basic, evolvesFrom := none,
     hp := 8, type := .psychic, retreat := 2, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hypnotic Ray", cost := [.psychic], damage := 1,
         effect := .inflict .asleep,
@@ -631,6 +684,7 @@ def sv10_84 : Card := .pokemon
   { name := "Steven's Claydol", stage := .stage1, evolvesFrom := some "Steven's Baltoy",
     hp := 12, type := .psychic, retreat := 2, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Eerie Light", cost := [.psychic], damage := 2,
         effect := .inflict .confused,
@@ -644,6 +698,7 @@ def sv10_85 : Card := .pokemon
   { name := "Team Rocket's Chingling", stage := .basic, evolvesFrom := none,
     hp := 3, type := .psychic, retreat := 0, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Chiming Commotion", cost := [], damage := 0,
         effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
@@ -654,6 +709,7 @@ def sv10_90 : Card := .pokemon
   { name := "Mankey", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fighting, retreat := 1, weakness := some .psychic,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Wild Kick", cost := [.fighting], damage := 0,
         effect := .choice (.damage (.const 3)) .skip,
@@ -664,6 +720,7 @@ def sv10_94 : Card := .pokemon
   { name := "Team Rocket's Larvitar", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Mountain Munch", cost := [.colorless], damage := 1,
         effect := .move .opp (.top 1) .discard .any .all,
@@ -674,6 +731,7 @@ def sv10_97 : Card := .pokemon
   { name := "Nosepass", stage := .basic, evolvesFrom := none,
     hp := 8, type := .fighting, retreat := 3, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Headbutt", cost := [.fighting], damage := 2,
         effect := .skip,
@@ -687,6 +745,7 @@ def sv10_99 : Card := .pokemon
   { name := "Meditite", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fighting, retreat := 1, weakness := some .psychic,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Steady Punch", cost := [.fighting], damage := 0,
         effect := .choice (.damage (.const 3)) (.damage (.const 1)),
@@ -697,6 +756,7 @@ def sv10_105 : Card := .pokemon
   { name := "Hippopotas", stage := .basic, evolvesFrom := none,
     hp := 9, type := .fighting, retreat := 3, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Push Down", cost := [.fighting], damage := 1,
         effect := .switch .opp,
@@ -707,6 +767,7 @@ def sv10_107 : Card := .pokemon
   { name := "Mudbray", stage := .basic, evolvesFrom := none,
     hp := 9, type := .fighting, retreat := 3, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Running Charge", cost := [.fighting, .colorless], damage := 0,
         effect := .damage (.many (.const 4)),
@@ -717,6 +778,7 @@ def sv10_109 : Card := .pokemon
   { name := "Arven's Toedscool", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Slight Intrusion", cost := [.colorless], damage := 3,
         effect := .selfDamage 1,
@@ -727,6 +789,7 @@ def sv10_110 : Card := .pokemon
   { name := "Arven's Toedscruel", stage := .stage1, evolvesFrom := some "Arven's Toedscool",
     hp := 14, type := .fighting, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Pull", cost := [.colorless], damage := 0,
         effect := .switch .opp,
@@ -740,6 +803,7 @@ def sv10_111 : Card := .pokemon
   { name := "Cornerstone Mask Ogerpon", stage := .basic, evolvesFrom := none,
     hp := 11, type := .fighting, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rock Kagura", cost := [.colorless], damage := 0,
         effect := .seq (.choice (.attach .own .deck (.energyOf .fighting) .active .any) (.attach .own .deck (.energyOf .fighting) .bench .any)) .shuffle,
@@ -753,6 +817,7 @@ def sv10_112 : Card := .pokemon
   { name := "Team Rocket's Ekans", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Drag Down", cost := [.colorless], damage := 0,
         effect := .choice (.inflict .paralyzed) .skip,
@@ -766,6 +831,7 @@ def sv10_114 : Card := .pokemon
   { name := "Team Rocket's Nidoran♀", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Surprise Attack", cost := [.darkness], damage := 0,
         effect := .choice (.damage (.const 3)) .skip,
@@ -776,6 +842,7 @@ def sv10_117 : Card := .pokemon
   { name := "Team Rocket's Nidoran♂", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Pierce", cost := [.darkness], damage := 1,
         effect := .skip,
@@ -789,6 +856,7 @@ def sv10_118 : Card := .pokemon
   { name := "Team Rocket's Nidorino", stage := .stage1, evolvesFrom := some "Team Rocket's Nidoran♂",
     hp := 10, type := .darkness, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hammer In", cost := [.darkness, .colorless], damage := 3,
         effect := .skip,
@@ -802,6 +870,7 @@ def sv10_119 : Card := .pokemon
   { name := "Team Rocket's Nidoking ex", stage := .stage2, evolvesFrom := some "Team Rocket's Nidorino",
     hp := 33, type := .darkness, retreat := 3, weakness := some .fighting,
     resistance := none, ruleBox := .ex, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tainted Horn", cost := [.darkness, .darkness, .colorless], damage := 10,
         effect := .seq (.inflict .poisoned) (.poisonUp 7),
@@ -815,6 +884,7 @@ def sv10_120 : Card := .pokemon
   { name := "Team Rocket's Zubat", stage := .basic, evolvesFrom := none,
     hp := 5, type := .darkness, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Poison Spray", cost := [.darkness], damage := 0,
         effect := .inflict .poisoned,
@@ -825,6 +895,7 @@ def sv10_132 : Card := .pokemon
   { name := "Marnie's Scraggy", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Crunch", cost := [.darkness, .darkness, .colorless], damage := 5,
         effect := .ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip,
@@ -835,6 +906,7 @@ def sv10_133 : Card := .pokemon
   { name := "Marnie's Scrafty", stage := .stage1, evolvesFrom := some "Marnie's Scraggy",
     hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rear Kick", cost := [.darkness], damage := 4,
         effect := .skip,
@@ -848,6 +920,7 @@ def sv10_134 : Card := .pokemon
   { name := "Marnie's Impidimp", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Filch", cost := [.colorless], damage := 0,
         effect := .move .own (.top 1) .hand .any .all,
@@ -861,6 +934,7 @@ def sv10_135 : Card := .pokemon
   { name := "Marnie's Morgrem", stage := .stage1, evolvesFrom := some "Marnie's Impidimp",
     hp := 10, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Corkscrew Punch", cost := [.darkness, .darkness], damage := 6,
         effect := .skip,
@@ -871,6 +945,7 @@ def sv10_137 : Card := .pokemon
   { name := "Marnie's Morpeko", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 0, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Spiky Wheel", cost := [.colorless, .colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 2) (.count (.energy .own (.energyOf .darkness)) 4)),
@@ -881,6 +956,7 @@ def sv10_138 : Card := .pokemon
   { name := "Arven's Maschiff", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Stampede", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -894,6 +970,7 @@ def sv10_141 : Card := .pokemon
   { name := "Skarmory", stage := .basic, evolvesFrom := none,
     hp := 11, type := .metal, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Roost", cost := [.colorless], damage := 0,
         effect := .seq (.heal 5) (.linger .own .after (.lock .retreat)),
@@ -907,6 +984,7 @@ def sv10_143 : Card := .pokemon
   { name := "Steven's Beldum", stage := .basic, evolvesFrom := none,
     hp := 7, type := .metal, retreat := 1, weakness := some .fire,
     resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ram", cost := [.metal, .colorless], damage := 3,
         effect := .skip,
@@ -917,6 +995,7 @@ def sv10_144 : Card := .pokemon
   { name := "Steven's Metang", stage := .stage1, evolvesFrom := some "Steven's Beldum",
     hp := 10, type := .metal, retreat := 2, weakness := some .fire,
     resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Metal Slash", cost := [.metal, .colorless], damage := 7,
         effect := .linger .own .after (.lock .attack),
@@ -927,6 +1006,7 @@ def sv10_147 : Card := .pokemon
   { name := "Team Rocket's Rattata", stage := .basic, evolvesFrom := none,
     hp := 5, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Dangerous Incisors", cost := [.colorless], damage := 1,
         effect := .inflict .poisoned,
@@ -937,6 +1017,7 @@ def sv10_151 : Card := .pokemon
   { name := "Kangaskhan", stage := .basic, evolvesFrom := none,
     hp := 12, type := .colorless, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 5,
         effect := .skip,
@@ -950,6 +1031,7 @@ def sv10_156 : Card := .pokemon
   { name := "Taillow", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Wing Attack", cost := [.colorless], damage := 2,
         effect := .skip,
@@ -960,6 +1042,7 @@ def sv10_157 : Card := .pokemon
   { name := "Swellow", stage := .stage1, evolvesFrom := some "Taillow",
     hp := 10, type := .colorless, retreat := 0, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Add On", cost := [.colorless], damage := 0,
         effect := .move .own (.top 3) .hand .any .all,
@@ -973,6 +1056,7 @@ def sv10_160 : Card := .pokemon
   { name := "Squawkabilly", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Push Down", cost := [.colorless], damage := 2,
         effect := .choice (.switch .opp) .skip,
@@ -999,6 +1083,7 @@ def rsv10pt5_1 : Card := .pokemon
   { name := "Sewaddle", stage := .basic, evolvesFrom := none,
     hp := 5, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Bug Bite", cost := [.grass], damage := 2,
         effect := .skip,
@@ -1009,6 +1094,7 @@ def rsv10pt5_4 : Card := .pokemon
   { name := "Cottonee", stage := .basic, evolvesFrom := none,
     hp := 6, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Absorb", cost := [.grass], damage := 1,
         effect := .heal 1,
@@ -1019,6 +1105,7 @@ def rsv10pt5_6 : Card := .pokemon
   { name := "Deerling", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rear Kick", cost := [.colorless, .colorless], damage := 3,
         effect := .skip,
@@ -1029,6 +1116,7 @@ def rsv10pt5_7 : Card := .pokemon
   { name := "Sawsbuck", stage := .stage1, evolvesFrom := some "Deerling",
     hp := 13, type := .grass, retreat := 2, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Push Down", cost := [.colorless, .colorless], damage := 5,
         effect := .switch .opp,
@@ -1042,6 +1130,7 @@ def rsv10pt5_9 : Card := .pokemon
   { name := "Accelgor", stage := .stage1, evolvesFrom := some "Shelmet",
     hp := 10, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Acid Spray", cost := [.grass], damage := 5,
         effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
@@ -1052,6 +1141,7 @@ def rsv10pt5_10 : Card := .pokemon
   { name := "Virizion", stage := .basic, evolvesFrom := none,
     hp := 12, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Giga Drain", cost := [.grass], damage := 0,
         effect := .drain (.const 3),
@@ -1065,6 +1155,7 @@ def rsv10pt5_11 : Card := .pokemon
   { name := "Tepig", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tackle", cost := [.fire], damage := 1,
         effect := .skip,
@@ -1078,6 +1169,7 @@ def rsv10pt5_12 : Card := .pokemon
   { name := "Pignite", stage := .stage1, evolvesFrom := some "Tepig",
     hp := 11, type := .fire, retreat := 3, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Combustion", cost := [.fire], damage := 3,
         effect := .skip,
@@ -1091,6 +1183,7 @@ def rsv10pt5_14 : Card := .pokemon
   { name := "Pansear", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Collect", cost := [.colorless], damage := 0,
         effect := .move .own (.top 1) .hand .any .all,
@@ -1104,6 +1197,7 @@ def rsv10pt5_15 : Card := .pokemon
   { name := "Simisear", stage := .stage1, evolvesFrom := some "Pansear",
     hp := 10, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 7,
         effect := .skip,
@@ -1114,6 +1208,7 @@ def rsv10pt5_17 : Card := .pokemon
   { name := "Lampent", stage := .stage1, evolvesFrom := some "Litwick",
     hp := 8, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Fire Blast", cost := [.fire], damage := 5,
         effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
@@ -1124,6 +1219,7 @@ def rsv10pt5_18 : Card := .pokemon
   { name := "Chandelure", stage := .stage2, evolvesFrom := some "Lampent",
     hp := 15, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Incendiary Pillar", cost := [.fire], damage := 0,
         effect := .ite (.countGe (.pile .own .discard (.energyOf .fire)) 10) (.damage (.const 15)) (.damage (.const 5)),
@@ -1137,6 +1233,7 @@ def rsv10pt5_19 : Card := .pokemon
   { name := "Heatmor", stage := .basic, evolvesFrom := none,
     hp := 12, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Licking Catch", cost := [.fire], damage := 0,
         effect := .seq (.move .own .deck .hand (.or (.ptype .fire) (.energyOf .fire)) (.upTo 3)) .shuffle,
@@ -1150,6 +1247,7 @@ def rsv10pt5_21 : Card := .pokemon
   { name := "Oshawott", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tackle", cost := [.water], damage := 1,
         effect := .skip,
@@ -1163,6 +1261,7 @@ def rsv10pt5_22 : Card := .pokemon
   { name := "Dewott", stage := .stage1, evolvesFrom := some "Oshawott",
     hp := 10, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Energized Shell", cost := [.water], damage := 0,
         effect := .damage (.count (.energy .own .energy) 3),
@@ -1173,6 +1272,7 @@ def rsv10pt5_25 : Card := .pokemon
   { name := "Ducklett", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Firefighting", cost := [.colorless], damage := 0,
         effect := .ite (.countGe (.energy .opp (.energyOf .fire)) 1) (.discardEnergy .opp .active (.energyOf .fire) (.exactly 1)) .skip,
@@ -1186,6 +1286,7 @@ def rsv10pt5_26 : Card := .pokemon
   { name := "Swanna", stage := .stage1, evolvesFrom := some "Ducklett",
     hp := 12, type := .water, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Flap", cost := [.colorless], damage := 3,
         effect := .skip,
@@ -1199,6 +1300,7 @@ def rsv10pt5_27 : Card := .pokemon
   { name := "Vanillite", stage := .basic, evolvesFrom := none,
     hp := 6, type := .water, retreat := 1, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Beat", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -1212,6 +1314,7 @@ def rsv10pt5_28 : Card := .pokemon
   { name := "Vanillish", stage := .stage1, evolvesFrom := some "Vanillite",
     hp := 9, type := .water, retreat := 2, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ram", cost := [.colorless, .colorless], damage := 3,
         effect := .skip,
@@ -1225,6 +1328,7 @@ def rsv10pt5_31 : Card := .pokemon
   { name := "Blitzle", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Smash Kick", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -1238,6 +1342,7 @@ def rsv10pt5_32 : Card := .pokemon
   { name := "Zebstrika", stage := .stage1, evolvesFrom := some "Blitzle",
     hp := 12, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Smash Kick", cost := [.colorless], damage := 3,
         effect := .skip,
@@ -1251,6 +1356,7 @@ def rsv10pt5_33 : Card := .pokemon
   { name := "Joltik", stage := .basic, evolvesFrom := none,
     hp := 4, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Surprise Attack", cost := [.lightning], damage := 0,
         effect := .choice (.damage (.const 3)) .skip,
@@ -1261,6 +1367,7 @@ def rsv10pt5_35 : Card := .pokemon
   { name := "Stunfisk", stage := .basic, evolvesFrom := none,
     hp := 11, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Muddy Bolt", cost := [.colorless], damage := 0,
         effect := .ite (.countGe (.energy .own (.energyOf .fighting)) 1) (.damage (.const 4)) (.damage (.const 2)),
@@ -1274,6 +1381,7 @@ def rsv10pt5_36 : Card := .pokemon
   { name := "Woobat", stage := .basic, evolvesFrom := none,
     hp := 6, type := .psychic, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Heart Stamp", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -1284,6 +1392,7 @@ def rsv10pt5_39 : Card := .pokemon
   { name := "Yamask", stage := .basic, evolvesFrom := none,
     hp := 7, type := .psychic, retreat := 2, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Focused Wish", cost := [.psychic, .colorless], damage := 0,
         effect := .choice (.damage (.const 4)) (.damage (.const 2)),
@@ -1294,6 +1403,7 @@ def rsv10pt5_41 : Card := .pokemon
   { name := "Gothita", stage := .basic, evolvesFrom := none,
     hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Super Psy Bolt", cost := [.psychic], damage := 2,
         effect := .skip,
@@ -1304,6 +1414,7 @@ def rsv10pt5_44 : Card := .pokemon
   { name := "Frillish", stage := .basic, evolvesFrom := none,
     hp := 8, type := .psychic, retreat := 3, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Oceanic Gloom", cost := [.psychic], damage := 2,
         effect := .linger .opp .next (.lock .item),
@@ -1314,6 +1425,7 @@ def rsv10pt5_50 : Card := .pokemon
   { name := "Archen", stage := .stage1, evolvesFrom := some "Antiuqe Plume Fossil",
     hp := 8, type := .fighting, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Acrobatics", cost := [.fighting, .colorless], damage := 0,
         effect := .choice (.damage (.const 3)) (.choice (.damage (.const 6)) (.damage (.const 9))),
@@ -1324,6 +1436,7 @@ def rsv10pt5_52 : Card := .pokemon
   { name := "Mienfoo", stage := .basic, evolvesFrom := none,
     hp := 6, type := .fighting, retreat := 1, weakness := some .psychic,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Kick", cost := [.fighting], damage := 2,
         effect := .skip,
@@ -1334,6 +1447,7 @@ def rsv10pt5_55 : Card := .pokemon
   { name := "Purrloin", stage := .basic, evolvesFrom := none,
     hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Invite Evil", cost := [.darkness], damage := 0,
         effect := .seq (.move .own .deck .hand (.ptype .darkness) (.upTo 3)) .shuffle,
@@ -1344,6 +1458,7 @@ def rsv10pt5_56 : Card := .pokemon
   { name := "Liepard", stage := .stage1, evolvesFrom := some "Purrloin",
     hp := 11, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Knock Off", cost := [.darkness], damage := 5,
         effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
@@ -1354,6 +1469,7 @@ def rsv10pt5_57 : Card := .pokemon
   { name := "Scraggy", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Headbutt", cost := [.darkness], damage := 1,
         effect := .skip,
@@ -1367,6 +1483,7 @@ def rsv10pt5_59 : Card := .pokemon
   { name := "Trubbish", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Drool", cost := [.darkness], damage := 1,
         effect := .skip,
@@ -1380,6 +1497,7 @@ def rsv10pt5_60 : Card := .pokemon
   { name := "Garbodor", stage := .stage1, evolvesFrom := some "Trubbish",
     hp := 14, type := .darkness, retreat := 3, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Suffocating Gas", cost := [.darkness], damage := 4,
         effect := .skip,
@@ -1393,6 +1511,7 @@ def rsv10pt5_61 : Card := .pokemon
   { name := "Zorua", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Take Down", cost := [.darkness], damage := 3,
         effect := .selfDamage 1,
@@ -1403,6 +1522,7 @@ def rsv10pt5_63 : Card := .pokemon
   { name := "Vullaby", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Playful Kick", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -1413,6 +1533,7 @@ def rsv10pt5_65 : Card := .pokemon
   { name := "Deino", stage := .basic, evolvesFrom := none,
     hp := 8, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Body Slam", cost := [.colorless, .colorless], damage := 2,
         effect := .choice (.inflict .paralyzed) .skip,
@@ -1426,6 +1547,7 @@ def rsv10pt5_66 : Card := .pokemon
   { name := "Zweilous", stage := .stage1, evolvesFrom := some "Deino",
     hp := 11, type := .darkness, retreat := 3, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Double Hit", cost := [.colorless, .colorless], damage := 0,
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 4)) (.damage (.const 8))),
@@ -1439,6 +1561,7 @@ def rsv10pt5_68 : Card := .pokemon
   { name := "Ferroseed", stage := .basic, evolvesFrom := none,
     hp := 7, type := .metal, retreat := 2, weakness := some .fire,
     resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Zzzt", cost := [.metal], damage := 1,
         effect := .skip,
@@ -1452,6 +1575,7 @@ def rsv10pt5_72 : Card := .pokemon
   { name := "Patrat", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Procurement", cost := [.colorless], damage := 0,
         effect := .seq (.move .own .deck .hand (.kind .item) (.upTo 1)) .shuffle,
@@ -1465,6 +1589,7 @@ def rsv10pt5_74 : Card := .pokemon
   { name := "Lillipup", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Play Rough", cost := [.colorless], damage := 0,
         effect := .choice (.damage (.const 3)) (.damage (.const 1)),
@@ -1475,6 +1600,7 @@ def rsv10pt5_75 : Card := .pokemon
   { name := "Herdier", stage := .stage1, evolvesFrom := some "Lillipup",
     hp := 9, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Roar", cost := [.colorless], damage := 0,
         effect := .switch .opp,
@@ -1496,6 +1622,7 @@ def rsv10pt5_172 : Card := .pokemon
   { name := "Victini", stage := .basic, evolvesFrom := none,
     hp := 8, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "V-Force", cost := [.fire, .fire], damage := 0,
         effect := .ite (.countGe (.bench .own .pokemon) 5) (.damage (.const 12)) .skip,
@@ -1506,6 +1633,7 @@ def zsv10pt5_1 : Card := .pokemon
   { name := "Snivy", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tackle", cost := [.grass], damage := 1,
         effect := .skip,
@@ -1519,6 +1647,7 @@ def zsv10pt5_2 : Card := .pokemon
   { name := "Servine", stage := .stage1, evolvesFrom := some "Snivy",
     hp := 10, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Wrap", cost := [.grass], damage := 2,
         effect := .choice (.inflict .paralyzed) .skip,
@@ -1532,6 +1661,7 @@ def zsv10pt5_4 : Card := .pokemon
   { name := "Pansage", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Collect", cost := [.colorless], damage := 0,
         effect := .move .own (.top 1) .hand .any .all,
@@ -1545,6 +1675,7 @@ def zsv10pt5_5 : Card := .pokemon
   { name := "Simisage", stage := .stage1, evolvesFrom := some "Pansage",
     hp := 10, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 7,
         effect := .skip,
@@ -1555,6 +1686,7 @@ def zsv10pt5_7 : Card := .pokemon
   { name := "Lilligant", stage := .stage1, evolvesFrom := some "Petilil",
     hp := 10, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Bemusing Aroma", cost := [.grass], damage := 3,
         effect := .choice (.seq (.inflict .paralyzed) (.inflict .poisoned)) (.inflict .confused),
@@ -1568,6 +1700,7 @@ def zsv10pt5_10 : Card := .pokemon
   { name := "Foongus", stage := .basic, evolvesFrom := none,
     hp := 5, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Toxic Spore", cost := [.colorless], damage := 0,
         effect := .inflict .poisoned,
@@ -1578,6 +1711,7 @@ def zsv10pt5_11 : Card := .pokemon
   { name := "Amoonguss", stage := .stage1, evolvesFrom := some "Foongus",
     hp := 12, type := .grass, retreat := 2, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Dangerous Reaction", cost := [.colorless], damage := 0,
         effect := .ite (.cond .opp .asleep) (.damage (.const 15)) (.ite (.cond .opp .burned) (.damage (.const 15)) (.ite (.cond .opp .confused) (.damage (.const 15)) (.ite (.cond .opp .paralyzed) (.damage (.const 15)) (.ite (.cond .opp .poisoned) (.damage (.const 15)) (.damage (.const 3)))))),
@@ -1591,6 +1725,7 @@ def zsv10pt5_13 : Card := .pokemon
   { name := "Darumaka", stage := .basic, evolvesFrom := none,
     hp := 8, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Will-O-Wisp", cost := [.fire, .colorless], damage := 3,
         effect := .skip,
@@ -1601,6 +1736,7 @@ def zsv10pt5_14 : Card := .pokemon
   { name := "Darmanitan", stage := .stage1, evolvesFrom := some "Darumaka",
     hp := 14, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Searing Flame", cost := [.fire, .colorless], damage := 5,
         effect := .inflict .burned,
@@ -1614,6 +1750,7 @@ def zsv10pt5_17 : Card := .pokemon
   { name := "Panpour", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Collect", cost := [.colorless], damage := 0,
         effect := .move .own (.top 1) .hand .any .all,
@@ -1627,6 +1764,7 @@ def zsv10pt5_18 : Card := .pokemon
   { name := "Simipour", stage := .stage1, evolvesFrom := some "Panpour",
     hp := 10, type := .water, retreat := 1, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 7,
         effect := .skip,
@@ -1637,6 +1775,7 @@ def zsv10pt5_22 : Card := .pokemon
   { name := "Tirtouga", stage := .stage1, evolvesFrom := some "Antique Cover Fossil",
     hp := 10, type := .water, retreat := 3, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ancient Seaweed", cost := [.water], damage := 0,
         effect := .damage (.count (.pile .opp .discard (.kind .item)) 3),
@@ -1650,6 +1789,7 @@ def zsv10pt5_25 : Card := .pokemon
   { name := "Cubchoo", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 2, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Snotted Up", cost := [.water], damage := 1,
         effect := .linger .opp .next (.lock .attack),
@@ -1660,6 +1800,7 @@ def zsv10pt5_26 : Card := .pokemon
   { name := "Beartic", stage := .stage1, evolvesFrom := some "Cubchoo",
     hp := 15, type := .water, retreat := 3, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Continuous Headbutt", cost := [.colorless], damage := 0,
         effect := .damage (.many (.const 5)),
@@ -1673,6 +1814,7 @@ def zsv10pt5_29 : Card := .pokemon
   { name := "Emolga", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 0, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Call for Family", cost := [.colorless], damage := 0,
         effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
@@ -1686,6 +1828,7 @@ def zsv10pt5_30 : Card := .pokemon
   { name := "Tynamo", stage := .basic, evolvesFrom := none,
     hp := 4, type := .lightning, retreat := 0, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hold Still", cost := [.colorless], damage := 0,
         effect := .heal 1,

@@ -190,12 +190,12 @@ def inPlays (C : List Card) : List InPlay :=
   (List.range (bound C + 1)).flatMap fun damage => rots.flatMap fun rot =>
   bools.flatMap fun poisoned => bools.flatMap fun burned =>
   (List.range (bound C + 1)).flatMap fun poisonUp => bools.flatMap fun fresh =>
-  markss.map fun marks =>
-  ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks⟩
+  markss.flatMap fun marks => bools.map fun used =>
+  ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used⟩
 
 theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     (hd : p.damage ≤ bound C) (hu : p.poisonUp ≤ bound C) : p ∈ inPlays C := by
-  obtain ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks⟩ := p
+  obtain ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used⟩ := p
   have hw' : Within C (under ++ energy ++ tools) :=
     hw.of_sub (by simp [InPlay.cardList]) (fun _ hx => .tail _ hx)
   simp only [inPlays, List.mem_flatMap, List.mem_map]
@@ -203,7 +203,7 @@ theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     energy, mem_cardLists hw'.left.right, tools, mem_cardLists hw'.right,
     damage, List.mem_range.2 (Nat.lt_succ_of_le hd), rot, mem_rots _, poisoned, mem_bools _,
     burned, mem_bools _, poisonUp, List.mem_range.2 (Nat.lt_succ_of_le hu), fresh, mem_bools _,
-    marks, mem_markss _, rfl⟩
+    marks, mem_markss _, used, mem_bools _, rfl⟩
 
 theorem length_le_benchCardList : ∀ b : List InPlay, b.length ≤ (benchCardList b).length
   | [] => Nat.le_refl _

@@ -9,8 +9,8 @@ modifiers add up without limit); with those generalisations the model does have 
 stores, and the finiteness results below need a hypothesis on the deck: tame decks
 (`Reach.finite`) or faithful decks (`Faithful.xfinite`); neither class contains the other.
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 35 constructors) of
-thirty-one primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 36 constructors) of
+thirty-two primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
@@ -94,7 +94,21 @@ allows 0 everywhere; `attach`, `putBench` and `moveEnergy` may do nothing; no hi
 information; a played Trainer is in the discard pile while it resolves; absent: returning a
 Pokémon in play to the hand or deck, devolution, evolution by effect). Zone moves change only zones
 and attached Energy and counts read no damage, so both clamps keep them exact and every clamp
-theorem was re-proved without new hypotheses (`ZStep.sim`, `Count.val_clampAt`). For that model it
+theorem was re-proved without new hypotheses (`ZStep.sim`, `Count.val_clampAt`). Milestone M8a
+added activated and on-play Abilities: a Pokémon card has a list of Abilities (`Ability`: a use
+limit, "once during your turn" per Pokémon in play, "as often as you like", or on entering play from
+the hand as a Basic, as an evolution or either; where it can be used from; an optional printed
+condition; an effect). `Move.ability` uses an activated Ability of a Pokémon in play during the turn
+proper, before attacking (rulebook 2023 p. 9: "F. Use Abilities (as many as you want). 3) Attack."),
+with no Knock Out pending and spending no allowance of the turn; `Move.onPlay` plays a Pokémon from
+the hand and resolves its on-play Ability. The effect resolves as a Trainer effect does (`TRun`). A
+per-Pokémon flag (`InPlay.used`) records a use and is cleared at the end of its owner's turn and by
+evolution (the evolved Pokémon has the new card's Abilities). Ability effects may act on "this
+Pokémon" (`SelfOp`: heal it, put damage counters on it, attach Energy to it, switch it in, move
+Energy to it): exact in the Active Spot, on the Bench a chosen Benched Pokémon (a superset); and a
+new primitive moves a damage counter between the player's own Pokémon (`Effect.moveCounter`, Team
+Rocket's Orbeetle), which both clamps keep exact (`CMove.sim`). Static and triggered Abilities,
+Ability locks and per-Pokémon modifiers are not modelled (Known gaps). For that model it
 proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects
@@ -205,7 +219,7 @@ clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the two decks 
 S10 found no Trainer card in today's Standard pool whose discard-pile filter admits a
 non-Supporter modifier writer, and no rest-of-game Trainer writer there, so the model's
 encodings of those Trainers and attacks satisfy clause 3 for every pairing of decks (a reading
-of the card pool, not a theorem; Abilities, Stadium effects and returns from play are outside
+of the card pool, not a theorem; Stadium effects, static Abilities and returns from play are outside
 the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
 Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
 damage…"), so printed decks are not all tame. The model over-approximates modifiers on purpose;
@@ -243,18 +257,28 @@ finiteness; the deck condition `Faithful` buys it back:
   Trainer card's effect can return from a discard pile a non-Supporter card that writes a bonus or
   reduction, and no effect at all one that writes a rest-of-game amount (`RecycleSafe`, decidable;
   attacks may recycle every other card, because an attack ends the turn; every deck with no
-  recycling satisfies it, so for such decks `Faithful` means what it meant before). Then every
-  reachable state satisfies `BoundedStores (storeBound g₀)` (`Faithful.reach_boundedStores`), where
-  `storeBound` adds the start stores, six times the Trainer amounts of the cards and three times the
-  largest amount of one attack; so from any faithful start (well-formed or not) the `xclamp`s of all
-  reachable states lie in one finite list, with the two-way bisimulation. The bound is per turn:
+  recycling satisfies it, so for such decks `Faithful` means what it meant before), and, since
+  milestone M8a, clauses 1 and 3 read Abilities too ("as often as you like" Abilities count with
+  Trainer effects in clause 3 (a)) and a fourth clause holds: no "as often as you like" Ability writes
+  a bonus or reduction and no Ability a rest-of-game one (`AbilitySafe`, decidable; every deck without
+  Abilities satisfies it). Then every reachable state satisfies `BoundedStores (storeBound g₀)`
+  (`Faithful.reach_boundedStores`), where `storeBound` adds the start stores, six times the Trainer
+  amounts of the cards, three times `Q · potBound |C|` for Abilities (`Q` what one bounded Ability use
+  can write and recycle, 0 for a deck without Abilities) and three times the largest amount of one
+  attack; so from any faithful start (well-formed or not) the `xclamp`s of all reachable states lie
+  in one finite list, with the two-way bisimulation. Once-per-turn and on-play Abilities may write
+  modifiers (Feraligatr sv5-41: `Abilities.feraligatr_faithful`) and recycle writers
+  (`Abilities.once_recycler_faithful`): their uses in one turn are bounded by a potential of the
+  player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`), which no move of the
+  turn raises; this rests on the model having no return of a Pokémon from play to the hand or deck. The bound is per turn:
   within a turn, before its attack, each non-Supporter writer is played at most once (clause 3) and
   one Supporter at most, so Trainers write at most twice the Trainer amounts in a turn; at most one
   attack is made per turn; carried amounts expire within three turn boundaries; the rest-of-game
   slot holds only amounts of cards in the discard piles that nothing recycles, and of GX attacks.
   Before milestone MV the bound counted each Trainer once per game, because nothing left a discard
   pile; that bound (`storeBoundNR`, with the Trainer amounts once) still holds for decks that recycle
-  nothing (`Faithful.reach_boundedStores_noRecycle`). Faithful decks may use damage reduction,
+  nothing and (since milestone M8a, a new hypothesis that every deck without Abilities satisfies)
+  whose Abilities write nothing (`Faithful.reach_boundedStores_noRecycle`). Faithful decks may use damage reduction,
   `drain`, carried bonuses and reductions in attacks and Trainers (Iron Defender), rest-of-game
   modifiers in GX attacks and Trainer cards, and recycling within clause 3 (Energy Retrieval,
   Night Stretcher, Dedenne's "Put a Trainer card from your discard pile into your hand" attack:
@@ -271,6 +295,19 @@ finiteness; the deck condition `Faithful` buys it back:
   nothing ever reads the stored reduction (no attack is made), so the unboundedly many states
   are not shown to differ in play. Whether unrestricted recycling could simulate a counter
   machine is open, and nothing here claims either way;
+* **unlimited Abilities break the bound** (`Abilities.unlimited_writer_breaks_bound`,
+  `Abilities.unlimited_recycler_breaks_bound`, `Pokemon/Abilities.lean`, milestone M8a): a
+  well-formed start satisfying clauses 1–3 whose Pokémon has an "as often as you like" Ability that
+  writes a carried reduction, and one satisfying clauses 1, 2 and 4 whose "as often as you like"
+  Ability returns an Iron Defender-like Item from the discard pile, have reachable states with
+  unbounded stores and `xclamp`s in no finite list (statements about representation, as above). No
+  Standard Ability has either shape (survey S10). Witnesses: an unlimited Ability used twice in a
+  turn (`Abilities.unlimited_twice`), a once-per-turn Ability refused the second time and available
+  again in the player's next turn (`Abilities.once_refused`, `Abilities.once_again`), an on-play
+  Ability (`Abilities.onPlay_witness`), and the card-neutral loops of survey S10, Mega Venusaur ex's
+  Grass Energy and Team Rocket's Orbeetle's damage counter moved to the Bench and back
+  (`Abilities.venusaur_loop`, `Abilities.orbeetle_loop`): states reachable from themselves by
+  Ability moves, which is why the finiteness theorems are about the state space, not termination;
 * **the rule change**: `Attack` has a field `gx`, and `Move.attack` lets a player use a GX
   attack only if they have not used one in the game, and records it (`PlayerState.gxUsed`,
   unused before); `Move.attackConfused` (a Confused Pokémon's failed attempt) has the same
@@ -299,14 +336,17 @@ by Trainer effects (`RecycleSafe`), and gives a finer quotient (the stores are k
 contains the other; for decks in both, both theorems apply.
 
 Not covered by `Faithful`, or not in the model: recycling outside clause 3 (an Item that returns
-a modifier-writing Item, as in `Recycle.recycling_breaks_bound`); Abilities and Stadium effects
-(absent: an Ability or Stadium that recycles a writer, or an "as often as you like" Ability that
-writes one, would need clause 3 extended); returning a card from play to the hand (absent);
+a modifier-writing Item, as in `Recycle.recycling_breaks_bound`, or an "as often as you like"
+Ability that does, `Abilities.unlimited_recycler_breaks_bound`); "as often as you like" Abilities
+that write a modifier (outside clause 4); static and triggered Abilities and Stadium effects
+(absent); returning a card from play to the hand (absent; with it a Pokémon could re-enter play and
+use or trigger its Ability again in the same turn, which the Ability bound does not cover);
 "attack twice", "attack again" after a Knock Out, and extra turns (absent: more than
-one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers, Abilities or Stadiums
-(absent); copy attacks, for instance copying a GX attack (absent); static modifiers and
-modifiers from Pokémon Tools, Abilities or Special Energy (absent: every modifier is written by
-an effect when it resolves); reductions restricted by type (printed Iron Defender protects Metal
+one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers or Stadiums (absent)
+and from Abilities (outside clause 4); copy attacks, for instance copying a GX attack (absent); static modifiers and
+modifiers from Pokémon Tools, static Abilities or Special Energy (absent: every modifier is written
+by an effect when it resolves); per-Pokémon modifiers (Feraligatr's "attacks used by this Pokémon
+do 120 more damage" is the player's bonus in the model, milestone M7); reductions restricted by type (printed Iron Defender protects Metal
 Pokémon only, whereas the model's reduction protects all of a player's Pokémon); effects that
 lock GX attacks (absent). The store bound rests on clause 3, on at most one attack per turn, and
 on there being no extra turns; "attack twice" and "take another turn" exist on printed cards

@@ -45,7 +45,7 @@ def recycleEff : Effect := .move .own .discard .hand (.kind .item) (.upTo 2)
 def recA : Card := .trainer "Recycler A" .item recycleEff
 def recB : Card := .trainer "Recycler B" .item recycleEff
 
-def guard : PokemonCard := ⟨"Guard", .basic, none, 10, .metal, [], 1, none, none, .none, false⟩
+def guard : PokemonCard := ⟨"Guard", .basic, none, 10, .metal, [], 1, none, none, .none, false, []⟩
 
 /-- A store with a carried reduction of `r` in the next turn's slot. -/
 def store (r : Nat) : Store := ⟨Mods.empty, { Mods.empty with reduce := r }, Mods.empty, Mods.empty⟩
@@ -179,7 +179,7 @@ attack, which ends the turn). -/
 def dedenne : PokemonCard :=
   ⟨"Dedenne", .basic, none, 7, .lightning,
     [⟨"Recycle", [], 0, .move .own .discard .hand .trainer (.upTo 1), false⟩], 1, none, none,
-    .none, false⟩
+    .none, false, []⟩
 
 /-- A deck with Iron Defender, the two printed Item recyclers above, and an attack that returns any
 Trainer card: clause 3 holds (decided), since no Item returns Iron Defender and an attack may.

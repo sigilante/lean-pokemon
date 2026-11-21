@@ -20,6 +20,13 @@ def attack_src(a, ind):
             + pad + '  gx := ' + lean(a['gx']) + ' }')
 
 
+def ability_src(ab, ind):
+    pad = ' ' * ind
+    return (pad + '{ name := ' + lean_str(ab['name']) + ', use := ' + lean(ab['use']) + ',\n'
+            + pad + '  spot := ' + lean(ab['spot']) + ', cond := ' + lean(ab['cond']) + ',\n'
+            + pad + '  effect := ' + lean(ab['effect']) + ' }')
+
+
 def card_src(term):
     if term[0] == 'energy':
         return '.energy ' + lean(term[1], False)
@@ -31,6 +38,10 @@ def card_src(term):
         atks = '[\n' + ',\n'.join(attack_src(a, 6) for a in p['attacks']) + ']'
     else:
         atks = '[]'
+    if p['abilities']:
+        abs_ = '[\n' + ',\n'.join(ability_src(a, 6) for a in p['abilities']) + ']'
+    else:
+        abs_ = '[]'
     return ('.pokemon\n'
             + '  { name := ' + lean_str(p['name']) + ', stage := ' + lean(p['stage'])
             + ', evolvesFrom := ' + lean(p['evolvesFrom']) + ',\n'
@@ -38,6 +49,7 @@ def card_src(term):
             + ', weakness := ' + lean(p['weakness']) + ',\n'
             + '    resistance := ' + lean(p['resistance']) + ', ruleBox := ' + lean(p['ruleBox'])
             + ', tera := ' + lean(p['tera']) + ',\n'
+            + '    abilities := ' + abs_ + ',\n'
             + '    attacks := ' + atks + ' }')
 
 

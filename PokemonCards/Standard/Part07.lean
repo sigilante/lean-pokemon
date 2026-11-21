@@ -16,6 +16,7 @@ def me5_69 : Card := .pokemon
   { name := "Type: Null", stage := .basic, evolvesFrom := none,
     hp := 11, type := .colorless, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Power Edge", cost := [.colorless, .colorless], damage := 4,
         effect := .skip,
@@ -26,6 +27,7 @@ def me55_1 : Card := .pokemon
   { name := "Exeggcute", stage := .basic, evolvesFrom := none,
     hp := 6, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hypnosis", cost := [.colorless], damage := 0,
         effect := .inflict .asleep,
@@ -36,6 +38,7 @@ def me55_3 : Card := .pokemon
   { name := "Volbeat", stage := .basic, evolvesFrom := none,
     hp := 8, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Luring Glow", cost := [.grass], damage := 0,
         effect := .switch .opp,
@@ -49,6 +52,7 @@ def me55_7 : Card := .pokemon
   { name := "Cherrim", stage := .stage1, evolvesFrom := some "Cherubi",
     hp := 8, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Energy Gift", cost := [.colorless], damage := 0,
         effect := .seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle,
@@ -62,6 +66,7 @@ def me55_9 : Card := .pokemon
   { name := "Vulpix", stage := .basic, evolvesFrom := none,
     hp := 7, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Wild Kick", cost := [.fire], damage := 0,
         effect := .choice (.damage (.const 3)) .skip,
@@ -72,6 +77,7 @@ def me55_10 : Card := .pokemon
   { name := "Ninetales", stage := .stage1, evolvesFrom := some "Vulpix",
     hp := 11, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Flame Tail", cost := [.fire], damage := 6,
         effect := .skip,
@@ -82,6 +88,7 @@ def me55_13 : Card := .pokemon
   { name := "Victini", stage := .basic, evolvesFrom := none,
     hp := 8, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Call for Family", cost := [.colorless], damage := 0,
         effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
@@ -95,6 +102,7 @@ def me55_14 : Card := .pokemon
   { name := "Reshiram", stage := .basic, evolvesFrom := none,
     hp := 13, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Slash", cost := [.fire, .colorless], damage := 5,
         effect := .skip,
@@ -108,6 +116,7 @@ def me55_17 : Card := .pokemon
   { name := "Lapras", stage := .basic, evolvesFrom := none,
     hp := 13, type := .water, retreat := 2, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ferry Across", cost := [.colorless], damage := 0,
         effect := .seq (.move .own .deck .hand (.kind .supporter) (.upTo 1)) .shuffle,
@@ -121,6 +130,7 @@ def me55_19 : Card := .pokemon
   { name := "Kyogre", stage := .basic, evolvesFrom := none,
     hp := 14, type := .water, retreat := 4, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hydro Pump", cost := [.colorless, .colorless, .colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 6) (.count (.energy .own (.energyOf .water)) 3)),
@@ -131,6 +141,7 @@ def me55_23 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Thunder Shock", cost := [.lightning, .colorless], damage := 2,
         effect := .choice (.inflict .paralyzed) .skip,
@@ -141,6 +152,7 @@ def me55_24 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Volt Tackle", cost := [.lightning, .colorless, .colorless], damage := 8,
         effect := .selfDamage 3,
@@ -151,6 +163,7 @@ def me55_25 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Spark", cost := [.lightning, .colorless], damage := 2,
         effect := .benchDamage .opp 2,
@@ -161,6 +174,7 @@ def me55_26 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Peer At", cost := [.colorless], damage := 0,
         effect := .skip,
@@ -171,6 +185,7 @@ def me55_27 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 8, type := .lightning, retreat := 3, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Nap", cost := [.colorless], damage := 0,
         effect := .heal 3,
@@ -181,6 +196,7 @@ def me55_29 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Find a Friend", cost := [.colorless], damage := 0,
         effect := .seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle,
@@ -191,6 +207,7 @@ def me55_30 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Mach Bolt", cost := [.lightning], damage := 3,
         effect := .skip,
@@ -201,6 +218,7 @@ def me55_31 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 5, type := .lightning, retreat := 0, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gnaw", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -211,6 +229,7 @@ def me55_32 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 5, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Scurry About", cost := [.colorless], damage := 0,
         effect := .switch .own,
@@ -221,6 +240,7 @@ def me55_35 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rollout", cost := [.colorless, .colorless], damage := 3,
         effect := .skip,
@@ -231,6 +251,7 @@ def me55_36 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Slight Intrusion", cost := [.lightning, .colorless], damage := 4,
         effect := .selfDamage 1,
@@ -241,6 +262,7 @@ def me55_37 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Energized Tail", cost := [.colorless], damage := 0,
         effect := .seq (.move .own .deck .hand .energy (.upTo 1)) .shuffle,
@@ -254,6 +276,7 @@ def me55_38 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Targeted Spark", cost := [.lightning], damage := 0,
         effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 2)) (.benchDamage .opp 2)) (.damage (.const 2)),
@@ -264,6 +287,7 @@ def me55_39 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Iron Tail", cost := [.colorless], damage := 0,
         effect := .damage (.many (.const 2)),
@@ -274,6 +298,7 @@ def me55_41 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hang Down", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -287,6 +312,7 @@ def me55_45 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Nightime Stroll", cost := [.colorless], damage := 0,
         effect := .move .own (.top 1) .hand .any .all,
@@ -300,6 +326,7 @@ def me55_46 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Get Some Air", cost := [.colorless], damage := 0,
         effect := .cure,
@@ -313,6 +340,7 @@ def me55_47 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Play Rough", cost := [.colorless], damage := 0,
         effect := .choice (.damage (.const 3)) (.damage (.const 1)),
@@ -323,6 +351,7 @@ def me55_48 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Store Up", cost := [.colorless], damage := 0,
         effect := .move .own .discard .hand .energy (.upTo 2),
@@ -333,6 +362,7 @@ def me55_50 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 8, type := .lightning, retreat := 3, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Satisfied Spark", cost := [.lightning, .lightning, .colorless, .colorless], damage := 10,
         effect := .skip,
@@ -343,6 +373,7 @@ def me55_52 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Angry Bolt", cost := [.lightning], damage := 0,
         effect := .damage (.add (.const 1) (.per .own 1)),
@@ -353,6 +384,7 @@ def me55_57 : Card := .pokemon
   { name := "Zeraora", stage := .basic, evolvesFrom := none,
     hp := 11, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rapid Draw", cost := [.colorless], damage := 2,
         effect := .move .own (.top 1) .hand .any .all,
@@ -366,6 +398,7 @@ def me55_58 : Card := .pokemon
   { name := "Toxel", stage := .basic, evolvesFrom := none,
     hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ram", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -376,6 +409,7 @@ def me55_59 : Card := .pokemon
   { name := "Toxtricity", stage := .stage1, evolvesFrom := some "Toxel",
     hp := 13, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Mach Bolt", cost := [.lightning, .colorless], damage := 8,
         effect := .skip,
@@ -386,6 +420,7 @@ def me55_60 : Card := .pokemon
   { name := "Toxtricity", stage := .stage1, evolvesFrom := some "Toxel",
     hp := 14, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Light Punch", cost := [.lightning], damage := 4,
         effect := .skip,
@@ -399,6 +434,7 @@ def me55_62 : Card := .pokemon
   { name := "Miraidon", stage := .basic, evolvesFrom := none,
     hp := 12, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Mach Bolt", cost := [.lightning], damage := 2,
         effect := .skip,
@@ -412,6 +448,7 @@ def me55_65 : Card := .pokemon
   { name := "Mew", stage := .basic, evolvesFrom := none,
     hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Psychic", cost := [.psychic, .psychic], damage := 0,
         effect := .damage (.add (.const 1) (.count (.energy .opp .energy) 4)),
@@ -422,6 +459,7 @@ def me55_67 : Card := .pokemon
   { name := "Marill", stage := .basic, evolvesFrom := none,
     hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tackle", cost := [.psychic, .colorless], damage := 3,
         effect := .skip,
@@ -432,6 +470,7 @@ def me55_70 : Card := .pokemon
   { name := "Espeon ex", stage := .stage1, evolvesFrom := some "Eevee",
     hp := 26, type := .psychic, retreat := 1, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
+    abilities := [],
     attacks := [
       { name := "Solar Beatdown", cost := [.psychic, .colorless], damage := 0,
         effect := .damage (.add (.const 3) (.count (.bench .own .pokemon) 3)),
@@ -442,6 +481,7 @@ def me55_74 : Card := .pokemon
   { name := "Cresselia", stage := .basic, evolvesFrom := none,
     hp := 12, type := .psychic, retreat := 1, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Aurora Gain", cost := [.psychic, .colorless], damage := 3,
         effect := .heal 3,
@@ -455,6 +495,7 @@ def me55_75 : Card := .pokemon
   { name := "Chandelure", stage := .stage2, evolvesFrom := some "Lampent",
     hp := 14, type := .psychic, retreat := 2, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Eerie Glow", cost := [.psychic, .psychic], damage := 13,
         effect := .seq (.inflict .burned) (.inflict .confused),
@@ -465,6 +506,7 @@ def me55_77 : Card := .pokemon
   { name := "Comfey", stage := .basic, evolvesFrom := none,
     hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Comforting Aroma", cost := [.colorless], damage := 0,
         effect := .benchHeal 8,
@@ -478,6 +520,7 @@ def me55_78 : Card := .pokemon
   { name := "Cosmog", stage := .basic, evolvesFrom := none,
     hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Splash", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -488,6 +531,7 @@ def me55_79 : Card := .pokemon
   { name := "Cosmoem", stage := .stage1, evolvesFrom := some "Cosmog",
     hp := 10, type := .psychic, retreat := 3, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Stiffen", cost := [.colorless, .colorless], damage := 0,
         effect := .linger .own .next (.reduce 6),
@@ -498,6 +542,7 @@ def me55_80 : Card := .pokemon
   { name := "Lunala", stage := .stage2, evolvesFrom := some "Cosmoem",
     hp := 16, type := .psychic, retreat := 2, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Midnight Ray", cost := [.psychic], damage := 0,
         effect := .damage (.add (.const 2) (.count (.pile .own .discard .energy) 2)),
@@ -511,6 +556,7 @@ def me55_81 : Card := .pokemon
   { name := "Gimmighoul", stage := .basic, evolvesFrom := none,
     hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Strolls So Much", cost := [.colorless], damage := 0,
         effect := .choice (.seq (.move .own .deck .hand .any (.upTo 1)) .shuffle) .skip,
@@ -521,6 +567,7 @@ def me55_82 : Card := .pokemon
   { name := "Groudon", stage := .basic, evolvesFrom := none,
     hp := 14, type := .fighting, retreat := 4, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Break Ground", cost := [.fighting, .fighting, .fighting, .fighting, .fighting], damage := 25,
         effect := .spreadDamage .own 2,
@@ -531,6 +578,7 @@ def me55_83 : Card := .pokemon
   { name := "Lucario", stage := .stage1, evolvesFrom := some "Riolu",
     hp := 12, type := .fighting, retreat := 2, weakness := some .psychic,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Aura Sphere", cost := [.fighting, .fighting, .colorless], damage := 10,
         effect := .benchDamage .opp 6,
@@ -541,6 +589,7 @@ def me55_86 : Card := .pokemon
   { name := "Koraidon", stage := .basic, evolvesFrom := none,
     hp := 13, type := .fighting, retreat := 2, weakness := some .psychic,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Low Kick", cost := [.fighting, .fighting], damage := 5,
         effect := .skip,
@@ -554,6 +603,7 @@ def me55_89 : Card := .pokemon
   { name := "Alolan Meowth", stage := .basic, evolvesFrom := none,
     hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Pay Day", cost := [], damage := 1,
         effect := .move .own (.top 1) .hand .any .all,
@@ -564,6 +614,7 @@ def me55_92 : Card := .pokemon
   { name := "Umbreon ex", stage := .stage1, evolvesFrom := some "Eevee",
     hp := 27, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .ex, tera := false,
+    abilities := [],
     attacks := [
       { name := "Lunatic Claw", cost := [.darkness, .colorless], damage := 0,
         effect := .ite (.atLeast .opp 1) (.damage (.const 24)) (.damage (.const 10)),
@@ -574,6 +625,7 @@ def me55_95 : Card := .pokemon
   { name := "Zorua", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Darkness Fang", cost := [.darkness, .darkness], damage := 4,
         effect := .skip,
@@ -584,6 +636,7 @@ def me55_97 : Card := .pokemon
   { name := "Deino", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gnaw", cost := [.darkness], damage := 1,
         effect := .skip,
@@ -597,6 +650,7 @@ def me55_98 : Card := .pokemon
   { name := "Zweilous", stage := .stage1, evolvesFrom := some "Deino",
     hp := 10, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Bite", cost := [.darkness], damage := 2,
         effect := .skip,
@@ -610,6 +664,7 @@ def me55_99 : Card := .pokemon
   { name := "Hydreigon", stage := .stage2, evolvesFrom := some "Zweilous",
     hp := 17, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Three-Headed Bite", cost := [.darkness], damage := 0,
         effect := .choice .skip (.choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) (.choice (.seq (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip)) (.seq (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) (.seq (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip))))),
@@ -623,6 +678,7 @@ def me55_101 : Card := .pokemon
   { name := "Galarian Meowth", stage := .basic, evolvesFrom := none,
     hp := 7, type := .metal, retreat := 1, weakness := some .fire,
     resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Pay Day", cost := [.colorless], damage := 1,
         effect := .move .own (.top 1) .hand .any .all,
@@ -636,6 +692,7 @@ def me55_103 : Card := .pokemon
   { name := "Dialga", stage := .basic, evolvesFrom := none,
     hp := 13, type := .metal, retreat := 2, weakness := some .fire,
     resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Reversed Clock", cost := [.colorless], damage := 0,
         effect := .move .own .discard .shuffle (.or .pokemon .energy) (.upTo 3),
@@ -649,6 +706,7 @@ def me55_109 : Card := .pokemon
   { name := "Salamence ex", stage := .stage2, evolvesFrom := some "Shelgon",
     hp := 33, type := .dragon, retreat := 2, weakness := none,
     resistance := none, ruleBox := .ex, tera := false,
+    abilities := [],
     attacks := [
       { name := "Booming Call", cost := [.colorless], damage := 0,
         effect := .seq (.putBench .own .discard (.ptype .dragon)) (.seq (.putBench .own .discard (.ptype .dragon)) (.putBench .own .discard (.ptype .dragon))),
@@ -662,6 +720,7 @@ def me55_111 : Card := .pokemon
   { name := "Hakamo-o", stage := .stage1, evolvesFrom := some "Jangmo-o",
     hp := 9, type := .dragon, retreat := 2, weakness := none,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Sharp Fang", cost := [.colorless], damage := 2,
         effect := .skip,
@@ -675,6 +734,7 @@ def me55_112 : Card := .pokemon
   { name := "Kommo-o", stage := .stage2, evolvesFrom := some "Hakamo-o",
     hp := 18, type := .dragon, retreat := 2, weakness := none,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Blazing Uppercut", cost := [.lightning, .fighting, .colorless], damage := 25,
         effect := .skip,
@@ -685,6 +745,7 @@ def me55_113 : Card := .pokemon
   { name := "Meowth", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Pay Day", cost := [.colorless, .colorless], damage := 3,
         effect := .move .own (.top 1) .hand .any .all,
@@ -695,6 +756,7 @@ def me55_114 : Card := .pokemon
   { name := "Kangaskhan", stage := .basic, evolvesFrom := none,
     hp := 13, type := .colorless, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Rage", cost := [.colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 2) (.per .own 1)),
@@ -708,6 +770,7 @@ def me55_117 : Card := .pokemon
   { name := "Eevee", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Quick Attack", cost := [.colorless, .colorless], damage := 0,
         effect := .choice (.damage (.const 4)) (.damage (.const 2)),
@@ -718,6 +781,7 @@ def me55_122 : Card := .pokemon
   { name := "Hisuian Zorua", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Scratch", cost := [.colorless], damage := 2,
         effect := .skip,
@@ -728,6 +792,7 @@ def me55_124 : Card := .pokemon
   { name := "Minior", stage := .basic, evolvesFrom := none,
     hp := 9, type := .colorless, retreat := 2, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Shoot Meteors", cost := [.colorless, .colorless, .colorless], damage := 0,
         effect := .seq (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))) (.discardEnergy .own .active .energy .all),
@@ -738,6 +803,7 @@ def me6_1 : Card := .pokemon
   { name := "Heracross", stage := .basic, evolvesFrom := none,
     hp := 13, type := .grass, retreat := 3, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Spike Draw", cost := [.grass], damage := 2,
         effect := .move .own (.top 2) .hand .any .all,
@@ -751,6 +817,7 @@ def me6_2 : Card := .pokemon
   { name := "Surskit", stage := .basic, evolvesFrom := none,
     hp := 5, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Multiply", cost := [.colorless], damage := 0,
         effect := .seq (.seq (.putBench .own .deck (.named "Surskit")) (.putBench .own .deck (.named "Surskit"))) .shuffle,
@@ -764,6 +831,7 @@ def me6_4 : Card := .pokemon
   { name := "Cacnea", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 2, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Knock Away", cost := [.colorless], damage := 0,
         effect := .choice (.damage (.const 2)) (.damage (.const 1)),
@@ -774,6 +842,7 @@ def me6_8 : Card := .pokemon
   { name := "Shaymin", stage := .basic, evolvesFrom := none,
     hp := 8, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Overrun", cost := [.grass], damage := 2,
         effect := .benchDamage .opp 2,
@@ -784,6 +853,7 @@ def me6_9 : Card := .pokemon
   { name := "Virizion", stage := .basic, evolvesFrom := none,
     hp := 12, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Double Draw", cost := [.colorless], damage := 0,
         effect := .move .own (.top 2) .hand .any .all,
@@ -797,6 +867,7 @@ def me6_11 : Card := .pokemon
   { name := "Mega Golisopod ex", stage := .stage1, evolvesFrom := some "Wimpod",
     hp := 34, type := .grass, retreat := 3, weakness := some .fire,
     resistance := none, ruleBox := .megaEx, tera := false,
+    abilities := [],
     attacks := [
       { name := "Finishing Blow", cost := [.grass], damage := 0,
         effect := .ite (.atLeast .opp 1) (.damage (.const 22)) (.damage (.const 6)),
@@ -810,6 +881,7 @@ def me6_12 : Card := .pokemon
   { name := "Sprigatito", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Play Rough", cost := [.grass], damage := 0,
         effect := .choice (.damage (.const 3)) (.damage (.const 1)),
@@ -820,6 +892,7 @@ def me6_13 : Card := .pokemon
   { name := "Floragato", stage := .stage1, evolvesFrom := some "Sprigatito",
     hp := 9, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Slash", cost := [.grass, .grass], damage := 6,
         effect := .skip,
@@ -830,6 +903,7 @@ def me6_15 : Card := .pokemon
   { name := "Smoliv", stage := .basic, evolvesFrom := none,
     hp := 6, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Spray Fluid", cost := [.grass], damage := 2,
         effect := .skip,
@@ -840,6 +914,7 @@ def me6_16 : Card := .pokemon
   { name := "Dolliv", stage := .stage1, evolvesFrom := some "Smoliv",
     hp := 9, type := .grass, retreat := 1, weakness := some .fire,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Leaf Step", cost := [.grass], damage := 4,
         effect := .skip,
@@ -850,6 +925,7 @@ def me6_18 : Card := .pokemon
   { name := "Growlithe", stage := .basic, evolvesFrom := none,
     hp := 8, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Roar", cost := [.colorless], damage := 0,
         effect := .switch .opp,
@@ -863,6 +939,7 @@ def me6_19 : Card := .pokemon
   { name := "Arcanine", stage := .stage1, evolvesFrom := some "Growlithe",
     hp := 15, type := .fire, retreat := 4, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Fervent Fang", cost := [.fire, .colorless, .colorless], damage := 0,
         effect := .ite (.countGe (.prizes .opp) 5) (.damage (.const 9)) (.damage (.const 18)),
@@ -876,6 +953,7 @@ def me6_20 : Card := .pokemon
   { name := "Magmar", stage := .basic, evolvesFrom := none,
     hp := 9, type := .fire, retreat := 2, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Gather Strength", cost := [.colorless], damage := 0,
         effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
@@ -889,6 +967,7 @@ def me6_24 : Card := .pokemon
   { name := "Heatmor", stage := .basic, evolvesFrom := none,
     hp := 11, type := .fire, retreat := 1, weakness := some .water,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Destructive Flame", cost := [.fire], damage := 3,
         effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
@@ -899,6 +978,7 @@ def me6_27 : Card := .pokemon
   { name := "Frillish", stage := .basic, evolvesFrom := none,
     hp := 8, type := .water, retreat := 2, weakness := some .lightning,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hook", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -909,6 +989,7 @@ def me6_30 : Card := .pokemon
   { name := "Electabuzz", stage := .basic, evolvesFrom := none,
     hp := 9, type := .lightning, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Call for Family", cost := [.colorless], damage := 0,
         effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
@@ -922,6 +1003,7 @@ def me6_32 : Card := .pokemon
   { name := "Jolteon", stage := .stage1, evolvesFrom := some "Eevee",
     hp := 11, type := .lightning, retreat := 0, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tackle", cost := [.lightning], damage := 3,
         effect := .skip,
@@ -935,6 +1017,7 @@ def me6_34 : Card := .pokemon
   { name := "Rotom", stage := .basic, evolvesFrom := none,
     hp := 8, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Thunder Shock", cost := [.lightning, .colorless], damage := 5,
         effect := .choice (.inflict .paralyzed) .skip,
@@ -945,6 +1028,7 @@ def me6_36 : Card := .pokemon
   { name := "Pincurchin", stage := .basic, evolvesFrom := none,
     hp := 8, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Energy Crush", cost := [.colorless, .colorless], damage := 0,
         effect := .damage (.count (.energyAll .opp .energy) 2),
@@ -955,6 +1039,7 @@ def me6_37 : Card := .pokemon
   { name := "Pawmi", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Quick Attack", cost := [.lightning], damage := 0,
         effect := .choice (.damage (.const 3)) (.damage (.const 1)),
@@ -965,6 +1050,7 @@ def me6_38 : Card := .pokemon
   { name := "Pawmo", stage := .stage1, evolvesFrom := some "Pawmi",
     hp := 9, type := .lightning, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Electro Ball", cost := [.lightning], damage := 4,
         effect := .skip,
@@ -975,6 +1061,7 @@ def me6_43 : Card := .pokemon
   { name := "Drowzee", stage := .basic, evolvesFrom := none,
     hp := 8, type := .psychic, retreat := 2, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Pound", cost := [.psychic], damage := 2,
         effect := .skip,
@@ -985,6 +1072,7 @@ def me6_44 : Card := .pokemon
   { name := "Hypno", stage := .stage1, evolvesFrom := some "Drowzee",
     hp := 12, type := .psychic, retreat := 2, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Mind Ruler", cost := [.psychic], damage := 0,
         effect := .damage (.count (.pile .opp .hand .any) 2),
@@ -998,6 +1086,7 @@ def me6_46 : Card := .pokemon
   { name := "Golett", stage := .basic, evolvesFrom := none,
     hp := 9, type := .psychic, retreat := 3, weakness := some .darkness,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Light Punch", cost := [.psychic, .psychic], damage := 5,
         effect := .skip,
@@ -1008,6 +1097,7 @@ def me6_51 : Card := .pokemon
   { name := "Onix", stage := .basic, evolvesFrom := none,
     hp := 12, type := .fighting, retreat := 4, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Guard Press", cost := [.colorless, .colorless, .colorless], damage := 8,
         effect := .linger .own .next (.reduce 3),
@@ -1018,6 +1108,7 @@ def me6_55 : Card := .pokemon
   { name := "Nidoran♀", stage := .basic, evolvesFrom := none,
     hp := 6, type := .darkness, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Find a Friend", cost := [.colorless], damage := 0,
         effect := .seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle,
@@ -1031,6 +1122,7 @@ def me6_56 : Card := .pokemon
   { name := "Nidorina", stage := .stage1, evolvesFrom := some "Nidoran♀",
     hp := 9, type := .darkness, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Tackle", cost := [.darkness, .colorless], damage := 6,
         effect := .skip,
@@ -1041,6 +1133,7 @@ def me6_61 : Card := .pokemon
   { name := "Carvanha", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Ambush", cost := [.darkness, .colorless], damage := 0,
         effect := .choice (.damage (.const 4)) (.damage (.const 2)),
@@ -1051,6 +1144,7 @@ def me6_62 : Card := .pokemon
   { name := "Sharpedo", stage := .stage1, evolvesFrom := some "Carvanha",
     hp := 12, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Crunch", cost := [.darkness, .colorless], damage := 6,
         effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
@@ -1061,6 +1155,7 @@ def me6_63 : Card := .pokemon
   { name := "Darkrai", stage := .basic, evolvesFrom := none,
     hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Shadow-Clad", cost := [.darkness], damage := 0,
         effect := .seq (.seq (.attach .own .deck (.energyOf .darkness) .active .any) (.attach .own .deck (.energyOf .darkness) .active .any)) .shuffle,
@@ -1074,6 +1169,7 @@ def me6_64 : Card := .pokemon
   { name := "Purrloin", stage := .basic, evolvesFrom := none,
     hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Dig Claws", cost := [.darkness], damage := 2,
         effect := .skip,
@@ -1084,6 +1180,7 @@ def me6_65 : Card := .pokemon
   { name := "Liepard", stage := .stage1, evolvesFrom := some "Purrloin",
     hp := 11, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Follow-Up Claw", cost := [.darkness], damage := 0,
         effect := .damage (.per .opp 2),
@@ -1097,6 +1194,7 @@ def me6_66 : Card := .pokemon
   { name := "Zorua", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Stampede", cost := [.darkness], damage := 1,
         effect := .skip,
@@ -1110,6 +1208,7 @@ def me6_68 : Card := .pokemon
   { name := "Inkay", stage := .basic, evolvesFrom := none,
     hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Knock Off", cost := [.darkness], damage := 1,
         effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
@@ -1120,6 +1219,7 @@ def me6_69 : Card := .pokemon
   { name := "Mega Malamar ex", stage := .stage1, evolvesFrom := some "Inkay",
     hp := 32, type := .darkness, retreat := 2, weakness := some .grass,
     resistance := none, ruleBox := .megaEx, tera := false,
+    abilities := [],
     attacks := [
       { name := "Psychic Marionette", cost := [.darkness, .darkness], damage := 0,
         effect := .damage (.count (.bench .opp .pokemon) 7),
@@ -1133,6 +1233,7 @@ def me6_70 : Card := .pokemon
   { name := "Morpeko", stage := .basic, evolvesFrom := none,
     hp := 8, type := .darkness, retreat := 1, weakness := some .grass,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Call for Family", cost := [.colorless], damage := 0,
         effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
@@ -1146,6 +1247,7 @@ def me6_73 : Card := .pokemon
   { name := "Jangmo-o", stage := .basic, evolvesFrom := none,
     hp := 7, type := .dragon, retreat := 1, weakness := none,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Hard Head", cost := [.lightning, .fighting], damage := 3,
         effect := .linger .own .next (.reduce 3),
@@ -1156,6 +1258,7 @@ def me6_74 : Card := .pokemon
   { name := "Hakamo-o", stage := .stage1, evolvesFrom := some "Jangmo-o",
     hp := 10, type := .dragon, retreat := 2, weakness := none,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Double Smash", cost := [.lightning, .fighting], damage := 0,
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 7)) (.damage (.const 14))),
@@ -1166,6 +1269,7 @@ def me6_76 : Card := .pokemon
   { name := "Cyclizar", stage := .basic, evolvesFrom := none,
     hp := 12, type := .dragon, retreat := 1, weakness := none,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Bite", cost := [.colorless, .colorless], damage := 3,
         effect := .skip,
@@ -1179,6 +1283,7 @@ def me6_77 : Card := .pokemon
   { name := "Tauros", stage := .basic, evolvesFrom := none,
     hp := 13, type := .colorless, retreat := 2, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Raging Horns", cost := [.colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 5) (.per .own 1)),
@@ -1189,6 +1294,7 @@ def me6_78 : Card := .pokemon
   { name := "Eevee", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Nap", cost := [.colorless], damage := 0,
         effect := .heal 2,
@@ -1202,6 +1308,7 @@ def me6_80 : Card := .pokemon
   { name := "Azurill", stage := .basic, evolvesFrom := none,
     hp := 3, type := .colorless, retreat := 0, weakness := some .fighting,
     resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Bouncy-Bounce Charge", cost := [], damage := 0,
         effect := .seq (.attach .own .deck .energy .bench .any) .shuffle,
@@ -1212,6 +1319,7 @@ def me6_81 : Card := .pokemon
   { name := "Swablu", stage := .basic, evolvesFrom := none,
     hp := 5, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Run Around", cost := [.colorless], damage := 0,
         effect := .switch .own,
@@ -1225,6 +1333,7 @@ def me6_86 : Card := .pokemon
   { name := "Fletchling", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Surprise Attack", cost := [.colorless], damage := 0,
         effect := .choice (.damage (.const 3)) .skip,
@@ -1235,6 +1344,7 @@ def me6_87 : Card := .pokemon
   { name := "Fletchinder", stage := .stage1, evolvesFrom := some "Fletchling",
     hp := 8, type := .colorless, retreat := 0, weakness := some .lightning,
     resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
     attacks := [
       { name := "Clutch", cost := [.colorless, .colorless], damage := 4,
         effect := .linger .opp .next (.lock .retreat),
