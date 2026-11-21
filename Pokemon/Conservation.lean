@@ -1,5 +1,4 @@
-import Pokemon.Rules
-import Pokemon.ListPerm
+import Pokemon.Zone
 
 /-!
 # Conservation of cards, and where finiteness can fail
@@ -171,6 +170,15 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | handToBottom h =>
       have := fun x => h.count_eq x
       perm_count [this]
+  | @zone e w g s' hw hz =>
+      rw [hz.updSide]
+      cases w with
+      | own =>
+          simp only [GameState.updSide, GameState.allCards]
+          exact (hz.perm.append_right _).append_right _
+      | opp =>
+          simp only [GameState.updSide, GameState.allCards]
+          exact (hz.perm.append_left _).append_right _
   | seq _ _ ih₁ ih₂ => exact ih₂.trans ih₁
   | choiceL _ ih => exact ih
   | choiceR _ ih => exact ih

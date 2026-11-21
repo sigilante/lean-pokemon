@@ -104,6 +104,132 @@ theorem Amt.Val.transfer {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val 
 theorem Amt.Val.const_inv {n m : Nat} {g : GameState} (h : (Amt.const n).Val g m) : m = n := by
   cases h; rfl
 
+/-! ## Zone moves (milestone MV)
+
+The primitives `move`, `drawTo`, `attach`, `putBench`, `discardEnergy` and `moveEnergy` act on the
+zones of one player (deck, hand, discard pile, Active Spot, Bench), never on damage, Special
+Conditions, markers, Prizes, the Lost Zone, the stores or the flags. `ZStep e s s'` is their
+semantics on one player's state; `Run.zone` lifts it to the game, with `PlayerState.setZones`
+taking from `s'` only the five zones, so that everything else is unchanged by definition. -/
+
+/-- The cards a source offers (`Src`). -/
+def Src.get : Src → PlayerState → List Card
+  | .deck, s => s.deck
+  | .top n, s => s.deck.take n
+  | .hand, s => s.hand
+
+/-- Replace the cards of a source by `r` (the cards not taken, in their order). -/
+def Src.set : Src → List Card → PlayerState → PlayerState
+  | .deck, r, s => { s with deck := r }
+  | .top n, r, s => { s with deck := r ++ s.deck.drop n }
+  | .hand, r, s => { s with hand := r }
+
+/-- `Split f l t r`: the cards `t` are taken from `l`, each passing `f`, and `r` are the others;
+both keep the order of `l`. -/
+inductive Split (f : Filter) : List Card → List Card → List Card → Prop where
+  | nil : Split f [] [] []
+  | take {x : Card} {l t r : List Card} (hx : f.eval x = true) :
+      Split f l t r → Split f (x :: l) (x :: t) r
+  | keep {x : Card} {l t r : List Card} : Split f l t r → Split f (x :: l) t (x :: r)
+
+/-- The number of cards taken is as `q` says: at most `n`, exactly `n`, or every card of the
+source that passes the filter. -/
+def Qty.ok : Qty → Filter → List Card → List Card → Prop
+  | .upTo n, _, t, _ => t.length ≤ n
+  | .exactly n, _, t, _ => t.length = n
+  | .all, f, _, r => ∀ x ∈ r, f.eval x = false
+
+/-- `Put d t s s'`: the cards `t` are put at the destination `d` of the state `s`. -/
+inductive Put : Dst → List Card → PlayerState → PlayerState → Prop where
+  | hand (t : List Card) (s : PlayerState) : Put .hand t s { s with hand := t ++ s.hand }
+  | discard (t : List Card) (s : PlayerState) :
+      Put .discard t s { s with discard := t ++ s.discard }
+  | top {t t' : List Card} (s : PlayerState) (h : t'.Perm t) :
+      Put .top t s { s with deck := t' ++ s.deck }
+  | bottom {t t' : List Card} (s : PlayerState) (h : t'.Perm t) :
+      Put .bottom t s { s with deck := s.deck ++ t' }
+  | shuffle {t d : List Card} (s : PlayerState) (h : d.Perm (t ++ s.deck)) :
+      Put .shuffle t s { s with deck := d }
+
+/-- The player whose zones a zone-move primitive acts on; `none` for every other effect. -/
+def Effect.zSide : Effect → Option Whose
+  | .move w _ _ _ _ => some w
+  | .drawTo w _ => some w
+  | .attach w _ _ _ _ => some w
+  | .putBench w _ _ => some w
+  | .discardEnergy w _ _ _ => some w
+  | .moveEnergy w _ => some w
+  | _ => none
+
+/-- `s` with the five zones (deck, hand, discard pile, Active Spot, Bench) of `z`; every other
+component (Prizes, Lost Zone, stores, flags) is `s`'s. -/
+def PlayerState.setZones (s z : PlayerState) : PlayerState :=
+  { s with deck := z.deck, hand := z.hand, discard := z.discard, active := z.active,
+           bench := z.bench }
+
+/-- Add an Energy card to a Pokémon in play. -/
+def InPlay.addEnergy (c : Card) (p : InPlay) : InPlay := { p with energy := c :: p.energy }
+
+/-- Draw the top `k` cards (all of them if fewer are left). -/
+def PlayerState.drawK (k : Nat) (s : PlayerState) : PlayerState :=
+  { s with deck := s.deck.drop k, hand := s.deck.take k ++ s.hand }
+
+/-- The semantics of the zone-move primitives on one player's state. -/
+inductive ZStep : Effect → PlayerState → PlayerState → Prop where
+  | move {w : Whose} {src : Src} {dst : Dst} {f : Filter} {q : Qty} {s s' : PlayerState}
+      {t r : List Card} (hs : Split f (src.get s) t r) (hq : q.ok f t r)
+      (hp : Put dst t (src.set r s) s') : ZStep (.move w src dst f q) s s'
+  | drawTo (w : Whose) (n : Nat) (s : PlayerState) :
+      ZStep (.drawTo w n) s (s.drawK (n - s.hand.length))
+  | attachActive {w : Whose} {src : Src} {f tf : Filter} {s : PlayerState} {r : List Card}
+      {t : BasicEnergy} {a : InPlay} (hs : Split f (src.get s) [.energy t] r)
+      (ha : s.active = some a) (ht : tf.eval (.pokemon a.top) = true) :
+      ZStep (.attach w src f .active tf) s
+        { src.set r s with active := some (a.addEnergy (.energy t)) }
+  | attachBench {w : Whose} {src : Src} {f tf : Filter} {s : PlayerState} {r : List Card}
+      {t : BasicEnergy} {q : InPlay} {b₁ b₂ : List InPlay} (hs : Split f (src.get s) [.energy t] r)
+      (hb : s.bench = b₁ ++ q :: b₂) (ht : tf.eval (.pokemon q.top) = true) :
+      ZStep (.attach w src f .bench tf) s
+        { src.set r s with bench := b₁ ++ q.addEnergy (.energy t) :: b₂ }
+  | attachNone (w : Whose) (src : Src) (f : Filter) (sp : Spot) (tf : Filter) (s : PlayerState) :
+      ZStep (.attach w src f sp tf) s s
+  | putBench {w : Whose} {src : Src} {f : Filter} {s : PlayerState} {r : List Card}
+      {p : PokemonCard} (hs : Split f (src.get s) [.pokemon p] r) (hst : p.stage = .basic)
+      (hhp : 0 < p.hp) (hb : s.bench.length < benchLimit) :
+      ZStep (.putBench w src f) s { src.set r s with bench := s.bench ++ [InPlay.ofBasic p] }
+  | putBenchNone (w : Whose) (src : Src) (f : Filter) (s : PlayerState) :
+      ZStep (.putBench w src f) s s
+  | discardActive {w : Whose} {f : Filter} {q : Qty} {s : PlayerState} {a : InPlay}
+      {t r : List Card} (ha : s.active = some a) (hs : Split f a.energy t r) (hq : q.ok f t r) :
+      ZStep (.discardEnergy w .active f q) s
+        { s with active := some { a with energy := r }, discard := t ++ s.discard }
+  | discardBench {w : Whose} {f : Filter} {q : Qty} {s : PlayerState} {p : InPlay}
+      {b₁ b₂ : List InPlay} {t r : List Card} (hb : s.bench = b₁ ++ p :: b₂)
+      (hs : Split f p.energy t r) (hq : q.ok f t r) :
+      ZStep (.discardEnergy w .bench f q) s
+        { s with bench := b₁ ++ { p with energy := r } :: b₂, discard := t ++ s.discard }
+  | discardNone {w : Whose} {f : Filter} {q : Qty} {s : PlayerState} (hb : s.bench = []) :
+      ZStep (.discardEnergy w .bench f q) s s
+  /-- from the Active Pokémon to a Benched one -/
+  | moveAB {w : Whose} {f : Filter} {s : PlayerState} {a q : InPlay} {b₁ b₂ : List InPlay}
+      {e₁ e₂ : List Card} {x : Card} (ha : s.active = some a) (he : a.energy = e₁ ++ x :: e₂)
+      (hx : f.eval x = true) (hb : s.bench = b₁ ++ q :: b₂) :
+      ZStep (.moveEnergy w f) s
+        { s with active := some { a with energy := e₁ ++ e₂ }, bench := b₁ ++ q.addEnergy x :: b₂ }
+  /-- from a Benched Pokémon to the Active one -/
+  | moveBA {w : Whose} {f : Filter} {s : PlayerState} {a q : InPlay} {b₁ b₂ : List InPlay}
+      {e₁ e₂ : List Card} {x : Card} (ha : s.active = some a) (hb : s.bench = b₁ ++ q :: b₂)
+      (he : q.energy = e₁ ++ x :: e₂) (hx : f.eval x = true) :
+      ZStep (.moveEnergy w f) s
+        { s with active := some (a.addEnergy x), bench := b₁ ++ { q with energy := e₁ ++ e₂ } :: b₂ }
+  /-- from a Benched Pokémon to a Benched one (taken off first, so the target may be any
+  Pokémon of the Bench after that) -/
+  | moveBB {w : Whose} {f : Filter} {s : PlayerState} {q q' : InPlay} {b₁ b₂ c₁ c₂ : List InPlay}
+      {e₁ e₂ : List Card} {x : Card} (hb : s.bench = b₁ ++ q :: b₂) (he : q.energy = e₁ ++ x :: e₂)
+      (hx : f.eval x = true) (hc : b₁ ++ { q with energy := e₁ ++ e₂ } :: b₂ = c₁ ++ q' :: c₂) :
+      ZStep (.moveEnergy w f) s { s with bench := c₁ ++ q'.addEnergy x :: c₂ }
+  | moveNone (w : Whose) (f : Filter) (s : PlayerState) : ZStep (.moveEnergy w f) s s
+
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g
   | draw {g : GameState} {c : Card} {d : List Card} (h : g.cur.deck = c :: d) :
@@ -206,6 +332,9 @@ inductive Run : Effect → GameState → GameState → Prop where
   | spreadDamage (w : Whose) (n : Nat) (g : GameState) :
       Run (.spreadDamage w n) g
         (g.updSide w fun s => { s with bench := s.bench.map (InPlay.hitBench n) })
+  /-- a zone-move primitive (milestone MV) on the `w` player's zones -/
+  | zone {e : Effect} {w : Whose} {g : GameState} {s' : PlayerState} (hw : e.zSide = some w)
+      (h : ZStep e (g.side w) s') : Run e g (g.updSide w fun s => s.setZones s')
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

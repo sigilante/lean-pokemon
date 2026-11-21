@@ -523,11 +523,30 @@ theorem HitAt.not_ownFree {e : Effect} {g h : GameState} (hh : HitAt e g h) :
   | iterHead _ ih => simp only [Effect.ownFree, ih]
   | iterTail _ _ ih => exact ih
 
-/-- An effect that does not switch the player's own Active Pokémon leaves the same cards in the
-player's Active Spot (its damage, markers and Special Conditions may change). -/
+/-- The Pokémon cards of a Pokémon in play: its top card and the cards under it (its attached
+Energy and Tools are not part of it). -/
+def InPlay.pokemonCards (p : InPlay) : List Card := Card.pokemon p.top :: p.under
+
+/-- A zone step leaves the same Pokémon (top card and the cards under it) in its player's Active
+Spot; it may attach or discard Energy there. -/
+theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
+    s'.active.map InPlay.pokemonCards = s.active.map InPlay.pokemonCards := by
+  cases h with
+  | @move w src dst f q s s' t r hs hq hp => rw [hp.fields.2.1, Src.set_active]
+  | @attachActive w src f tf s r t a hs ha ht => rw [ha]; rfl
+  | @attachBench w src f tf s r t q b₁ b₂ hs hb ht => cases src <;> rfl
+  | @putBench w src f s r p hs hst hhp hb => cases src <;> rfl
+  | discardActive ha => rw [ha]; rfl
+  | moveAB ha => rw [ha]; rfl
+  | moveBA ha => rw [ha]; rfl
+  | _ => rfl
+
+/-- An effect that does not switch the player's own Active Pokémon leaves the same Pokémon in the
+player's Active Spot (its damage, markers, Special Conditions and, since milestone MV, attached
+Energy may change; before MV the whole card list was kept). -/
 theorem Run.cardList_of_switchesOwn {e : Effect} {g g' : GameState} (h : Run e g g')
     (hs : e.switchesOwn = false) :
-    g'.cur.active.map InPlay.cardList = g.cur.active.map InPlay.cardList := by
+    g'.cur.active.map InPlay.pokemonCards = g.cur.active.map InPlay.pokemonCards := by
   induction h with
   | iteT _ _ _ ih =>
       simp only [Effect.switchesOwn, Bool.or_eq_false_iff] at hs; exact ih hs.1
@@ -563,6 +582,11 @@ theorem Run.cardList_of_switchesOwn {e : Effect} {g g' : GameState} (h : Run e g
       · rfl
   | @touchBench _ w _ _ _ _ _ _ _ => cases w <;> rfl
   | linger w _ _ _ => cases w <;> rfl
+  | @zone e w g s' hw hz =>
+      cases w
+      · simp only [GameState.side] at hz
+        simp only [GameState.updSide, PlayerState.setZones]; exact hz.active_pokemonCards
+      · rfl
   | @benchCounters _ _ _ _ w _ _ => cases w <;> rfl
   | spreadCounters w _ _ => cases w <;> rfl
   | @benchDamage _ _ _ _ w _ _ => cases w <;> rfl
@@ -575,7 +599,7 @@ damage step reads for Weakness and Resistance (`GameState.weak`, `GameState.resi
 that was Active when the effect began (its type can differ only by a Coloring counter). -/
 theorem HitAt.attacker {e : Effect} {g h : GameState} (hh : HitAt e g h)
     (hs : e.switchSafe = true) :
-    h.cur.active.map InPlay.cardList = g.cur.active.map InPlay.cardList := by
+    h.cur.active.map InPlay.pokemonCards = g.cur.active.map InPlay.pokemonCards := by
   induction hh with
   | damage => rfl
   | drain => rfl
@@ -606,7 +630,7 @@ well-formed attack (`Attack.wf`, a premise of `Move.attack`) used by the Active 
 every damage step of its script is reached with `a`'s cards in the Active Spot. -/
 theorem Attack.attacker_at_hit {atk : Attack} {g h : GameState} {a : InPlay}
     (hw : atk.wf = true) (ha : g.cur.active = some a) (hh : HitAt atk.script g h) :
-    h.cur.active.map InPlay.cardList = some a.cardList := by
+    h.cur.active.map InPlay.pokemonCards = some a.pokemonCards := by
   rw [hh.attacker (Attack.script_switchSafe hw), ha]; rfl
 
 end Pokemon

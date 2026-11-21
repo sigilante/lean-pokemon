@@ -1,4 +1,4 @@
-import Pokemon.Damage
+import Pokemon.ZoneSim
 
 /-!
 # The clamp is a bisimulation (for tame decks)
@@ -58,6 +58,7 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | switch w ha hb => intro _ hn; cases w <;> exact hn
   | benchDamage w n h => intro _ hn; cases w <;> exact hn
   | spreadDamage w n g => intro _ hn; cases w <;> exact hn
+  | @zone e w g s' hw hz => intro _ hn; cases w <;> exact hn
   | linger w s m g =>
       intro ht hn
       have hm : ∀ n, m ≠ .reduce n := by
@@ -503,6 +504,24 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       subst he₁
       exact ⟨_, .benchHealNone n rfl, hc⟩
   | drain => intro ht; simp [Effect.tame] at ht
+  | @zone e w g s' hw hz =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.cur with active := c₂, bench := e₁, mods := m₁ })
+            ⟨rfl, rfl, rfl, hc₂, he₁⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, ha₂,
+              he₂, hm₁, hm₂]⟩
+      | opp =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.opp with active := a₂, bench := e₂, mods := m₂ })
+            ⟨rfl, rfl, rfl, ha₂, he₂⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, hc₂,
+              he₁, hm₁, hm₂]⟩
   | shuffle h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc

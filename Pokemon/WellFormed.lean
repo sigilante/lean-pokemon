@@ -48,6 +48,41 @@ theorem BenchOk.map {b : List InPlay} {U : InPlay → InPlay} (hb : BenchOk b)
   obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
   exact hU q (hb q hq)
 
+/-- A zone step keeps every Benched Pokémon `Benched`: it changes only attached Energy, and a
+Pokémon it puts onto the Bench is a Basic Pokémon just put into play. -/
+theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb : BenchOk s.bench) :
+    BenchOk s'.bench := by
+  have mem : ∀ {b b₁ b₂ : List InPlay} {q : InPlay}, b = b₁ ++ q :: b₂ → q ∈ b :=
+    fun e => by rw [e]; exact List.mem_append_right _ (.head _)
+  cases h with
+  | @move w src dst f q s s' t r hs hq hp => rw [hp.fields.2.2, Src.set_bench]; exact hb
+  | drawTo => exact hb
+  | @attachActive w src f tf s r t a hs ha ht =>
+      show BenchOk (src.set r s).bench; rw [Src.set_bench]; exact hb
+  | @attachBench w src f tf s r t q b₁ b₂ hs hb' ht =>
+      exact benched_update hb' hb ((hb q (mem hb')).of_eq rfl rfl rfl rfl)
+  | attachNone => exact hb
+  | @putBench w src f s r p hs hst hhp hbl =>
+      intro x hx
+      rcases List.mem_append.1 hx with hx | hx
+      · exact hb x hx
+      · rw [List.mem_singleton] at hx; subst hx; exact ⟨rfl, rfl, rfl, rfl⟩
+  | putBenchNone => exact hb
+  | discardActive => exact hb
+  | @discardBench w f q s p b₁ b₂ t r hb' hs hq =>
+      exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
+  | discardNone => exact hb
+  | @moveAB w f s a q b₁ b₂ e₁ e₂ x ha he hx hb' =>
+      exact benched_update hb' hb ((hb q (mem hb')).of_eq rfl rfl rfl rfl)
+  | @moveBA w f s a q b₁ b₂ e₁ e₂ x ha hb' he hx =>
+      exact benched_update hb' hb ((hb q (mem hb')).of_eq rfl rfl rfl rfl)
+  | @moveBB w f s q q' b₁ b₂ c₁ c₂ e₁ e₂ x hb' he hx hc =>
+      have h1 : BenchOk (b₁ ++ { q with energy := e₁ ++ e₂ } :: b₂) :=
+        benched_update hb' hb ((hb q (mem hb')).of_eq rfl rfl rfl rfl)
+      rw [hc] at h1
+      exact benched_update rfl h1 ((h1 q' (mem rfl)).of_eq rfl rfl rfl rfl)
+  | moveNone => exact hb
+
 /-- What resolving an effect never changes: that every Benched Pokémon is `Benched` (effects
 change Benched Pokémon only in markers and damage counters, and a Pokémon that a switch puts on
 the Bench is cured, milestone M3), the Prizes, the winner, who is first, and the phase of the
@@ -161,6 +196,10 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
             first
             | exact hb.map hq
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
+  | @zone e w g s' hw hz =>
+      cases w with
+      | own => exact ⟨fun hb => hz.benchOk hb, id, rfl, rfl, rfl, rfl, rfl⟩
+      | opp => exact ⟨id, fun hb => hz.benchOk hb, rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/

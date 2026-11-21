@@ -321,6 +321,7 @@ theorem Run.slot_nowrite {e : Effect} {g g' : GameState} (h : Run e g g') :
   | switch w ha hb => intro _ s; cases w <;> exact Nat.le_refl _
   | benchDamage w n h => intro _ s; cases w <;> exact Nat.le_refl _
   | spreadDamage w n g => intro _ s; cases w <;> exact Nat.le_refl _
+  | @zone e w g s' hw hz => intro _ s; cases w <;> exact Nat.le_refl _
   | linger w s m g =>
       intro hw s'
       rw [GameState.slotAmt_linger, Mod.amt_of_not_isAmt hw]
@@ -361,6 +362,7 @@ theorem Run.slot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
   | switch w ha hb => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | benchDamage w n h => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | spreadDamage w n g => intro _ s; cases w <;> exact Nat.le_add_right _ _
+  | @zone e w g s' hw hz => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | linger w s m g =>
       intro _ s'
       rw [GameState.slotAmt_linger]
@@ -384,6 +386,24 @@ theorem Keeps.trans {g₁ g₂ g₃ : GameState} (h₁ : Keeps g₁ g₂) (h₂ 
 
 theorem Keeps.refl (g : GameState) : Keeps g g := ⟨Nat.le_refl _, rfl, rfl, rfl⟩
 
+/-- A zone step only adds cards to its player's discard pile (milestone MV, before recycling). -/
+theorem ZStep.discard_grows {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
+    ∃ t, s'.discard = t ++ s.discard := by
+  cases h with
+  | @move w src dst f q s s' t r hs hq hp =>
+      cases hp <;> cases src <;> first | exact ⟨[], rfl⟩ | exact ⟨_, rfl⟩
+  | @attachActive w src f tf s r t a hs ha ht => cases src <;> exact ⟨[], rfl⟩
+  | @attachBench w src f tf s r t q b₁ b₂ hs hb ht => cases src <;> exact ⟨[], rfl⟩
+  | @putBench w src f s r p hs hst hhp hb => cases src <;> exact ⟨[], rfl⟩
+  | discardActive => exact ⟨_, rfl⟩
+  | discardBench => exact ⟨_, rfl⟩
+  | _ => exact ⟨[], rfl⟩
+
+theorem ZStep.disc_amt {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
+    cardsAmt s.discard ≤ cardsAmt s'.discard := by
+  obtain ⟨t, ht⟩ := h.discard_grows
+  rw [ht, cardsAmt_append]; omega
+
 theorem Run.keeps {e : Effect} {g g' : GameState} (h : Run e g g') : Keeps g g' := by
   induction h with
   | iteT _ _ _ ih => exact ih
@@ -402,6 +422,11 @@ theorem Run.keeps {e : Effect} {g g' : GameState} (h : Run e g g') : Keeps g g' 
   | benchDamage w n h => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
   | linger w s m g => cases w <;> exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
+  | @zone e w g s' hw hz =>
+      have := hz.disc_amt
+      cases w <;> simp only [GameState.side] at this <;>
+        exact ⟨by simp only [GameState.discAmt, GameState.updSide, PlayerState.setZones]; omega,
+          rfl, rfl, rfl⟩
   | _ => exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
 
 theorem KOMove.keeps {g g' : GameState} (h : KOMove g g') :

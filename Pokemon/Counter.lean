@@ -443,6 +443,7 @@ theorem Does.seq {a b : Effect} {k₁ o₁ k₂ o₂ k₃ o₃ : Pk} (ha : Does 
   | seq h₁ h₂ => exact (hb _ (ha' _ h₁)).2 _ h₂
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.skip (kc ko : Pk) : Does .skip kc ko kc ko := by
   intro g hs
@@ -451,6 +452,7 @@ theorem Does.skip (kc ko : Pk) : Does .skip kc ko kc ko := by
   | skip => exact hs
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 /-- The damage a test on the `w` Active Pokémon reads. -/
 def rd : Whose → Pk → Pk → Nat
@@ -488,6 +490,7 @@ theorem Does.ite_eq {w : Whose} {v : Nat} {a b : Effect} {kc ko kc' ko' : Pk}
       rw [hp] at hp'; cases hp'; rw [ht] at ht'; cases ht'
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.ite_ne {w : Whose} {v : Nat} {a b : Effect} {kc ko kc' ko' : Pk}
     (hv : rd w kc ko ≠ v) (h : Does b kc ko kc' ko') :
@@ -505,6 +508,7 @@ theorem Does.ite_ne {w : Whose} {v : Nat} {a b : Effect} {kc ko kc' ko' : Pk}
       rw [hp] at hp'; cases hp'; rw [ht] at ht'; cases ht'
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.sel_hit {w : Whose} {f : Nat → Effect} {kc ko kc' ko' : Pk} :
     ∀ {l : List Nat}, rd w kc ko ∈ l → Does (f (rd w kc ko)) kc ko kc' ko' →
@@ -545,6 +549,7 @@ theorem Does.handToBottom (kc ko : Pk) :
         · exact hc.stocked hk h1.1
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.healAll (kc ko : Pk) : Does .healAll kc ko { kc with dmg := 0 } ko := by
   intro g hs
@@ -558,6 +563,7 @@ theorem Does.healAll (kc ko : Pk) : Does .healAll kc ko { kc with dmg := 0 } ko 
         hc.held⟩, hs.opp⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.selfDamage (n : Nat) (kc ko : Pk) :
     Does (.selfDamage n) kc ko { kc with dmg := kc.dmg + n } ko := by
@@ -572,6 +578,7 @@ theorem Does.selfDamage (n : Nat) (kc ko : Pk) :
         hc.mods, hc.stocked, hc.held⟩, hs.opp⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.counters (n : Nat) (kc ko : Pk) :
     Does (.counters n) kc ko kc { ko with dmg := ko.dmg + n } := by
@@ -586,6 +593,7 @@ theorem Does.counters (n : Nat) (kc ko : Pk) :
         hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 /-- With no Weakness and no Resistance on the defender (the Clock and the Tape have neither),
 damage `n + 1` does `n + 1` plus the bonus less the reduction. -/
@@ -621,6 +629,7 @@ theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 /-- An attack with base damage 0 does no damage, whatever the modifiers. -/
 theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := by
@@ -636,6 +645,7 @@ theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := 
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.bonusOwn (n : Nat) (kc ko : Pk) :
     Does (.linger .own .always (.bonus n)) kc ko { kc with bonus := kc.bonus + n } ko := by
@@ -648,6 +658,7 @@ theorem Does.bonusOwn (n : Nat) (kc ko : Pk) :
         simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩, hs.opp⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.reduceOwn (n : Nat) (kc ko : Pk) :
     Does (.linger .own .always (.reduce n)) kc ko { kc with reduce := kc.reduce + n } ko := by
@@ -660,6 +671,7 @@ theorem Does.reduceOwn (n : Nat) (kc ko : Pk) :
         simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩, hs.opp⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.reduceOpp (n : Nat) (kc ko : Pk) :
     Does (.linger .opp .always (.reduce n)) kc ko kc { ko with reduce := ko.reduce + n } := by
@@ -672,6 +684,7 @@ theorem Does.reduceOpp (n : Nat) (kc ko : Pk) :
         simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.markOwn (m : Marker) (kc ko : Pk) :
     Does (.mark .own m) kc ko { kc with marks := kc.marks.set m true } ko := by
@@ -692,6 +705,7 @@ theorem Does.markOwn (m : Marker) (kc ko : Pk) :
       obtain ⟨rfl, rfl⟩ := he
       simp only [GameState.side, hs.cur.bench] at h'
       exact absurd h'.symm (by simp)
+  | zone hw => simp [Effect.zSide] at hw
 
 /-! ## The abstract state, and one attack of each player -/
 
@@ -1022,6 +1036,7 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchDamage w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | linger w s m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | @zone e w g s' hw hz => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem Shape.damageBounded {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)

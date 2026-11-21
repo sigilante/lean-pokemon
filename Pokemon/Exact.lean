@@ -616,6 +616,24 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
       exact ⟨_, .handToBottom h, by
         simp only [GameState.xrclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂]⟩
+  | @zone e w g s' hw hz =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      cases w with
+      | own =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.cur with active := c₂, bench := e₁ })
+            ⟨rfl, rfl, rfl, hc₂, he₁⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, ha₂,
+              he₂]⟩
+      | opp =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.opp with active := a₂, bench := e₂ })
+            ⟨rfl, rfl, rfl, ha₂, he₂⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, hc₂,
+              he₁]⟩
   | seq _ _ ih₁ ih₂ =>
       intro hb g₂ hc
       simp only [Effect.tmax] at hb

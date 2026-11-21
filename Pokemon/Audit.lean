@@ -4,9 +4,11 @@ import Pokemon.ListPerm
 import Pokemon.State
 import Pokemon.Effect
 import Pokemon.Rules
+import Pokemon.Zone
 import Pokemon.Conservation
 import Pokemon.WellFormed
 import Pokemon.Damage
+import Pokemon.ZoneSim
 import Pokemon.Sim
 import Pokemon.Finite
 import Pokemon.Infinite
