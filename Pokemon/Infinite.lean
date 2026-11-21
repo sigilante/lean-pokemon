@@ -36,19 +36,19 @@ def item : Card := .trainer "PoisonUpItem" .item eff
 
 def side (hand : List Card) (discard : List Card) (a : InPlay) : PlayerState :=
   ⟨[.energy .grass, .energy .grass], hand, discard, [.energy .fire], [], some a, [],
-    none, false, false, false, false, false, Store.empty⟩
+    false, false, false, false, false, Store.empty, true⟩
 
 /-- Each player has one Prize card and a 50-HP Active Pokémon; the player to move holds
 `item`. -/
 def start : GameState :=
   ⟨side [item] [] (InPlay.ofBasic mon), side [] [] (InPlay.ofBasic mon),
-    true, false, false, false, none⟩
+    true, false, false, false, none, none⟩
 
 /-- `start` after playing `item` with `n` repetitions of `poisonUp 1`. -/
 def st (n : Nat) : GameState :=
   ⟨side [] [item] (InPlay.ofBasic mon),
     side [] [] { InPlay.ofBasic mon with poisoned := true, poisonUp := n },
-    true, false, false, false, none⟩
+    true, false, false, false, none, none⟩
 
 theorem start_wellFormed : WellFormed start := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>
@@ -94,7 +94,7 @@ theorem reach_st (n : Nat) : Reach start (st n) := by
       (trun_iter_st n 0)
   rw [Nat.zero_add] at hr
   exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl
-    start_settled hr rfl)
+    start_settled hr rfl rfl)
 
 /-- Poison strength on the opponent's Active Pokémon. -/
 def oppPoisonUp (g : GameState) : Nat :=

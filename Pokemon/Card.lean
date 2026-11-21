@@ -16,6 +16,25 @@ inductive EType where
   | darkness | metal | fairy | dragon | colorless
   deriving DecidableEq
 
+/-- The nine types of Basic Energy card: "A Grass, Fire, Water, Lightning, Psychic, Fighting,
+Darkness, Metal or Fairy Energy card" (rulebook 2023, glossary p. 39). There is no Basic
+Colorless or Dragon Energy. Special Energy cards are absent from the model. -/
+inductive BasicEnergy where
+  | grass | fire | water | lightning | psychic | fighting | darkness | metal | fairy
+  deriving DecidableEq
+
+/-- The type of Energy a Basic Energy card provides. -/
+def BasicEnergy.type : BasicEnergy → EType
+  | .grass => .grass
+  | .fire => .fire
+  | .water => .water
+  | .lightning => .lightning
+  | .psychic => .psychic
+  | .fighting => .fighting
+  | .darkness => .darkness
+  | .metal => .metal
+  | .fairy => .fairy
+
 inductive Stage where
   | basic | stage1 | stage2
   deriving DecidableEq
@@ -99,7 +118,9 @@ inductive Effect where
   | inflict (c : Condition)
   /-- if the opponent's Active Pokémon is Poisoned, it takes `n` more damage counters from
   Poison at every Pokémon Checkup; repeated uses add up (Croagunk STS 58, *Poison Up*: "This
-  effect can be applied more than once") -/
+  effect can be applied more than once"). It does not Poison: it raises the strength of the
+  Poison already there, which lasts until Poison ends or a new Poison replaces it
+  (`InPlay.inflict` resets it) -/
   | poisonUp (n : Nat)
   /-- the player's Active Pokémon recovers from all Special Conditions (Full Heal) -/
   | cure
@@ -129,9 +150,12 @@ inductive Effect where
   | color (w : Whose) (t : EType)
   /-- the `w` player gets the lingering modifier `m` for the turns `s` -/
   | linger (w : Whose) (s : Slot) (m : Mod)
-  /-- the attack does `n` damage to the opponent's Active Pokémon: `n` plus the player's damage
-  bonus, minus the opponent's damage reduction, or nothing if the opponent has damage
-  prevention (`GameState.dealt`) -/
+  /-- the attack does `n` damage to the opponent's Active Pokémon, `n` being its base damage as
+  printed or as the attack's text computes it: nothing if `n = 0` (the rulebook's "Stop if the
+  base damage is 0"), else `n` plus the player's damage bonus, minus the opponent's damage
+  reduction, or nothing if the opponent has damage prevention (`GameState.dealt`, `dealtBy`).
+  `Move.attack` does the printed base damage (`Attack.damage`) this way; an effect may do more
+  `damage` (an attack whose text sets or adds to its damage) -/
   | damage (n : Nat)
   /-- as `damage n`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
@@ -144,7 +168,8 @@ inductive Effect where
 structure Attack where
   name : String
   cost : List EType
-  /-- base damage, in counters -/
+  /-- base damage, in counters (0 for an attack printed with no damage, or whose damage the
+  text computes; that damage is then an `Effect.damage` in the effect) -/
   damage : Nat
   effect : Effect
   /-- a GX attack: each player can use at most one GX attack in a game (`PlayerState.gxUsed`;
@@ -170,7 +195,8 @@ inductive TrainerKind where
 
 inductive Card where
   | pokemon (p : PokemonCard)
-  | energy (t : EType)
+  /-- a Basic Energy card (`BasicEnergy`: nine types, no Colorless or Dragon) -/
+  | energy (t : BasicEnergy)
   | trainer (name : String) (kind : TrainerKind) (effect : Effect)
   deriving DecidableEq
 

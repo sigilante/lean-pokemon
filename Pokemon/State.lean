@@ -5,7 +5,9 @@ import Pokemon.Card
 
 The state inventory follows `survey/S2-rules-state-space.md`. Every component is either a
 list of cards, a number of damage counters, or a flag. There is deliberately no turn
-counter: card text reads the turn number only as "first turn".
+counter: card text reads the turn number only as "first turn", which two flags record (the
+first turn of the game, `GameState.firstTurn`, and each player's first turn,
+`PlayerState.hadTurn`).
 -/
 
 namespace Pokemon
@@ -80,7 +82,8 @@ structure InPlay where
   poisoned : Bool
   burned : Bool
   /-- extra damage counters Poison places at each Checkup, beyond the ordinary one; raised by
-  `Effect.poisonUp`, cleared with the Poisoned condition. Not bounded by any rule. -/
+  `Effect.poisonUp`, cleared with the Poisoned condition and reset to 0 by a new Poison
+  (`InPlay.inflict`). Not bounded by any rule. -/
   poisonUp : Nat
   /-- put into play or evolved this turn -/
   fresh : Bool
@@ -109,10 +112,14 @@ def setMarks (f : Marks → Marks) (p : InPlay) : InPlay := { p with marks := f 
 /-- The Pokémon's type: the one its Coloring counter set, or else its top card's. -/
 def type (p : InPlay) : EType := p.marks.coloring.getD p.top.type
 
-/-- Apply a Special Condition. A new Asleep, Confused or Paralyzed replaces the old one.
-Poisoning an already Poisoned Pokémon keeps its `poisonUp`. -/
+/-- Apply a Special Condition. A new Asleep, Confused or Paralyzed replaces the old one. A new
+Poison replaces the old one: "A Pokémon cannot have two Poison markers; if an attack gives it
+another Poison marker, the new Poisoned Condition simply replaces the old one" (rulebook 2023,
+p. 16; the same in the 2024 rulebook, survey S8 G7), so poisoning resets the Poison strength
+`poisonUp` to that of a plain Poison (0 extra counters). Burn has the same rule; a Burn carries
+no strength here, so re-burning changes nothing. -/
 def inflict : Condition → InPlay → InPlay
-  | .poisoned, p => { p with poisoned := true }
+  | .poisoned, p => { p with poisoned := true, poisonUp := 0 }
   | .burned, p => { p with burned := true }
   | .asleep, p => { p with rot := .asleep }
   | .confused, p => { p with rot := .confused }
@@ -173,7 +180,8 @@ def benchCards : List InPlay → Nat
   | [] => 0
   | p :: ps => p.cards + benchCards ps
 
-def stadiumCards : Option Card → Nat
+/-- The number of cards in the Stadium slot. -/
+def stadiumCards : Option (Bool × Card) → Nat
   | none => 0
   | some _ => 1
 
@@ -187,9 +195,10 @@ def benchCardList : List InPlay → List Card
   | [] => []
   | p :: ps => p.cardList ++ benchCardList ps
 
-def stadiumCardList : Option Card → List Card
+/-- The card in the Stadium slot, if any. -/
+def stadiumCardList : Option (Bool × Card) → List Card
   | none => []
-  | some c => [c]
+  | some (_, c) => [c]
 
 /-- The lingering modifiers on one player for one turn (or for the rest of the game). -/
 structure Mods where
@@ -258,8 +267,6 @@ structure PlayerState where
   lost : List Card
   active : Option InPlay
   bench : List InPlay
-  /-- the Stadium this player has in play, if any -/
-  stadium : Option Card
   energyAttached : Bool
   supporterPlayed : Bool
   retreated : Bool
@@ -268,20 +275,24 @@ structure PlayerState where
   vstarUsed : Bool
   /-- lingering modifiers on this player (`Store`); shifted at the end of every turn -/
   mods : Store
+  /-- has this player finished a turn of their own? `false` during the player's first turn,
+  set by `Move.endTurn` when that turn ends. Read by the evolution ban: "neither player can
+  evolve a Pokémon on that player's first turn" (rulebook 2023 p. 11). -/
+  hadTurn : Bool
 
 namespace PlayerState
 
 /-- Number of physical cards this player owns, over all zones. -/
 def cards (s : PlayerState) : Nat :=
   s.deck.length + s.hand.length + s.discard.length + s.prizes.length + s.lost.length
-    + optCards s.active + benchCards s.bench + stadiumCards s.stadium
+    + optCards s.active + benchCards s.bench
 
-/-- Every physical card this player owns, over all zones: deck, hand, discard pile, Prizes,
-Lost Zone, the Active Pokémon and each Benched Pokémon (top card, the cards under it,
-attached Energy and Tools), and the Stadium. -/
+/-- Every physical card this player owns, over all zones except the Stadium slot (which both
+players share, `GameState.stadium`): deck, hand, discard pile, Prizes, Lost Zone, the Active
+Pokémon and each Benched Pokémon (top card, the cards under it, attached Energy and Tools). -/
 def allCards (s : PlayerState) : List Card :=
   s.deck ++ s.hand ++ s.discard ++ s.prizes ++ s.lost
-    ++ optCardList s.active ++ benchCardList s.bench ++ stadiumCardList s.stadium
+    ++ optCardList s.active ++ benchCardList s.bench
 
 def unfresh (s : PlayerState) : PlayerState :=
   { s with active := s.active.map InPlay.unfresh, bench := s.bench.map InPlay.unfresh }
@@ -294,7 +305,11 @@ structure GameState where
   opp : PlayerState
   /-- is the player to move the one who went first? -/
   curIsFirst : Bool
-  /-- is this the first turn of the game? -/
+  /-- is this the first turn of the game, that is the starting player's first turn? Read by the
+  bans on attacking and on Supporters, which apply to the starting player's first turn only
+  (rulebook 2023 pp. 12–13). The per-player first turn is `PlayerState.hadTurn`; in play from
+  the start of a game the two agree (`firstTurn` holds exactly when the player to move went
+  first and has not had a turn), but start states are not required to be consistent. -/
   firstTurn : Bool
   /-- has the player to move attacked this turn? -/
   attacked : Bool
@@ -303,17 +318,27 @@ structure GameState where
   between : Bool
   /-- `some b`: the game is over, won by the first player iff `b` -/
   winner : Option Bool
+  /-- the Stadium in play, if any, with its owner (`true`: the player who went first). There is
+  one Stadium slot for both players: "Only one Stadium can be in play at a time" (rulebook 2023
+  p. 12). No move plays a Stadium yet (survey S8 B9, milestone M5), so the slot only holds a
+  card of the start state. -/
+  stadium : Option (Bool × Card)
 
 /-- The Active Pokémon of the player to move (`own`) or of the opponent (`opp`). -/
 def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
 
-/-- The damage an attack of base `n` does to the opponent's Active Pokémon: nothing if the
-opponent has damage prevention in effect; otherwise `n` plus the player's damage bonus minus the
-opponent's damage reduction (at least 0). Weakness and Resistance are absent. -/
+/-- The damage an attack of base `n` does to the opponent's Active Pokémon, in the rulebook's
+order of damage calculation (rulebook 2023 p. 20, 2024 the same, survey S8 F2): if the base
+damage is 0 the calculation stops and the attack does no damage ("Stop if the base damage is 0
+(or if the attack does not do any damage at all)"), whatever the bonuses; otherwise nothing if
+the opponent has damage prevention in effect, and else `n` plus the player's damage bonus
+minus the opponent's damage reduction (at least 0: "If the damage is 0 or less, don't put on
+any damage counters"). Weakness and Resistance (steps 3 and 4) are absent, so the attacker's
+modifiers (step 2) and the defender's (step 5) are applied together. -/
 def dealtBy (n : Nat) (own opp : Store) : Nat :=
-  if opp.live.prevent then 0 else (n + own.live.bonus) - opp.live.reduce
+  if n = 0 then 0 else if opp.live.prevent then 0 else (n + own.live.bonus) - opp.live.reduce
 
 @[inherit_doc dealtBy]
 def GameState.dealt (n : Nat) (g : GameState) : Nat := dealtBy n g.cur.mods g.opp.mods
@@ -328,10 +353,12 @@ def GameState.updSide : Whose → (PlayerState → PlayerState) → GameState �
   | .own, f, g => { g with cur := f g.cur }
   | .opp, f, g => { g with opp := f g.opp }
 
-def GameState.cards (g : GameState) : Nat := g.cur.cards + g.opp.cards
+def GameState.cards (g : GameState) : Nat :=
+  g.cur.cards + g.opp.cards + stadiumCards g.stadium
 
 /-- Every physical card in the game, in both players' zones. -/
-def GameState.allCards (g : GameState) : List Card := g.cur.allCards ++ g.opp.allCards
+def GameState.allCards (g : GameState) : List Card :=
+  g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium
 
 def benchLimit : Nat := 5
 

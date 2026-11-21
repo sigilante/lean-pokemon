@@ -82,7 +82,7 @@ open Infinite
 two cards in the deck. -/
 def rs (d : Nat) : GameState :=
   ⟨side [] [] (InPlay.ofBasic mon), side [] [] { InPlay.ofBasic mon with damage := d },
-    true, false, false, false, none⟩
+    true, false, false, false, none, none⟩
 
 /-- If the opponent's Active Pokémon has at least 6 damage counters, do nothing; else draw. -/
 def probe : Effect := .ite (.atLeast .opp 6) .skip .draw
@@ -90,8 +90,8 @@ def probe : Effect := .ite (.atLeast .opp 6) .skip .draw
 /-- `rs 5` after drawing a card. -/
 def drawn : GameState :=
   ⟨⟨[.energy .grass], [.energy .grass], [], [.energy .fire], [], some (InPlay.ofBasic mon), [],
-    none, false, false, false, false, false, Store.empty⟩,
-    side [] [] { InPlay.ofBasic mon with damage := 5 }, true, false, false, false, none⟩
+    false, false, false, false, false, Store.empty, true⟩,
+    side [] [] { InPlay.ofBasic mon with damage := 5 }, true, false, false, false, none, none⟩
 
 theorem rs_clamp (k : Nat) : (rs 5).clamp k = (rs 6).clamp k := rfl
 
@@ -125,12 +125,12 @@ def hurter : PokemonCard :=
 
 def start2 : GameState :=
   ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),
-    true, false, false, false, none⟩
+    true, false, false, false, none, none⟩
 
 def after2 : GameState :=
   ⟨side [] [] { InPlay.ofBasic hurter with damage := 9 },
     side [] [] { InPlay.ofBasic mon with damage := 0 + 0 },
-    true, false, true, false, none⟩
+    true, false, true, false, none, none⟩
 
 theorem start2_damageBounded : DamageBounded start2 := by
   intro p hp

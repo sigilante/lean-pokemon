@@ -261,7 +261,7 @@ theorem InPlay.Agree.upd {c : Cap} {q p : InPlay} (h : Agree c q p) :
     cases k <;>
       exact ⟨h.top, h.under, h.energy, h.tools, by first | rfl | exact h.rot,
         by first | rfl | exact h.poisoned, by first | rfl | exact h.burned, h.fresh, h.marks,
-        hd, h.poisonUp⟩
+        hd, by first | exact h.poisonUp | simp only [InPlay.inflict, Nat.zero_min]⟩
 
 /-- Agreement survives a change of markers. -/
 theorem InPlay.Agree.setMarks {c : Cap} {q p : InPlay} (h : Agree c q p) (f : Marks → Marks) :
@@ -424,9 +424,10 @@ theorem Store.NoReduce.of_cap {k : Nat} (hk : 0 < k) {a b : Store} (h : a.cap k 
   obtain ⟨b1, b2, b3, b4⟩ := hb
   refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
 
-/-- With no damage reduction, the damage done is the base damage plus the bonus, or nothing. -/
+/-- With no damage reduction, the damage done is the base damage plus the bonus, or nothing
+(base damage 0, or prevention). -/
 theorem dealtBy_of_noReduce {own opp : Store} (h : opp.NoReduce) (n : Nat) :
-    dealtBy n own opp = if opp.live.prevent then 0 else n + own.live.bonus := by
+    dealtBy n own opp = if n = 0 then 0 else if opp.live.prevent then 0 else n + own.live.bonus := by
   simp only [dealtBy, h.live, Nat.sub_zero]
 
 /-- With no damage reduction, damage done agrees at the cap `k` when the stores do. -/
@@ -438,9 +439,12 @@ theorem dealtBy_cap {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store} (hc : c
   have hc' := Mods.cap_iff.1 (Store.live_cap hc)
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
   rw [ho'.2.2.1]
-  split
-  · rfl
-  · omega
+  by_cases h0 : n = 0
+  · simp only [h0, ↓reduceIte]
+  · simp only [h0, ↓reduceIte]
+    split
+    · rfl
+    · omega
 
 /-- The flags in effect agree when the stores agree at a cap. -/
 theorem Store.flags_of_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
@@ -705,12 +709,12 @@ theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.
 def cxCard : PokemonCard := ⟨"", .basic, none, 1, .grass, [], 0⟩
 
 def cxSide (a : InPlay) : PlayerState :=
-  ⟨[], [], [], [], [], some a, [], none, false, false, false, false, false, Store.empty⟩
+  ⟨[], [], [], [], [], some a, [], false, false, false, false, false, Store.empty, true⟩
 
 /-- Both Active Pokémon have 10 HP and no damage; the opponent's is Poisoned. -/
 def cxState : GameState :=
   ⟨cxSide (InPlay.ofBasic cxCard), cxSide { InPlay.ofBasic cxCard with poisoned := true },
-    true, false, false, false, none⟩
+    true, false, false, false, none, none⟩
 
 /-- `Move.damageBounded_of_turn` (every move that passes the turn yields a state with no
 pending Knock Out) is false in the model with Checkup: ending the turn from a state with no

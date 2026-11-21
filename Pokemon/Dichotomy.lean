@@ -77,8 +77,8 @@ theorem effB_loopFree (M : Machine) : (effB M).loopFree = true := by
   simp only [effB, Effect.loopFree, h2, Bool.and_self]
 
 theorem start_allCards (M : Machine) (a b : Nat) :
-    (start M a b).allCards = [.energy .colorless, .energy .colorless, .pokemon (clock M),
-      .energy .colorless, .energy .colorless, .pokemon (tape M)] := rfl
+    (start M a b).allCards = [.energy .grass, .energy .grass, .pokemon (clock M),
+      .energy .grass, .energy .grass, .pokemon (tape M)] := rfl
 
 /-- **The two-counter decks satisfy clause 1**: none of their effects has a damage bonus or
 reduction under `iter` (they have no `iter` at all). -/

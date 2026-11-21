@@ -13,9 +13,19 @@ phase only Knock Outs, promotions, and the draw that starts the turn proper (`st
 without a player's action; the Knock Outs it causes are therefore taken before anything else
 can happen, as the rulebook requires.
 
-Knock Out timing. The rulebook checks for Knock Outs at the end of every attack, at the end of
-every Pokémon Checkup, and at once whenever damage reaches HP at any other time. The model
-follows it in two ways. Between moves: every move that is not part of resolving a Knock Out
+An attack ends the turn: "Once you attack, your turn is over" (rulebook 2023 p. 13; "3) Attack.
+Then, end your turn.", p. 9). `attack` and `attackConfused` (a Confused Pokémon's failed
+attempt, which is still the turn's attack) set `GameState.attacked`, and every action of the
+turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `attack`,
+`attackConfused`) requires `attacked = false`; so after an attack only its Knock Outs (and
+promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
+does not attack ends the turn by `endTurn` at any point of the turn proper.
+
+Knock Out timing. The rulebook checks for Knock Outs at the end of every attack ("check to see
+if any Pokémon were Knocked Out by the attack", 2023 p. 14) and at the end of every Pokémon
+Checkup ("After both players have gone through these checks", p. 15). The model also takes a
+Knock Out at once whenever damage reaches HP at any other time; that third clause is not in the
+English rulebook (see the Known gaps for its source). The model follows these in two ways. Between moves: every move that is not part of resolving a Knock Out
 (the six moves `knockOut`, `promote`, `noPokemon` and their `Own` versions) requires the state
 to be `Settled`: no Pokémon in play is at or above its HP, and both Active Spots are filled.
 So once a move leaves a Pokémon at or above its HP, the next moves must Knock it Out (and
@@ -26,6 +36,28 @@ attack, as the rulebook says; an Item or Supporter's effect is resolved by `TRun
 every Knock Out at once after each primitive step (`Resolve`) and stops if the game is over, so
 no step of a Trainer effect runs while a Pokémon is at or above its HP (`TRun.guarded`).
 
+Sources of the turn rules (milestone M1). The rulebook quoted is the *Scarlet & Violet—151*
+rulebook (©2023, `data/mew_rulebook_en.pdf`, survey S9); survey S8 read the *Surging Sparks*
+rulebook (©2024) and a Professor Program post on the rule changes of February 2026. The model
+follows the latest source; for the rules below the three agree except where noted.
+* An attack ends the turn (2023 pp. 9, 13; 2024 the same, S8 B13). The failed Confused attempt
+  also ends the turn: the rulebook says only that "the attack doesn't happen" (p. 16); the model
+  reads the Confusion check as step C of using the attack (p. 20).
+* First-turn bans (2023 pp. 11–13; 2024 the same, S8 B4, B8, B14): no attack and no Supporter
+  for the starting player on the first turn of the game, no evolving on either player's own
+  first turn. Card text that lifts them is absent from the model.
+* Damage calculation stops at base damage 0 (2023 p. 20; 2024 the same, S8 F2). The model
+  applies the rule to each `damage` primitive, not to the attack's total (see the gaps).
+* A new Poison replaces the old one (2023 p. 16; 2024 the same, S8 G7). That Croagunk's
+  stacked increase ends with the replaced Poison is the model's reading; no ruling was found.
+* Nine Basic Energy types (2023 glossary p. 39; S8 D1); `BasicEnergy`.
+* One Stadium in play at a time (2023 p. 12; 2024 the same, S8 B9): one shared slot, state
+  only.
+* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21); the 2026 post replaced it with
+  tiebreaker games (S8 J4, unverified against a rulebook); the model has neither (gaps).
+* Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
+  model's rule comes from another source (gaps).
+
 Known gaps (each is a place where this model is simpler than the rulebook):
 * setup, mulligans and the opening coin flip are not modelled; start from a set-up state;
 * Energy is attached to, and evolution applied to, the Active Pokémon only;
@@ -33,9 +65,19 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Knock Outs are separate moves, forced by `Settled` (above) before any other move; they are
   taken one at a time, in either order when several are pending, so when both players take
   their last Prize from the same attack or Checkup the first Knock Out taken decides the game
-  (no Sudden Death); a player with no Pokémon to promote loses at once; only Active Pokémon
+  (no Sudden Death, which the 2023 rulebook has, nor the tiebreaker game that replaced it in
+  2026, survey S8 J4); a player with no Pokémon to promote loses at once; only Active Pokémon
   can be Knocked Out, which suffices while no effect damages the Bench; a Knock Out always
   gives exactly one Prize;
+* the source of the Knock Out timing outside attacks and Checkup: survey S9 found no rule in
+  the 2023 English rulebook (*Scarlet & Violet—151*) that Knock Outs are checked at once at
+  other times, and survey S8 quotes none from the 2024 rulebook; the model's immediate Knock
+  Outs in mid-effect (`TRun`) and its `Settled` premise on every other move rest on the Pokémon
+  Asia *Advanced Player's Rulebook* (Ver. 3.4, 2025), quoted by survey S2 ("When to check for a
+  Knock Out: At the end of an attack, At the end of Pokémon checkup, Anytime a Pokémon's
+  remaining HP becomes zero, in addition to the above"), a document of another region's rules
+  text. This milestone does not change the timing; it is a modelling decision until an English
+  source confirms it;
 * Knock Outs in mid-effect (Item and Supporter cards, `TRun`): they are checked after each
   primitive step of the model's effect language, so a printed sentence that the model writes
   as several primitives gets a check between them, and the outcome in which the whole
@@ -92,11 +134,20 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Modifiers belong to a player, not to one Pokémon: "this Pokémon takes 30 less damage during
   your opponent's next turn" protects whichever Pokémon that player has Active, and does not
   end when the Pokémon leaves the Active Spot or follow it to the Bench. Damage done by an
-  attack (`Effect.damage`, used for base damage) is `n + bonus - reduction`, or nothing under
-  prevention; Weakness and Resistance are absent, so the order "bonus, then Weakness and
-  Resistance, then reduction" collapses to this; `counters` (damage counters, not damage) is
-  not modified, as in the rulebook. `damage` and `drain` are also usable in Trainer effects,
-  where the printed game has no attack damage (an over-approximation). Absent: threshold
+  attack (`Effect.damage n`, used for base damage) is nothing if `n = 0` (the rulebook's "Stop
+  if the base damage is 0", 2023 p. 20, 2024 the same), and otherwise `n + bonus - reduction`,
+  or nothing under prevention; Weakness and Resistance are absent, so the order "bonus, then
+  Weakness and Resistance, then reduction" collapses to this; `counters` (damage counters, not
+  damage) is not modified, as in the rulebook. The rulebook computes one damage per attack;
+  the model applies the modifiers to each `damage` primitive of the attack, so an effect with
+  several `damage` steps (written for "flip N coins, 20 damage for each heads", say) adds the
+  bonus once per step and stops at 0 per step rather than once for the attack's total. The
+  two differ in both directions, so the model can lose printed outcomes as well as add some:
+  the bonus counts once per step (more damage), and each step's reduction is cut off at 0
+  separately (two `damage 2` steps against a reduction of 3 do 0 in total, where one
+  calculation with base 4 does 1). `damage`
+  and `drain` are also usable in Trainer effects, where the printed game has no attack damage
+  (an over-approximation). Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, Weakness and type changes, "attack
   twice" and "take another turn", and "that much more damage" (damage taken last turn).
@@ -127,19 +178,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   finite up to the exact-store clamp, nor up to any equivalence fine enough to recover the
   machine's configuration, a statement about representation, not play
   (`Faithful.xclamp_not_finite`, `Counter.not_finite_up_to`);
-* base damage 0: the rulebook stops an attack's damage calculation when its base damage is 0,
-  so a 0-damage attack does no damage whatever the bonuses; the model's `dealtBy` adds the
-  bonus to it, so `damage 0` deals `bonus - reduction` (an over-approximation). The two-counter
-  construction does not rely on this: both of its attacks have base damage 0, but in every state
-  it tracks (`Counter.pkA`, `Counter.pkB`) the defender's rest-of-game reduction is at least the
-  attacker's bonus (`x + a` against `x`), so the base damage deals 0 as the rulebook says; its
-  zero test is `damage 1` inside the effect, whose base is 1;
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending
-  Pokémon", Jynx base1-31) is written with base damage 0 and the counters in the effect
-  (`seq (scale opp 1) (counters 2)`); the rulebook computes an attack's damage and then places
-  it all at once, so the order of the model's primitives is a representation choice;
+  Pokémon", Jynx base1-31) is written with base damage 0 and the damage in the effect
+  (`seq (scale opp 1) (damage 2)`, so that the damage bonus applies to its 20 damage, as the
+  stop at base damage 0 requires of a printed base of 20; `counters 2` would take no bonus);
+  the rulebook computes an attack's damage and then places it all at once. This encoding is
+  not only a choice of order: the part placed by `scale` takes neither bonus nor reduction
+  (with a reduction of 3 and 3 damage counters on the target the model places 3, where one
+  calculation gives (2 + 3) - 3 = 2), so it changes the damage done;
 * `ite`, `scale`, `selfDamage` and `healAll` are general primitives, usable in any effect,
   any number of times and inside `iter`, whereas printed cards use them once, in fixed forms;
   the model over-approximates the printed texts;
@@ -149,18 +197,20 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`attackConfused`) only under the same condition, and a failed attempt (tails) does not use it
   up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
   ruling, and the model takes the answer "no"; VSTAR Powers are absent (`vstarUsed` is unused);
-* an attack does not end the turn, but at most one attack is made per turn (`attacked`, reset
-  only by `endTurn`); the first player may play a Supporter on the first turn;
-  each player has their own Stadium slot;
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them only from the player's own Active Pokémon (`cure`); the variants with a number
-  ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; poisoning a
-  Pokémon that is already Poisoned keeps its accumulated Poison strength (`poisonUp`), whereas
-  the rulebook says a new Poison replaces the old one (so the strength would return to that of
-  the new Poison);
-  Croagunk's cumulative increase is modelled as a number on the Pokémon (`poisonUp`) that
-  lasts until Poison ends, not as a lingering effect; a Confused Pokémon whose flip is tails
-  uses up the turn's attack, and its attack must be one it could otherwise use;
+  ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; a new Poison
+  replaces the old one, as the rulebook says (2023 p. 16, 2024 the same), so poisoning a
+  Pokémon that is already Poisoned resets its Poison strength (`poisonUp`) to 0
+  (`InPlay.inflict`); Croagunk's cumulative increase is modelled as a number on the Pokémon
+  (`poisonUp`) that belongs to the Poisoned Condition: it lasts until Poison ends or is
+  replaced, and stacks across uses of the attack, which raises an existing Poison and does not
+  re-Poison (that the increase ends when a later attack re-Poisons the Pokémon is the model's
+  reading of "replaces"; no ruling on it was found); a Confused Pokémon whose flip is tails
+  ends the turn as an attack does (the rulebook: "the attack doesn't happen", p. 16; that the
+  failed attempt still ends the turn is the model's reading of the attack steps, p. 20, in
+  which the Confusion check is step C of using the attack), and its attack must be one it could
+  otherwise use;
 * Pokémon Checkup (`InPlay.checkup`) covers the five Special Conditions and the Char counter
   only: no Ability,
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
@@ -176,11 +226,23 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `selfDamage` on the player's own): no effect damages the Bench;
 * `heal` and `healAll` remove damage from the player's own Active Pokémon only, not from the
   Bench nor from the opponent's Pokémon;
-* Stadium and Tool cards occupy state but have no move; Abilities are absent;
+* Stadium and Tool cards occupy state but have no move (survey S8 B9, B10: milestone M5): the
+  Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
+  as the rulebook has it, but it only holds a card of the start state; so the rules that come
+  with playing a Stadium (one per turn, no Stadium of the same name, the old one discarded) and
+  Tools (one per Pokémon) have nothing to act on yet; Abilities are absent;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
-  an empty Prize list) a pending Knock Out may be impossible to take;
-* the "no evolving on your first turn" rule is applied to the first turn of the game only.
+  an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
+  be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`; `attacked`
+  with `between`): from a start with `firstTurn` true and the player's `hadTurn` already true,
+  that player could evolve on the game's first turn. No theorem needs consistency, and every
+  witness start is consistent;
+* first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
+  starting player cannot attack or play a Supporter on the first turn of the game
+  (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
+  that lifts these bans ("If you go first, you can use this attack during your first turn",
+  Delibird me1-105; 26 Standard cards, survey S9 part 2) is not expressible.
 -/
 
 namespace Pokemon
@@ -296,22 +358,28 @@ inductive Move : GameState → GameState → Prop where
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
       (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂)
       (hs : p.stage = .basic) (hhp : 0 < p.hp)
-      (hb : g.cur.bench.length < benchLimit) (hbt : g.between = false) (hst : Settled g) :
+      (hb : g.cur.bench.length < benchLimit) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, bench := g.cur.bench ++ [InPlay.ofBasic p] } }
   /-- attach one Energy card from hand to the Active Pokémon, once per turn -/
-  | attach {g : GameState} {l₁ l₂ : List Card} {t : EType} {a : InPlay}
+  | attach {g : GameState} {l₁ l₂ : List Card} {t : BasicEnergy} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
       (hf : g.cur.energyAttached = false) (ha : g.cur.active = some a)
-      (hbt : g.between = false) (hst : Settled g) :
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, energyAttached := true,
         active := some { a with energy := Card.energy t :: a.energy } } }
-  /-- evolve the Active Pokémon; Special Conditions are removed -/
+  /-- evolve the Active Pokémon; Special Conditions are removed. Not a Pokémon put into play or
+  evolved this turn (`fresh`: "Neither player can evolve a Pokémon on its first turn in play",
+  "you can't evolve it a second time the same turn"), and not on the player's own first turn
+  (`hadTurn`: "neither player can evolve a Pokémon on that player's first turn unless a card
+  says so"; rulebook 2023 p. 11) -/
   | evolve {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (ha : g.cur.active = some a)
       (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false)
-      (hf : g.firstTurn = false) (hbt : g.between = false) (hst : Settled g) :
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂,
         active := some { a with
@@ -323,7 +391,7 @@ inductive Move : GameState → GameState → Prop where
       (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
       (hp : paid.length = a.top.retreat)
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
-      (hl : g.cur.mods.live.noRetreat = false) :
+      (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         active := some q,
         bench := b₁ ++ { a with
@@ -336,18 +404,22 @@ inductive Move : GameState → GameState → Prop where
       (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
-      (hl : g.cur.mods.live.noItem = false) :
+      (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false) :
       Move g g'
-  /-- play a Supporter card, once per turn; its effect resolves as an Item's does (`TRun`) -/
+  /-- play a Supporter card, once per turn, and not on the first turn of the game ("The player
+  who goes first cannot play a Supporter card on their first turn", rulebook 2023 p. 12); its
+  effect resolves as an Item's does (`TRun`) -/
   | supporter {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
       (hh : g.cur.hand = l₁ ++ Card.trainer n .supporter e :: l₂)
       (hs : g.cur.supporterPlayed = false) (hbt : g.between = false) (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
-        discard := Card.trainer n .supporter e :: g.cur.discard } } g') :
+        discard := Card.trainer n .supporter e :: g.cur.discard } } g')
+      (hat : g.attacked = false) (hf : g.firstTurn = false) :
       Move g g'
   /-- attack: do the base damage (with the lingering modifiers, `Effect.damage`), then resolve
-  the attack's effect. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
+  the attack's effect. The attack ends the turn (`attacked`): afterwards only Knock Outs and
+  `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
   its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
   using it records that (`PlayerState.gxUsed`). -/
@@ -361,7 +433,7 @@ inductive Move : GameState → GameState → Prop where
       (hgx : atk.gx = true → g.cur.gxUsed = false) :
       Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
-  happen, and the attacker gets 3 damage counters. As for `attack`, a GX attack can be tried
+  happen, and the attacker gets 3 damage counters; this still ends the turn (`attacked`). As for `attack`, a GX attack can be tried
   only by a player who has not used one in this game; the failed attempt does not use it up
   (an unverified ruling; see the Known gaps). -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}
@@ -420,9 +492,10 @@ inductive Move : GameState → GameState → Prop where
             energyAttached := false, supporterPlayed := false, retreated := false,
             mods := g.opp.mods.shift },
           opp := { g.cur.unfresh with
-            active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift },
+            active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift,
+            hadTurn := true },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
-          between := true, winner := g.winner }
+          between := true, winner := g.winner, stadium := g.stadium }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken
   and both Active Spots are filled -/
   | startTurn {g : GameState} {a b : InPlay} {c : Card} {d : List Card}
