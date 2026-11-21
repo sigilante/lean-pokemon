@@ -986,6 +986,7 @@ me55-90	Gengar ex	Pokémon	triggered Ability (Knock Out, damage, Checkup, oppone
 me55-91	Umbreon	Pokémon	history (this turn, last turn, Knock Outs)	condition not expressible: any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn: If any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn, this attack does 100 more damage.	me55-91
 me55-93	Murkrow	Pokémon	Weakness/Resistance or effects ignored	Resistance not -N: {'type': 'Fighting', 'value': '×2'}	me55-93
 me55-94	Scraggy	Pokémon	draw or discard variants (may draw until, draw for each, discard until)	unhandled sentence: Your opponent shuffles their hand into their deck and draws 4 cards.	me55-94 me55-140
+me55-96	Zoroark	Pokémon	data defect: a Stage 1 or Stage 2 record with no evolves-from field	evolution card with no evolves-from field in the data	me55-96
 me55-100	Yveltal	Pokémon	static text (Ability, Tool or Stadium): prevention or immunity (damage, effects, Special Conditions, healing)	Ability: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Your opponent's Active Pokémon can't be healed.	me55-100
 me55-102	Jirachi ex	Pokémon	Weakness/Resistance or effects ignored	unhandled sentence: This attack's damage isn't affected by Weakness or Resistance, or by any effects on your opponent's Active Pokémon.	me55-102 me55-155
 me55-104	Ferrothorn	Pokémon	Weakness/Resistance or effects ignored	unhandled sentence: (Don't apply Weakness and Resistance for Benched Pokémon.	me55-104

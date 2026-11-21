@@ -19,7 +19,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1108 terms, for 1110 of the pool's 2161 cards: 2 cards share the term of another,
+/-- Every imported card (1107 terms, for 1109 of the pool's 2161 cards: 2 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -1026,6 +1026,7 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me55-91", "Umbreon", "condition not expressible: any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn: If any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn, this attack does 100 more damage."),
   ("me55-93", "Murkrow", "Resistance not -N: {'type': 'Fighting', 'value': '×2'}"),
   ("me55-94", "Scraggy", "unhandled sentence: Your opponent shuffles their hand into their deck and draws 4 cards."),
+  ("me55-96", "Zoroark", "evolution card with no evolves-from field in the data"),
   ("me55-100", "Yveltal", "Ability: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Your opponent's Active Pokémon can't be healed."),
   ("me55-102", "Jirachi ex", "unhandled sentence: This attack's damage isn't affected by Weakness or Resistance, or by any effects on your opponent's Active Pokémon."),
   ("me55-104", "Ferrothorn", "unhandled sentence: (Don't apply Weakness and Resistance for Benched Pokémon."),
@@ -1091,13 +1092,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-133", "Growing Grass Energy", "Special Energy"),
   ("me6-134", "Nitro Fire Energy", "Special Energy")]
 
-/-- **The count.** `all` has 1108 entries. -/
-theorem all_length : all.length = 1108 := by decide +kernel
+/-- **The count.** `all` has 1107 entries. -/
+theorem all_length : all.length = 1107 := by decide +kernel
 
-/-- `notImported` has 1051 entries. -/
-theorem notImported_length : notImported.length = 1051 := by decide +kernel
+/-- `notImported` has 1052 entries. -/
+theorem notImported_length : notImported.length = 1052 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1108 + 2 + 1051 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1107 + 2 + 1052 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -1202,7 +1203,7 @@ theorem cross_6_8 : crossOk Part06.cards Part08.cards = true := by decide +kerne
 /-- No card of part 7 is the same term as a card of part 8. -/
 theorem cross_7_8 : crossOk Part07.cards Part08.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1108 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1107 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=
@@ -1301,8 +1302,8 @@ theorem staticReduce : (all.filter (Card.hasStatic Static.reduces)).map Card.lab
   simp only [all, List.filter_append, List.map_append, Part01.cards_staticReduce, Part02.cards_staticReduce, Part03.cards_staticReduce, Part04.cards_staticReduce, Part05.cards_staticReduce, Part06.cards_staticReduce, Part07.cards_staticReduce, Part08.cards_staticReduce, List.cons_append, List.nil_append,
     List.append_nil]
 
-/-- The imported cards with a static Retreat Cost effect (milestone M6), by name (5). Checked part by part. -/
-theorem staticRetreat : (all.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Paradise Resort", "Gravity Gemstone", "Toedscruel", "Air Balloon", "Zoroark"] := by
+/-- The imported cards with a static Retreat Cost effect (milestone M6), by name (4). Checked part by part. -/
+theorem staticRetreat : (all.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Paradise Resort", "Gravity Gemstone", "Toedscruel", "Air Balloon"] := by
   simp only [all, List.filter_append, List.map_append, Part01.cards_staticRetreat, Part02.cards_staticRetreat, Part03.cards_staticRetreat, Part04.cards_staticRetreat, Part05.cards_staticRetreat, Part06.cards_staticRetreat, Part07.cards_staticRetreat, Part08.cards_staticRetreat, List.cons_append, List.nil_append,
     List.append_nil]
 

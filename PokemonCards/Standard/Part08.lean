@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 8 of 8 (58 cards).
+Imported Standard cards, part 8 of 8 (57 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.5.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,20 +10,6 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part08
 open Pokemon
-
-/-- Hakamo-o (me55-111). Records: me55-111. -/
-def me55_111 : Card := .pokemon
-  { name := "Hakamo-o", stage := .stage1, evolvesFrom := some "Jangmo-o",
-    hp := 9, type := .dragon, retreat := 2, weakness := none,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Sharp Fang", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false },
-      { name := "Dragon Claw", cost := [.lightning, .fighting], damage := 7,
-        effect := .skip,
-        gx := false }] }
 
 /-- Kommo-o (me55-112). Records: me55-112, me55-143. -/
 def me55_112 : Card := .pokemon
@@ -722,7 +708,6 @@ def me6_89 : Card := .trainer "Aarune" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
-  me55_111,
   me55_112,
   me55_113,
   me55_114,

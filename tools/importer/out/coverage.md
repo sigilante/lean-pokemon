@@ -4,16 +4,16 @@ Pool: 3402 records, 2161 cards (S9 identities: 2164), 8 Lean files.
 
 | kind | cards | imported exactly | with caveats | not imported |
 |---|---|---|---|---|
-| Pokémon | 1881 | 819 (43.5%) | 227 (12.1%) | 835 (44.4%) |
+| Pokémon | 1881 | 818 (43.5%) | 227 (12.1%) | 836 (44.4%) |
 | Item | 86 | 10 (11.6%) | 14 (16.3%) | 62 (72.1%) |
 | Supporter | 83 | 6 (7.2%) | 8 (9.6%) | 69 (83.1%) |
 | Pokémon Tool | 44 | 7 (15.9%) | 3 (6.8%) | 34 (77.3%) |
 | Stadium | 36 | 5 (13.9%) | 2 (5.6%) | 29 (80.6%) |
 | Basic Energy | 9 | 9 (100.0%) | 0 (0.0%) | 0 (0.0%) |
 | Special Energy | 22 | 0 (0.0%) | 0 (0.0%) | 22 (100.0%) |
-| **all** | **2161** | **856 (39.6%)** | **254 (11.8%)** | **1051 (48.6%)** |
+| **all** | **2161** | **855 (39.6%)** | **254 (11.8%)** | **1052 (48.7%)** |
 
-By records: imported exactly 1292, with caveats 351, not imported 1759 (of 3402).
+By records: imported exactly 1291, with caveats 351, not imported 1760 (of 3402).
 
 Caveats (cards may carry several), with their direction: does the term allow outcomes the printed card does not (allows more), forbid outcomes it allows (forbids some), or both? A card imported with caveats is in general neither an over- nor an under-approximation of its printed card, so the imported pool must not be used for "no deck can ..." arguments without checking the caveat.
 
@@ -35,7 +35,7 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `staticBench` | both | 12 | a static damage reduction ('takes N less damage from attacks') is subtracted at step 5 of the damage calculation, which only damage to the Active Pokémon passes through: attack damage to a Benched Pokémon takes no reduction in the model (Known gaps, milestone M3: Bench damage takes no bonus, reduction or prevention; milestone M6) |
 | `poisonStrength` | both | 1 | a stronger Poison ('N damage counters instead of 1') is written as Poison plus poisonUp (N-1); the Known gaps list numbered Poison variants as absent |
 
-Blocking mechanisms of the 1051 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
+Blocking mechanisms of the 1052 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
 
 | mechanism | blocks alone | blocks (any) |
 |---|---|---|
@@ -90,19 +90,20 @@ Blocking mechanisms of the 1051 cards not imported (keyword classification of ea
 | static text (Ability, Tool or Stadium): evolution rules | 1 | 2 |
 | static text (Ability, Tool or Stadium): the number of Tools | 1 | 1 |
 | static text (Ability, Tool or Stadium): coin re-flips | 1 | 1 |
+| data defect: a Stage 1 or Stage 2 record with no evolves-from field | 1 | 1 |
 | Trainer played as a Pokémon | 0 | 7 |
 | static text (Ability, Tool or Stadium): reads HP or damage | 0 | 4 |
 | static text (Ability, Tool or Stadium): Pokémon Checkup | 0 | 1 |
 | static text (Ability, Tool or Stadium): Bench size | 0 | 1 |
 
-Pokémon with an Ability (315 cards): imported exactly 24, imported with caveats 43, not imported 248. Not imported, by the first reason the Ability was refused (or "translated; card blocked elsewhere"):
+Pokémon with an Ability (315 cards): imported exactly 23, imported with caveats 43, not imported 249. Not imported, by the first reason the Ability was refused (or "translated; card blocked elsewhere"):
 
 | status or reason | cards |
 |---|---|
 | imported with caveats | 43 |
-| imported exactly | 24 |
+| imported exactly | 23 |
 | Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots) | 63 |
-| Ability translated; card blocked elsewhere | 42 |
+| Ability translated; card blocked elsewhere | 43 |
 | Ability: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)) | 25 |
 | Ability effect: a sentence has no rule | 16 |
 | Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)) | 15 |
@@ -131,7 +132,7 @@ Pokémon with an Ability (315 cards): imported exactly 24, imported with caveats
 | Ability: static, play (a rule on putting the card into play) | 1 |
 | Ability: static, toolCount (the number of Tools) | 1 |
 
-Imported Abilities by use limit: onPlay-bench 2, onPlay-evolve 7, once 35, static 19, unlimited 4.
+Imported Abilities by use limit: onPlay-bench 2, onPlay-evolve 7, once 35, static 18, unlimited 4.
 
 Cards whose Ability says "You can't use more than 1 … Ability each turn" (6): Fezandipiti ex (sv6pt5-38), Pecharunt ex (sv6pt5-39), Fan Rotom (sv7-118), Lunatone (me1-74), Mega Kangaskhan ex (me1-104), Meowth ex (me3-62). Imported with the caveat `onePerName` (allows more): Mega Kangaskhan ex (me1-104).
 
@@ -193,14 +194,14 @@ Pokémon Tool cards (44): imported 10, refused 34.
 | Pokémon Tool: text besides the attack grant (end-of-turn discard) | 1 |
 | Pokémon Tool: text besides the attack grant (the Mega Evolution ex rule printed on a Tool) | 1 |
 
-Static text (milestone M6). Cards imported with a static effect: 32 (Pokémon with a static Ability 19, Pokémon Tools 9, Stadiums 4). By kind (a card may have several):
+Static text (milestone M6). Cards imported with a static effect: 31 (Pokémon with a static Ability 18, Pokémon Tools 9, Stadiums 4). By kind (a card may have several):
 
 | kind | cards | names |
 |---|---|---|
 | HP | 5 | Hero's Cape (sv5-152), Okidogi (sv6-111), Gravity Mountain (sv8-177), Lively Stadium (sv8-180), Conkeldurr (zsv10pt5-49) |
 | damage bonus | 10 | Maximum Belt (sv5-154), Okidogi (sv6-111), Carracosta (sv7-38), Victini (sv8-21), Lilligant (sv9-7), Brave Bangle (rsv10pt5-80), Serperior ex (zsv10pt5-3), Garganacl (me1-84), Light Ball (me2pt5-191), Brave Bangle (me5-104) |
 | damage reduction | 12 | Turtwig (sv5-10), Full Metal Lab (sv5-148), Tangrowth (sv6-2), Dubwool (sv7-125), Cetitan (sv8-54), Bronzong (sv8pt5-67), Furfrou (sv8pt5-88), Mudsdale (sv10-108), Klinklang (zsv10pt5-63), Dewgong (me2-22), Thick Scale (me2pt5-211), Kakuna (me4-2) |
-| Retreat Cost | 6 | Paradise Resort (svp-150), Gravity Gemstone (sv7-137), Toedscruel (sv9-89), Air Balloon (zsv10pt5-79), Air Balloon (me1-166), Zoroark (me55-96) |
+| Retreat Cost | 5 | Paradise Resort (svp-150), Gravity Gemstone (sv7-137), Toedscruel (sv9-89), Air Balloon (zsv10pt5-79), Air Balloon (me1-166) |
 
 - Paradise Resort (svp-150): `[{ sel := .all, filt := .named "Psyduck", tgt := none, src := none, need := none, eff := .retreatMinus 1 }]`
 - Turtwig (sv5-10) [caveats: staticBench]: `[{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 2 .any }]`
@@ -233,7 +234,6 @@ Static text (milestone M6). Cards imported with a static effect: 32 (Pokémon wi
 - Thick Scale (me2pt5-211) [caveats: staticBench]: `[{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 5 (.or (.ptype .grass) (.or (.ptype .fire) (.or (.ptype .water) (.ptype .lightning)))) }]`
 - Kakuna (me4-2) [caveats: staticBench]: `[{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 2 .any }]`
 - Brave Bangle (me5-104): `[{ sel := .self, filt := .noRuleBox, tgt := none, src := none, need := none, eff := .bonus 3 (.and .pokemon (.not .noRuleBox)) }]`
-- Zoroark (me55-96): `[{ sel := .own, filt := .any, tgt := some .active, src := some .bench, need := none, eff := .retreatMinus 2 }]`
 
 Static texts refused (114 texts, counted per card: an Ability text, or a whole Tool or Stadium text), by reason code: "first" is the code reported first, "alone" the texts with no other code, "any" the texts with this code among theirs (a keyword classification of the text):
 

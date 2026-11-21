@@ -41,6 +41,7 @@ MECHS = [
 ] + [('static text (Ability, Tool or Stadium): ' + d, r'^(?:Ability|Pokémon Tool|Stadium): static, ' + k + ' ')
      for k, d in TR.STATIC_DESC.items()] + [
     ('static Ability: first-turn rule', r'^Ability: static \(first-turn rule\)'),
+    ('data defect: a Stage 1 or Stage 2 record with no evolves-from field', r'^evolution card with no evolves-from'),
     ("triggered Ability (Knock Out, damage, Checkup, opponent's action, move between spots)", r'^Ability: triggered'),
     ('Ability with a first-turn rule ("once during your first turn", "can\'t use … during your first turn")',
      r'^Ability: (?:once during your first turn|first-turn limit)'),

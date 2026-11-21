@@ -2783,6 +2783,11 @@ def translate_pokemon(c, res):
         rb = 'none'
     else:
         rb = 'none'
+    if stage is not None and stage != ('basic',) and not c.get('evolvesFrom'):
+        # a Stage 1 or Stage 2 record with no evolves-from field (a data defect: Zoroark me55-96 evolves
+        # from Zorua) would be a card that can never be played (`Move.evolve` needs `evolvesFrom`); found
+        # in validation, importer 0.5.0
+        B.append(('evolution card with no evolves-from field in the data', ''))
     tera = 'Tera' in sub
     rules = [norm(r) for r in c.get('rules') or []]
     allowed = list(RULEBOX_TEXT.get(rb, []))

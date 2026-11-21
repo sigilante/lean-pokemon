@@ -1682,20 +1682,6 @@ def me55_95 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Zoroark (me55-96). Records: me55-96. -/
-def me55_96 : Card := .pokemon
-  { name := "Zoroark", stage := .stage1, evolvesFrom := none,
-    hp := 12, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Nighttime Byway", use := .static [{ sel := .own, filt := .any, tgt := some .active, src := some .bench, need := none, eff := .retreatMinus 2 }],
-        spot := none, cond := none,
-        effect := .fx .skip }],
-    attacks := [
-      { name := "Slashing Claw", cost := [.darkness, .darkness, .colorless], damage := 9,
-        effect := .skip,
-        gx := false }] }
-
 /-- Deino (me55-97). Records: me55-97. -/
 def me55_97 : Card := .pokemon
   { name := "Deino", stage := .basic, evolvesFrom := none,
@@ -1806,6 +1792,20 @@ def me55_109 : Card := .pokemon
         gx := false },
       { name := "Dragon Pulse", cost := [.fire, .water], damage := 24,
         effect := .move .own (.top 2) .discard .any .all,
+        gx := false }] }
+
+/-- Hakamo-o (me55-111). Records: me55-111. -/
+def me55_111 : Card := .pokemon
+  { name := "Hakamo-o", stage := .stage1, evolvesFrom := some "Jangmo-o",
+    hp := 9, type := .dragon, retreat := 2, weakness := none,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Sharp Fang", cost := [.colorless], damage := 2,
+        effect := .skip,
+        gx := false },
+      { name := "Dragon Claw", cost := [.lightning, .fighting], damage := 7,
+        effect := .skip,
         gx := false }] }
 
 /-- The cards of this part. -/
@@ -1951,7 +1951,6 @@ def cards : List Card := [
   me55_89,
   me55_92,
   me55_95,
-  me55_96,
   me55_97,
   me55_98,
   me55_99,
@@ -1959,7 +1958,8 @@ def cards : List Card := [
   me55_103,
   me55_105,
   me55_107,
-  me55_109]
+  me55_109,
+  me55_111]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1981,7 +1981,7 @@ theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map C
 theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.reduces)).map Card.label = ["Kakuna"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
-theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Zoroark"] := by decide +kernel
+theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = [] := by decide +kernel
 
 /-- Every printed HP in this part is at most 38 counters (the largest over the imported pool). -/
 theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ 38)) = true := by decide +kernel

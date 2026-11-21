@@ -16,7 +16,7 @@ ling-lock-self	linger own after (lock attack|retreat)	27	47	sv5-7 Breloom	During
 ling-lock-defending	linger opp next (lock attack|retreat)	26	49	sv5-22 Scovillain ex	During your opponent's next turn, that Pokémon can't retreat.
 search-to-bench	putBench own deck F (n times)	25	30	sv5-18 Grubbin	Search your deck for up to 2 Grubbin and put them onto your Bench.
 ling-reduce-self	linger own next (reduce n)	21	30	sv5-3 Seedot	During your opponent's next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).
-static-ability		19	27	sv5-10 Turtwig	This Pokémon takes 20 less damage from attacks (after applying Weakness and Resistance).
+static-ability		18	27	sv5-10 Turtwig	This Pokémon takes 20 less damage from attacks (after applying Weakness and Resistance).
 search-attach	attach own deck F spot any (n times)	18	24	sv5-59 Boltund	Search your deck for up to 2 Basic Lightning Energy cards and attach them to your Benched Pokémon in any way you like.
 also-1-bench	benchDamage w n	16	25	sv6-83 Girafarig	This attack also does 10 damage to 1 of your Benched Pokémon.
 flip-until-tails-damage	damage (many (const k)) [+ base]	15	17	svp-162 Houndstone ex	Flip a coin until you get tails. This attack does 20 more damage for each heads.
