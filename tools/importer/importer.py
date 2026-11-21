@@ -402,6 +402,8 @@ def ability_status(recs, r):
     texts = [TR.norm(a.get('text')) for a in recs[0].get('abilities') or []]
     for a, b in r['blockers']:
         if a.startswith('Ability') or (b and any(b in t for t in texts)):
+            if a.startswith('Ability: static, '):
+                return a.split(' (')[0]
             if a.startswith('Ability'):
                 return ':'.join(a.split(':')[:2])
             if a == 'unhandled sentence':
@@ -467,6 +469,7 @@ def stadium_tool_section(results):
             if not r['ok']:
                 a = r['blockers'][0][0]
                 a = re.sub(r'^(Stadium: activated effect not expressible): .*$', r'\1', a)
+                a = re.sub(r'^((?:Stadium|Pokémon Tool): static, \w+) .*$', r'\1', a)
                 c[a] += 1
         L.append('| refused by reason | cards |')
         L.append('|---|---|')

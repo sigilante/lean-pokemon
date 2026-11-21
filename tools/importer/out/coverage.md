@@ -104,33 +104,33 @@ Pokémon with an Ability (315 cards): imported exactly 23, imported with caveats
 | imported exactly | 23 |
 | Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots) | 63 |
 | Ability translated; card blocked elsewhere | 43 |
-| Ability: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)) | 25 |
+| Ability: static, prevent | 25 |
 | Ability effect: a sentence has no rule | 16 |
-| Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)) | 15 |
-| Ability: static, cost (attack cost or Energy provision) | 12 |
+| Ability: static, lock | 15 |
+| Ability: static, cost | 12 |
 | Ability: condition not expressible | 9 |
-| Ability: static, noRetreat ("has no Retreat Cost" (a set form; the model has more and less only)) | 6 |
-| Ability: static, stack (stacking rule ("doesn't stack") | 6 |
+| Ability: static, noRetreat | 6 |
+| Ability: static, stack | 6 |
 | Ability effect: condition not expressible | 5 |
 | Ability: static (first-turn rule) | 5 |
-| Ability: static, cond (a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage)) | 5 |
-| Ability: static, typeWeak (a change of type or Weakness) | 5 |
+| Ability: static, cond | 5 |
+| Ability: static, typeWeak | 5 |
 | Ability: Knocks Out its own Pokémon, or is also triggered by a Knock Out | 4 |
 | Ability: condition on this Pokémon, which may be on the Bench | 4 |
 | Ability: condition on the history of the turn (this turn, last turn) | 3 |
 | Ability: returns its Pokémon from play | 3 |
-| Ability: static, filter (a filter the model has not (name prefix, Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex)) | 3 |
-| Ability: static, oppLess (the opponent's attacks do less damage before Weakness and Resistance (the model's static reduction is at step 5)) | 3 |
+| Ability: static, filter | 3 |
+| Ability: static, oppLess | 3 |
 | Ability effect: Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only) | 2 |
-| Ability: static, attacks (use of other attacks) | 2 |
-| Ability: static, readsHp (reads HP or damage) | 2 |
+| Ability: static, attacks | 2 |
+| Ability: static, readsHp | 2 |
 | Ability: used from the hand | 2 |
 | Ability effect: card kind with no filter | 1 |
 | Ability: cost not expressible | 1 |
 | Ability: first-turn limit | 1 |
 | Ability: once during your first turn | 1 |
-| Ability: static, play (a rule on putting the card into play) | 1 |
-| Ability: static, toolCount (the number of Tools) | 1 |
+| Ability: static, play | 1 |
+| Ability: static, toolCount | 1 |
 
 Imported Abilities by use limit: onPlay-bench 2, onPlay-evolve 7, once 35, static 18, unlimited 4.
 
@@ -156,16 +156,16 @@ Stadium cards (36): imported 7, refused 29.
 | refused by reason | cards |
 |---|---|
 | Stadium: activated effect not expressible | 9 |
-| Stadium: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)) | 5 |
-| Stadium: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)) | 4 |
+| Stadium: static, prevent | 5 |
+| Stadium: static, lock | 4 |
 | Stadium: triggered | 3 |
-| Stadium: static, filter (a filter the model has not (name prefix, Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex)) | 2 |
-| Stadium: static, bench (Bench size) | 1 |
-| Stadium: static, checkup (Pokémon Checkup) | 1 |
-| Stadium: static, cost (attack cost or Energy provision) | 1 |
-| Stadium: static, evolve (evolution rules) | 1 |
-| Stadium: static, noRetreat ("has no Retreat Cost" (a set form; the model has more and less only)) | 1 |
-| Stadium: static, play (a rule on putting the card into play) | 1 |
+| Stadium: static, filter | 2 |
+| Stadium: static, bench | 1 |
+| Stadium: static, checkup | 1 |
+| Stadium: static, cost | 1 |
+| Stadium: static, evolve | 1 |
+| Stadium: static, noRetreat | 1 |
+| Stadium: static, play | 1 |
 
 Pokémon Tool cards (44): imported 10, refused 34.
 
@@ -183,12 +183,12 @@ Pokémon Tool cards (44): imported 10, refused 34.
 | refused by reason | cards |
 |---|---|
 | Pokémon Tool: triggered | 18 |
-| Pokémon Tool: static, cost (attack cost or Energy provision) | 4 |
-| Pokémon Tool: static, filter (a filter the model has not (name prefix, Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex)) | 3 |
-| Pokémon Tool: static, noRetreat ("has no Retreat Cost" (a set form; the model has more and less only)) | 2 |
+| Pokémon Tool: static, cost | 4 |
+| Pokémon Tool: static, filter | 3 |
+| Pokémon Tool: static, noRetreat | 2 |
 | Pokémon Tool: record text names no holder (an Item-like text; unclassified record) | 1 |
-| Pokémon Tool: static, coins (coin re-flips) | 1 |
-| Pokémon Tool: static, cond (a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage)) | 1 |
+| Pokémon Tool: static, coins | 1 |
+| Pokémon Tool: static, cond | 1 |
 | Pokémon Tool: subtype not modelled on a Tool: Ancient | 1 |
 | Pokémon Tool: subtype not modelled on a Tool: Future | 1 |
 | Pokémon Tool: text besides the attack grant (end-of-turn discard) | 1 |
