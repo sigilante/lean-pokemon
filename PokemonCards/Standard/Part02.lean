@@ -381,7 +381,7 @@ def sv6_106 : Card := .pokemon
         effect := .seq (.move .own .deck .hand .any (.upTo 1)) .shuffle,
         gx := false },
       { name := "Mirage Barrage", cost := [.water, .colorless, .colorless], damage := 0,
-        effect := .seq (.ite (.countGe (.bench .opp .any) 2) (.choice (.seq (.damage (.const 12)) (.benchSome .opp 1 .any true 12)) (.benchSome .opp 2 .any true 12)) (.seq (.damage (.const 12)) (.benchSome .opp 1 .any true 12))) (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)),
+        effect := .seq (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)) (.ite (.countGe (.bench .opp .any) 2) (.choice (.seq (.damage (.const 12)) (.benchSome .opp 1 .any true 12)) (.benchSome .opp 2 .any true 12)) (.seq (.damage (.const 12)) (.benchSome .opp 1 .any true 12))),
         gx := false }] }
 
 /-- Glimmet (sv6-108). Records: sv6-108. -/
@@ -652,7 +652,7 @@ def sv6_143 : Card := .trainer "Bug Catching Set" .item
 def sv6_147 : Card := .trainer "Cook" .supporter
     (.heal 7)
 
-/-- Hassel (sv6-151). Records: sv6-151, sv6-205. Caveats: upTo0. -/
+/-- Hassel (sv6-151). Records: sv6-151, sv6-205. Caveats: koCheckup, upTo0. -/
 def sv6_151 : Card := .trainer "Hassel" .supporter
     (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 8) .hand .any (.upTo 3)) .shuffle))
 
@@ -669,7 +669,7 @@ def sv6_158 : Card := .tool "Lucky Helmet"
         spot := some .active, cond := none,
         effect := .fx (.move .own (.top 2) .hand .any .all) }] }
 
-/-- Unfair Stamp (sv6-165). Records: sv6-165. Caveats: aceSpec. -/
+/-- Unfair Stamp (sv6-165). Records: sv6-165. Caveats: aceSpec, koCheckup. -/
 def sv6_165 : Card := .trainer "Unfair Stamp" .item
     (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.move .own .hand .shuffle .any .all) (.move .opp .hand .shuffle .any .all)) (.seq (.move .own (.top 5) .hand .any .all) (.move .opp (.top 2) .hand .any .all))))
 
@@ -916,7 +916,7 @@ def sv6pt5_32 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Fezandipiti ex (sv6pt5-38). Records: sv6pt5-38, sv6pt5-84, sv6pt5-92, me2pt5-142, me2pt5-288. Caveats: benchMods, onePerName. -/
+/-- Fezandipiti ex (sv6pt5-38). Records: sv6pt5-38, sv6pt5-84, sv6pt5-92, me2pt5-142, me2pt5-288. Caveats: benchMods, koCheckup, onePerName. -/
 def sv6pt5_38 : Card := .pokemon
   { name := "Fezandipiti ex", stage := .basic, evolvesFrom := none,
     hp := 21, type := .darkness, retreat := 1, weakness := some .fighting,

@@ -199,10 +199,10 @@ sv6-139	Ducklett	Pokémon	imported exactly		sv6-139	sv6_139
 sv6-140	Swanna	Pokémon	imported exactly		sv6-140	sv6_140	
 sv6-143	Bug Catching Set	Item	imported exactly		sv6-143 sv8pt5-102	sv6_143	
 sv6-147	Cook	Supporter	imported with caveats	noopPlay	sv6-147	sv6_147	
-sv6-151	Hassel	Supporter	imported with caveats	upTo0	sv6-151 sv6-205	sv6_151	
+sv6-151	Hassel	Supporter	imported with caveats	koCheckup,upTo0	sv6-151 sv6-205	sv6_151	
 sv6-152	Hyper Aroma	Item	imported with caveats	aceSpec,upTo0	sv6-152	sv6_152	
 sv6-158	Lucky Helmet	Pokémon Tool	imported with caveats	trigDamaged	sv6-158	sv6_158	
-sv6-165	Unfair Stamp	Item	imported with caveats	aceSpec	sv6-165	sv6_165	
+sv6-165	Unfair Stamp	Item	imported with caveats	aceSpec,koCheckup	sv6-165	sv6_165	
 sv6pt5-3	Rowlet	Pokémon	imported exactly		sv6pt5-3	sv6pt5_3	
 sv6pt5-4	Dartrix	Pokémon	imported exactly		sv6pt5-4	sv6pt5_4	
 sv6pt5-6	Tapu Bulu	Pokémon	imported with caveats	recoil	sv6pt5-6 sv6pt5-65	sv6pt5_6	
@@ -221,7 +221,7 @@ sv6pt5-28	Golbat	Pokémon	imported with caveats	perPokemon	sv6pt5-28	sv6pt5_28
 sv6pt5-30	Absol	Pokémon	imported exactly		sv6pt5-30	sv6pt5_30	
 sv6pt5-31	Zorua	Pokémon	imported exactly		sv6pt5-31 sv6pt5-75	sv6pt5_31	
 sv6pt5-32	Zoroark	Pokémon	imported exactly		sv6pt5-32	sv6pt5_32	
-sv6pt5-38	Fezandipiti ex	Pokémon	imported with caveats	benchMods,onePerName	sv6pt5-38 sv6pt5-84 sv6pt5-92 me2pt5-142 me2pt5-288	sv6pt5_38	
+sv6pt5-38	Fezandipiti ex	Pokémon	imported with caveats	benchMods,koCheckup,onePerName	sv6pt5-38 sv6pt5-84 sv6pt5-92 me2pt5-142 me2pt5-288	sv6pt5_38	
 sv6pt5-41	Cufant	Pokémon	imported exactly		sv6pt5-41 sv6pt5-76	sv6pt5_41	
 sv6pt5-43	Varoom	Pokémon	imported with caveats	perPokemon	sv6pt5-43	sv6pt5_43	
 sv6pt5-44	Axew	Pokémon	imported exactly		sv6pt5-44	sv6pt5_44	

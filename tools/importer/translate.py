@@ -92,6 +92,10 @@ CAVEATS = {
     'koAttackWide': "'Knocked Out by damage from an attack during your opponent's last turn' is read as 'Knocked Out by the "
                     "Knock Out check after the turn's attack' (`Count.koLast w true`): Knock Outs by damage counters an "
                     "attack's effect placed also count (Known gaps, one-turn history, milestone MV2)",
+    'koCheckup': "'Knocked Out during your opponent's last turn' (any cause) is `Count.koLast w false`, and the model "
+                 "records Knock Outs at Pokémon Checkup in no turn (Known gaps, one-turn history, milestone MV2): a Knock Out "
+                 "by Poison or Burn after the opponent's turn does not make the test true; whether the printed condition "
+                 "counts it was not checked against a ruling",
     'movedUpPromotion': "'moved from your Bench to the Active Spot this turn' is `InPlay.movedUp`, which a promotion after a "
                         "Knock Out of the player's own Active Pokémon in their own turn does not set (Known gaps, one-turn "
                         "history, milestone MV2: an under-model)",
@@ -130,6 +134,7 @@ CAVEAT_DIRECTION = {
                                    # model's when the attacker was switched out or Knocked Out
     'koAttackWide': 'both',        # the test is true in more states: the printed result of a false test (no bonus)
                                    # is then absent, and the model's bonus is an outcome the printed card lacks
+    'koCheckup': 'forbids some',   # if a Checkup Knock Out counts in print, the model's test is false where it is true
     'movedUpPromotion': 'forbids some',  # the printed bonus after such a promotion is not available
 }
 
@@ -576,6 +581,7 @@ def parse_test_mv2(c, ctx):
         if m.group(2):
             tcav(ctx, 'koAttackWide')
             return [('countGe', ('koLast', OWN, True), 1)], False
+        tcav(ctx, 'koCheckup')
         return [('countGe', ('koLast', OWN, False), 1)], False
     if c == 'this Pokémon moved from your Bench to the Active Spot this turn':
         if ctx['kind'] != 'attack':
@@ -653,8 +659,8 @@ def abseq(*xs):
 class Cost:
     """A Trainer's cost ('You can use this card only if you discard N other cards from your hand'),
     resolved first."""
-    def __init__(self, e):
-        self.e = e
+    def __init__(self, e, cavs=()):
+        self.e, self.cavs = e, set(cavs)
 
 
 # ------------------------------------------------------------------ the sentence table
@@ -1606,9 +1612,9 @@ class Parser:
         if m and ctx['kind'] == 'trainer':
             ctx.pop('_tc', None)
             tests, neg = parse_test(m.group(1), ctx)
-            assert not neg and len(tests) == 1 and not ctx.pop('_tc', None)
+            assert not neg and len(tests) == 1
             self.used.append(('play-condition-history', s))
-            self.items.append((i, Cost(ite(tests[0], SKIP, NO_PLAY))))
+            self.items.append((i, Cost(ite(tests[0], SKIP, NO_PLAY), ctx.pop('_tc', set()))))
             return i + 1
         # a condition: "If C, X."
         m = re.match(r'^If (.+?), (this attack does .+|.+)$', s)
@@ -1676,6 +1682,11 @@ class Parser:
             first = self.one(m.group(1) + '.')
             second = self.one(m.group('dmg')[0].upper() + m.group('dmg')[1:])
             self.used.append(('discard-all-and', s))
+            if m.group(1) != 'Discard all Energy from this Pokémon' and isinstance(second, Dmg):
+                # importer 0.7.0: the discard is resolved before the damage step, as printed (a static bonus
+                # with an Energy condition on the attacker could otherwise see the Energy; validation, MV2). The
+                # v0.6.0 form "Discard all Energy from this Pokémon, and …" keeps its earlier term.
+                first = Eff(first.e, first.cavs, pre=True)
             self.items.append((i, first))
             self.items.append((i, second))
             return i + 1
@@ -1920,6 +1931,9 @@ def build_attack(base, suffix, items, cost):
                 if any(any(x[1:2] == (OPP,) or x[0] in ('switch', 'counters', 'inflict', 'scale') for x in T.prims(e))
                        for i, e in post):
                     raise Refuse('an effect on the opponent printed before damage to chosen Pokémon')
+                # effects printed before it (an Energy discard from this Pokémon) are resolved before it, as printed
+                pre += [e for i, e in post]
+                post = []
             elif op == 'each':
                 if tree is not None:
                     raise Refuse('damage to each Pokémon with a printed base damage')
@@ -2055,6 +2069,9 @@ def translate_trainer(c, res):
     if B:
         return res
     costs = [it.e for _, it in p.items if isinstance(it, Cost)]
+    for _, it in p.items:
+        if isinstance(it, Cost):
+            res['caveats'] |= it.cavs
     effs = []
     for _, it in p.items:
         if isinstance(it, Cost):

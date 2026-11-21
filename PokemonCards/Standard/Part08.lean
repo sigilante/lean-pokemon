@@ -529,7 +529,7 @@ def me55_51 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Lightning Crash", cost := [.lightning, .lightning, .lightning], damage := 0,
-        effect := .seq (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 9)) (.benchDamage .opp 9)) (.damage (.const 9))) (.discardEnergy .own .active (.energyOf .lightning) .all),
+        effect := .seq (.discardEnergy .own .active (.energyOf .lightning) .all) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 9)) (.benchDamage .opp 9)) (.damage (.const 9))),
         gx := false }] }
 
 /-- Pikachu (me55-52). Records: me55-52. -/
