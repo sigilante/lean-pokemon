@@ -12,9 +12,12 @@ counters on the opponent's Active Pokémon for each damage counter on either Act
 (Lunala's doubling is the case `k = 1` on the opponent's), damage to the player's own Active
 Pokémon, and healing all of its damage; a move relation in which an Asleep or Paralyzed
 Pokémon can neither attack nor retreat and a Confused Pokémon's attack can fail (tails: no
-attack, and 3 damage counters on itself); Knock Out timing as in the rulebook at the level of
-moves: once a move leaves a Pokémon at or above its HP, it must be Knocked Out and replaced
-before any other move (`Settled`), while inside one effect damage may exceed HP and be read;
+attack, and 3 damage counters on itself); Knock Out timing at the level of moves: once a
+move leaves a Pokémon at or above its HP, it must be Knocked Out and replaced before any
+other move (`Settled`), while inside one effect damage may exceed HP and be read. This
+matches the rulebook for attacks and Checkup but not for Item and Supporter cards, where the
+rulebook Knocks Out immediately in mid-effect; there the model and the printed game are
+incomparable (see the gaps list in `Pokemon/Rules.lean`);
 and Pokémon Checkup between turns (Poison, Burn, Sleep, Paralysis, then Knock Outs). For that
 model it proves:
 

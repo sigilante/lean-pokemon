@@ -36,7 +36,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * an Item or Supporter's effect is resolved as a whole before any Knock Out is taken, as an
   attack is: the rulebook would Knock Out at once a Pokémon whose damage reaches its HP in
   the middle of a Trainer card's effect, so the model lets a Trainer card read (and heal)
-  over-HP damage that the printed game would not; this over-approximates what play can do;
+  over-HP damage that the printed game would not. The two timings are INCOMPARABLE, so
+  finiteness of this model does not transfer to the rulebook's Trainer timing by inclusion:
+  the model has behaviours the printed game lacks (reading over-HP damage), and the printed
+  game has behaviours the model lacks (with `seq (selfDamage 5) (heal 5)` on a 5-HP Pokémon
+  the rulebook Knocks it Out after the first step, while the model's only resolution leaves
+  it undamaged; with `iter (counters 5)` the rulebook can Knock Out, promote and hit the new
+  Active within one card);
+* a Knock Out takes the top card of the Prize list, whereas the rulebook lets the player
+  choose any Prize card (a finite choice);
 * HP is the printed value: there are no HP modifiers (the survey's loophole L1);
 * there are no markers (Imprison, Shock-wave), which the survey found to be uncapped counts;
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
