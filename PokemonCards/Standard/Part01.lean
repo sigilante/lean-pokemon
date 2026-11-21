@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 1 of 8 (150 cards).
+Imported Standard cards, part 1 of 9 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.7.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.8.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -1208,6 +1208,20 @@ def sv5_106 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Farigiraf ex (sv5-108). Records: sv5-108, sv5-194. Caveats: benchMods, staticPreventBench. -/
+def sv5_108 : Card := .pokemon
+  { name := "Farigiraf ex", stage := .stage1, evolvesFrom := some "Girafarig",
+    hp := 26, type := .darkness, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .ex, tera := true,
+    abilities := [
+      { name := "Armor Tail", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .prevent (.and .basic .ex) }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Dirty Beam", cost := [.psychic, .colorless, .colorless], damage := 16,
+        effect := .benchDamage .opp 3,
+        gx := false }] }
+
 /-- Forretress (sv5-110). Records: sv5-110. Caveats: recoil. -/
 def sv5_110 : Card := .pokemon
   { name := "Forretress", stage := .stage1, evolvesFrom := some "Pineco",
@@ -1395,6 +1409,10 @@ def sv5_154 : Card := .tool "Maximum Belt"
     abilities := [],
     statics := [
       { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
+
+/-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec, noopPlay. -/
+def sv5_157 : Card := .trainer "Prime Catcher" .item
+    (.ifDone (.countGe (.bench .opp .pokemon) 1) (.switch .opp) (.switch .own))
 
 /-- Tangela (sv6-1). Records: sv6-1. -/
 def sv6_1 : Card := .pokemon
@@ -1786,34 +1804,6 @@ def sv6_49 : Card := .pokemon
         effect := .damage (.per .own 1),
         gx := false }] }
 
-/-- Glalie (sv6-52). Records: sv6-52. -/
-def sv6_52 : Card := .pokemon
-  { name := "Glalie", stage := .stage1, evolvesFrom := some "Snorunt",
-    hp := 12, type := .water, retreat := 2, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Damage Beat", cost := [.water], damage := 0,
-        effect := .damage (.per .opp 2),
-        gx := false },
-      { name := "Crazy Headbutt", cost := [.water, .colorless, .colorless], damage := 14,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Phione (sv6-55). Records: sv6-55, sv6-175. -/
-def sv6_55 : Card := .pokemon
-  { name := "Phione", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Beckon", cost := [.colorless], damage := 0,
-        effect := .ite (.countGe (.pile .own .discard (.kind .supporter)) 1) (.move .own .discard .hand (.kind .supporter) (.exactly 1)) .skip,
-        gx := false },
-      { name := "Energy Press", cost := [.water], damage := 0,
-        effect := .damage (.count (.energy .opp .energy) 2),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1917,6 +1907,7 @@ def cards : List Card := [
   sv5_103,
   sv5_105,
   sv5_106,
+  sv5_108,
   sv5_110,
   sv5_113,
   sv5_116,
@@ -1934,6 +1925,7 @@ def cards : List Card := [
   sv5_152,
   sv5_153,
   sv5_154,
+  sv5_157,
   sv6_1,
   sv6_2,
   sv6_4,
@@ -1963,9 +1955,7 @@ def cards : List Card := [
   sv6_45,
   sv6_47,
   sv6_48,
-  sv6_49,
-  sv6_52,
-  sv6_55]
+  sv6_49]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
