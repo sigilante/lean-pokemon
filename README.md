@@ -240,8 +240,8 @@ each kind of modifier is in effect. Printed rest-of-game bonuses and reductions 
 once-per-game attacks (survey S7), and same-turn ones are bounded by copies of their cards times
 printed constants provided no recycling replays them within a turn; since milestone MV this is
 clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the two decks together. Survey
-S10 found no Trainer card in today's Standard pool whose discard-pile filter admits a
-non-Supporter modifier writer, and no rest-of-game Trainer writer there, so the model's
+S10 found no Item or Supporter card in today's Standard pool whose discard-pile filter admits a
+modifier-writing Item, and no rest-of-game Trainer writer there, so the model's
 encodings of those Trainers and attacks satisfy clause 3 for every pairing of decks (a reading
 of the card pool, not a theorem; static Stadium and Tool text, static Abilities and returns from play
 are outside the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
@@ -278,8 +278,10 @@ finiteness; the deck condition `Faithful` buys it back:
 * **finiteness for faithful decks** (`Faithful.xfinite`, `Pokemon/Faithful.lean`): a start is
   `Faithful` if no card's effect has a damage bonus or reduction under `iter` (`LoopFree`), only
   GX attacks write rest-of-game bonuses or reductions (`GXOnly`), and, since milestone MV, no
-  Trainer card's effect can return from a discard pile a non-Supporter card that writes a bonus or
-  reduction, and no effect at all one that writes a rest-of-game amount (`RecycleSafe`, decidable;
+  Item or Supporter effect can return from a discard pile an Item card that writes a bonus or
+  reduction, and no effect at all an Item or Supporter card that writes a rest-of-game amount
+  (`RecycleSafe`, decidable; a Stadium's once-per-turn effect is not restricted this way, and is
+  paid for per use;
   attacks may recycle every other card, because an attack ends the turn; every deck with no
   recycling satisfies it, so for such decks `Faithful` means what it meant before), and, since
   milestone M8a, clauses 1 and 3 read Abilities too ("as often as you like" Abilities count with
@@ -301,7 +303,7 @@ finiteness; the deck condition `Faithful` buys it back:
   (`Abilities.once_recycler_faithful`): their uses in one turn are bounded by a potential of the
   player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`), which no move of the
   turn raises; this rests on the model having no return of a Pokémon from play to the hand or deck. The bound is per turn:
-  within a turn, before its attack, each non-Supporter writer is played at most once (clause 3) and
+  within a turn, before its attack, each writer Item is played at most once unless a Stadium use returns it (clause 3) and
   one Supporter at most, so Trainers write at most twice the Trainer amounts in a turn; at most one
   attack is made per turn; carried amounts expire within three turn boundaries; the rest-of-game
   slot holds only amounts of cards in the discard piles that nothing recycles, and of GX attacks.
@@ -348,7 +350,7 @@ finiteness; the deck condition `Faithful` buys it back:
   effect returns an Iron Defender-like Item from the discard pile every turn, to both players, is
   faithful (`Stadiums.stadium_recycler_faithful`): the Item is replayed at most once per Stadium
   use, and a turn has at most two uses (`GameState.stPot`); the clause 3 of milestone M8a refused
-  this deck (`Stadiums.stadium_recycler_not_M8a`). No Standard Stadium writes a modifier;
+  this deck (`Stadiums.stadium_recycler_not_M8a`). No Standard Stadium's activated ("once during each player's turn") effect writes a lingering modifier; static ones (Postwick, Full Metal Lab, …) are not modelled (see Known gaps);
 * **the rule change**: `Attack` has a field `gx`, and `Move.attack` lets a player use a GX
   attack only if they have not used one in the game, and records it (`PlayerState.gxUsed`,
   unused before); `Move.attackConfused` (a Confused Pokémon's failed attempt) has the same
@@ -372,8 +374,8 @@ reduction in effect at the start; it allows bonus writes under `iter` and rest-o
 in attacks that are not GX attacks, and recycling of every kind (milestone MV), and gives a
 coarser quotient (the clamp caps stored bonuses). `Faithful.xfinite` allows damage reduction,
 `drain`, carried modifiers and Trainer modifiers; it forbids amounts written under `iter`,
-rest-of-game amounts written by attacks that are not GX attacks, and recycling of modifier writers
-by Trainer effects (`RecycleSafe`), and gives a finer quotient (the stores are kept exact). Neither class
+rest-of-game amounts written by attacks that are not GX attacks, and recycling of modifier-writing Items
+by Item and Supporter effects and unlimited Abilities (`RecycleSafe`), and gives a finer quotient (the stores are kept exact). Neither class
 contains the other; for decks in both, both theorems apply.
 
 Not covered by `Faithful`, or not in the model: recycling outside clause 3 (an Item that returns
@@ -395,7 +397,7 @@ on there being no extra turns; "attack twice" and "take another turn" exist on p
 guess-and-verify coupling of the Poet's second session (one replayable effect that writes a
 this-turn and a carried amount in lockstep) is excluded inside one effect by `LoopFree`, and
 across effects it lacks the replays it needs: an attack writes a bounded amount once per turn,
-and within a turn each non-Supporter Trainer writer is played at most once and one Supporter at
+and within a turn each writer Item is played a bounded number of times and one Supporter at
 most (clause 3); survey S10 found no printed card that writes modifiers of two durations.
 
 For tame decks, effects that read damage do not break finiteness, but they change why it holds. Inside an
@@ -459,7 +461,7 @@ today's Standard pool (survey S9's pool B: regulation marks H, I, J plus Basic E
 `Card` terms, conservatively, and writes them to `PokemonCards/Standard/Part*.lean` with
 per-card checks, plus `PokemonCards/Standard.lean` (the count of imported cards, the named
 list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.faithful`:
-every game whose cards all come from the imported pool is `Faithful`, all four clauses).
+every game whose cards all come from the imported pool is `Faithful`, all five clauses).
 Since importer version 0.3.0 activated ("once during your turn", "as often as you like") and
 on-play Abilities are translated when every sentence has a rule; static, passive and triggered
 Abilities, and the other forms the model lacks, are refused with a reason. Regenerate with
