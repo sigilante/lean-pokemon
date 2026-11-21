@@ -40,7 +40,7 @@ def Card.attacksWf (c : Card) : Bool := c.attacks.all Attack.wf
 /-- A Trainer's effect (an Item's or a Supporter's when played, a Stadium's when used) has no
 attack damage step and no attack damage to the Bench. -/
 def Card.trainerOk : Card → Bool
-  | .trainer _ _ e => e.hitFree && e.benchHitFree
+  | .trainer _ _ e _ => e.hitFree && e.benchHitFree
   | _ => true
 
 /-- The per-card part of `GXOnly`: an attack the card has or gives that is not a GX attack writes no
@@ -69,7 +69,7 @@ def Effect.lingers : Effect → Bool
 /-- A Trainer card's effect (an Item's or Supporter's when played, a Stadium's when used), `skip`
 for other cards. -/
 def Card.trainerEffect : Card → Effect
-  | .trainer _ _ e => e
+  | .trainer _ _ e _ => e
   | _ => .skip
 
 /-- The card writes a lingering damage bonus or reduction (`Effect.writes`) in an attack or an
@@ -101,7 +101,7 @@ def Card.abilityRecycles (c : Card) : Bool :=
 /-- The printed name (Basic Energy cards are labelled by kind only). -/
 def Card.label : Card → String
   | .pokemon p => p.name
-  | .trainer n _ _ => n
+  | .trainer n _ _ _ => n
   | .tool n _ => n
   | .energy _ => "Basic Energy"
 
@@ -159,8 +159,8 @@ theorem attacks_wf_of {C : List Card} (h : C.all Card.importOk = true) :
   fun c hc a ha => List.all_eq_true.1 (importOk_parts (List.all_eq_true.1 h c hc)).1 a ha
 
 theorem trainers_of {C : List Card} (h : C.all Card.importOk = true) :
-    ∀ c ∈ C, ∀ n k e, c = .trainer n k e → e.hitFree = true ∧ e.benchHitFree = true := by
-  intro c hc n k e he
+    ∀ c ∈ C, ∀ n k e ss, c = .trainer n k e ss → e.hitFree = true ∧ e.benchHitFree = true := by
+  intro c hc n k e ss he
   have := (importOk_parts (List.all_eq_true.1 h c hc)).2.1
   subst he
   simpa only [Card.trainerOk, Bool.and_eq_true] using this
@@ -219,7 +219,7 @@ def cardFp : Card → Nat
       (((p.hp * 8 + p.retreat) * 16 + etypeIdx p.type) * 16 +
         (match p.weakness with | some t => etypeIdx t + 1 | none => 0))) * 3
   | .energy _ => 1
-  | .trainer _ _ _ => 2
+  | .trainer _ _ _ _ => 2
   | .tool _ _ => 4
 
 /-- No card of `l₁` is the same term as a card of `l₂`. -/

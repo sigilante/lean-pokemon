@@ -1300,12 +1300,16 @@ theorem stadiumSafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) 
 theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=
   faithful_of all_ok recSafe g hg
 
-/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged. -/
+/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged; the clamp
+is taken at `Enum.bound g₀.allCards`, which bounds every derived HP (milestone M6). -/
 theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :
-    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧
-      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
-        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
-        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) :=
+    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧
+      ∀ g₁ g₂, Reach g₀ g₁ →
+        g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →
+        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧
+          g₁'.xclamp (Enum.bound g₀.allCards) = g₂'.xclamp (Enum.bound g₀.allCards)) ∧
+        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧
+          g₂'.xclamp (Enum.bound g₀.allCards) = g₁'.xclamp (Enum.bound g₀.allCards)) :=
   Faithful.xfinite (faithful g₀ hg)
 
 /-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by
@@ -1315,7 +1319,7 @@ theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=
 
 /-- Every imported Trainer effect is `hitFree` and `benchHitFree` (required by `Move.item`,
 `Move.supporter` and, for a Stadium's effect, `Move.stadiumUse`). -/
-theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e, c = .trainer n k e →
+theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e ss, c = .trainer n k e ss →
     e.hitFree = true ∧ e.benchHitFree = true :=
   trainers_of all_ok
 

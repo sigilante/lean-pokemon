@@ -295,12 +295,16 @@ def run(data, out, survey=None):
                 '`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `Faithful.xfinite` applies to it. -/',
                 'theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=\n'
                 '  faithful_of all_ok recSafe g hg\n',
-                '/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged. -/',
+                '/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged; the clamp\n'
+                'is taken at `Enum.bound g₀.allCards`, which bounds every derived HP (milestone M6). -/',
                 'theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :\n'
-                '    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧\n'
-                '      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →\n'
-                '        (∀ g₁\', Move g₁ g₁\' → ∃ g₂\', Move g₂ g₂\' ∧ g₁\'.xclamp = g₂\'.xclamp) ∧\n'
-                '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧ g₂\'.xclamp = g₁\'.xclamp) :=\n'
+                '    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧\n'
+                '      ∀ g₁ g₂, Reach g₀ g₁ →\n'
+                '        g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →\n'
+                '        (∀ g₁\', Move g₁ g₁\' → ∃ g₂\', Move g₂ g₂\' ∧\n'
+                '          g₁\'.xclamp (Enum.bound g₀.allCards) = g₂\'.xclamp (Enum.bound g₀.allCards)) ∧\n'
+                '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧\n'
+                '          g₂\'.xclamp (Enum.bound g₀.allCards) = g₁\'.xclamp (Enum.bound g₀.allCards)) :=\n'
                 '  Faithful.xfinite (faithful g₀ hg)\n']
     src += ['/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by\n'
             '`Move.attack`). -/',
@@ -308,7 +312,7 @@ def run(data, out, survey=None):
             '  attacks_wf_of all_ok\n',
             '/-- Every imported Trainer effect is `hitFree` and `benchHitFree` (required by `Move.item`,\n'
             '`Move.supporter` and, for a Stadium\'s effect, `Move.stadiumUse`). -/',
-            'theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e, c = .trainer n k e →\n'
+            'theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e ss, c = .trainer n k e ss →\n'
             '    e.hitFree = true ∧ e.benchHitFree = true :=\n  trainers_of all_ok\n',
             '/-- Every script of every Ability an imported card has or (a Tool) gives has no attack damage step\n'
             'and no attack damage to the Bench (premises of `Move.ability` and `Move.onPlay`). -/',
