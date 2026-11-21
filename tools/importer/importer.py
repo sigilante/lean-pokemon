@@ -182,6 +182,8 @@ def run(data, out, survey=None):
     # pool (the constants of the HP bound, `hpOf_le`)
     hp_max = max(printed_hp(r['term']) for _, r in imported)
     gain_max = max(hp_gain(r['term']) for _, r in imported)
+    # the largest static damage reduction units of one card (`Card.reduceGain`; the constant of `sReduce_le`)
+    red_max = max(reduce_gain(r['term']) for _, r in imported)
     for k, chunk in enumerate(parts, 1):
         pn = 'Part%02d' % k
         part_names.append(pn)
@@ -210,6 +212,14 @@ def run(data, out, survey=None):
                    '(the largest over the imported pool). -/' % gain_max)
         src.append('theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ %d)) = true := by decide +kernel\n'
                    % gain_max)
+        src.append('/-- The static damage reduction units of every card in this part (`Card.reduceGain`) are at most %d\n'
+                   'counters (the largest over the imported pool). -/' % red_max)
+        src.append('theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ %d)) = true := by decide +kernel\n'
+                   % red_max)
+        src.append('/-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by\n'
+                   'name. -/')
+        src.append('theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = %s := by decide +kernel\n'
+                   % T.lean([recs[0]['name'] for recs, r in chunk if not card_tame(r['term'])]))
         src.append('end PokemonCards.Standard.' + pn + '\n')
         files['PokemonCards/Standard/' + pn + '.lean'] = '\n'.join(src)
 
@@ -346,7 +356,7 @@ def run(data, out, survey=None):
                 '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧\n'
                 '          g₂\'.xclamp (Enum.bound g₀.allCards) = g₁\'.xclamp (Enum.bound g₀.allCards)) :=\n'
                 '  Faithful.xfinite (faithful g₀ hg)\n']
-    src += static_theorems(imported, part_names, hp_max, gain_max)
+    src += static_theorems(imported, part_names, hp_max, gain_max, red_max)
     src += ['/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by\n'
             '`Move.attack`). -/',
             'theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=\n'
@@ -607,11 +617,14 @@ def card_effects(term):
             + [e for ab in card_abilities(term) for e in T.ability_scripts(ab)])
 
 
-def static_theorems(imported, part_names, hp_max, gain_max):
+def static_theorems(imported, part_names, hp_max, gain_max, red_max):
     """The set-level statements about static effects (milestone M6): the imported cards with a static
-    effect, by kind; the HP bound; `StaticTame` for decks without a static reduction."""
+    effect, by kind; the HP bound; the bound on static damage reduction; the cards that are not tame."""
     out = []
     pl = lambda suffix: ', '.join(pn + '.' + suffix for pn in part_names)  # noqa: E731
+    untame_names = [recs[0]['name'] for recs, r in imported if not card_tame(r['term'])]
+    # `List.append_nil` closes the combined list only when the last part contributes nothing to it
+    last_tame = all(card_tame(r['term']) for _, r in imported[(len(imported) - 1) // PART_SIZE * PART_SIZE:])
     for k, what, pred, _ in STATIC_KINDS:
         names = [recs[0]['name'] for recs, r in imported if k in static_kinds(r['term'])]
         out += ['/-- The imported cards with a static %s effect (milestone M6), by name (%d). Checked part by part. -/'
@@ -647,14 +660,31 @@ def static_theorems(imported, part_names, hp_max, gain_max):
             'theorem hpOf_le_120 (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) (hn : g.allCards.length ≤ 120)\n'
             '    {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) : g.hpOf w sp p ≤ %d :=\n'
             '  hpOf_le g hg hn hp\n' % (hp_max + 2 * 121 * 120 * gain_max),
-            '/-- **Decks without a static reduction are `StaticTame`** (the static part of `GameState.Fit`, a premise\n'
-            'of the tame-deck theorem `Reach.finite`): every game whose cards are imported cards other than those of\n'
-            '`staticReduce`. `Fit` asks more (every card `Card.tame`, no reduction stored at the start), which this\n'
-            'does not establish; every game of imported cards is `Faithful` (`faithful`), so `Faithful.xfinite`\n'
-            'applies to all of them. -/',
-            'theorem staticTame (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all ∧ x.hasStatic Static.reduces = false) :\n'
-            '    g.StaticTame :=\n'
-            '  staticTame_of fun x hx => (hg x hx).2\n']
+            '/-- The static damage reduction units of every imported card (`Card.reduceGain`: the sum of the\n'
+            '`reduce` constants of its static effects) are at most %d counters. -/' % red_max,
+            'theorem reduceGain_le : ∀ c ∈ all, c.reduceGain ≤ %d := by\n'
+            '  have h : all.all (fun c => decide (c.reduceGain ≤ %d)) = true := by\n'
+            '    simp only [all, List.all_append, %s, Bool.and_self]\n'
+            '  intro c hc\n'
+            '  exact of_decide_eq_true (List.all_eq_true.1 h c hc)\n' % (red_max, red_max, pl('cards_reduceGain')),
+            '/-- **A bound on static damage reduction** (milestone M6). In every game whose cards are all imported\n'
+            'cards and number at most `N`, the static damage reduction in force (`GameState.sReduce`) is at most the\n'
+            'model\'s bound `sReduceBound` of the cards, which is at most 2 (N %d). `sReduceBound` is a summand of\n'
+            '`Enum.bound`, so the clamp of `xfinite` caps above it. -/' % red_max,
+            'theorem sReduce_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : Nat} (hn : g.allCards.length ≤ N) :\n'
+            '    g.sReduce ≤ sReduceBound g.allCards ∧ sReduceBound g.allCards ≤ 2 * (N * %d) :=\n'
+            '  sReduce_le_of reduceGain_le hg hn\n' % red_max,
+            '/-- **The imported cards that are not tame** (%d), by name. Checked part by part. The tame-deck theorem\n'
+            '`Reach.finite` asks, through `GameState.Fit`, that every card of the game be `Card.tame` (no `drain`, no\n'
+            'stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`\n'
+            '(Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game\n'
+            '(`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards\n'
+            'is not covered by `Reach.finite`; every game of imported cards is `Faithful` (`faithful`), and\n'
+            '`Faithful.xfinite` (`xfinite`) applies to all of them. -/' % len(untame_names),
+            'theorem untame : (all.filter (fun c => !c.tame)).map Card.label = %s := by\n'
+            '  simp only [all, List.filter_append, List.map_append, %s, List.cons_append, List.nil_append%s]\n'
+            % (T.lean(untame_names), pl('cards_untame'),
+               ',\n    List.append_nil' if last_tame else '')]
     return out
 
 
@@ -675,16 +705,18 @@ def card_statics(term):
     return []
 
 
-# The kinds of static effect, with the Lean predicate on a `Static` (PokemonCards/Props.lean; `Static.reduces`
-# is the model's) and the `SEff` constructors of the kind.
+# The kinds of static effect, with the Lean predicate on a `Static` (PokemonCards/Props.lean; `Static.isReduce`
+# is a nonzero `Static.reduceUnit`, the model's) and the `SEff` constructors of the kind.
 STATIC_KINDS = [('Hp', 'HP', 'Static.isHp', ('hpPlus', 'hpMinus')),
                 ('Bonus', 'damage bonus', 'Static.isBonus', ('bonus',)),
-                ('Reduce', 'damage reduction', 'Static.reduces', ('reduce',)),
+                ('Reduce', 'damage reduction', 'Static.isReduce', ('reduce',)),
                 ('Retreat', 'Retreat Cost', 'Static.isRetreat', ('retreatPlus', 'retreatMinus'))]
 
 
 def static_kinds(term):
-    return [k for k, _, _, effs in STATIC_KINDS if any(x['eff'][0] in effs for x in card_statics(term))]
+    # a `reduce` counts only with a nonzero constant (`Static.isReduce`)
+    return [k for k, _, _, effs in STATIC_KINDS
+            if any(x['eff'][0] in effs and (x['eff'][0] != 'reduce' or x['eff'][1] != 0) for x in card_statics(term))]
 
 
 def printed_hp(term):
@@ -700,6 +732,23 @@ def hp_gain(term):
         if e[0] == 'hpPlus':
             out += e[1][1] if e[1][0] == 'const' else e[1][2]
     return out
+
+
+def reduce_gain(term):
+    """`Card.reduceGain`: the reduction units of the card's static effects (`Static.reduceUnit`)."""
+    return sum(x['eff'][1] for x in card_statics(term) if x['eff'][0] == 'reduce')
+
+
+def effect_tame(e):
+    """`Effect.tame`: no `drain` and no stored damage reduction (`linger _ _ (.reduce _)`)."""
+    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] == 'reduce'):
+        return False
+    return all(effect_tame(x) for x in T.subs(e))
+
+
+def card_tame(term):
+    """`Card.tame`: every effect of the card (`card_effects`) is tame."""
+    return all(effect_tame(e) for e in card_effects(term))
 
 
 def ability_writes(term, pred):

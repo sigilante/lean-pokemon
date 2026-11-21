@@ -2035,7 +2035,7 @@ theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.la
 theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
-theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.reduces)).map Card.label = ["Mudsdale"] := by decide +kernel
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Mudsdale"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
 theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Toedscruel"] := by decide +kernel
@@ -2046,5 +2046,13 @@ theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ 38)) = tru
 /-- The HP units of every card's static effects in this part (`Card.hpGain`) are at most 10 counters
 (the largest over the imported pool). -/
 theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ 10)) = true := by decide +kernel
+
+/-- The static damage reduction units of every card in this part (`Card.reduceGain`) are at most 5
+counters (the largest over the imported pool). -/
+theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
+
+/-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
+name. -/
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Hop's Corviknight", "Shelgon", "Clamperl", "Virizion"] := by decide +kernel
 
 end PokemonCards.Standard.Part04

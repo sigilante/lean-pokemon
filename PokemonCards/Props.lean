@@ -30,9 +30,17 @@ statements the model's theorems use. Every check is stated with the model's own 
 
 Since milestone M6 a card may carry static effects (`Card.statics`: a static Ability's, a Tool's
 static text, a Stadium's static text). `Faithful` has no clause about them and `Faithful.xfinite`
-holds with the clamp at `Enum.bound`, which bounds every derived HP; `Card.hasStatic` lists the cards
-by kind, `hpOf_le_of` bounds derived HP over a pool, and `staticTame_of` gives `StaticTame` (the
-static part of `GameState.Fit`) for games without a static damage reduction.
+holds with the clamp at `Enum.bound`, which bounds every derived HP and every static damage
+reduction; `Card.hasStatic` lists the cards by kind (a static damage reduction is `Static.isReduce`,
+a nonzero `Static.reduceUnit` of the model), `hpOf_le_of` bounds derived HP over a pool, and
+`sReduce_le_of` bounds the static damage reduction in force over a pool.
+
+The tame-deck theorem `Reach.finite` does not apply to imported decks in general: its premise
+`GameState.Fit` asks every card to be `Card.tame` (no `drain`, no stored damage reduction), and the
+imported pool has cards with `drain` attacks and with stored damage reductions. Its new clause
+`ReduceLe` (Resistance plus `sReduceBound`) holds at `Enum.bound` for every game by the definition
+of the bound (`reduceLe_bound`), so static reductions do not stand in the way; tameness does.
+For imported decks the theorem that applies is `Faithful.xfinite`, through `faithful_of`.
 
 These are facts about the Lean terms; whether a term says what its printed card says is the
 importer's claim, checked by eye in survey S11, not by Lean.
@@ -118,6 +126,20 @@ def Static.isBonus (s : Static) : Bool :=
   match s.eff with
   | .bonus _ _ => true
   | _ => false
+
+/-- A static damage reduction: a static effect whose reduction constant (`Static.reduceUnit`, the
+model's) is nonzero, that is one that counts in the model's bound `sReduceBound`. -/
+def Static.isReduce (s : Static) : Bool := s.reduceUnit != 0
+
+theorem Static.isReduce_iff (s : Static) : s.isReduce = true ↔ 0 < s.reduceUnit := by
+  unfold Static.isReduce
+  cases s.reduceUnit with
+  | zero => decide
+  | succ n => exact ⟨fun _ => Nat.succ_pos n, fun _ => rfl⟩
+
+/-- The reduction units of a card's static effects (`Static.reduceUnit`), the summand of the model's
+`sReduceBound`. -/
+def Card.reduceGain (c : Card) : Nat := c.gain Static.reduceUnit
 
 /-- A static Retreat Cost change. -/
 def Static.isRetreat (s : Static) : Bool :=
@@ -337,15 +359,26 @@ theorem hpOf_le_of {C : List Card} {M G N : Nat} (hm : ∀ c ∈ C, c.printedHp 
   unfold hpBound at h1
   omega
 
-/-- A game none of whose cards has a static damage reduction is `StaticTame`. -/
-theorem staticTame_of {g : GameState} (h : ∀ x ∈ g.allCards, x.hasStatic Static.reduces = false) :
-    g.StaticTame := by
-  intro c hc s hs
-  have := h c hc
-  simp only [Card.hasStatic, List.any_eq_false] at this
-  cases hr : s.reduces with
-  | false => rfl
-  | true => exact absurd hr (this s hs)
+/-- **Static damage reduction over a pool.** If every card of `C` has static reduction units
+(`Card.reduceGain`) at most `R`, then in every game of at most `N` cards all from `C`, the static
+damage reduction in force (`GameState.sReduce`) and the model's bound `sReduceBound` of the cards
+are at most `2 (N R)`. -/
+theorem sReduce_le_of {C : List Card} {R N : Nat} (hr : ∀ c ∈ C, c.reduceGain ≤ R) {g : GameState}
+    (hg : ∀ x ∈ g.allCards, x ∈ C) (hn : g.allCards.length ≤ N) :
+    g.sReduce ≤ sReduceBound g.allCards ∧ sReduceBound g.allCards ≤ 2 * (N * R) := by
+  have h3 : csum (Card.gain Static.reduceUnit) g.allCards ≤ g.allCards.length * R :=
+    csum_le_mul fun c hc => hr c (hg c hc)
+  have h4 := Nat.le_trans h3 (Nat.mul_le_mul_right R hn)
+  refine ⟨g.sReduce_le, ?_⟩
+  unfold sReduceBound
+  omega
+
+/-- The clause `ReduceLe` of `GameState.Fit` (milestone M6: every Resistance plus the static reduction
+bound `sReduceBound` at most `k`) holds at `Enum.bound` for every game, by the definition of the bound. -/
+theorem reduceLe_bound (g : GameState) : g.ReduceLe (Enum.bound g.allCards) := fun p hp => by
+  have := resist_le_maxResist hp
+  simp only [Enum.bound]
+  omega
 
 /-- **Faithful decks from a checked pool.** If every card of `C` passes `Card.importOk` and
 `recSafeB C` holds, every game whose cards all come from `C` is `Faithful`: `LoopFree`, `GXOnly`,

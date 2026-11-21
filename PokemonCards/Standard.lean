@@ -1298,7 +1298,7 @@ theorem staticBonus : (all.filter (Card.hasStatic Static.isBonus)).map Card.labe
     List.append_nil]
 
 /-- The imported cards with a static damage reduction effect (milestone M6), by name (12). Checked part by part. -/
-theorem staticReduce : (all.filter (Card.hasStatic Static.reduces)).map Card.label = ["Turtwig", "Full Metal Lab", "Tangrowth", "Dubwool", "Cetitan", "Bronzong", "Furfrou", "Mudsdale", "Klinklang", "Dewgong", "Thick Scale", "Kakuna"] := by
+theorem staticReduce : (all.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig", "Full Metal Lab", "Tangrowth", "Dubwool", "Cetitan", "Bronzong", "Furfrou", "Mudsdale", "Klinklang", "Dewgong", "Thick Scale", "Kakuna"] := by
   simp only [all, List.filter_append, List.map_append, Part01.cards_staticReduce, Part02.cards_staticReduce, Part03.cards_staticReduce, Part04.cards_staticReduce, Part05.cards_staticReduce, Part06.cards_staticReduce, Part07.cards_staticReduce, Part08.cards_staticReduce, List.cons_append, List.nil_append,
     List.append_nil]
 
@@ -1338,14 +1338,31 @@ theorem hpOf_le_120 (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) (hn :
     {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) : g.hpOf w sp p ≤ 290438 :=
   hpOf_le g hg hn hp
 
-/-- **Decks without a static reduction are `StaticTame`** (the static part of `GameState.Fit`, a premise
-of the tame-deck theorem `Reach.finite`): every game whose cards are imported cards other than those of
-`staticReduce`. `Fit` asks more (every card `Card.tame`, no reduction stored at the start), which this
-does not establish; every game of imported cards is `Faithful` (`faithful`), so `Faithful.xfinite`
-applies to all of them. -/
-theorem staticTame (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all ∧ x.hasStatic Static.reduces = false) :
-    g.StaticTame :=
-  staticTame_of fun x hx => (hg x hx).2
+/-- The static damage reduction units of every imported card (`Card.reduceGain`: the sum of the
+`reduce` constants of its static effects) are at most 5 counters. -/
+theorem reduceGain_le : ∀ c ∈ all, c.reduceGain ≤ 5 := by
+  have h : all.all (fun c => decide (c.reduceGain ≤ 5)) = true := by
+    simp only [all, List.all_append, Part01.cards_reduceGain, Part02.cards_reduceGain, Part03.cards_reduceGain, Part04.cards_reduceGain, Part05.cards_reduceGain, Part06.cards_reduceGain, Part07.cards_reduceGain, Part08.cards_reduceGain, Bool.and_self]
+  intro c hc
+  exact of_decide_eq_true (List.all_eq_true.1 h c hc)
+
+/-- **A bound on static damage reduction** (milestone M6). In every game whose cards are all imported
+cards and number at most `N`, the static damage reduction in force (`GameState.sReduce`) is at most the
+model's bound `sReduceBound` of the cards, which is at most 2 (N 5). `sReduceBound` is a summand of
+`Enum.bound`, so the clamp of `xfinite` caps above it. -/
+theorem sReduce_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : Nat} (hn : g.allCards.length ≤ N) :
+    g.sReduce ≤ sReduceBound g.allCards ∧ sReduceBound g.allCards ≤ 2 * (N * 5) :=
+  sReduce_le_of reduceGain_le hg hn
+
+/-- **The imported cards that are not tame** (26), by name. Checked part by part. The tame-deck theorem
+`Reach.finite` asks, through `GameState.Fit`, that every card of the game be `Card.tame` (no `drain`, no
+stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`
+(Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game
+(`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards
+is not covered by `Reach.finite`; every game of imported cards is `Faithful` (`faithful`), and
+`Faithful.xfinite` (`xfinite`) applies to all of them. -/
+theorem untame : (all.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle", "Trevenant", "Torkoal", "Varoom", "Drifloon", "Tornadus", "Volcarona", "Skarmory", "Jasmine's Gaze", "Paras", "Hop's Corviknight", "Shelgon", "Clamperl", "Virizion", "Klink", "Klang", "Genesect ex", "Exeggutor", "Carkol", "Registeel ex", "Metang", "Cosmoem", "Zamazenta", "Onix", "Jangmo-o"] := by
+  simp only [all, List.filter_append, List.map_append, Part01.cards_untame, Part02.cards_untame, Part03.cards_untame, Part04.cards_untame, Part05.cards_untame, Part06.cards_untame, Part07.cards_untame, Part08.cards_untame, List.cons_append, List.nil_append]
 
 /-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by
 `Move.attack`). -/

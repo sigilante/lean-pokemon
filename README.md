@@ -191,10 +191,11 @@ HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and
   reduction at `2 · bound` (`bound` is a constant computed from the cards: more than every
   HP a Pokémon can have (`hpBound`, since milestone M6, when HP became derived; before it the clamp
-  capped at the printed HP), every Resistance and every test constant; the factor 2 absorbs Resistance, which is
-  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no damage reduction, no
-  `drain`) and with no reduction in effect (`GameState.Fit` at `bound`, which
-  `GameState.fit_bound` gives), the clamps of all reachable states lie in one finite list, and
+  capped at the printed HP), every Resistance plus the bound `sReduceBound` on static damage
+  reductions (M6), and every test constant; the factor 2 absorbs Resistance, which is
+  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no stored damage reduction, no
+  `drain`; static reductions are allowed) and with no reduction stored (`GameState.Fit` at
+  `bound`, which `GameState.fit_bound` gives from those two hypotheses alone), the clamps of all reachable states lie in one finite list, and
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
   `Reach.clamp_sim`), so the excesses the clamp removes cannot be observed by play. This holds
   with the Trainer timing above. The list half alone (`Reach.clamp_mem`) holds from every
@@ -396,8 +397,8 @@ finiteness; the deck condition `Faithful` buys it back:
   not faithful, and some of them are finite (tame decks that violate `GXOnly` are covered by
   `Reach.finite`).
 
-Which theorem applies. `Reach.finite` needs tame cards (no damage reduction, no `drain`) and no
-reduction in effect at the start; it allows bonus writes under `iter` and rest-of-game bonuses
+Which theorem applies. `Reach.finite` needs tame cards (no stored damage reduction, no `drain`;
+static reductions are allowed) and no reduction stored at the start; it allows bonus writes under `iter` and rest-of-game bonuses
 in attacks that are not GX attacks, and recycling of every kind (milestone MV), and gives a
 coarser quotient (the clamp caps stored bonuses). `Faithful.xfinite` allows damage reduction,
 `drain`, carried modifiers and Trainer modifiers; it forbids amounts written under `iter`,
@@ -488,10 +489,19 @@ today's Standard pool (survey S9's pool B: regulation marks H, I, J plus Basic E
 `Card` terms, conservatively, and writes them to `PokemonCards/Standard/Part*.lean` with
 per-card checks, plus `PokemonCards/Standard.lean` (the count of imported cards, the named
 list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.faithful`:
-every game whose cards all come from the imported pool is `Faithful`, all five clauses).
-Since importer version 0.3.0 activated ("once during your turn", "as often as you like") and
-on-play Abilities are translated when every sentence has a rule; static, passive and triggered
-Abilities, and the other forms the model lacks, are refused with a reason. Regenerate with
+every game whose cards all come from the imported pool is `Faithful`, all five clauses, and
+`PokemonCards.Standard.xfinite`, `Faithful.xfinite` for those games, both stated with the clamp
+at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
+damage reduction). Of the pool's 2,161 cards, 1,109 are imported (855 exactly, 254 with
+caveats) as 1,107 distinct terms, and 1,052 are refused, each with a reason
+(`tools/importer/out/coverage.md`). Since importer version 0.3.0 activated ("once during your
+turn", "as often as you like") and on-play Abilities are translated when every sentence has a
+rule, and since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
+the model's `Static`; passive and triggered Abilities, static text in other shapes, and the
+other forms the model lacks are refused with a reason. The tame-deck theorem `Reach.finite`
+does not cover imported decks in general: `Standard.untame` lists the imported cards that are
+not tame (a `drain` attack or a stored damage reduction); its clause on static reductions holds
+for every game (`reduceLe_bound`), and `Standard.sReduce_le` bounds the static reduction in force. Regenerate with
 `python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
 memory and diffs); build with `lake build PokemonCards`, which runs its own axiom gate
 (`PokemonCards/Audit.lean`). These are facts about the generated terms; whether a term says
