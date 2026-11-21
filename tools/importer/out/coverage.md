@@ -56,7 +56,6 @@ Blocking mechanisms of the 928 cards not imported (keyword classification of eac
 | Energy to hand, deck or between specific Pokémon | 26 | 41 |
 | coin-flip variants | 26 | 39 |
 | a condition the model cannot test | 26 | 37 |
-| Weakness/Resistance or effects ignored | 23 | 30 |
 | history: per-attack lock (not modelled, Known gaps MV2) | 22 | 27 |
 | look at / reveal and choose from deck or hand | 21 | 52 |
 | damage or counters spread "in any way you like" / to several chosen | 18 | 37 |
@@ -65,6 +64,7 @@ Blocking mechanisms of the 928 cards not imported (keyword classification of eac
 | Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms) | 17 | 24 |
 | a count the model cannot read | 16 | 22 |
 | "If you do" / "in this way" consequences | 14 | 55 |
+| damage modifiers MV3 does not express (the opponent's attacks less damage before W/R, more damage taken after W/R, a named attack's bonus, Weakness changes) | 14 | 21 |
 | evolution or devolution by effect | 14 | 19 |
 | draw or discard variants (may draw until, draw for each, discard until) | 14 | 19 |
 | several cards to one chosen Pokémon, or one to each | 13 | 17 |
@@ -78,6 +78,7 @@ Blocking mechanisms of the 928 cards not imported (keyword classification of eac
 | HP reads | 8 | 17 |
 | Pokémon Tool card: triggered text of other shapes (the model would play it inert; refused) | 8 | 8 |
 | static text (Ability, Tool or Stadium): a filter the model has not (name prefix, Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex) | 7 | 23 |
+| Weakness/Resistance or effects ignored | 7 | 11 |
 | a card kind with no filter | 7 | 9 |
 | spread: amount computed by the text (not modelled, Known gaps MV2) | 6 | 8 |
 | copy an attack | 6 | 8 |
