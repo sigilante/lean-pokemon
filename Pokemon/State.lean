@@ -20,6 +20,53 @@ def Rot.canAct : Rot → Bool
   | .paralyzed => false
   | _ => true
 
+/-- The markers on one Pokémon in play (`survey/S7-load-bearing-spec.md` §3).
+
+Modelling assumption (markers as flags). Printed Imprison and Shock-wave markers have no cap:
+the cards place one at a time, and nothing limits how many a Pokémon carries. The model keeps
+only whether a Pokémon has any. This is exact for the printed cards: the only reads are "has
+any Imprison markers" (Gardevoir ex δ) and "has any Shock-wave markers" (Tyranitar ex δ), and
+the only removal takes them all (Tropius δ), so the map from a count to "count > 0" commutes
+with placing, removing and reading. A card that counted these markers, or removed one at a
+time, would break it; none was found in the English card data. Lightning Rod has a printed cap
+of one and Char is placed only on a Pokémon without one, so flags are exact for them too.
+The Coloring counter (Smeargle basep-32) is a type, not a flag: placing one removes the old
+one, and the Pokémon is of the chosen type while the counter is on it.
+
+Fate of markers (a rule choice; card text is silent except for Char, whose text says it stays
+while the Pokémon is in play): every marker stays on its Pokémon through evolution, retreat and
+promotion, and leaves play with it (a Knocked Out Pokémon's `InPlay` record is discarded). -/
+structure Marks where
+  imprison : Bool
+  shockwave : Bool
+  lightningRod : Bool
+  char : Bool
+  /-- the type set by a Coloring counter, if the Pokémon has one -/
+  coloring : Option EType
+  deriving DecidableEq
+
+namespace Marks
+
+/-- No markers. -/
+def empty : Marks := ⟨false, false, false, false, none⟩
+
+/-- Does the Pokémon have the marker `m`? -/
+def get : Marker → Marks → Bool
+  | .imprison, k => k.imprison
+  | .shockwave, k => k.shockwave
+  | .lightningRod, k => k.lightningRod
+  | .char, k => k.char
+
+/-- Put (`b = true`) or remove (`b = false`) the marker `m`. -/
+def set (m : Marker) (b : Bool) (k : Marks) : Marks :=
+  match m with
+  | .imprison => { k with imprison := b }
+  | .shockwave => { k with shockwave := b }
+  | .lightningRod => { k with lightningRod := b }
+  | .char => { k with char := b }
+
+end Marks
+
 /-- A Pokémon in play, with everything attached to it. -/
 structure InPlay where
   top : PokemonCard
@@ -37,6 +84,8 @@ structure InPlay where
   poisonUp : Nat
   /-- put into play or evolved this turn -/
   fresh : Bool
+  /-- markers (Imprison, Shock-wave, Lightning Rod, Char) and the Coloring counter -/
+  marks : Marks
 
 namespace InPlay
 
@@ -49,9 +98,16 @@ def cardList (p : InPlay) : List Card := Card.pokemon p.top :: (p.under ++ p.ene
 /-- A Basic Pokémon just put into play. -/
 def ofBasic (p : PokemonCard) : InPlay :=
   { top := p, under := [], energy := [], tools := [], damage := 0,
-    rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true }
+    rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+    marks := Marks.empty }
 
 def unfresh (p : InPlay) : InPlay := { p with fresh := false }
+
+/-- Change the markers. -/
+def setMarks (f : Marks → Marks) (p : InPlay) : InPlay := { p with marks := f p.marks }
+
+/-- The Pokémon's type: the one its Coloring counter set, or else its top card's. -/
+def type (p : InPlay) : EType := p.marks.coloring.getD p.top.type
 
 /-- Apply a Special Condition. A new Asleep, Confused or Paralyzed replaces the old one.
 Poisoning an already Poisoned Pokémon keeps its `poisonUp`. -/
@@ -65,11 +121,14 @@ def inflict : Condition → InPlay → InPlay
 /-- Pokémon Checkup on one Active Pokémon (`S2`, `S4`: Poisoned, then Burned, then Asleep, then
 Paralyzed). Poison places `1 + poisonUp` damage counters. Burn places 2, then a coin flip
 (`burnHeads`) cures it on heads. Sleep is cured on heads (`sleepHeads`). Paralysis ends at the
-Checkup after its owner's turn (`ownersTurnEnded`). Knock Outs are checked afterwards, by the
-Knock Out moves; Confusion has no Checkup step. -/
-def checkup (ownersTurnEnded burnHeads sleepHeads : Bool) (p : InPlay) : InPlay :=
+Checkup after its owner's turn (`ownersTurnEnded`). A Char counter makes the opponent flip a
+coin after every turn and puts 2 damage counters on its Pokémon on tails (`charTails`; Quilava
+neo1-47). Knock Outs are checked afterwards, by the Knock Out moves; Confusion has no Checkup
+step. -/
+def checkup (ownersTurnEnded burnHeads sleepHeads charTails : Bool) (p : InPlay) : InPlay :=
   { p with
-    damage := p.damage + (if p.poisoned then 1 + p.poisonUp else 0) + (if p.burned then 2 else 0),
+    damage := p.damage + (if p.poisoned then 1 + p.poisonUp else 0) + (if p.burned then 2 else 0)
+      + (if p.marks.char && charTails then 2 else 0),
     burned := p.burned && !burnHeads,
     rot := match p.rot with
       | .asleep => if sleepHeads then .none else .asleep
@@ -95,12 +154,16 @@ def Test.whose : Test → Whose
   | .atLeast w _ => w
   | .exactly w _ => w
   | .cond w _ => w
+  | .marked w _ => w
+  | .isType w _ => w
 
 /-- The value of a test on the Active Pokémon it reads. -/
 def Test.eval : Test → InPlay → Bool
   | .atLeast _ n, p => Nat.ble n p.damage
   | .exactly _ n, p => Nat.beq p.damage n
   | .cond _ c, p => p.has c
+  | .marked _ m, p => p.marks.get m
+  | .isType _ t, p => decide (p.type = t)
 
 def optCards : Option InPlay → Nat
   | none => 0
@@ -185,6 +248,16 @@ structure GameState where
 def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
+
+/-- The player to move (`own`) or the opponent (`opp`). -/
+def GameState.side : Whose → GameState → PlayerState
+  | .own, g => g.cur
+  | .opp, g => g.opp
+
+/-- Change the state of the player to move (`own`) or of the opponent (`opp`). -/
+def GameState.updSide : Whose → (PlayerState → PlayerState) → GameState → GameState
+  | .own, f, g => { g with cur := f g.cur }
+  | .opp, f, g => { g with opp := f g.opp }
 
 def GameState.cards (g : GameState) : Nat := g.cur.cards + g.opp.cards
 

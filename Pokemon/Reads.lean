@@ -58,7 +58,7 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
   | supporter _ _ _ hst _ => exact bounded hst.1 _ _
   | attack _ _ _ _ _ _ _ hst _ => exact bounded hst.1 _ _
   | attackConfused _ _ _ _ _ _ _ hst => exact bounded hst.1 _ _
-  | endTurn _ _ _ _ _ _ hk _ => exact bounded hk _ _
+  | endTurn _ _ _ _ _ _ _ _ hk _ => exact bounded hk _ _
   | startTurn _ _ _ hk _ => exact bounded hk _ _
   | deckOut _ _ _ hk _ => exact bounded hk _ _
   | knockOut ha hk hp => exact ⟨fun h _ => ⟨.inl h, rfl⟩, fun _ _ => ⟨.inr rfl, rfl⟩⟩
@@ -100,11 +100,15 @@ theorem run_clamp_not_sim :
   refine ⟨probe, rs 5, rs 6, drawn, rs_clamp, .iteF rfl rfl (.draw rfl), fun g₂' hr heq => ?_⟩
   cases hr with
   | iteT h ht r =>
-      cases r
-      exact absurd (congrArg (fun g : GameState => g.cur.hand.length) heq) (by decide)
+      cases r with
+      | skip => exact absurd (congrArg (fun g : GameState => g.cur.hand.length) heq) (by decide)
+      | touchActive he => simp [Effect.touch] at he
+      | touchBench he => simp [Effect.touch] at he
   | iteF h ht r =>
       cases h
       exact absurd ht (by decide)
+  | touchActive he => simp [probe, Effect.touch] at he
+  | touchBench he => simp [probe, Effect.touch] at he
 
 /-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
 on itself. -/

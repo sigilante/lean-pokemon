@@ -31,6 +31,15 @@ inductive Whose where
   | own | opp
   deriving DecidableEq
 
+/-- The named Boolean markers a Pokémon in play can carry (`survey/S7-load-bearing-spec.md`
+§3.1): Imprison and Shock-wave (Gardevoir ex δ ex15-93, Tyranitar ex δ ex15-99; removed by
+Tropius δ ex15-23), Lightning Rod (Electabuzz basep-46) and Char (Quilava neo1-47). The
+Coloring counter (Smeargle basep-32) carries a type and is a separate field
+(`Marks.coloring`). -/
+inductive Marker where
+  | imprison | shockwave | lightningRod | char
+  deriving DecidableEq
+
 /-- A test an effect can make on one Active Pokémon. -/
 inductive Test where
   /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
@@ -40,6 +49,11 @@ inductive Test where
   | exactly (w : Whose) (n : Nat)
   /-- it is affected by the Special Condition `c` -/
   | cond (w : Whose) (c : Condition)
+  /-- it has the marker `m` ("any Pokémon that has any Imprison markers on it", "that has any
+  Shock-wave markers on it", "with a Lightning Rod marker on it") -/
+  | marked (w : Whose) (m : Marker)
+  /-- its type is `t`: the type of its top card, or the type its Coloring counter set -/
+  | isType (w : Whose) (t : EType)
   deriving DecidableEq
 
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
@@ -77,6 +91,14 @@ inductive Effect where
   | selfDamage (n : Nat)
   /-- remove all damage counters from the player's own Active Pokémon -/
   | healAll
+  /-- put the marker `m` on one of the `w` player's Pokémon in play, Active or Benched (the
+  player chooses). A Pokémon has the marker or not: placing it again changes nothing. -/
+  | mark (w : Whose) (m : Marker)
+  /-- remove every `m` marker from all of the `w` player's Pokémon in play (Tropius δ) -/
+  | unmark (w : Whose) (m : Marker)
+  /-- put a Coloring counter for type `t` on one of the `w` player's Pokémon in play, replacing
+  any earlier one: that Pokémon is now of type `t` (Smeargle basep-32, *Paint*) -/
+  | color (w : Whose) (t : EType)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)

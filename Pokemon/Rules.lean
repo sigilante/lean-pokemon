@@ -53,10 +53,28 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * a Knock Out takes the top card of the Prize list, whereas the rulebook lets the player
   choose any Prize card (a finite choice);
 * HP is the printed value: there are no HP modifiers (the survey's loophole L1);
-* there are no markers (Imprison, Shock-wave), which the survey found to be uncapped counts;
+* markers (`Marks`): Imprison, Shock-wave, Lightning Rod and Char are flags, and the Coloring
+  counter is a type. The printed Imprison and Shock-wave counts are uncapped, but only "has
+  any" is read and removal takes them all, so a flag is exact for them (`Markers.flag_exact`;
+  this is a modelling assumption about the card pool: a card that counted them would break it).
+  Effects put a marker or a Coloring counter on any one of either player's Pokémon in play
+  (`mark`, `color`; printed cards target the opponent's), remove a marker from all of either
+  player's Pokémon (`unmark`; Tropius removes from its own player's), and test either Active
+  Pokémon (`Test.marked`, `Test.isType`); markers are general primitives, usable any number of
+  times and inside `iter`. Markers stay through evolution, retreat and promotion and leave play
+  with the Pokémon (text is silent except for Char, which stays while in play). Char puts 2
+  damage counters on tails at every Checkup, but only on an Active Pokémon: Checkup does not
+  reach the Bench, so a Char counter on a Benched Pokémon does nothing until it is Active again
+  (a restriction: the printed Char also damages a Benched Pokémon, which this model cannot Knock
+  Out). Absent: the readers of Imprison (Poké-Powers and Poké-Bodies; Abilities are absent),
+  tests on Benched Pokémon's markers ("Choose 1 of your opponent's Pokémon that has any
+  Shock-wave markers", "any Pokémon with a Lightning Rod marker"), Dark Ivysaur bp-6's
+  transient markers allocated by the opponent, and the marker-like states of S7 §3.3 (Poison
+  payloads, delayed triggers, attack locks bound to one Pokémon, history flags, face-up Prizes);
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
-  `Test.atLeast` and `Test.exactly`; the proportional write `scale`) and their Special
-  Conditions (`Test.cond`); there are no tests or counts on Benched Pokémon, on Energy, on
+  `Test.atLeast` and `Test.exactly`; the proportional write `scale`), their Special
+  Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); there
+  are no tests or counts on Benched Pokémon, on Energy, on
   cards in hand, deck, discard pile or Prizes, on Poison strength, on HP ("if it has full HP",
   "remaining HP"), and no lingering "this turn" modifiers; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
@@ -80,7 +98,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Croagunk's cumulative increase is modelled as a number on the Pokémon (`poisonUp`) that
   lasts until Poison ends, not as a lingering effect; a Confused Pokémon whose flip is tails
   uses up the turn's attack, and its attack must be one it could otherwise use;
-* Pokémon Checkup (`InPlay.checkup`) covers the five Special Conditions only: no Ability,
+* Pokémon Checkup (`InPlay.checkup`) covers the five Special Conditions and the Char counter
+  only: no Ability,
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
   choice of order between Special Conditions and those effects does not arise); Burn uses the
   current rule (2 counters, then heads cures); Paralysis ends at the Checkup after its
@@ -314,18 +333,18 @@ inductive Move : GameState → GameState → Prop where
   /-- the player has no Pokémon left to promote -/
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
       Move g { g with winner := some (!g.curIsFirst) }
-  /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa` (Burn,
-  Sleep) for the opponent's and `fb`, `sb` for the player's own; then the opponent becomes the
-  player to move, between turns. Requires both Active Pokémon and no pending Knock Out
-  anywhere. -/
-  | endTurn {g : GameState} {a b : InPlay} (fa sa fb sb : Bool)
+  /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
+  (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own; then the
+  opponent becomes the player to move, between turns. Requires both Active Pokémon and no
+  pending Knock Out anywhere. -/
+  | endTurn {g : GameState} {a b : InPlay} (fa sa ca fb sb cb : Bool)
       (ha : g.opp.active = some a) (hb : g.cur.active = some b) (hk : DamageBounded g)
       (hbt : g.between = false) :
       Move g
         { cur := { g.opp with
-            active := some (a.checkup false fa sa),
+            active := some (a.checkup false fa sa ca),
             energyAttached := false, supporterPlayed := false, retreated := false },
-          opp := { g.cur.unfresh with active := some (b.unfresh.checkup true fb sb) },
+          opp := { g.cur.unfresh with active := some (b.unfresh.checkup true fb sb cb) },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken
