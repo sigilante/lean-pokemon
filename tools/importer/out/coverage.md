@@ -112,6 +112,45 @@ Imported "as often as you like" Abilities (4):
 - Azumarill ex (me2pt5-84), Bubble Gathering: `.self (.energyTo .energy)`
 - Dewgong (me3-19), Wash Out: `.fx (.moveEnergy .own (.energyOf .water))`
 
+Stadium cards (36): imported 3, refused 33.
+
+- imported: Academy at Night (sv6pt5-54): `.trainer "Academy at Night" .stadium (.move .own .hand .top .any (.exactly 1))`
+- imported: Levincia (sv9-150, sv10-244) [caveats: upTo0]: `.trainer "Levincia" .stadium (.move .own .discard .hand (.energyOf .lightning) (.upTo 2))`
+- imported: Prism Tower (me4-80, me4-111): `.trainer "Prism Tower" .stadium (.seq (.move .own .hand .discard .any (.exactly 2)) (.move .own (.top 1) .hand .any .all))`
+
+| refused by reason | cards |
+|---|---|
+| Stadium: activated effect not expressible | 9 |
+| Stadium: static (damage reduction or prevention) | 4 |
+| Stadium: static (HP) | 3 |
+| Stadium: static (Special Conditions) | 3 |
+| Stadium: triggered | 3 |
+| Stadium: static (Ability lock) | 2 |
+| Stadium: static (Retreat Cost) | 2 |
+| Stadium: static (Tool lock) | 2 |
+| Stadium: static (Bench size) | 1 |
+| Stadium: static (Pokémon Checkup) | 1 |
+| Stadium: static (attack cost) | 1 |
+| Stadium: static (damage bonus) | 1 |
+| Stadium: static (evolution timing) | 1 |
+
+Pokémon Tool cards (44): imported 1, refused 43.
+
+- imported: Core Memory (me3-70): `.tool "Core Memory" { holder := .named "Mega Zygarde ex", attacks := [ { name := "Geobuster", cost := [.fighting, .fighting, .fighting, .fighting], damage := 35, effect := .discardEnergy .own .active .energy .all, gx := false }], abilities := [] }`
+
+| refused by reason | cards |
+|---|---|
+| Pokémon Tool: triggered | 18 |
+| Pokémon Tool: static (damage bonus) | 7 |
+| Pokémon Tool: static (Retreat Cost) | 5 |
+| Pokémon Tool: static (HP) | 3 |
+| Pokémon Tool: static (attack cost) | 3 |
+| Pokémon Tool: static (damage reduction or prevention) | 3 |
+| Pokémon Tool: record text names no holder (an Item-like text; unclassified record) | 1 |
+| Pokémon Tool: static (coin re-flip) | 1 |
+| Pokémon Tool: text besides the attack grant (end-of-turn discard) | 1 |
+| Pokémon Tool: text besides the attack grant (the Mega Evolution ex rule printed on a Tool) | 1 |
+
 Top unhandled sentences (templates: numbers N, own name SELF, types TYPE) in cards not blocked by a card-level mechanism (Ability, Tool, Stadium, Special Energy):
 
 | count | template | example |

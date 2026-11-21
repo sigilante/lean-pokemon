@@ -402,6 +402,34 @@ def ability_section(results):
     return L
 
 
+def stadium_tool_section(results):
+    """Stadiums and Tools (milestone M5): the imported ones with their terms, the refused ones by
+    reason (the reason with its quoted text dropped)."""
+    L = []
+    for kind in ('Stadium', 'Pokémon Tool'):
+        rs = [(recs, r) for recs, r in results if kind_of(recs[0]) == kind]
+        imp = [(recs, r) for recs, r in rs if r['ok']]
+        L.append('%s cards (%d): imported %d, refused %d.' % (kind, len(rs), len(imp), len(rs) - len(imp)))
+        L.append('')
+        for recs, r in imp:
+            L.append('- imported: %s (%s)%s: `%s`' % (recs[0]['name'], ', '.join(x['id'] for x in recs),
+                                                      ' [caveats: ' + ', '.join(sorted(r['caveats'])) + ']' if r['caveats'] else '',
+                                                      ' '.join(emit.card_src(r['term']).split())))
+        L.append('')
+        c = collections.Counter()
+        for recs, r in rs:
+            if not r['ok']:
+                a = r['blockers'][0][0]
+                a = re.sub(r'^(Stadium: activated effect not expressible): .*$', r'\1', a)
+                c[a] += 1
+        L.append('| refused by reason | cards |')
+        L.append('|---|---|')
+        for k, v in sorted(c.items(), key=lambda kv: (-kv[1], kv[0])):
+            L.append('| %s | %d |' % (k, v))
+        L.append('')
+    return L
+
+
 def first_reason(r):
     a, b = r['blockers'][0]
     return a + (': ' + b if b and a != 'unhandled sentence' else (': ' + b if b else ''))
@@ -600,6 +628,7 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
         L.append('| %s | %d | %d |' % (m, alone[m], anyc[m]))
     L.append('')
     L += ability_section(results)
+    L += stadium_tool_section(results)
     # unhandled templates
     sc = collections.Counter()
     exs = {}
