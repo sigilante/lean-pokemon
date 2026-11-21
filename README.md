@@ -11,3 +11,5 @@ speak only about decks whose card text is expressible in `Pokemon.Effect`.
 
 Build: `lake build` (core Lean only, no dependencies). `Pokemon/Audit.lean` prints the axioms
 of every theorem; CI fails unless they are a subset of `propext`, `Quot.sound`.
+
+Licence: MIT (see `LICENSE`).
