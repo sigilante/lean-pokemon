@@ -1,7 +1,7 @@
 /-
 The imported Standard cards: the list, the cards not imported, and the set-level checks.
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.1.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.2.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -18,7 +18,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1020 of the pool's 2193 cards). -/
+/-- Every imported card (1010 of the pool's 2161 cards). -/
 def all : List Card :=
   Part01.cards ++
   Part02.cards ++
@@ -449,7 +449,6 @@ def notImported : List (String × String × String) := [
   ("sv8pt5-30", "Jolteon ex", "unhandled sentence: You may discard up to 2 Basic Energy from your Benched Pokémon."),
   ("sv8pt5-34", "Espeon ex", "unhandled sentence: Devolve each of your opponent's evolved Pokémon by shuffling the highest Stage Evolution card on it into your opponent's deck."),
   ("sv8pt5-40", "Sylveon", "Ability"),
-  ("sv8pt5-41", "Sylveon ex", "unhandled sentence: During your opponent's next turn, attacks used by the Defending Pokémon do 100 less damage (before applying Weakness and Resistance)."),
   ("sv8pt5-51", "Lucario ex", "unhandled sentence: During your next turn, this Pokémon's Tornado Rush attack does 100 more damage (before applying Weakness and Resistance)."),
   ("sv8pt5-58", "Cornerstone Mask Ogerpon ex", "Ability"),
   ("sv8pt5-60", "Umbreon ex", "unhandled sentence: Discard all Energy from this Pokémon, and take a Prize card."),
@@ -465,18 +464,11 @@ def notImported : List (String × String × String) := [
   ("sv8pt5-89", "Hawlucha", "condition not expressible: your opponent's Active Pokémon is a Pokémon ex: If your opponent's Active Pokémon is a Pokémon ex, this attack does 50 more damage."),
   ("sv8pt5-92", "Terapagos ex", "condition not expressible: you go second: If you go second, you can't use this attack during your first turn."),
   ("sv8pt5-93", "Amarys", "unhandled sentence: At the end of this turn, if you have 5 or more cards in your hand, discard your hand."),
-  ("sv8pt5-94", "Area Zero Underdepths", "Stadium"),
   ("sv8pt5-96", "Black Belt's Training", "unhandled sentence: During this turn, attacks used by your Pokémon do 40 more damage to your opponent's Active Pokémon ex (before applying Weakness and Resistance)."),
-  ("sv8pt5-103", "Carmine", "condition not expressible: you go first: If you go first, you may use this card during your first turn."),
   ("sv8pt5-108", "Festival Grounds", "Stadium"),
-  ("sv8pt5-110", "Glass Trumpet", "unhandled sentence: You can use this card only if you have any Tera Pokémon in play."),
   ("sv8pt5-111", "Haban Berry", "Pokémon Tool"),
   ("sv8pt5-115", "Larry's Skill", "unhandled sentence: Discard your hand and search your deck for a Pokémon, a Supporter card, and a Basic Energy card, reveal them, and put them into your hand."),
-  ("sv8pt5-117", "Maximum Belt", "Pokémon Tool"),
-  ("sv8pt5-119", "Prime Catcher", "unhandled sentence: If you do, switch your Active Pokémon with 1 of your Benched Pokémon."),
-  ("sv8pt5-128", "Scoop Up Cyclone", "unhandled sentence: Put 1 of your Pokémon and all attached cards into your hand."),
   ("sv8pt5-131", "Treasure Tracker", "card kind with no filter: Pokémon Tool: Search your deck for up to 5 Pokémon Tool cards, reveal them, and put them into your hand."),
-  ("sv8pt5-179", "Pikachu ex", "Ability"),
   ("sv9-2", "Metapod", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks if that damage is 60 or less."),
   ("sv9-3", "Butterfree", "condition not expressible: at least 2 of them are heads: If at least 2 of them are heads, your opponent's Active Pokémon is now Paralyzed."),
   ("sv9-7", "Lilligant", "Ability"),
@@ -485,7 +477,6 @@ def notImported : List (String × String × String) := [
   ("sv9-18", "Meowscarada", "Ability"),
   ("sv9-21", "Magmortar", "Ability"),
   ("sv9-24", "Blaziken ex", "Ability"),
-  ("sv9-27", "N's Darmanitan", "unhandled sentence: Discard all Energy from this Pokémon, and this attack also does 90 damage to 1 of your opponent's Benched Pokémon."),
   ("sv9-31", "Volcanion ex", "Ability"),
   ("sv9-34", "Octillery", "unhandled sentence: You may put an Energy attached to your opponent's Active Pokémon into their hand."),
   ("sv9-37", "Ludicolo", "Ability"),
@@ -518,7 +509,6 @@ def notImported : List (String × String × String) := [
   ("sv9-96", "N's Purrloin", "unhandled sentence: Your opponent reveals their hand, and you choose a card you find there and put it on the bottom of their deck."),
   ("sv9-98", "N's Zoroark ex", "Ability"),
   ("sv9-99", "Pangoro", "unhandled sentence: Choose 1 of your opponent's Active Pokémon's attacks."),
-  ("sv9-101", "Bombirdier", "unhandled sentence: Discard all Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent's Pokémon."),
   ("sv9-107", "Magearna", "Ability"),
   ("sv9-111", "Hop's Zacian ex", "unhandled sentence: During your next turn, this Pokémon can't use Brave Slash."),
   ("sv9-115", "Druddigon", "unhandled sentence: Attach a Basic Fire Energy card from your discard pile to 1 of your Dragon Pokémon."),
@@ -584,7 +574,7 @@ def notImported : List (String × String × String) := [
   ("sv10-70", "Team Rocket's Zapdos", "unhandled sentence: You may move an Energy from your opponent's Active Pokémon to 1 of their Benched Pokémon."),
   ("sv10-74", "Team Rocket's Ampharos", "Ability"),
   ("sv10-77", "Rotom", "unhandled sentence: Choose a random card from your opponent's hand."),
-  ("sv10-78", "Zeraora", "unhandled sentence: Discard all Energy from this Pokémon, and this attack does 210 damage to 1 of your opponent's Benched Pokémon ex."),
+  ("sv10-78", "Zeraora", "unhandled sentence: This attack does 210 damage to 1 of your opponent's Benched Pokémon ex."),
   ("sv10-80", "Team Rocket's Hypno", "unhandled sentence: Your opponent flips a coin for each of their Benched Pokémon."),
   ("sv10-81", "Team Rocket's Mewtwo ex", "Ability"),
   ("sv10-82", "Team Rocket's Wobbuffet", "unhandled sentence: Move all damage counters from 1 of your Benched Team Rocket's Pokémon to your opponent's Active Pokémon."),
@@ -721,7 +711,6 @@ def notImported : List (String × String × String) := [
   ("zsv10pt5-50", "Throh", "count not expressible: Colorless in your opponent's Active Pokémon's Retreat Cost: This attack does 30 less damage for each Colorless in your opponent's Active Pokémon's Retreat Cost."),
   ("zsv10pt5-52", "Crustle", "Ability"),
   ("zsv10pt5-56", "Scolipede", "Ability"),
-  ("zsv10pt5-80", "Antique Cover Fossil", "Trainer played as a Pokémon"),
   ("zsv10pt5-63", "Klinklang", "Ability"),
   ("zsv10pt5-66", "Cobalion", "unhandled sentence: Discard a Special Energy from your opponent's Active Pokémon."),
   ("zsv10pt5-67", "Genesect ex", "Ability"),
@@ -823,7 +812,6 @@ def notImported : List (String × String × String) := [
   ("me2-36", "Mismagius ex", "Ability"),
   ("me2-40", "Meloetta", "unhandled sentence: Heal 120 damage from 1 of your Benched Psychic Pokémon."),
   ("me2-41", "Mega Diancie ex", "Ability"),
-  ("me2-46", "Bramblin", "unhandled sentence: Place 1 damage counter on 1 of your opponent's Pokémon."),
   ("me2-47", "Brambleghast", "Ability"),
   ("me2-48", "Paldean Tauros", "count not expressible: of your Pokémon that has \"Tauros\" in its name that has any damage counters on it: This attack does 40 damage for each of your Pokémon that has \"Tauros\" in its name that has any damage counters on it."),
   ("me2-53", "Flygon", "Ability"),
@@ -877,7 +865,6 @@ def notImported : List (String × String × String) := [
   ("me2pt5-83", "Marill", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("me2pt5-84", "Azumarill ex", "Ability"),
   ("me2pt5-85", "Misdreavus", "unhandled sentence: Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it."),
-  ("me2pt5-86", "Mismagius", "unhandled sentence: Place 6 damage counters on 1 of your opponent's Benched Pokémon."),
   ("me2pt5-89", "Mega Gardevoir ex", "unhandled sentence: For each of your Benched Pokémon, search your deck for a Basic Psychic Energy card and attach it to that Pokémon."),
   ("me2pt5-92", "Rotom", "unhandled sentence: You may search your deck for any number of Pokémon that have \"Rotom\" in their name and put them onto your Bench."),
   ("me2pt5-95", "Hop's Phantump", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
@@ -923,7 +910,6 @@ def notImported : List (String × String × String) := [
   ("me3-6", "Serperior", "condition not expressible: Rosa's Encouragement is in your discard pile: If Rosa's Encouragement is in your discard pile, this attack does 150 more damage."),
   ("me3-8", "Spewpa", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("me3-9", "Vivillon", "Ability"),
-  ("me3-11", "Dartrix", "unhandled sentence: Discard all Energy from this Pokémon, and this attack does 90 damage to 1 of your opponent's Pokémon."),
   ("me3-12", "Decidueye ex", "Ability"),
   ("me3-14", "Talonflame", "Ability"),
   ("me3-17", "Turtonator", "Ability"),
@@ -944,7 +930,6 @@ def notImported : List (String × String × String) := [
   ("me3-45", "Tyrantrum", "Ability"),
   ("me3-46", "Hawlucha", "condition not expressible: your Benched Pokémon have any damage counters on them: If your Benched Pokémon have any damage counters on them, this attack does 60 more damage."),
   ("me3-47", "Mega Zygarde ex", "unhandled sentence: For each of your opponent's Pokémon, flip a coin."),
-  ("me3-49", "Haunter", "unhandled sentence: Place 3 damage counters on your opponent's Active Pokémon."),
   ("me3-50", "Gengar", "Ability"),
   ("me3-53", "Yveltal ex", "unhandled sentence: Knock Out each of your opponent's Pokémon that has 50 HP or less remaining."),
   ("me3-54", "Chien-Pao", "condition not expressible: your opponent's Active Pokémon is a Pokémon ex: If your opponent's Active Pokémon is a Pokémon ex, this attack does 80 more damage."),
@@ -1022,9 +1007,7 @@ def notImported : List (String × String × String) := [
   ("me4-84", "Bubbly Water Energy", "Special Energy"),
   ("me4-85", "Magnetic Metal Energy", "Special Energy"),
   ("me4-86", "Nitro Fire Energy", "Special Energy"),
-  ("me4-109", "Jumbo Ice Cream", "unhandled sentence: Heal 80 damage from your Active Pokémon that has 3 or more Energy attached."),
   ("me4-114", "Surfing Beach", "Stadium"),
-  ("me4-115", "Tool Scrapper", "unhandled sentence: Choose up to 2 Pokémon Tools attached to Pokémon (yours or your opponent's) and discard them."),
   ("me5-1", "Tropius", "unhandled sentence: Look at the top 6 cards of your deck, and you may reveal any number of Pokémon you find there and put them into your hand."),
   ("me5-4", "Lurantis ex", "condition not expressible: this Pokémon was healed during this turn: If this Pokémon was healed during this turn, this attack does 200 more damage."),
   ("me5-5", "Poltchageist", "Ability"),
@@ -1081,9 +1064,6 @@ def notImported : List (String × String × String) := [
   ("me5-83", "Shadowy Darkness Energy", "Special Energy"),
   ("me5-84", "Voltaic Lightning Energy", "Special Energy"),
   ("me5-104", "Brave Bangle", "Pokémon Tool"),
-  ("me5-105", "Crushing Hammer", "unhandled sentence: Discard an Energy from 1 of your opponent's Pokémon."),
-  ("me5-107", "Energy Switch", "unhandled sentence: Move a Basic Energy from 1 of your Pokémon to another of your Pokémon."),
-  ("me5-110", "Iron Defender", "unhandled sentence: During your opponent's next turn, all of your Metal Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance)."),
   ("me5-115", "Mega Chandelure ex", "Ability"),
   ("me55-2", "Alolan Exeggutor", "Ability"),
   ("me55-4", "Illumise", "Ability"),
@@ -1144,7 +1124,6 @@ def notImported : List (String × String × String) := [
   ("me55-120", "Igglybuff", "count not expressible: of your Benched Pokémon that has a maximum HP of 30: This attack does 30 damage for each of your Benched Pokémon that has a maximum HP of 30."),
   ("me55-121", "Lugia", "unhandled sentence: Discard a Fire Energy, a Water Energy, and a Lightning Energy from this Pokémon."),
   ("me55-123", "Hisuian Zoroark", "unhandled sentence: Place damage counters on your opponent's Active Pokémon until its remaining HP is 50."),
-  ("me55-124", "Minior", "unhandled sentence: Discard all Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent's Pokémon."),
   ("me55-125", "Maushold", "unhandled sentence: Flip a coin for each Maushold you have in play."),
   ("me6-3", "Masquerain", "unhandled sentence: Reveal the bottom 7 cards of your deck, and this attack does 50 damage for each Pokémon you find there that has the Bug Out attack."),
   ("me6-5", "Cacturne", "count not expressible: of your opponent's Pokémon in play that has an Ability: This attack does 50 more damage for each of your opponent's Pokémon in play that has an Ability."),
@@ -1192,7 +1171,6 @@ def notImported : List (String × String × String) := [
   ("me6-89", "Aarune", "card kind with no filter: Stadium: Search your deck for up to 3 in any combination of Supporter and Stadium cards, reveal them, and put them into your hand."),
   ("me6-90", "Adventure Lantern", "Pokémon Tool"),
   ("me6-91", "Custom Vest", "Pokémon Tool"),
-  ("me6-92", "Emcee's Hype", "unhandled sentence: Draw 2 more cards."),
   ("me6-93", "Grisham", "unhandled sentence: Heal 50 damage from each Pokémon (both yours and your opponent's)."),
   ("me6-94", "Legendary Pyroduct", "Stadium"),
   ("me6-96", "Legendary Summit", "Stadium"),
@@ -1205,23 +1183,98 @@ def notImported : List (String × String × String) := [
   ("me6-133", "Growing Grass Energy", "Special Energy"),
   ("me6-134", "Nitro Fire Energy", "Special Energy")]
 
-/-- **The count.** 1020 cards of the pool are imported. -/
-theorem all_length : all.length = 1020 := by decide +kernel
+/-- **The count.** `all` has 1010 entries. -/
+theorem all_length : all.length = 1010 := by decide +kernel
 
-/-- 1173 cards are not imported, and the two lists together are the 2193 cards of the pool. -/
-theorem notImported_length : notImported.length = 1173 := by decide +kernel
+/-- `notImported` has 1151 entries. -/
+theorem notImported_length : notImported.length = 1151 := by decide +kernel
 
-theorem pool_size : all.length + notImported.length = 2193 := by decide +kernel
+/-- Arithmetic on the two lengths, and nothing more: 1010 + 1151 = 2161. That the two lists partition the
+pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
+the importer (`tools/importer/importer.py`, which asserts it when it writes this file) and by an
+external check script; the pool itself is not a Lean object. -/
+theorem pool_size : all.length + notImported.length = 2161 := by decide +kernel
 
 /-- Every imported card passes the per-card checks. -/
 theorem all_ok : all.all Card.importOk = true := by
   simp only [all, List.all_append, Part01.cards_ok, Part02.cards_ok, Part03.cards_ok, Part04.cards_ok, Part05.cards_ok, Part06.cards_ok, Part07.cards_ok, Bool.and_self]
 
+/-- No card of part 1 is the same term as a card of part 2. -/
+theorem cross_1_2 : crossOk Part01.cards Part02.cards = true := by decide +kernel
+
+/-- No card of part 1 is the same term as a card of part 3. -/
+theorem cross_1_3 : crossOk Part01.cards Part03.cards = true := by decide +kernel
+
+/-- No card of part 2 is the same term as a card of part 3. -/
+theorem cross_2_3 : crossOk Part02.cards Part03.cards = true := by decide +kernel
+
+/-- No card of part 1 is the same term as a card of part 4. -/
+theorem cross_1_4 : crossOk Part01.cards Part04.cards = true := by decide +kernel
+
+/-- No card of part 2 is the same term as a card of part 4. -/
+theorem cross_2_4 : crossOk Part02.cards Part04.cards = true := by decide +kernel
+
+/-- No card of part 3 is the same term as a card of part 4. -/
+theorem cross_3_4 : crossOk Part03.cards Part04.cards = true := by decide +kernel
+
+/-- No card of part 1 is the same term as a card of part 5. -/
+theorem cross_1_5 : crossOk Part01.cards Part05.cards = true := by decide +kernel
+
+/-- No card of part 2 is the same term as a card of part 5. -/
+theorem cross_2_5 : crossOk Part02.cards Part05.cards = true := by decide +kernel
+
+/-- No card of part 3 is the same term as a card of part 5. -/
+theorem cross_3_5 : crossOk Part03.cards Part05.cards = true := by decide +kernel
+
+/-- No card of part 4 is the same term as a card of part 5. -/
+theorem cross_4_5 : crossOk Part04.cards Part05.cards = true := by decide +kernel
+
+/-- No card of part 1 is the same term as a card of part 6. -/
+theorem cross_1_6 : crossOk Part01.cards Part06.cards = true := by decide +kernel
+
+/-- No card of part 2 is the same term as a card of part 6. -/
+theorem cross_2_6 : crossOk Part02.cards Part06.cards = true := by decide +kernel
+
+/-- No card of part 3 is the same term as a card of part 6. -/
+theorem cross_3_6 : crossOk Part03.cards Part06.cards = true := by decide +kernel
+
+/-- No card of part 4 is the same term as a card of part 6. -/
+theorem cross_4_6 : crossOk Part04.cards Part06.cards = true := by decide +kernel
+
+/-- No card of part 5 is the same term as a card of part 6. -/
+theorem cross_5_6 : crossOk Part05.cards Part06.cards = true := by decide +kernel
+
+/-- No card of part 1 is the same term as a card of part 7. -/
+theorem cross_1_7 : crossOk Part01.cards Part07.cards = true := by decide +kernel
+
+/-- No card of part 2 is the same term as a card of part 7. -/
+theorem cross_2_7 : crossOk Part02.cards Part07.cards = true := by decide +kernel
+
+/-- No card of part 3 is the same term as a card of part 7. -/
+theorem cross_3_7 : crossOk Part03.cards Part07.cards = true := by decide +kernel
+
+/-- No card of part 4 is the same term as a card of part 7. -/
+theorem cross_4_7 : crossOk Part04.cards Part07.cards = true := by decide +kernel
+
+/-- No card of part 5 is the same term as a card of part 7. -/
+theorem cross_5_7 : crossOk Part05.cards Part07.cards = true := by decide +kernel
+
+/-- No card of part 6 is the same term as a card of part 7. -/
+theorem cross_6_7 : crossOk Part06.cards Part07.cards = true := by decide +kernel
+
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1010 distinct
+cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
+small.) -/
+theorem all_nodup : all.Nodup :=
+  nodup_of_nodupFp (by
+    simp only [all, nodupFp_append, crossOk_append_left, Part01.cards_nodup, Part02.cards_nodup, Part03.cards_nodup, Part04.cards_nodup, Part05.cards_nodup, Part06.cards_nodup, Part07.cards_nodup,
+      cross_1_2, cross_1_3, cross_2_3, cross_1_4, cross_2_4, cross_3_4, cross_1_5, cross_2_5, cross_3_5, cross_4_5, cross_1_6, cross_2_6, cross_3_6, cross_4_6, cross_5_6, cross_1_7, cross_2_7, cross_3_7, cross_4_7, cross_5_7, cross_6_7, Bool.and_self])
+
 /-- The imported cards that write a lingering damage bonus or reduction (`Effect.writes`), by name. -/
 theorem writers : (all.filter Card.writesAmt).map Card.label = ["Seedot", "Grotle", "Torkoal", "Kilowattrel", "Varoom", "Drifloon", "Tornadus", "Skarmory", "Jasmine's Gaze", "Hop's Corviknight", "Shelgon", "Clamperl", "Klink", "Klang", "Exeggutor", "Carkol", "Registeel ex", "Donphan", "Metang", "Cosmoem", "Onix", "Jangmo-o"] := by decide +kernel
 
 /-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/
-theorem lingerers : (all.filter Card.lingers).map Card.label = ["Seedot", "Breloom", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Azumarill", "Golett", "Tranquill", "Torkoal", "Crawdaunt", "Finizen", "Luxio", "Kilowattrel", "Nosepass", "Whirlipede", "Sneasel", "Golbat", "Varoom", "Lileep", "Turtonator", "Electivire", "Drifloon", "Tornadus", "Xerneas", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Pyroar", "Heatran", "Shelmet", "Lombre", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Escavalier", "Hop's Corviknight", "Shelgon", "Oinkologne", "Clamperl", "Floatzel", "Skarmory", "Steven's Metang", "Virizion", "Frillish", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Fraxure", "Bulbasaur", "Exeggutor", "Stonjourner", "Yveltal", "Gliscor", "Bronzor", "Erika's Weepinbell", "Budew", "N's Vanillish", "Stunfisk ex", "Carkol", "Hoopa", "Registeel ex", "Larry's Braviary", "Spinarak", "Ariados", "Aegislash", "Flaaffy", "Donphan", "Metang", "Toxtricity", "Cosmoem", "Mega Golisopod ex", "Onix", "Jangmo-o", "Fletchinder"] := by decide +kernel
+theorem lingerers : (all.filter Card.lingers).map Card.label = ["Seedot", "Breloom", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Azumarill", "Golett", "Tranquill", "Torkoal", "Crawdaunt", "Finizen", "Luxio", "Kilowattrel", "Nosepass", "Whirlipede", "Sneasel", "Golbat", "Varoom", "Lileep", "Turtonator", "Electivire", "Drifloon", "Tornadus", "Xerneas", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Pyroar", "Heatran", "Shelmet", "Lombre", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Escavalier", "Hop's Corviknight", "Shelgon", "Oinkologne", "Clamperl", "Floatzel", "Skarmory", "Steven's Metang", "Virizion", "Frillish", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Fraxure", "Bulbasaur", "Exeggutor", "Stonjourner", "Yveltal", "Gliscor", "Bronzor", "Erika's Weepinbell", "N's Vanillish", "Stunfisk ex", "Carkol", "Hoopa", "Registeel ex", "Larry's Braviary", "Spinarak", "Ariados", "Aegislash", "Flaaffy", "Donphan", "Metang", "Toxtricity", "Cosmoem", "Mega Golisopod ex", "Onix", "Jangmo-o", "Fletchinder"] := by decide +kernel
 
 /-- The imported Trainers that are not Supporters and write a bonus or reduction (`Card.wAmt`), the
 cards clause 3 (a) of `Faithful` forbids Trainers to recycle, by name. -/

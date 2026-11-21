@@ -17,6 +17,8 @@ statements the model's theorems use.
   as one Boolean over the recycling filters of `C` and the modifier writers of `C`.
 * `faithful_of`: from both, every game whose cards all come from `C` is `Faithful`, so
   `Faithful.xfinite` applies to it.
+* `nodupFp`: a check that a list of cards has no two equal terms, cheap enough for the kernel on
+  the whole imported list (`nodup_of_nodupFp`).
 
 These are facts about the Lean terms; whether a term says what its printed card says is the
 importer's claim, checked by eye in survey S11, not by Lean.
@@ -139,6 +141,77 @@ theorem gxOnly_of {C : List Card} (h : C.all Card.importOk = true) :
   have h2 := List.all_eq_true.1 this atk ha
   rw [hgx, Bool.false_or] at h2
   exact Nat.eq_of_beq_eq_true h2
+
+/-! ### Distinct terms
+
+`List.Nodup` of a thousand `Card` terms by `decide` compares every pair with the derived
+`DecidableEq`, which the kernel evaluates slowly and with much memory. `nodupFp` first compares a
+cheap fingerprint (`cardFp`, a natural number from HP, retreat, type, Weakness and each attack's
+damage and cost length), and compares the terms only when the fingerprints agree; `nodupFp_append`
+and `crossOk_append_left` let a long list be checked block by block. The fingerprint is used only
+to skip comparisons: whatever it is, `nodupFp l = true` gives `l.Nodup`. -/
+
+/-- The position of a type in `EType`'s declaration. -/
+def etypeIdx : EType → Nat
+  | .grass => 0 | .fire => 1 | .water => 2 | .lightning => 3 | .psychic => 4 | .fighting => 5
+  | .darkness => 6 | .metal => 7 | .fairy => 8 | .dragon => 9 | .colorless => 10
+
+/-- A fingerprint of a card; equal cards have equal fingerprints. -/
+def cardFp : Card → Nat
+  | .pokemon p => (p.attacks.foldl (fun h a => (h * 64 + a.damage) * 8 + a.cost.length)
+      (((p.hp * 8 + p.retreat) * 16 + etypeIdx p.type) * 16 +
+        (match p.weakness with | some t => etypeIdx t + 1 | none => 0))) * 3
+  | .energy _ => 1
+  | .trainer _ _ _ => 2
+
+/-- No card of `l₁` is the same term as a card of `l₂`. -/
+def crossOk (l₁ l₂ : List Card) : Bool :=
+  l₁.all fun a => l₂.all fun b => !decide (cardFp a = cardFp b) || !decide (a = b)
+
+/-- No two entries of the list are the same term. -/
+def nodupFp : List Card → Bool
+  | [] => true
+  | a :: l => crossOk [a] l && nodupFp l
+
+theorem crossOk_append_left (l₁ l₂ l₃ : List Card) :
+    crossOk (l₁ ++ l₂) l₃ = (crossOk l₁ l₃ && crossOk l₂ l₃) := by
+  simp only [crossOk, List.all_append]
+
+theorem crossOk_cons_left (a : Card) (l₁ l₃ : List Card) :
+    crossOk (a :: l₁) l₃ = (crossOk [a] l₃ && crossOk l₁ l₃) := by
+  simp only [crossOk, List.all_cons, List.all_nil, Bool.and_true]
+
+theorem crossOk_append_right (l₁ l₂ l₃ : List Card) :
+    crossOk l₁ (l₂ ++ l₃) = (crossOk l₁ l₂ && crossOk l₁ l₃) := by
+  induction l₁ with
+  | nil => rfl
+  | cons a l ih =>
+    rw [crossOk_cons_left, ih, crossOk_cons_left a l l₂, crossOk_cons_left a l l₃]
+    simp only [crossOk, List.all_cons, List.all_nil, Bool.and_true, List.all_append]
+    cases (l₂.all fun b => !decide (cardFp a = cardFp b) || !decide (a = b)) <;>
+    cases (l₃.all fun b => !decide (cardFp a = cardFp b) || !decide (a = b)) <;>
+    cases (l.all fun a => l₂.all fun b => !decide (cardFp a = cardFp b) || !decide (a = b)) <;>
+    cases (l.all fun a => l₃.all fun b => !decide (cardFp a = cardFp b) || !decide (a = b)) <;> rfl
+
+theorem nodupFp_append (l₁ l₂ : List Card) :
+    nodupFp (l₁ ++ l₂) = (nodupFp l₁ && nodupFp l₂ && crossOk l₁ l₂) := by
+  induction l₁ with
+  | nil => simp [nodupFp, crossOk]
+  | cons a l ih =>
+    simp only [List.cons_append, nodupFp, ih, crossOk_append_right, crossOk_cons_left a l l₂]
+    cases crossOk [a] l <;> cases crossOk [a] l₂ <;> cases nodupFp l <;> cases nodupFp l₂ <;>
+      cases crossOk l l₂ <;> rfl
+
+/-- `nodupFp` decides `List.Nodup` (in one direction, which is all the generated files use). -/
+theorem nodup_of_nodupFp {l : List Card} (h : nodupFp l = true) : l.Nodup := by
+  induction l with
+  | nil => exact List.nodup_nil
+  | cons a l ih =>
+    rw [nodupFp, Bool.and_eq_true] at h
+    refine List.nodup_cons.2 ⟨fun hm => ?_, ih h.2⟩
+    have := List.all_eq_true.1 (List.all_eq_true.1 h.1 a (List.mem_singleton_self a)) a hm
+    rw [decide_eq_true rfl, decide_eq_true rfl] at this
+    exact absurd this (by decide)
 
 /-- **Faithful decks from a checked pool.** If every card of `C` passes `Card.importOk` and
 `recSafeB C` holds, every game whose cards all come from `C` is `Faithful`. -/

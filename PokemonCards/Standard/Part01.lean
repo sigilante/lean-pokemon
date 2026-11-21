@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 7 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.1.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.2.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -11,28 +11,28 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part01
 open Pokemon
 
-/-- Fighting Energy (base1-97). Records: base1-97, base4-125, gym1-127, gym2-127, neo1-106, ecard1-160, ex1-105, ex9-106, ex13-110, ex16-108, dp1-128, hgss1-120, col1-93, bw1-110, xy1-137, g1-80, xy12-96, sm1-169, sm2-169, swsh6-233, swsh12pt5-157. -/
+/-- Fighting Energy (base1-97). Records: base1-97, base4-125, gym1-127, gym2-127, neo1-106, ecard1-160, ex1-105, ex9-106, ex13-110, ex16-108, dp1-128, hgss1-120, col1-93, bw1-110, xy1-137, g1-80, xy12-96, sm1-169, sm2-169, swsh6-233, swsh12pt5-157, sv1-258, sve-6, sve-14. -/
 def base1_97 : Card := .energy .fighting
 
-/-- Fire Energy (base1-98). Records: base1-98, base4-126, gym1-128, gym2-128, neo1-107, ecard1-161, ex1-108, tk1a-10, ex9-102, tk2b-11, ex13-106, ex16-104, dp1-124, hgss1-116, col1-89, bw1-106, xy1-133, g1-76, xy12-92, sm1-165, sm3-167, swsh8-284, swsh12pt5-153. -/
+/-- Fire Energy (base1-98). Records: base1-98, base4-126, gym1-128, gym2-128, neo1-107, ecard1-161, ex1-108, tk1a-10, ex9-102, tk2b-11, ex13-106, ex16-104, dp1-124, hgss1-116, col1-89, bw1-106, xy1-133, g1-76, xy12-92, sm1-165, sm3-167, swsh8-284, swsh12pt5-153, sve-2, sve-10, sv3-230. -/
 def base1_98 : Card := .energy .fire
 
-/-- Grass Energy (base1-99). Records: base1-99, base4-127, gym1-129, gym2-129, neo1-108, ecard1-162, ex1-104, ex9-101, ex13-105, ex16-103, dp1-123, hgss1-115, col1-88, bw1-105, xy1-132, g1-75, xy12-91, sm1-164, sm2-167, swsh8-283, swsh12pt5-152. -/
+/-- Grass Energy (base1-99). Records: base1-99, base4-127, gym1-129, gym2-129, neo1-108, ecard1-162, ex1-104, ex9-101, ex13-105, ex16-103, dp1-123, hgss1-115, col1-88, bw1-105, xy1-132, g1-75, xy12-91, sm1-164, sm2-167, swsh8-283, swsh12pt5-152, sve-1, sve-9, sv2-278. -/
 def base1_99 : Card := .energy .grass
 
-/-- Lightning Energy (base1-100). Records: base1-100, base4-128, gym1-130, gym2-130, neo1-109, ecard1-163, ex1-109, tk1b-10, ex9-104, tk2a-11, tk2b-12, ex13-108, ex16-106, dp1-126, hgss1-118, col1-91, bw1-108, xy1-135, g1-78, xy12-94, sm1-167, sm2-168, swsh7-235, swsh12pt5-155. -/
+/-- Lightning Energy (base1-100). Records: base1-100, base4-128, gym1-130, gym2-130, neo1-109, ecard1-163, ex1-109, tk1b-10, ex9-104, tk2a-11, tk2b-12, ex13-108, ex16-106, dp1-126, hgss1-118, col1-91, bw1-108, xy1-135, g1-78, xy12-94, sm1-167, sm2-168, swsh7-235, swsh12pt5-155, sv1-257, sve-4, sve-12. -/
 def base1_100 : Card := .energy .lightning
 
-/-- Psychic Energy (base1-101). Records: base1-101, base4-129, gym1-131, gym2-131, neo1-110, ecard1-164, ex1-107, ex9-105, tk2a-12, ex13-109, ex16-107, dp1-127, hgss1-119, col1-92, bw1-109, xy1-136, g1-79, xy12-95, sm1-162, sm1-168, swsh6-232, swsh12pt5-156. -/
+/-- Psychic Energy (base1-101). Records: base1-101, base4-129, gym1-131, gym2-131, neo1-110, ecard1-164, ex1-107, ex9-105, tk2a-12, ex13-109, ex16-107, dp1-127, hgss1-119, col1-92, bw1-109, xy1-136, g1-79, xy12-95, sm1-162, sm1-168, swsh6-232, swsh12pt5-156, sve-5, sve-13, sv3pt5-207. -/
 def base1_101 : Card := .energy .psychic
 
-/-- Water Energy (base1-102). Records: base1-102, base4-130, gym1-132, gym2-132, neo1-111, ecard1-165, ex1-106, ex9-103, ex13-107, ex16-105, dp1-125, hgss1-117, col1-90, bw1-107, xy1-134, g1-77, xy12-93, sm1-166, sm4-124, swsh6-231, swsh12pt5-154. -/
+/-- Water Energy (base1-102). Records: base1-102, base4-130, gym1-132, gym2-132, neo1-111, ecard1-165, ex1-106, ex9-103, ex13-107, ex16-105, dp1-125, hgss1-117, col1-90, bw1-107, xy1-134, g1-77, xy12-93, sm1-166, sm4-124, swsh6-231, swsh12pt5-154, sve-3, sve-11, sv2-279. -/
 def base1_102 : Card := .energy .water
 
-/-- Darkness Energy (dp1-129). Records: dp1-129, hgss1-121, col1-94, bw1-111, xy1-138, g1-81, xy12-97, sm1-170, sm3-168, swsh7-236, swsh12pt5-158. -/
+/-- Darkness Energy (dp1-129). Records: dp1-129, hgss1-121, col1-94, bw1-111, xy1-138, g1-81, xy12-97, sm1-170, sm3-168, swsh7-236, swsh12pt5-158, sve-7, sve-15, sv6pt5-98. -/
 def dp1_129 : Card := .energy .darkness
 
-/-- Metal Energy (dp1-130). Records: dp1-130, hgss1-122, col1-95, bw1-112, xy1-139, g1-82, xy12-98, sm1-163, sm1-171, swsh7-237, swsh12pt5-159. -/
+/-- Metal Energy (dp1-130). Records: dp1-130, hgss1-122, col1-95, bw1-112, xy1-139, g1-82, xy12-98, sm1-163, sm1-171, swsh7-237, swsh12pt5-159, sve-8, sve-16, sv6pt5-99. -/
 def dp1_130 : Card := .energy .metal
 
 /-- Fairy Energy (xy1-140). Records: xy1-140, g1-83, xy12-99, sm1-172, sm3-169. -/
@@ -254,33 +254,6 @@ def svp_162 : Card := .pokemon
       { name := "Horrifying Fang", cost := [.psychic, .colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 10) (.many (.const 2))),
         gx := false }] }
-
-/-- Basic Lightning Energy (sv1-257). Records: sv1-257, sve-4, sve-12. -/
-def sv1_257 : Card := .energy .lightning
-
-/-- Basic Fighting Energy (sv1-258). Records: sv1-258, sve-6, sve-14. -/
-def sv1_258 : Card := .energy .fighting
-
-/-- Basic Grass Energy (sve-1). Records: sve-1, sve-9, sv2-278. -/
-def sve_1 : Card := .energy .grass
-
-/-- Basic Fire Energy (sve-2). Records: sve-2, sve-10, sv3-230. -/
-def sve_2 : Card := .energy .fire
-
-/-- Basic Water Energy (sve-3). Records: sve-3, sve-11, sv2-279. -/
-def sve_3 : Card := .energy .water
-
-/-- Basic Psychic Energy (sve-5). Records: sve-5, sve-13. -/
-def sve_5 : Card := .energy .psychic
-
-/-- Basic Darkness Energy (sve-7). Records: sve-7, sve-15. -/
-def sve_7 : Card := .energy .darkness
-
-/-- Basic Metal Energy (sve-8). Records: sve-8, sve-16. -/
-def sve_8 : Card := .energy .metal
-
-/-- Basic Psychic Energy (sv3pt5-207). Records: sv3pt5-207. -/
-def sv3pt5_207 : Card := .energy .psychic
 
 /-- Pineco (sv5-2). Records: sv5-2. -/
 def sv5_2 : Card := .pokemon
@@ -1601,6 +1574,111 @@ def sv6_74 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Wattrel (sv6-75). Records: sv6-75, sv6-178. -/
+def sv6_75 : Card := .pokemon
+  { name := "Wattrel", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .lightning, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Thunder Shock", cost := [.lightning], damage := 1,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false }] }
+
+/-- Kilowattrel (sv6-76). Records: sv6-76. Caveats: perPokemon. -/
+def sv6_76 : Card := .pokemon
+  { name := "Kilowattrel", stage := .stage1, evolvesFrom := some "Wattrel",
+    hp := 12, type := .lightning, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Wind Power Charge", cost := [.colorless], damage := 1,
+        effect := .linger .own .after (.bonus 12),
+        gx := false },
+      { name := "Strong Volt", cost := [.lightning, .colorless], damage := 10,
+        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
+        gx := false }] }
+
+/-- Clefairy (sv6-78). Records: sv6-78, me2pt5-74. -/
+def sv6_78 : Card := .pokemon
+  { name := "Clefairy", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Moon Kick", cost := [.colorless, .colorless], damage := 4,
+        effect := .skip,
+        gx := false }] }
+
+/-- Kadabra (sv6-81). Records: sv6-81. -/
+def sv6_81 : Card := .pokemon
+  { name := "Kadabra", stage := .stage1, evolvesFrom := some "Abra",
+    hp := 8, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Psychic", cost := [.psychic], damage := 0,
+        effect := .damage (.add (.const 1) (.count (.energy .opp .energy) 3)),
+        gx := false }] }
+
+/-- Girafarig (sv6-83). Records: sv6-83. Caveats: benchMods. -/
+def sv6_83 : Card := .pokemon
+  { name := "Girafarig", stage := .basic, evolvesFrom := none,
+    hp := 10, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Dual Headbutt", cost := [.colorless], damage := 3,
+        effect := .benchDamage .own 1,
+        gx := false }] }
+
+/-- Flabébé (sv6-86). Records: sv6-86. -/
+def sv6_86 : Card := .pokemon
+  { name := "Flabébé", stage := .basic, evolvesFrom := none,
+    hp := 4, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Bind Wound", cost := [.colorless], damage := 0,
+        effect := .ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3),
+        gx := false },
+      { name := "Fairy Wind", cost := [.psychic], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Floette (sv6-87). Records: sv6-87. -/
+def sv6_87 : Card := .pokemon
+  { name := "Floette", stage := .stage1, evolvesFrom := some "Flabébé",
+    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Minor Errand-Running", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand .energy (.upTo 3)) .shuffle,
+        gx := false },
+      { name := "Spinning Attack", cost := [.psychic, .colorless], damage := 4,
+        effect := .skip,
+        gx := false }] }
+
+/-- Sandshrew (sv6-97). Records: sv6-97. -/
+def sv6_97 : Card := .pokemon
+  { name := "Sandshrew", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Rollout", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Double Scratch", cost := [.fighting, .colorless], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 2)) (.damage (.const 4))),
+        gx := false }] }
+
+/-- Sandslash (sv6-98). Records: sv6-98. Caveats: benchMods. -/
+def sv6_98 : Card := .pokemon
+  { name := "Sandslash", stage := .stage1, evolvesFrom := some "Sandshrew",
+    hp := 12, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    attacks := [
+      { name := "Dig Claws", cost := [.colorless], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Earthquake", cost := [.fighting, .colorless], damage := 12,
+        effect := .spreadDamage .own 1,
+        gx := false }] }
+
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1631,15 +1709,6 @@ def cards : List Card := [
   svp_155,
   svp_157,
   svp_162,
-  sv1_257,
-  sv1_258,
-  sve_1,
-  sve_2,
-  sve_3,
-  sve_5,
-  sve_7,
-  sve_8,
-  sv3pt5_207,
   sv5_2,
   sv5_3,
   sv5_4,
@@ -1752,9 +1821,21 @@ def cards : List Card := [
   sv6_70,
   sv6_71,
   sv6_73,
-  sv6_74]
+  sv6_74,
+  sv6_75,
+  sv6_76,
+  sv6_78,
+  sv6_81,
+  sv6_83,
+  sv6_86,
+  sv6_87,
+  sv6_97,
+  sv6_98]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
+
+/-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
+theorem cards_nodup : nodupFp cards = true := by decide +kernel
 
 end PokemonCards.Standard.Part01

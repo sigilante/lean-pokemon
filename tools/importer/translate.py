@@ -33,8 +33,33 @@ CAVEATS = {
     'selfInDiscard': "the model resolves a Trainer with the card already in the discard pile, so its "
                      "recycling filter or discard count can see the card itself (Known gaps)",
     'searchAny': "a deck search for 'a card' (any card) may find nothing in the model",
+    'noopPlay': "a Trainer whose effect may do nothing in the model (switch with an empty Bench, heal an "
+                "undamaged Pokémon, cure a Pokémon with no Special Condition) can be played to no effect; "
+                "a Trainer cannot be played when its effect cannot happen (taken from rulings, not in the "
+                "2023 rulebook on hand)",
     'koBetweenSteps': "a Trainer sentence written as several primitives gets a Knock Out check between "
                       "them (Known gaps, TRun)",
+}
+
+
+# The direction of each caveat: does the model's term allow outcomes the printed card does not
+# ('allows more'), forbid outcomes the printed card allows ('forbids some'), or both? A card imported
+# with caveats is in general neither an over- nor an under-approximation of its printed card.
+CAVEAT_DIRECTION = {
+    'perPokemon': 'both',          # a reduction or prevention on one Pokémon covers all of its player's
+                                   # (allows more); a lock on the Defending Pokémon locks every Pokémon
+                                   # of that player, so a switched-in Pokémon cannot attack (forbids some)
+    'recoil': 'both',              # self-damage takes no Weakness, Resistance or modifier: a different amount
+    'benchMods': 'both',           # Bench damage takes no bonus, reduction or prevention: a different amount
+    'mayFail': 'allows more',
+    'upTo0': 'allows more',
+    'hiddenInfo': 'allows more',   # the player acts on information the printed card hides
+    'aceSpec': 'allows more',      # decks with several ACE SPEC cards
+    'poisonStrength': 'both',      # the strength is a separate counter (a new Poison resets it)
+    'selfInDiscard': 'both',       # the card can recycle or count itself
+    'searchAny': 'allows more',
+    'koBetweenSteps': 'both',      # a Knock Out check, with its replacement, falls between two steps
+    'noopPlay': 'allows more',
 }
 
 
@@ -51,6 +76,13 @@ NUMW = {'a': 1, 'an': 1, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'another': 1
 TYPE_RE = r'(Grass|Fire|Water|Lightning|Psychic|Fighting|Darkness|Metal|Fairy|Dragon|Colorless)'
 CONDS = {'Asleep': 'asleep', 'Burned': 'burned', 'Confused': 'confused', 'Paralyzed': 'paralyzed',
          'Poisoned': 'poisoned'}
+
+
+def noop(ctx):
+    """The `noopPlay` caveat, for a mandatory Trainer primitive that the model lets do nothing
+    (`switchNone`, `heal` of an undamaged Pokémon, `benchHealNone`, `cure` with no condition). In an
+    attack doing nothing is what the card does when it cannot, so no caveat."""
+    return {'noopPlay'} if ctx['kind'] == 'trainer' else set()
 
 
 def num(s):
@@ -140,9 +172,21 @@ def parse_qty_np(q):
     return num(q), False
 
 
-def min_take(count, n, make):
-    """Take `n` if at least `n` are there, else all of them: the printed 'discard N' when fewer may
-    be available ("as much as you can"). `make(q)` builds the move for quantity `q`."""
+def min_take(count, n, make, ctx):
+    """Take `n` if at least `n` are there, else as many as there are: the printed 'put N' or
+    'discard N' when fewer may be available. `make(q)` builds the move for quantity `q`.
+
+    In an attack the effect does as much as it can, so with nothing to take it does nothing (`skip`,
+    or the move of `all` of none). A Trainer cannot be played when its effect cannot happen (taken
+    from rulings; not in the 2023 rulebook on hand), so in a Trainer the case with nothing to take
+    has no resolution: `exactly 1` of none, the model's convention for an unpayable cost
+    (Pokemon/Rules.lean, `Move.item`), and a Trainer that can take some but fewer than `n` takes all
+    of them."""
+    if ctx['kind'] == 'trainer':
+        if n == 1:
+            return make(('exactly', 1))
+        return ite(('countGe', count, n), make(('exactly', n)),
+                   ite(('countGe', count, 1), make(('all',)), make(('exactly', 1))))
     if n == 1:
         return ite(('countGe', count, 1), make(('exactly', 1)), SKIP)
     return ite(('countGe', count, n), make(('exactly', n)), make(('all',)))
@@ -378,7 +422,7 @@ def _(m, ctx):
     return Eff(('spreadDamage', OPP, counters(m.group(1))), {'benchMods'})
 
 
-@rule('counters-each-opp', r"Put (\d+) damage counters? on each of your opponent's Pokémon\.", 'B',
+@rule('counters-each-opp', r"(?:Put|Place) (\d+) damage counters? on each of your opponent's Pokémon\.", 'B',
       'counters n; spreadCounters opp n')
 def _(m, ctx):
     n = num(m.group(1))
@@ -460,7 +504,7 @@ def _(m, ctx):
 
 @rule('heal-active', r'Heal (\d+) damage from your Active Pokémon\.', 'T', 'heal n')
 def _(m, ctx):
-    return Eff(('heal', counters(m.group(1))))
+    return Eff(('heal', counters(m.group(1))), noop(ctx))
 
 
 def one_of(w, active, bench):
@@ -474,12 +518,12 @@ def one_of(w, active, bench):
       'ite (countGe (bench own pokemon) 1) (choice (heal n) (benchHeal n)) (heal n)')
 def _(m, ctx):
     n = counters(m.group(1))
-    return Eff(one_of(OWN, ('heal', n), ('benchHeal', n)))
+    return Eff(one_of(OWN, ('heal', n), ('benchHeal', n)), noop(ctx))
 
 
 @rule('heal-1-bench', r'Heal (\d+) damage from 1 of your Benched Pokémon\.', 'B', 'benchHeal n')
 def _(m, ctx):
-    return Eff(('benchHeal', counters(m.group(1))))
+    return Eff(('benchHeal', counters(m.group(1))), noop(ctx))
 
 
 COND_RE = r'(?:Asleep|Burned|Confused|Paralyzed|Poisoned)'
@@ -496,28 +540,28 @@ def _(m, ctx):
 def _(m, ctx):
     if ctx['kind'] == 'attack' and m.group(1) != 'This Pokémon':
         raise Refuse('wording')
-    return Eff(('cure',))
+    return Eff(('cure',), noop(ctx))
 
 
-@rule('counters-opp-active', r'Put (\d+) damage counters? on ' + OPPA + r'\.', 'B', 'counters n')
+@rule('counters-opp-active', r'(?:Put|Place) (\d+) damage counters? on ' + OPPA + r'\.', 'B', 'counters n')
 def _(m, ctx):
     return Eff(('counters', num(m.group(1))))
 
 
-@rule('counters-opp-1bench', r"Put (\d+) damage counters? on 1 of your opponent's Benched Pokémon\.", 'B',
+@rule('counters-opp-1bench', r"(?:Put|Place) (\d+) damage counters? on 1 of your opponent's Benched Pokémon\.", 'B',
       'benchCounters opp n')
 def _(m, ctx):
     return Eff(('benchCounters', OPP, num(m.group(1))))
 
 
-@rule('counters-opp-1', r"Put (\d+) damage counters? on 1 of your opponent's Pokémon\.", 'B',
+@rule('counters-opp-1', r"(?:Put|Place) (\d+) damage counters? on 1 of your opponent's Pokémon\.", 'B',
       'ite (countGe (bench opp pokemon) 1) (choice (counters n) (benchCounters opp n)) (counters n)')
 def _(m, ctx):
     n = num(m.group(1))
     return Eff(one_of(OPP, ('counters', n), ('benchCounters', OPP, n)))
 
 
-@rule('counters-opp-each-bench', r"Put (\d+) damage counters? on each of your opponent's Benched Pokémon\.", 'B',
+@rule('counters-opp-each-bench', r"(?:Put|Place) (\d+) damage counters? on each of your opponent's Benched Pokémon\.", 'B',
       'spreadCounters opp n')
 def _(m, ctx):
     return Eff(('spreadCounters', OPP, num(m.group(1))))
@@ -557,18 +601,18 @@ def _(m, ctx):
 
 @rule('switch-active', r'Switch your Active Pokémon with 1 of your Benched Pokémon\.', 'T', 'switch own')
 def _(m, ctx):
-    return Eff(('switch', OWN))
+    return Eff(('switch', OWN), noop(ctx))
 
 
 @rule('gust', r"Switch in 1 of your opponent's Benched Pokémon to the Active Spot\.", 'B', 'switch opp')
 def _(m, ctx):
-    return Eff(('switch', OPP))
+    return Eff(('switch', OPP), noop(ctx))
 
 
 @rule('switch-out-opp', r"Switch out your opponent's Active Pokémon to the Bench\. \(Your opponent chooses the new Active Pokémon\.\)",
       'B', 'switch opp')
 def _(m, ctx):
-    return Eff(('switch', OPP))
+    return Eff(('switch', OPP), noop(ctx))
 
 
 @rule('shuffle', r'(?:Then, shuffle your deck|Shuffle your deck afterward)\.', 'B', 'shuffle')
@@ -647,25 +691,25 @@ def _(m, ctx):
 
 
 @rule('recycle-to-hand', r'Put (up to \d+|an?|\d+) (.+?) from your discard pile into your hand\.', 'B',
-      'move own discard hand F (upTo n | at most n, as many as there are)')
+      'move own discard hand F (upTo n | exactly n, or as many as there are; in a Trainer at least 1, min_take)')
 def _(m, ctx):
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
     mk = lambda q: ('move', OWN, ('discard',), ('hand',), f, q)
     if upto:
         return Eff(mk(('upTo', n)), {'upTo0'} if ctx['kind'] == 'trainer' else set())
-    return Eff(min_take(('pile', OWN, ('discard',), f), n, mk))
+    return Eff(min_take(('pile', OWN, ('discard',), f), n, mk, ctx))
 
 
 @rule('recycle-to-deck', r'Shuffle (up to \d+|an?|\d+) (.+?) from your discard pile into your deck\.', 'B',
-      'move own discard shuffle F (upTo n | ...)')
+      'move own discard shuffle F (upTo n | exactly n, or as many as there are; in a Trainer at least 1, min_take)')
 def _(m, ctx):
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
     mk = lambda q: ('move', OWN, ('discard',), ('shuffle',), f, q)
     if upto:
         return Eff(mk(('upTo', n)), {'upTo0'} if ctx['kind'] == 'trainer' else set())
-    return Eff(min_take(('pile', OWN, ('discard',), f), n, mk))
+    return Eff(min_take(('pile', OWN, ('discard',), f), n, mk, ctx))
 
 
 @rule('discard-to-bench', r'Put (up to \d+|an?|\d+) (.+?) from your discard pile onto your Bench\.', 'B',
@@ -683,7 +727,7 @@ def _(m, ctx):
 
 @rule('discard-energy', r"Discard (an|a|all|\d+) (?:(Basic )?" + TYPE_RE + r" )?Energy (?:cards? )?from (this Pokémon|"
       + OPPA + r')\.', 'B',
-      'ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip)')
+      'ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip); in a Trainer no fallback when none (min_take)')
 def _(m, ctx):
     q = m.group(1)
     t = m.group(3)
@@ -699,7 +743,7 @@ def _(m, ctx):
     mk = lambda qq: ('discardEnergy', w, ('active',), f, qq)
     if q == 'all':
         return Eff(mk(('all',)))
-    return Eff(min_take(('energy', w, f), num(q), mk))
+    return Eff(min_take(('energy', w, f), num(q), mk, ctx))
 
 
 @rule('ling-reduce-self', r"During your opponent's next turn, this Pokémon takes (\d+) less damage from attacks \(after applying Weakness and Resistance\)\.",
@@ -762,22 +806,22 @@ def _(m, ctx):
     return Eff(SKIP, {'hiddenInfo'})
 
 
-def opp_hand_discard(n):
+def opp_hand_discard(n, ctx):
     mk = lambda q: ('move', OPP, ('hand',), ('discard',), ('any',), q)
-    return min_take(('pile', OPP, ('hand',), ('any',)), n, mk)
+    return min_take(('pile', OPP, ('hand',), ('any',)), n, mk, ctx)
 
 
 @rule('discard-random-opp-hand', r"Discard a random card from your opponent's hand\.", 'B',
-      'ite (countGe (pile opp hand any) 1) (move opp hand discard any (exactly 1)) skip')
+      'ite (countGe (pile opp hand any) 1) (move opp hand discard any (exactly 1)) skip; in a Trainer move ... (exactly 1) (min_take)')
 def _(m, ctx):
-    return Eff(opp_hand_discard(1))
+    return Eff(opp_hand_discard(1, ctx))
 
 
 @rule('opp-discards', r"Your opponent discards (a card|\d+ cards) from their hand\.", 'B',
-      'ite (countGe (pile opp hand any) n) (move opp hand discard any (exactly n)) (... all)')
+      'ite (countGe (pile opp hand any) n) (move opp hand discard any (exactly n)) (... all); in a Trainer no fallback when none (min_take)')
 def _(m, ctx):
     n = 1 if m.group(1) == 'a card' else num(m.group(1).split()[0])
-    return Eff(opp_hand_discard(n))
+    return Eff(opp_hand_discard(n, ctx))
 
 
 @rule('discard-own-hand-card', r"Discard (a card|\d+ cards) from your hand\.", 'A',
@@ -785,7 +829,7 @@ def _(m, ctx):
 def _(m, ctx):
     n = 1 if m.group(1) == 'a card' else num(m.group(1).split()[0])
     mk = lambda q: ('move', OWN, ('hand',), ('discard',), ('any',), q)
-    return Eff(min_take(('pile', OWN, ('hand',), ('any',)), n, mk))
+    return Eff(min_take(('pile', OWN, ('hand',), ('any',)), n, mk, ctx))
 
 
 @rule('hand-into-deck', r'Shuffle your hand into your deck\.', 'B', 'move own hand shuffle any all')
@@ -1033,6 +1077,17 @@ class Parser:
             self.items.append((i, Eff(seq(('move', OWN, ('top', k), ('hand',), ('any',), ('upTo', c)), ('shuffle',)),
                                       {'upTo0'} if ctx['kind'] == 'trainer' else set())))
             return i + 2
+        # "Discard all Energy from this Pokémon, and this attack [also] does ...": two sentences. The
+        # discard and the damage commute in the model (the damage step reads no Energy of the attacker),
+        # so the order of the two items does not matter.
+        m = re.match(r"^(Discard all Energy from this Pokémon), and (this attack (?:also )?does .+)$", s)
+        if m and ctx['kind'] == 'attack':
+            first = self.one(m.group(1) + '.')
+            second = self.one(m.group(2)[0].upper() + m.group(2)[1:])
+            self.used.append(('discard-all-and', s))
+            self.items.append((i, first))
+            self.items.append((i, second))
+            return i + 1
         it = self.one(s)
         self.items.append((i, it))
         return i + 1
@@ -1597,3 +1652,4 @@ def poison_before_up(e):
             walk(s)
     walk(e)
     return ok[0]
+assert set(CAVEATS) == set(CAVEAT_DIRECTION)

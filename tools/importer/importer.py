@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -128,6 +128,11 @@ def run(data, out, survey=None):
     results = []
     for recs in G:
         r = TR.translate_card(recs[0])
+        # every record of a card translates to the same result (the key's canonicalisation loses
+        # nothing the translator reads)
+        for x in recs[1:]:
+            rx = TR.translate_card(x)
+            assert (rx['ok'], rx['term'], rx['caveats']) == (r['ok'], r['term'], r['caveats']), (recs[0]['id'], x['id'])
         results.append((recs, r))
     files = {}
 
@@ -135,6 +140,12 @@ def run(data, out, survey=None):
     imported = [(recs, r) for recs, r in results if r['ok']]
     idents = [emit.ident(recs[0]) for recs, _ in imported]
     assert len(set(idents)) == len(idents)
+    # distinct cards have distinct terms (checked again in Lean: `all_nodup`)
+    srcs = [emit.card_src(r['term']) for _, r in imported]
+    assert len(set(srcs)) == len(srcs), 'two imported cards have the same Lean term'
+    # the pool is partitioned: every card is imported or not, once
+    assert len(results) == len(imported) + sum(1 for _, r in results if not r['ok'])
+    assert len({id(recs) for recs, _ in results}) == len(results)
     parts = [imported[i:i + PART_SIZE] for i in range(0, len(imported), PART_SIZE)]
     part_names = []
     for k, chunk in enumerate(parts, 1):
@@ -149,6 +160,8 @@ def run(data, out, survey=None):
         src.append('def cards : List Card := [\n  ' + ',\n  '.join(emit.ident(recs[0]) for recs, _ in chunk) + ']\n')
         src.append('/-- Every card of this part passes the per-card checks (`Card.importOk`). -/')
         src.append('theorem cards_ok : cards.all Card.importOk = true := by decide +kernel\n')
+        src.append('/-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/')
+        src.append('theorem cards_nodup : nodupFp cards = true := by decide +kernel\n')
         src.append('end PokemonCards.Standard.' + pn + '\n')
         files['PokemonCards/Standard/' + pn + '.lean'] = '\n'.join(src)
 
@@ -170,14 +183,30 @@ def run(data, out, survey=None):
            'def notImported : List (String × String × String) := [\n  '
            + ',\n  '.join('(' + T.lean_str(recs[0]['id']) + ', ' + T.lean_str(recs[0]['name']) + ', '
                           + T.lean_str(first_reason(r)) + ')' for recs, r in not_imp) + ']\n',
-           '/-- **The count.** %d cards of the pool are imported. -/' % n_imp,
+           '/-- **The count.** `all` has %d entries. -/' % n_imp,
            'theorem all_length : all.length = %d := by decide +kernel\n' % n_imp,
-           '/-- %d cards are not imported, and the two lists together are the %d cards of the pool. -/' % (len(not_imp), n_pool),
+           '/-- `notImported` has %d entries. -/' % len(not_imp),
            'theorem notImported_length : notImported.length = %d := by decide +kernel\n' % len(not_imp),
+           '/-- Arithmetic on the two lengths, and nothing more: %d + %d = %d. That the two lists partition the\n'
+           'pool\'s %d cards (every card of the pool in exactly one of them, once) is established outside Lean, by\n'
+           'the importer (`tools/importer/importer.py`, which asserts it when it writes this file) and by an\n'
+           'external check script; the pool itself is not a Lean object. -/' % (n_imp, len(not_imp), n_pool, n_pool),
            'theorem pool_size : all.length + notImported.length = %d := by decide +kernel\n' % n_pool,
            '/-- Every imported card passes the per-card checks. -/',
            'theorem all_ok : all.all Card.importOk = true := by\n  simp only [all, List.all_append, '
            + ', '.join(pn + '.cards_ok' for pn in part_names) + ', Bool.and_self]\n',
+           ] + [
+           '/-- No card of part %d is the same term as a card of part %d. -/\n'
+           'theorem cross_%d_%d : crossOk %s.cards %s.cards = true := by decide +kernel\n'
+           % (i + 1, j + 1, i + 1, j + 1, part_names[i], part_names[j])
+           for j in range(len(part_names)) for i in range(j)] + [
+           '/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts %d distinct\n'
+           'cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check\n'
+           'small.) -/' % n_imp,
+           'theorem all_nodup : all.Nodup :=\n  nodup_of_nodupFp (by\n    simp only [all, nodupFp_append, crossOk_append_left, '
+           + ', '.join(pn + '.cards_nodup' for pn in part_names) + ',\n      '
+           + ', '.join('cross_%d_%d' % (i + 1, j + 1) for j in range(len(part_names)) for i in range(j))
+           + ', Bool.and_self])\n',
            '/-- The imported cards that write a lingering damage bonus or reduction (`Effect.writes`), by name. -/',
            'theorem writers : (all.filter Card.writesAmt).map Card.label = ' + T.lean([recs[0]['name'] for recs, _ in writers])
            + ' := by decide +kernel\n',
@@ -302,7 +331,8 @@ def template_table(results):
                  'flip-n-coins-each': 'choice over 0..N heads of h copies of the effect',
                  'flip-until-tails-damage': 'damage (many (const k)) [+ base]',
                  'if-condition': 'ite test (consequence) (alternative); for damage, a test-dependent amount',
-                 'look-top-take': 'move own (top n) hand F (upTo k); shuffle'})
+                 'look-top-take': 'move own (top n) hand F (upTo k); shuffle',
+                 'discard-all-and': 'the two clauses as two sentences (discardEnergy own active energy all; the damage)'})
     imp = collections.Counter()
     allc = collections.Counter()
     ex = {}
@@ -364,12 +394,15 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
         if r['ok']:
             for k in r['caveats']:
                 cav[k] += 1
-    L.append('Caveats (cards may carry several):')
+    L.append('Caveats (cards may carry several), with their direction: does the term allow outcomes the printed '
+             'card does not (allows more), forbid outcomes it allows (forbids some), or both? A card imported with '
+             'caveats is in general neither an over- nor an under-approximation of its printed card, so the imported '
+             'pool must not be used for "no deck can ..." arguments without checking the caveat.')
     L.append('')
-    L.append('| caveat | cards | meaning |')
-    L.append('|---|---|---|')
-    for k, v in cav.most_common():
-        L.append('| `%s` | %d | %s |' % (k, v, TR.CAVEATS[k]))
+    L.append('| caveat | direction | cards | meaning |')
+    L.append('|---|---|---|---|')
+    for k, v in sorted(cav.items(), key=lambda kv: (['allows more', 'forbids some', 'both'].index(TR.CAVEAT_DIRECTION[kv[0]]), -kv[1], kv[0])):
+        L.append('| `%s` | %s | %d | %s |' % (k, TR.CAVEAT_DIRECTION[k], v, TR.CAVEATS[k]))
     L.append('')
     # blocking mechanisms
     alone = collections.Counter()

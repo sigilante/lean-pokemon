@@ -383,6 +383,18 @@ every game whose cards all come from the imported pool is `Faithful`). Regenerat
 memory and diffs); build with `lake build PokemonCards`, which runs its own axiom gate
 (`PokemonCards/Audit.lean`). These are facts about the generated terms; whether a term says
 what its printed card says is the importer's claim, validated by eye in survey S11. The
+theorems cover only games built entirely from imported cards: the refused cards, and decks
+that mix any of them in, are not covered, and "today's Standard satisfies `RecycleSafe`" is
+not proved. A separate, hand-written probe (`PokemonCards/OverApprox.lean`) adds
+over-approximated terms for the two refused Items that write a modifier (Iron Defender and
+Premium Power Pro, type restriction dropped) and shows the recycling check still holds; it is
+evidence about those two Items, not a theorem about the Standard pool. Cards imported with
+caveats are in general neither over- nor under-approximations of their printed cards (a
+caveat may allow outcomes the card does not, forbid outcomes it allows, or both; S11 tables
+the direction of each), so the imported pool must not be used for "no deck can …" arguments
+without checking the caveats. `Standard.all_nodup` proves that the imported list has no two
+equal terms; `pool_size` is arithmetic on two list lengths, and the partition of the pool into
+the two lists is established by the importer, not by Lean. The
 library lives outside `Pokemon/` because `Pokemon/Audit.lean` requires every module under
 `Pokemon/` to be imported by it.
 

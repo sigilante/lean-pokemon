@@ -4,8 +4,9 @@ The pool is survey S9's pool B: every record with regulation mark H, I or J, plu
 Energy record (an assumption about today's Standard format; see survey/S9-standard-profile.md (a)).
 Records are grouped into *cards*: records with the same game-relevant content (name, supertype,
 subtypes, HP, types, evolves-from, abilities, attacks with cost, damage and text, Weakness,
-Resistance, retreat cost, rules) are one card. This is finer than S9's identity key (name plus
-text), which ignores HP, costs and damage; both counts are reported.
+Resistance, retreat cost, rules), after the formatting variants listed in `card_key` are
+canonicalised, are one card. S9's identity key (name plus text) ignores HP, costs and damage but
+does not canonicalise formatting; both counts are reported.
 
 Standard library only; the data is untrusted and read as JSON only. Run with python3 -I.
 """
@@ -58,17 +59,65 @@ def s9_key(c):
     return (c['name'], ' \n '.join(parts).replace('’', "'"))
 
 
+# Lines that are formatting, not content: play reminders (the rules say the same), the ACE SPEC
+# line (the subtype says it), and the labels some printings put before a rule line.
+REMINDER_LINES = {
+    'You may play any number of Item cards during your turn.',
+    'You may play only 1 Supporter card during your turn.',
+    'You may play only 1 Supporter card during your turn (before your attack).',
+    "ACE SPEC: You can't have more than 1 ACE SPEC card in your deck.",
+    "You can't have more than 1 ACE SPEC card in your deck.",
+}
+RULE_LABELS = ('Tera: ', 'Pokémon ex rule: ')
+
+
+def canon(s):
+    """Text with typographic quotes straightened and every run of whitespace (spaces, newlines)
+    collapsed to one space."""
+    return ' '.join(norm_text(s).split())
+
+
+def canon_rules(rules):
+    """Rule lines as a set: canonical text, a leading label removed, reminder lines dropped, sorted."""
+    out = []
+    for r in rules or []:
+        r = canon(r)
+        if r in REMINDER_LINES:
+            continue
+        for lab in RULE_LABELS:
+            if r.startswith(lab):
+                r = r[len(lab):]
+        out.append(r)
+    return sorted(out)
+
+
+def canon_name(c):
+    """A Basic Energy card is printed as 'Fire Energy' or 'Basic Fire Energy'; the same card."""
+    n = c['name']
+    if is_basic_energy(c) and n.startswith('Basic '):
+        n = n[len('Basic '):]
+    return n
+
+
 def card_key(c):
-    """Every field the importer reads; two records with the same key are the same card."""
+    """Every field the importer reads, canonicalised; two records with the same key are the same card.
+    Formatting variants are one card: whitespace and line breaks in text, the order of rule lines, a
+    'Tera: ' or 'Pokémon ex rule: ' label, play reminders and the ACE SPEC line, a 'Free' cost (printed
+    as an empty cost elsewhere), 'Basic ' in a Basic Energy name, and the `types` field of a Basic
+    Energy record (present on some records, absent on others; the name gives the type). Reprints that
+    differ in any field (HP, cost, damage, text, Weakness, ...) stay distinct cards."""
     def atk(a):
-        return (a.get('name'), tuple(a.get('cost') or []), a.get('damage') or '', norm_text(a.get('text')))
+        return (canon(a.get('name')), tuple(x for x in a.get('cost') or [] if x != 'Free'),
+                canon(a.get('damage')), canon(a.get('text')))
+    at = c.get('ancientTrait')
     return json.dumps([
-        c['name'], c['supertype'], sorted(c['_sub']), c.get('hp'), c.get('types'), c.get('evolvesFrom'),
-        [(a.get('type'), a.get('name'), norm_text(a.get('text'))) for a in c.get('abilities') or []],
-        c.get('ancientTrait'),
+        canon_name(c), c['supertype'], sorted(c['_sub']), c.get('hp'),
+        None if is_basic_energy(c) else c.get('types'), c.get('evolvesFrom'),
+        [(a.get('type'), canon(a.get('name')), canon(a.get('text'))) for a in c.get('abilities') or []],
+        (canon(at.get('name')), canon(at.get('text'))) if at else None,
         [atk(a) for a in c.get('attacks') or []],
         c.get('weaknesses'), c.get('resistances'), c.get('convertedRetreatCost'),
-        [norm_text(r) for r in c.get('rules') or []],
+        canon_rules(c.get('rules')),
     ], ensure_ascii=False, sort_keys=True)
 
 
