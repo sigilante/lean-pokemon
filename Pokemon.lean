@@ -9,4 +9,5 @@ import Pokemon.Damage
 import Pokemon.Finite
 import Pokemon.Infinite
 import Pokemon.Reads
+import Pokemon.Trainer
 import Pokemon.Audit
