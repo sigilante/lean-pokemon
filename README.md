@@ -373,4 +373,17 @@ depends on an axiom other than `propext` and `Quot.sound` (so `sorry` fails it t
 file under `Pokemon/` is not imported. `scripts/audit.sh build.log` then fails CI unless the
 log shows the gate's success line and no error or `sorry`.
 
+Imported cards (library `PokemonCards`, not a default target): `tools/importer/` translates
+today's Standard pool (survey S9's pool B: regulation marks H, I, J plus Basic Energy) into
+`Card` terms, conservatively, and writes them to `PokemonCards/Standard/Part*.lean` with
+per-card checks, plus `PokemonCards/Standard.lean` (the count of imported cards, the named
+list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.faithful`:
+every game whose cards all come from the imported pool is `Faithful`). Regenerate with
+`python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
+memory and diffs); build with `lake build PokemonCards`, which runs its own axiom gate
+(`PokemonCards/Audit.lean`). These are facts about the generated terms; whether a term says
+what its printed card says is the importer's claim, validated by eye in survey S11. The
+library lives outside `Pokemon/` because `Pokemon/Audit.lean` requires every module under
+`Pokemon/` to be imported by it.
+
 Licence: MIT (see `LICENSE`).

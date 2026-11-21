@@ -118,3 +118,5 @@ Imported cards that write a lingering damage bonus or reduction (22): Seedot (sv
 Imported cards that write any lingering modifier (80).
 
 RecycleSafe holds over the imported pool. Imported recyclers (16): Wooper (svp-155), Poltchageist (sv6-21), Phione (sv6-55), Night Stretcher (sv6pt5-61), Slowpoke (sv7-57), Dedenne (sv8-87), Miracle Headset (sv8-183), Max Rod (sv8pt5-116), Audino (sv9-124), Energy Recycler (sv10-164), Sacred Ash (sv10-168), Energy Retrieval (rsv10pt5-82), Tarragon (me3-85), Energy Retrieval (me4-108), Pikachu (me55-48), Dialga (me55-103).
+
+Writers that clause 3 constrains: non-Supporter Trainers writing a bonus or reduction: none; Trainers writing a rest-of-game bonus or reduction: none.

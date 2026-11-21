@@ -184,6 +184,13 @@ def run(data, out, survey=None):
            '/-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/',
            'theorem lingerers : (all.filter Card.lingers).map Card.label = ' + T.lean([recs[0]['name'] for recs, _ in lingerers])
            + ' := by decide +kernel\n',
+           '/-- The imported Trainers that are not Supporters and write a bonus or reduction (`Card.wAmt`), the\n'
+           'cards clause 3 (a) of `Faithful` forbids Trainers to recycle, by name. -/',
+           'theorem nonSupporterWriters : (all.filter fun c => c.wAmt != 0).map Card.label = '
+           + T.lean([t[1] for t in [r['term'] for _, r in imported] if w_amt(t)]) + ' := by decide +kernel\n',
+           '/-- The imported Trainers that write a rest-of-game bonus or reduction (`Card.alAmt`), by name. -/',
+           'theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = '
+           + T.lean([t[1] for t in [r['term'] for _, r in imported] if al_amt(t)]) + ' := by decide +kernel\n',
            '/-- Clause 3 of `Faithful` over the whole imported pool, decided. -/',
            'theorem recSafe : recSafeB all = ' + ('true' if not rs_pairs else 'false') + ' := by decide +kernel\n',
            ]
@@ -427,6 +434,11 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
         rec = [(recs, r) for recs, r in results if r['ok'] and any(T.rec_filters(e) for e in card_effects(r['term']))]
         L.append('RecycleSafe holds over the imported pool. Imported recyclers (%d): %s.' % (
             len(rec), ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in rec)))
+        L.append('')
+        terms_ = [r['term'] for _, r in results if r['ok']]
+        L.append('Writers that clause 3 constrains: non-Supporter Trainers writing a bonus or reduction: %s; '
+                 'Trainers writing a rest-of-game bonus or reduction: %s.' % (
+                     [t[1] for t in terms_ if w_amt(t)] or 'none', [t[1] for t in terms_ if al_amt(t)] or 'none'))
     return '\n'.join(L)
 
 

@@ -1223,6 +1223,13 @@ theorem writers : (all.filter Card.writesAmt).map Card.label = ["Seedot", "Grotl
 /-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/
 theorem lingerers : (all.filter Card.lingers).map Card.label = ["Seedot", "Breloom", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Azumarill", "Golett", "Tranquill", "Torkoal", "Crawdaunt", "Finizen", "Luxio", "Kilowattrel", "Nosepass", "Whirlipede", "Sneasel", "Golbat", "Varoom", "Lileep", "Turtonator", "Electivire", "Drifloon", "Tornadus", "Xerneas", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Pyroar", "Heatran", "Shelmet", "Lombre", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Escavalier", "Hop's Corviknight", "Shelgon", "Oinkologne", "Clamperl", "Floatzel", "Skarmory", "Steven's Metang", "Virizion", "Frillish", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Fraxure", "Bulbasaur", "Exeggutor", "Stonjourner", "Yveltal", "Gliscor", "Bronzor", "Erika's Weepinbell", "Budew", "N's Vanillish", "Stunfisk ex", "Carkol", "Hoopa", "Registeel ex", "Larry's Braviary", "Spinarak", "Ariados", "Aegislash", "Flaaffy", "Donphan", "Metang", "Toxtricity", "Cosmoem", "Mega Golisopod ex", "Onix", "Jangmo-o", "Fletchinder"] := by decide +kernel
 
+/-- The imported Trainers that are not Supporters and write a bonus or reduction (`Card.wAmt`), the
+cards clause 3 (a) of `Faithful` forbids Trainers to recycle, by name. -/
+theorem nonSupporterWriters : (all.filter fun c => c.wAmt != 0).map Card.label = [] := by decide +kernel
+
+/-- The imported Trainers that write a rest-of-game bonus or reduction (`Card.alAmt`), by name. -/
+theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = [] := by decide +kernel
+
 /-- Clause 3 of `Faithful` over the whole imported pool, decided. -/
 theorem recSafe : recSafeB all = true := by decide +kernel
 
