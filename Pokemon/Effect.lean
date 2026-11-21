@@ -181,6 +181,15 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.benchHeal n) g
         { g with cur := { g.cur with bench := b₁ ++ { q with damage := q.damage - n } :: b₂ } }
   | benchHealNone {g : GameState} (n : Nat) (h : g.cur.bench = []) : Run (.benchHeal n) g g
+  /-- the `w` player's Active Pokémon `a` switches with the Benched `q`; `a` goes to the Bench
+  cured of its Special Conditions ("When your Active Pokémon goes to your Bench (whether it
+  retreated or got there some other way), some things do go away—Special Conditions and any
+  effects from attacks", rulebook 2023 p. 12) -/
+  | switch {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} (w : Whose)
+      (ha : (g.side w).active = some a) (hb : (g.side w).bench = b₁ ++ q :: b₂) :
+      Run (.switch w) g
+        (g.updSide w fun s => { s with active := some q, bench := b₁ ++ a.cure :: b₂ })
+  | switchNone {g : GameState} (w : Whose) (hb : (g.side w).bench = []) : Run (.switch w) g g
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

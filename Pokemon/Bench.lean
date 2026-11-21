@@ -19,6 +19,9 @@ Knock Out wins.
   Benched Pokémon; two Knock Outs are pending at once, and both are taken before the next step.
 * `charBench_reachable`: a Char counter on a Benched Pokémon puts 2 damage counters on it
   between turns (tails), which Knocks it Out on the Bench.
+* `gust_reachable`: an Item switches the opponent's 50-HP Benched Pokémon into the Active Spot
+  and Knocks it Out there; `switch_cures`: the player's Poisoned Active Pokémon switched to the
+  Bench is no longer Poisoned.
 -/
 
 namespace Pokemon.Bench
@@ -232,5 +235,78 @@ theorem charBench_reachable :
     fun hk => ?_, rfl, .head _⟩
   exact absurd (hk (charred.unfresh.addDamage 2) (Or.inr (Or.inr (Or.inr (.head _)))))
     (by decide)
+
+/-! ## Switching -/
+
+/-- Switch in one of the opponent's Benched Pokémon, then put 5 damage counters on the
+opponent's Active Pokémon. -/
+def gust : Card := .trainer "Gust" .item (.seq (.switch .opp) (.counters 5))
+
+def gustStart : GameState :=
+  ⟨side [gust] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
+    side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low],
+    true, false, false, false, none, none⟩
+
+theorem gustStart_wellFormed : WellFormed gustStart := by
+  refine ⟨fun _ => ⟨by simp [gustStart, Trainer.side], by simp [gustStart, Trainer.side]⟩,
+    (fun p hp => by cases hp), fun p hp => ?_⟩
+  simp only [gustStart, Trainer.side, List.mem_singleton] at hp
+  subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
+
+theorem gustStart_settled : Settled gustStart :=
+  settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+    (fun p hp => by simp only [gustStart, Trainer.side, List.mem_singleton] at hp; subst hp; decide)
+
+/-- **Witness: a gust and a Knock Out in one Item.** The opponent's Benched 50-HP Pokémon is
+switched into the Active Spot, Knocked Out by the second step, and the opponent promotes the
+Pokémon that the switch sent to the Bench. -/
+theorem gust_reachable :
+    ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g, Move g₀ g ∧ Reach g₀ g ∧
+      Card.pokemon low ∈ g.opp.discard ∧ g.opp.active = some (InPlay.ofBasic big).cure ∧
+      g.opp.bench = [] ∧ g.cur.prizes.length + 1 = g₀.cur.prizes.length := by
+  have hm : Move gustStart _ :=
+    .item (l₁ := []) (l₂ := []) (n := "Gust") rfl rfl gustStart_settled
+      (.seq (.prim rfl rfl (.switch (b₁ := []) .opp rfl rfl)
+          (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+            (fun p hp => by
+            simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
+            subst hp; decide)))))
+        (.prim rfl rfl (.counters 5 rfl)
+          (.step rfl (.knockOut rfl (by decide) rfl)
+            (.step rfl (.promote (b₁ := []) rfl rfl)
+              (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
+                (fun p hp => by cases hp)))))))) rfl rfl rfl
+  exact ⟨gustStart, gustStart_wellFormed, gustStart_settled, _, hm, .step (.refl _) rfl hm,
+    .head _, rfl, rfl, rfl⟩
+
+/-- Switch the player's Active Pokémon with one of their Benched Pokémon. -/
+def switchCard : Card := .trainer "Switch" .item (.switch .own)
+
+/-- The player to move has a Poisoned `big` Active and `low` on the Bench. -/
+def switchStart : GameState :=
+  ⟨side [switchCard] [.energy .fire] { InPlay.ofBasic big with poisoned := true }
+      [InPlay.ofBasic low],
+    side [] [.energy .fire] (InPlay.ofBasic big) [],
+    true, false, false, false, none, none⟩
+
+/-- **Witness: switching cures.** Playing `switchCard` puts the Poisoned Active Pokémon on the
+Bench, no longer Poisoned ("When your Active Pokémon goes to your Bench … Special Conditions …
+go away", rulebook 2023 p. 12). -/
+theorem switch_cures :
+    ∃ g q, Move switchStart g ∧ g.cur.bench = [q] ∧ q.top = big ∧ q.poisoned = false ∧
+      (∃ p, switchStart.cur.active = some p ∧ p.poisoned = true) := by
+  have hm : Move switchStart _ :=
+    .item (l₁ := []) (l₂ := []) (n := "Switch") rfl rfl
+      (settled_of rfl rfl (by decide) (by decide)
+        (fun p hp => by simp only [switchStart, Trainer.side, List.mem_singleton] at hp
+                        subst hp; decide)
+        (fun p hp => by cases hp))
+      (.prim rfl rfl (.switch (b₁ := []) .own rfl rfl)
+        (.done (.inl (settled_of rfl rfl (by decide) (by decide)
+          (fun p hp => by
+            simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
+            subst hp; decide)
+          (fun p hp => by cases hp))))) rfl rfl rfl
+  exact ⟨_, _, hm, rfl, rfl, rfl, _, rfl, rfl⟩
 
 end Pokemon.Bench

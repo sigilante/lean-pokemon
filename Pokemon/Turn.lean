@@ -161,6 +161,7 @@ theorem Run.sameTurn {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameTu
   | unmark w m g => cases w <;> exact .refl _
   | benchCounters w n h => cases w <;> exact .refl _
   | spreadCounters w n g => cases w <;> exact .refl _
+  | switch w ha hb => cases w <;> exact .refl _
   | linger w s m g => cases w <;> exact .refl _
   | _ => exact .refl _
 

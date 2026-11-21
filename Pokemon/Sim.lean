@@ -54,6 +54,7 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | unmark w m g => intro _ hn; cases w <;> exact hn
   | benchCounters w n h => intro _ hn; cases w <;> exact hn
   | spreadCounters w n g => intro _ hn; cases w <;> exact hn
+  | switch w ha hb => intro _ hn; cases w <;> exact hn
   | linger w s m g =>
       intro ht hn
       have hm : ∀ n, m ≠ .reduce n := by
@@ -405,8 +406,8 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       cases w <;>
         exact ⟨_, .spreadCounters _ n _, by
           simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂, he₁, he₂,
-            bench_map_comm (InPlay.clampWith_exact_addDamage n) he₁,
-            bench_map_comm (InPlay.clampWith_exact_addDamage n) he₂]⟩
+            bench_map_agree (U := InPlay.addDamage n) (fun x y h => h.upd.2.1 n) he₁,
+            bench_map_agree (U := InPlay.addDamage n) (fun x y h => h.upd.2.1 n) he₂]⟩
   | @benchHeal g q b₁ b₂ n h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
@@ -418,6 +419,40 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       exact ⟨_, .benchHeal n rfl, by
         simp only [GameState.rclamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append, List.map_cons, h1, h3,
           InPlay.clamp_of_agree hr']⟩
+  | @switch g a q b₁ b₂ w ha h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at ha h
+          rw [ha] at hc₂
+          obtain ⟨a', rfl, hqa⟩ := agree_of_map hc₂
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
+          exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, ha₂, hm₁, hm₂, he₂, Option.map_some,
+              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+      | opp =>
+          simp only [GameState.side] at ha h
+          rw [ha] at ha₂
+          obtain ⟨a', rfl, hqa⟩ := agree_of_map ha₂
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
+          exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, hm₁, hm₂, he₁, Option.map_some,
+              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+  | switchNone w h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₁
+          subst he₁
+          exact ⟨_, .switchNone .own rfl, hc⟩
+      | opp =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₂
+          subst he₂
+          exact ⟨_, .switchNone .opp rfl, hc⟩
   | benchHealNone n h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
@@ -484,7 +519,8 @@ theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameSt
         (GameState.rclamp_of_clamp hc hs.1)
       have hhp' := hhp.of_perm hr.perm
       obtain ⟨g₂', hk₂, hc'⟩ := hk.clamp_sim (k := k)
-        (GameState.clamp_of_rclamp hcm fun p hp => (hhp' _ (GameState.top_mem_opp_active hp)).1)
+        (GameState.clamp_of_rclamp hcm (fun p hp => (hhp' _ (GameState.top_mem_opp_active hp)).1)
+          fun p hp => (hhp' _ (GameState.top_mem_opp_bench hp)).1)
       exact ⟨g₂', .prim he (by rw [GameState.winner_of_clamp hc]; exact hn) hr₂ hk₂, hc'⟩
   | stop hn =>
       intro _ _ _ _ g₂ hc _
@@ -744,6 +780,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         GameState)) hc''
       exact GameState.clamp_of_rclamp this
         (fun p hp => (hhp _ (GameState.top_mem_opp_active (g := g') hp)).1)
+        (fun p hp => (hhp _ (GameState.top_mem_opp_bench (g := g') hp)).1)
   | attackConfused ha hm hc' hs hn hf hbt hst hl hgx hw =>
       have hs' := hs₂ hst
       subst hg

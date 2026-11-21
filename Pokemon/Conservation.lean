@@ -130,6 +130,9 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
           benchCardList_addDamage] <;> exact .refl _
   | benchHeal n h => perm_count [h]
   | benchHealNone => exact .refl _
+  | @switch g a q b₁ b₂ w ha hb =>
+      cases w <;> simp only [GameState.side] at ha hb <;> perm_count [ha, hb, GameState.updSide]
+  | switchNone => exact .refl _
   | damage n h => perm_count [h]
   | drain n h hq => perm_count [h, hq]
   | shuffle h =>

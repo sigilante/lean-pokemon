@@ -298,6 +298,17 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   one of the player's own Benched Pokémon (milestone M3); no effect heals the opponent's
   Pokémon, and none heals each of a player's Benched Pokémon at once ("Heal 20 damage from
   each of your Pokémon" is not expressible exactly);
+* switching by effect (`Effect.switch`, milestone M3): the player's own Active Pokémon with one of
+  their Benched Pokémon (Switch), or the opponent's ("gust": Boss's Orders, or the opponent's own
+  choice; the nondeterministic choice covers whoever chooses); the Pokémon that goes to the Bench
+  is cured of its Special Conditions and Poison strength (rulebook 2023 pp. 12, 16). The
+  rulebook also ends "any effects from attacks" on it; the model's lingering effects belong to a
+  player, not to a Pokémon, so there is nothing more to end (per-Pokémon effects are milestone
+  M7). With no Benched Pokémon a switch does nothing. A switch that the rulebook makes a choice
+  of a player other than the one the model lets choose is still in the relation;
+* Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
+  Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
+  Underdepths, S8 L2) wait for the Stadium milestone (M5);
 * Stadium and Tool cards occupy state but have no move (survey S8 B9, B10: milestone M5): the
   Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
   as the rulebook has it, but it only holds a card of the start state; so the rules that come

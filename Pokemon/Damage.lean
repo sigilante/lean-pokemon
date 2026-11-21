@@ -56,15 +56,16 @@ def Store.cap (k : Nat) (t : Store) : Store :=
   ⟨t.now.cap k, t.next.cap k, t.after.cap k, t.always.cap k⟩
 
 /-- Clamp the player's Active Pokémon by `co`, the opponent's by `cp`, every Benched Pokémon of
-both players by `cb`, and both players' damage bonuses and reductions at `k`. Every other
+the player to move by `cbo` and of the opponent by `cbp`, and both players' damage bonuses and
+reductions at `k`. Every other
 component is unchanged. (Before milestone M3 the Benches were not clamped: no Benched Pokémon
 could be damaged, and every Benched Pokémon was below its HP.) -/
-def GameState.clampAt (co cp cb : Cap) (k : Nat) (g : GameState) : GameState :=
+def GameState.clampAt (co cp cbo cbp : Cap) (k : Nat) (g : GameState) : GameState :=
   { g with cur := { g.cur with active := g.cur.active.map (InPlay.clampWith co),
-                               bench := g.cur.bench.map (InPlay.clampWith cb),
+                               bench := g.cur.bench.map (InPlay.clampWith cbo),
                                mods := g.cur.mods.cap k },
            opp := { g.opp with active := g.opp.active.map (InPlay.clampWith cp),
-                               bench := g.opp.bench.map (InPlay.clampWith cb),
+                               bench := g.opp.bench.map (InPlay.clampWith cbp),
                                mods := g.opp.mods.cap k } }
 
 /-- The clamp at move boundaries: damage and Poison strength on every Pokémon in play (both
@@ -75,13 +76,16 @@ the damage cap because Resistance subtracts a card constant after the bonus is a
 (`dealtBy_cap`); with the stores capped at `k` itself the kernel would not be a simulation (a
 bonus of `k` and of `k + 1` against Resistance 3 do `k - 2` and `k - 1` damage from base damage
 1). Weakness doubles, which can only raise the damage, and needs no larger cap. -/
-def GameState.clamp (k : Nat) (g : GameState) : GameState := g.clampAt .hp .hp .hp (2 * k)
+def GameState.clamp (k : Nat) (g : GameState) : GameState := g.clampAt .hp .hp .hp .hp (2 * k)
 
-/-- The relation used inside an attack's effect: the player's own Active Pokémon's damage exact,
-the opponent's capped at `k`, the damage on every Benched Pokémon exact (Poison strength capped
-at HP throughout), bonuses and reductions capped at `2 * k`. -/
+/-- The relation used inside an attack's effect: the damage on the player's own Pokémon (Active
+and Benched) exact, on the opponent's Pokémon (Active and Benched) capped at `k` (Poison strength
+capped at HP throughout), bonuses and reductions capped at `2 * k`. The opponent's Bench is
+capped like the opponent's Active Pokémon because an effect can switch the two (`Effect.switch`,
+milestone M3), and no effect reads the damage on the opponent's Benched Pokémon except to add
+damage counters to it. -/
 def GameState.rclamp (k : Nat) (g : GameState) : GameState :=
-  g.clampAt .exact (.upto k) .exact (2 * k)
+  g.clampAt .exact (.upto k) .exact (.upto k) (2 * k)
 
 /-! ## Turn boundaries -/
 
@@ -479,24 +483,24 @@ theorem Store.flags_of_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
 
 /-- Two states with the same `clampAt co cp cb k` differ at most in the Pokémon in play, as
 `Agree` allows, and in the damage bonuses and reductions above `k`. -/
-theorem GameState.clamp_inv {co cp cb : Cap} {k : Nat} {g₁ g₂ : GameState}
-    (h : g₁.clampAt co cp cb k = g₂.clampAt co cp cb k) :
+theorem GameState.clamp_inv {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
+    (h : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k) :
     ∃ c₂ a₂ m₁ m₂ e₁ e₂, g₂ = { g₁ with
         cur := { g₁.cur with active := c₂, bench := e₁, mods := m₁ },
         opp := { g₁.opp with active := a₂, bench := e₂, mods := m₂ } } ∧
       c₂.map (InPlay.clampWith co) = g₁.cur.active.map (InPlay.clampWith co) ∧
       a₂.map (InPlay.clampWith cp) = g₁.opp.active.map (InPlay.clampWith cp) ∧
       m₁.cap k = g₁.cur.mods.cap k ∧ m₂.cap k = g₁.opp.mods.cap k ∧
-      e₁.map (InPlay.clampWith cb) = g₁.cur.bench.map (InPlay.clampWith cb) ∧
-      e₂.map (InPlay.clampWith cb) = g₁.opp.bench.map (InPlay.clampWith cb) := by
+      e₁.map (InPlay.clampWith cbo) = g₁.cur.bench.map (InPlay.clampWith cbo) ∧
+      e₂.map (InPlay.clampWith cbp) = g₁.opp.bench.map (InPlay.clampWith cbp) := by
   refine ⟨g₂.cur.active, g₂.opp.active, g₂.cur.mods, g₂.opp.mods, g₂.cur.bench, g₂.opp.bench,
     ?_, (congrArg (fun g => g.cur.active) h).symm, (congrArg (fun g => g.opp.active) h).symm,
     (congrArg (fun g => g.cur.mods) h).symm, (congrArg (fun g => g.opp.mods) h).symm,
     (congrArg (fun g => g.cur.bench) h).symm, (congrArg (fun g => g.opp.bench) h).symm⟩
-  have e : g₂ = { g₂.clampAt co cp cb k with
-      cur := { (g₂.clampAt co cp cb k).cur with
+  have e : g₂ = { g₂.clampAt co cp cbo cbp k with
+      cur := { (g₂.clampAt co cp cbo cbp k).cur with
         active := g₂.cur.active, bench := g₂.cur.bench, mods := g₂.cur.mods },
-      opp := { (g₂.clampAt co cp cb k).opp with
+      opp := { (g₂.clampAt co cp cbo cbp k).opp with
         active := g₂.opp.active, bench := g₂.opp.bench, mods := g₂.opp.mods } } :=
     rfl
   refine e.trans ?_
@@ -570,6 +574,15 @@ theorem bench_map_comm {c : Cap} {U : InPlay → InPlay}
     (e.map U).map (InPlay.clampWith c) = (b.map U).map (InPlay.clampWith c) := by
   have hc : InPlay.clampWith c ∘ U = U ∘ InPlay.clampWith c := funext hU
   rw [List.map_map, List.map_map, hc, ← List.map_map, ← List.map_map, h]
+
+/-- An update that preserves agreement keeps two agreeing Benches agreeing. -/
+theorem bench_map_agree {c : Cap} {U : InPlay → InPlay}
+    (hU : ∀ x y, InPlay.Agree c y x → InPlay.Agree c (U y) (U x)) {b e : List InPlay}
+    (h : e.map (InPlay.clampWith c) = b.map (InPlay.clampWith c)) :
+    (e.map U).map (InPlay.clampWith c) = (b.map U).map (InPlay.clampWith c) := by
+  rw [List.map_map, List.map_map]
+  exact map_transfer h fun x _ y hy =>
+    InPlay.clamp_of_agree (hU x y (InPlay.agree_of_clamp hy))
 
 theorem InPlay.clampWith_unfresh (c : Cap) (x : InPlay) :
     InPlay.clampWith c x.unfresh = (InPlay.clampWith c x).unfresh := by
@@ -691,15 +704,25 @@ theorem GameState.rclamp_of_clamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.cl
     map_exact_of_hp hc₂ fun p hp => hk p (Or.inl hp),
     map_recap (c := .upto k) (map_exact_of_hp ha₂ fun p hp => hk p (Or.inr (Or.inr (Or.inl hp)))),
     bench_exact_of_hp he₁ fun p hp => hk p (Or.inr (Or.inl hp)),
-    bench_exact_of_hp he₂ fun p hp => hk p (Or.inr (Or.inr (Or.inr hp)))]
+    bench_recap (c := .upto k) (bench_exact_of_hp he₂ fun p hp => hk p (Or.inr (Or.inr (Or.inr hp))))]
 
-/-- Equal `rclamp k` gives equal `clamp k` when the opponent's Active Pokémon has HP at most
-`k`. -/
+/-- On a Bench whose Pokémon have HP at most `k`, agreement capped at `k` gives agreement at
+HP. -/
+theorem bench_hp_of_upto {k : Nat} {b e : List InPlay}
+    (h : e.map (InPlay.clampWith (.upto k)) = b.map (InPlay.clampWith (.upto k)))
+    (hk : ∀ p ∈ b, p.top.hp ≤ k) :
+    e.map (InPlay.clampWith .hp) = b.map (InPlay.clampWith .hp) :=
+  map_transfer h fun x hx _ hy =>
+    InPlay.clamp_of_agree ((InPlay.agree_of_clamp hy).hp_of_upto (hk x hx))
+
+/-- Equal `rclamp k` gives equal `clamp k` when the opponent's Pokémon (Active and Benched) have
+HP at most `k`. (Milestone M3 added the Bench to the hypothesis.) -/
 theorem GameState.clamp_of_rclamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.rclamp k = g₂.rclamp k)
-    (hk : ∀ p, g₁.opp.active = some p → p.top.hp ≤ k) : g₁.clamp k = g₂.clamp k := by
+    (hk : ∀ p, g₁.opp.active = some p → p.top.hp ≤ k) (hb : ∀ p ∈ g₁.opp.bench, p.top.hp ≤ k) :
+    g₁.clamp k = g₂.clamp k := by
   obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv h
   simp only [GameState.clamp, GameState.clampAt, hm₁, hm₂, map_recap (c := .hp) hc₂,
-    map_hp_of_upto ha₂ hk, bench_recap (c := .hp) he₁, bench_recap (c := .hp) he₂]
+    map_hp_of_upto ha₂ hk, bench_recap (c := .hp) he₁, bench_hp_of_upto he₂ hb]
 
 theorem GameState.damageBounded_of_clamp {k : Nat} {g₁ g₂ : GameState}
     (h : g₁.clamp k = g₂.clamp k) (hk : DamageBounded g₁) : DamageBounded g₂ := by

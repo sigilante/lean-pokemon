@@ -521,6 +521,40 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       exact ⟨_, .benchHeal n rfl, by
         simp only [GameState.xrclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append, List.map_cons, h1, h3,
           InPlay.clamp_of_agree hr']⟩
+  | @switch g a q b₁ b₂ w ha h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at ha h
+          rw [ha] at hc₂
+          obtain ⟨a', rfl, hqa⟩ := agree_of_map hc₂
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
+          exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, ha₂, he₂, Option.map_some,
+              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+      | opp =>
+          simp only [GameState.side] at ha h
+          rw [ha] at ha₂
+          obtain ⟨a', rfl, hqa⟩ := agree_of_map ha₂
+          obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
+          exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
+            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, he₁, Option.map_some,
+              List.map_append, List.map_cons, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+  | switchNone w h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₁
+          subst he₁
+          exact ⟨_, .switchNone .own rfl, hc⟩
+      | opp =>
+          simp only [GameState.side] at h
+          rw [h, List.map_nil, List.map_eq_nil_iff] at he₂
+          subst he₂
+          exact ⟨_, .switchNone .opp rfl, hc⟩
   | benchHealNone n h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc

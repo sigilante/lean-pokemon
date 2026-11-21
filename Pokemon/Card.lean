@@ -315,6 +315,13 @@ inductive Effect where
   the effect resolves ("Heal 30 damage from 1 of your Benched Pokémon"); nothing if the player has
   no Benched Pokémon -/
   | benchHeal (n : Nat)
+  /-- the `w` player's Active Pokémon switches with one of their Benched Pokémon, chosen when the
+  effect resolves (`own`: "Switch your Active Pokémon with 1 of your Benched Pokémon", Switch;
+  `opp`: "Switch in 1 of your opponent's Benched Pokémon to the Active Spot", Boss's Orders, or
+  "your opponent switches their Active Pokémon with 1 of their Benched Pokémon"; the relation
+  covers whoever chooses); nothing if that player has no Benched Pokémon. The Pokémon that goes
+  to the Bench recovers from all Special Conditions (rulebook 2023 p. 12, p. 16). Milestone M3 -/
+  | switch (w : Whose)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -385,7 +392,8 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
-  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _ => rfl
+  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
+  | .switch _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

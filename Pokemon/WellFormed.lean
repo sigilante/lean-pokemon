@@ -19,12 +19,38 @@ namespace Pokemon
 /-- A Pokémon with its markers and damage counters removed. -/
 def InPlay.bare (p : InPlay) : InPlay := { p with marks := Marks.empty, damage := 0 }
 
-/-- What resolving an effect never changes: the Benches except for markers and damage counters
-(since milestone M3 effects damage and heal Benched Pokémon), the Prizes, the winner, who is
-first, and the phase of the turn. -/
+/-- Replacing one Benched Pokémon by a `Benched` one keeps the Bench `Benched`. -/
+theorem benched_update {b b₁ b₂ : List InPlay} {q x : InPlay} (hb : b = b₁ ++ q :: b₂)
+    (hw : ∀ p ∈ b, Benched p) (hx : Benched x) : ∀ p ∈ b₁ ++ x :: b₂, Benched p := by
+  intro p hp
+  rcases List.mem_append.1 hp with hp | hp
+  · exact hw p (by rw [hb]; exact List.mem_append_left _ hp)
+  · cases hp with
+    | head => exact hx
+    | tail _ hp => exact hw p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
+
+/-- Every Pokémon on a Bench is `Benched`. -/
+def BenchOk (b : List InPlay) : Prop := ∀ p ∈ b, Benched p
+
+/-- A Pokémon with the Special Conditions and Poison strength of a `Benched` one is `Benched`. -/
+theorem Benched.of_eq {p q : InPlay} (h : Benched q) (h1 : p.rot = q.rot)
+    (h2 : p.poisoned = q.poisoned) (h3 : p.burned = q.burned) (h4 : p.poisonUp = q.poisonUp) :
+    Benched p :=
+  ⟨h1 ▸ h.1, h2 ▸ h.2.1, h3 ▸ h.2.2.1, h4 ▸ h.2.2.2⟩
+
+/-- An update that keeps Special Conditions and Poison strength keeps a Bench `BenchOk`. -/
+theorem BenchOk.map {b : List InPlay} {U : InPlay → InPlay} (hb : BenchOk b)
+    (hU : ∀ q, Benched q → Benched (U q)) : BenchOk (b.map U) := by
+  intro p hp
+  obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
+  exact hU q (hb q hq)
+
+/-- What resolving an effect never changes: that every Benched Pokémon is `Benched` (effects
+change Benched Pokémon only in markers and damage counters, and a Pokémon that a switch puts on
+the Bench is cured, milestone M3), the Prizes, the winner, who is first, and the phase of the
+turn. (Before milestone M3 the Benches themselves were unchanged except for markers.) -/
 def Run.Frame (g g' : GameState) : Prop :=
-  g'.cur.bench.map InPlay.bare = g.cur.bench.map InPlay.bare ∧
-    g'.opp.bench.map InPlay.bare = g.opp.bench.map InPlay.bare ∧
+  (BenchOk g.cur.bench → BenchOk g'.cur.bench) ∧ (BenchOk g.opp.bench → BenchOk g'.opp.bench) ∧
     g'.cur.prizes = g.cur.prizes ∧ g'.opp.prizes = g.opp.prizes ∧
     g'.winner = g.winner ∧ g'.curIsFirst = g.curIsFirst ∧ g'.between = g.between
 
@@ -35,38 +61,76 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
   | seq _ _ ih₁ ih₂ =>
       obtain ⟨a1, a2, a3, a4, a5, a6, a7⟩ := ih₁
       obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := ih₂
-      exact ⟨b1.trans a1, b2.trans a2, b3.trans a3, b4.trans a4, b5.trans a5, b6.trans a6,
-        b7.trans a7⟩
+      exact ⟨fun h => b1 (a1 h), fun h => b2 (a2 h), b3.trans a3, b4.trans a4, b5.trans a5,
+        b6.trans a6, b7.trans a7⟩
   | choiceL _ ih => exact ih
   | choiceR _ ih => exact ih
   | iterCons _ _ ih₁ ih₂ =>
       obtain ⟨a1, a2, a3, a4, a5, a6, a7⟩ := ih₁
       obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := ih₂
-      exact ⟨b1.trans a1, b2.trans a2, b3.trans a3, b4.trans a4, b5.trans a5, b6.trans a6,
-        b7.trans a7⟩
-  | @touchActive e w f g p he h => cases w <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      exact ⟨fun h => b1 (a1 h), fun h => b2 (a2 h), b3.trans a3, b4.trans a4, b5.trans a5,
+        b6.trans a6, b7.trans a7⟩
+  | @touchActive e w f g p he h => cases w <;> exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
   | @touchBench e w f g q b₁ b₂ he h =>
       cases w <;> simp only [GameState.side] at h <;>
-        exact ⟨by simp [GameState.updSide, h, InPlay.bare, InPlay.setMarks],
-          by simp [GameState.updSide, h, InPlay.bare, InPlay.setMarks], rfl, rfl, rfl, rfl,
-          rfl⟩
+        exact ⟨fun hb => by
+            first
+            | exact benched_update h hb
+                ((hb q (by rw [h]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl)
+            | exact hb,
+          fun hb => by
+            first
+            | exact benched_update h hb
+                ((hb q (by rw [h]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl)
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | unmark w m g =>
       cases w <;>
-        exact ⟨by simp [GameState.updSide, PlayerState.unmark, InPlay.bare, InPlay.setMarks],
-          by simp [GameState.updSide, PlayerState.unmark, InPlay.bare, InPlay.setMarks],
-          rfl, rfl, rfl, rfl, rfl⟩
-  | linger w s m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+        exact ⟨fun hb => by
+            first
+            | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
+            | exact hb,
+          fun hb => by
+            first
+            | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
+  | linger w s m g => cases w <;> exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
   | @benchCounters g q b₁ b₂ w n h =>
       cases w <;> simp only [GameState.side] at h <;>
-        exact ⟨by simp [GameState.updSide, h, InPlay.bare],
-          by simp [GameState.updSide, h, InPlay.bare], rfl, rfl, rfl, rfl, rfl⟩
+        exact ⟨fun hb => by
+            first
+            | exact benched_update h hb
+                ((hb q (by rw [h]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl)
+            | exact hb,
+          fun hb => by
+            first
+            | exact benched_update h hb
+                ((hb q (by rw [h]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl)
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | spreadCounters w n g =>
       cases w <;>
-        exact ⟨by simp [GameState.updSide, InPlay.bare, InPlay.addDamage],
-          by simp [GameState.updSide, InPlay.bare, InPlay.addDamage], rfl, rfl, rfl, rfl, rfl⟩
-  | benchHeal n h =>
-      exact ⟨by simp [h, InPlay.bare], rfl, rfl, rfl, rfl, rfl, rfl⟩
-  | _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+        exact ⟨fun hb => by
+            first
+            | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
+            | exact hb,
+          fun hb => by
+            first
+            | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
+  | @benchHeal g q b₁ b₂ n h =>
+      exact ⟨fun hb => benched_update h hb
+          ((hb q (by rw [h]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl),
+        id, rfl, rfl, rfl, rfl, rfl⟩
+  | @switch g a q b₁ b₂ w ha h =>
+      cases w <;> simp only [GameState.side] at h <;>
+        exact ⟨fun hb => by
+            first
+            | exact benched_update h hb ⟨rfl, rfl, rfl, rfl⟩
+            | exact hb,
+          fun hb => by
+            first
+            | exact benched_update h hb ⟨rfl, rfl, rfl, rfl⟩
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
+  | _ => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/
 theorem benched_of_map {b b' : List InPlay}
@@ -89,10 +153,8 @@ theorem benched_of_map {b b' : List InPlay}
 theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Frame g g') :
     WellFormed g' := by
   obtain ⟨f1, f2, f3, f4, f5, _, _⟩ := hf
-  refine ⟨fun hn => ?_, ?_, ?_⟩
-  · rw [f3, f4]; exact hw.1 (f5 ▸ hn)
-  · exact benched_of_map f1 hw.2.1
-  · exact benched_of_map f2 hw.2.2
+  refine ⟨fun hn => ?_, f1 hw.2.1, f2 hw.2.2⟩
+  rw [f3, f4]; exact hw.1 (f5 ▸ hn)
 
 theorem mem_append_cons_of_mem {α : Type} {x : α} {b₁ b₂ : List α} (y : α)
     (h : x ∈ b₁ ++ b₂) : x ∈ b₁ ++ y :: b₂ := by
@@ -115,16 +177,6 @@ theorem BenchChar.benched {b b' : List InPlay} (h : BenchChar b b') (hb : ∀ p 
               have h := hb _ (.head _)
               exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
       | tail _ hp => exact ih (fun q hq => hb q (.tail _ hq)) p hp
-
-/-- Replacing one Benched Pokémon by a `Benched` one keeps the Bench `Benched`. -/
-theorem benched_update {b b₁ b₂ : List InPlay} {q x : InPlay} (hb : b = b₁ ++ q :: b₂)
-    (hw : ∀ p ∈ b, Benched p) (hx : Benched x) : ∀ p ∈ b₁ ++ x :: b₂, Benched p := by
-  intro p hp
-  rcases List.mem_append.1 hp with hp | hp
-  · exact hw p (by rw [hb]; exact List.mem_append_left _ hp)
-  · cases hp with
-    | head => exact hx
-    | tail _ hp => exact hw p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
 
 /-- A player who has not taken their last Prize card has Prize cards left. -/
 theorem prizes_of_not_out {n : Nat} {s : PlayerState} (h : s.prizesOut n = false) :
