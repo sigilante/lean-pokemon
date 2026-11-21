@@ -20,7 +20,11 @@ formalized. These are theorems about the model, not yet about the printed game: 
 only decks whose card text is expressible in `Pokemon.Effect`, and the model's departures
 from the rulebook are listed at the top of `Pokemon/Rules.lean`.
 
-Build: `lake build` (core Lean only, no dependencies). `Pokemon/Audit.lean` prints the axioms
-of every theorem; CI fails unless they are a subset of `propext`, `Quot.sound`.
+Build: `lake build` (core Lean only, no dependencies). `Pokemon/Audit.lean` runs
+`#audit_namespace Pokemon` (defined in `Pokemon/AuditCmd.lean`), which checks every theorem
+declared in the project, private and generated ones included, and fails the build if any
+depends on an axiom other than `propext` and `Quot.sound` (so `sorry` fails it too) or if a
+file under `Pokemon/` is not imported. `scripts/audit.sh build.log` then fails CI unless the
+log shows the gate's success line and no error or `sorry`.
 
 Licence: MIT (see `LICENSE`).
