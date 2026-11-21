@@ -479,7 +479,7 @@ theorem Does.ite_eq {w : Whose} {v : Nat} {a b : Effect} {kc ko kc' ko' : Pk}
     Does (.ite (.exactly w v) a b) kc ko kc' ko' := by
   intro g hs
   obtain ⟨p, hp, hd⟩ := hs.activeOf w
-  have ht : (Test.exactly w v).eval p = true := by
+  have ht : (Test.exactly w v).eval g p = true := by
     simp only [Test.eval, hd, hv]; exact Nat.beq_refl v
   obtain ⟨⟨g', r⟩, h'⟩ := h g hs
   refine ⟨⟨g', .iteT (p := p) hp ht r⟩, fun g' hr => ?_⟩
@@ -497,7 +497,7 @@ theorem Does.ite_ne {w : Whose} {v : Nat} {a b : Effect} {kc ko kc' ko' : Pk}
     Does (.ite (.exactly w v) a b) kc ko kc' ko' := by
   intro g hs
   obtain ⟨p, hp, hd⟩ := hs.activeOf w
-  have ht : (Test.exactly w v).eval p = false := by
+  have ht : (Test.exactly w v).eval g p = false := by
     simp only [Test.eval, hd]; exact beq_false hv
   obtain ⟨⟨g', r⟩, h'⟩ := h g hs
   refine ⟨⟨g', .iteF (p := p) hp ht r⟩, fun g' hr => ?_⟩

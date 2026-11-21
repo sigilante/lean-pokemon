@@ -65,9 +65,12 @@ inductive Amt.Val : Amt → GameState → Nat → Prop where
   | manyNil (a : Amt) (g : GameState) : Amt.Val (.many a) g 0
   | manyCons {a : Amt} {g : GameState} {x y : Nat} :
       Amt.Val a g x → Amt.Val (.many a) g y → Amt.Val (.many a) g (x + y)
+  | count (c : Count) (k : Nat) (g : GameState) : Amt.Val (.count c k) g (k * c.val g)
 
-/-- An amount evaluates the same in a state whose Active Pokémon have the same damage. -/
+/-- An amount evaluates the same in a state whose Active Pokémon have the same damage and whose
+counts are the same. -/
 theorem Amt.Val.congr {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val g₁ n)
+    (hv : ∀ c : Count, c.val g₂ = c.val g₁)
     (hc : ∀ w p, g₁.activeOf w = some p → ∃ q, g₂.activeOf w = some q ∧ q.damage = p.damage) :
     a.Val g₂ n := by
   induction h with
@@ -75,10 +78,11 @@ theorem Amt.Val.congr {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val g�
   | per k h =>
       obtain ⟨q, hq, hd⟩ := hc _ _ h
       rw [← hd]; exact .per k hq
-  | add _ _ ih₁ ih₂ => exact .add (ih₁ hc) (ih₂ hc)
-  | sub _ _ ih₁ ih₂ => exact .sub (ih₁ hc) (ih₂ hc)
+  | add _ _ ih₁ ih₂ => exact .add (ih₁ hv hc) (ih₂ hv hc)
+  | sub _ _ ih₁ ih₂ => exact .sub (ih₁ hv hc) (ih₂ hv hc)
   | manyNil a g => exact .manyNil a g₂
-  | manyCons _ _ ih₁ ih₂ => exact .manyCons (ih₁ hc) (ih₂ hc)
+  | manyCons _ _ ih₁ ih₂ => exact .manyCons (ih₁ hv hc) (ih₂ hv hc)
+  | count c k g => rw [← hv c]; exact .count c k g₂
 
 /-- An amount that has a value in one state has one in every state with Active Pokémon where
 the first has them (the values may differ). -/
@@ -99,6 +103,7 @@ theorem Amt.Val.transfer {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val 
       exact ⟨_, .sub hx hy⟩
   | manyNil a g => exact ⟨0, .manyNil a g₂⟩
   | manyCons _ _ _ _ => exact ⟨0, .manyNil _ g₂⟩
+  | count c k g => exact ⟨_, .count c k g₂⟩
 
 /-- A printed number evaluates to itself. -/
 theorem Amt.Val.const_inv {n m : Nat} {g : GameState} (h : (Amt.const n).Val g m) : m = n := by
@@ -258,10 +263,10 @@ inductive Run : Effect → GameState → GameState → Prop where
   | handToBottom {g : GameState} {hs : List Card} (h : hs.Perm g.cur.hand) :
       Run .handToBottom g { g with cur := { g.cur with deck := g.cur.deck ++ hs, hand := [] } }
   | iteT {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay}
-      (h : g.activeOf t.whose = some p) (ht : t.eval p = true) :
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = true) :
       Run a g g' → Run (.ite t a b) g g'
   | iteF {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay}
-      (h : g.activeOf t.whose = some p) (ht : t.eval p = false) :
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = false) :
       Run b g g' → Run (.ite t a b) g g'
   | scale {g : GameState} {p q : InPlay} (w : Whose) (k : Nat)
       (hs : g.activeOf w = some p) (h : g.opp.active = some q) :

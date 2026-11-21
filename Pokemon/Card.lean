@@ -211,41 +211,6 @@ inductive Mod where
   | lock (l : Lock)
   deriving DecidableEq
 
-/-- A test an effect can make on one Active Pokémon. -/
-inductive Test where
-  /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
-  "if it has no damage counters" is the `else` branch of that test) -/
-  | atLeast (w : Whose) (n : Nat)
-  /-- it has exactly `n` damage counters (Mega Absol ex, me1-86) -/
-  | exactly (w : Whose) (n : Nat)
-  /-- it is affected by the Special Condition `c` -/
-  | cond (w : Whose) (c : Condition)
-  /-- it has the marker `m` ("any Pokémon that has any Imprison markers on it", "that has any
-  Shock-wave markers on it", "with a Lightning Rod marker on it") -/
-  | marked (w : Whose) (m : Marker)
-  /-- its type is `t`: the type of its top card, or the type its Coloring counter set -/
-  | isType (w : Whose) (t : EType)
-  deriving DecidableEq
-
-/-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
-as the attack text will tell you" when "an ×, –, or + is printed next to it" (rulebook 2023
-p. 20, step 1), before any modifier. It is evaluated once, when the attack's damage is placed
-(`Amt.Val`, `Effect.damage`). -/
-inductive Amt where
-  /-- a printed number -/
-  | const (n : Nat)
-  /-- `k` for each damage counter on the `w` Active Pokémon ("20 damage plus 10 more for each
-  damage counter on your opponent's Active Pokémon" is `add (const 2) (per opp 1)`, Jynx
-  base1-31) -/
-  | per (w : Whose) (k : Nat)
-  | add (a b : Amt)
-  /-- `a` less `b`, at least 0 ("10 less damage for each damage counter on this Pokémon") -/
-  | sub (a b : Amt)
-  /-- the sum of any number of values of `a`: "Flip a coin until you get tails. This attack does
-  30 damage for each heads" is `many (const 3)` -/
-  | many (a : Amt)
-  deriving DecidableEq
-
 /-! ## Card filters and zone moves (milestone MV) -/
 
 inductive TrainerKind where
@@ -321,6 +286,66 @@ inductive Qty where
 Pokémon chosen when the effect resolves. "1 of your Pokémon" is a `choice` of the two. -/
 inductive Spot where
   | active | bench
+  deriving DecidableEq
+
+/-- A zone of one player that a count reads (milestone MV). -/
+inductive Pile where
+  | hand | deck | discard
+  deriving DecidableEq
+
+/-- A number read from the state (milestone MV), for amounts ("30 damage for each card in your
+hand") and tests ("if you have 3 or more Benched Pokémon"): the cards passing a filter in one of
+the `w` player's hand, deck or discard pile; the `w` player's Prize cards left; the `w` player's
+Benched Pokémon whose card passes a filter; the Energy cards passing a filter attached to the `w`
+player's Active Pokémon, or to all of the `w` player's Pokémon in play. No count reads damage, so
+both clamps keep every count exact (`Count.val_clampAt`, `Count.val_xclampAt`). -/
+inductive Count where
+  | pile (w : Whose) (z : Pile) (f : Filter)
+  | prizes (w : Whose)
+  | bench (w : Whose) (f : Filter)
+  | energy (w : Whose) (f : Filter)
+  | energyAll (w : Whose) (f : Filter)
+  deriving DecidableEq
+
+/-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. -/
+inductive Test where
+  /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
+  "if it has no damage counters" is the `else` branch of that test) -/
+  | atLeast (w : Whose) (n : Nat)
+  /-- it has exactly `n` damage counters (Mega Absol ex, me1-86) -/
+  | exactly (w : Whose) (n : Nat)
+  /-- it is affected by the Special Condition `c` -/
+  | cond (w : Whose) (c : Condition)
+  /-- it has the marker `m` ("any Pokémon that has any Imprison markers on it", "that has any
+  Shock-wave markers on it", "with a Lightning Rod marker on it") -/
+  | marked (w : Whose) (m : Marker)
+  /-- its type is `t`: the type of its top card, or the type its Coloring counter set -/
+  | isType (w : Whose) (t : EType)
+  /-- the count is at least `n` (milestone MV; "if you have 3 or more cards in your hand"); it reads
+  no Active Pokémon, and like every test it is made while the player has an Active Pokémon -/
+  | countGe (c : Count) (n : Nat)
+  deriving DecidableEq
+
+/-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
+as the attack text will tell you" when "an ×, –, or + is printed next to it" (rulebook 2023
+p. 20, step 1), before any modifier. It is evaluated once, when the attack's damage is placed
+(`Amt.Val`, `Effect.damage`). -/
+inductive Amt where
+  /-- a printed number -/
+  | const (n : Nat)
+  /-- `k` for each damage counter on the `w` Active Pokémon ("20 damage plus 10 more for each
+  damage counter on your opponent's Active Pokémon" is `add (const 2) (per opp 1)`, Jynx
+  base1-31) -/
+  | per (w : Whose) (k : Nat)
+  | add (a b : Amt)
+  /-- `a` less `b`, at least 0 ("10 less damage for each damage counter on this Pokémon") -/
+  | sub (a b : Amt)
+  /-- the sum of any number of values of `a`: "Flip a coin until you get tails. This attack does
+  30 damage for each heads" is `many (const 3)` -/
+  | many (a : Amt)
+  /-- `k` for each unit of the count `c` ("30 damage for each Energy attached to this Pokémon" is
+  `count (.energy .own .energy) 3`; milestone MV) -/
+  | count (c : Count) (k : Nat)
   deriving DecidableEq
 
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
@@ -498,9 +523,11 @@ def Effect.oneHit : Effect → Bool
   | .iter a => a.hitFree
   | _ => true
 
-/-- The test reads the player's own Active Pokémon. -/
+/-- The test reads the player's own Active Pokémon (a count of the Energy attached to it
+included). -/
 def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
+  | .countGe (.energy .own _) _ => true
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,

@@ -99,6 +99,30 @@ theorem GameState.xclamp_inv {co cp cb : Cap} {g₁ g₂ : GameState}
   rw [← h]
   rfl
 
+/-- The clamp with exact stores keeps every count (milestone MV). -/
+theorem Count.val_xclampAt (c : Count) (co cp cb : Cap) (g : GameState) :
+    c.val (g.xclampAt co cp cb) = c.val g := by
+  have t1 : ∀ (cb : Cap) (b : List InPlay),
+      (b.map (InPlay.clampWith cb)).map InPlay.top = b.map InPlay.top := fun cb b => by
+    rw [List.map_map]; rfl
+  have t2 : ∀ (cb : Cap) (b : List InPlay),
+      (b.map (InPlay.clampWith cb)).map InPlay.energy = b.map InPlay.energy := fun cb b => by
+    rw [List.map_map]; rfl
+  have t3 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith cb)).map InPlay.energy = o.map InPlay.energy := fun cb o => by
+    cases o <;> rfl
+  cases c with
+  | pile w z f => cases w <;> cases z <;> rfl
+  | prizes w => cases w <;> rfl
+  | bench w f => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t1]
+  | energy w f => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t3]
+  | energyAll w f =>
+      cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t2, t3]
+
+theorem GameState.count_of_xclampAt {co cp cb : Cap} {g₁ g₂ : GameState}
+    (h : g₁.xclampAt co cp cb = g₂.xclampAt co cp cb) (c : Count) : c.val g₂ = c.val g₁ := by
+  rw [← c.val_xclampAt co cp cb g₂, ← h, c.val_xclampAt]
+
 /-- The clamp with exact stores determines the stores. -/
 theorem GameState.mods_of_xclamp {co cp cb : Cap} {g₁ g₂ : GameState}
     (h : g₁.xclampAt co cp cb = g₂.xclampAt co cp cb) :
@@ -130,7 +154,7 @@ theorem GameState.xactiveOf_agree {k : Nat} {g₁ g₂ : GameState}
 /-- An amount of damage evaluates the same in states with the same `xrclamp`. -/
 theorem Amt.Val.of_xrclamp {a : Amt} {g₁ g₂ : GameState} {n : Nat} (hv : a.Val g₁ n)
     (h : g₁.xrclamp = g₂.xrclamp) : a.Val g₂ n :=
-  hv.congr fun _ _ hp => by
+  hv.congr (GameState.count_of_xclampAt h) fun _ _ hp => by
     obtain ⟨q, hq, ha⟩ := GameState.xactiveOf_exact h hp
     exact ⟨q, hq, ha.damage_eq⟩
 
@@ -341,13 +365,13 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       simp only [Effect.tmax] at hb
       obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) hc h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hc
-      exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+      exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ (GameState.count_of_xclampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | iteF h ht' _ ih =>
       intro hb g₂ hc
       simp only [Effect.tmax] at hb
       obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) hc h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hc
-      exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+      exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ (GameState.count_of_xclampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | @scale g p q w k' hs h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -684,7 +708,7 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
       obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) (GameState.xrclamp_of_xclamp hc hs'.1) h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hhp hc hs
       exact ⟨g₂', .iteT (by rw [GameState.winner_of_xclamp hc]; exact hn) hq
-        (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+        (by rw [Test.eval_agree _ (GameState.count_of_xclampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | iteF hn h ht' _ ih =>
       intro hb hhp g₂ hc hs
       have hs' : Settled _ := hs.resolve_right (fun h => h hn)
@@ -692,7 +716,7 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
       obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) (GameState.xrclamp_of_xclamp hc hs'.1) h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hhp hc hs
       exact ⟨g₂', .iteF (by rw [GameState.winner_of_xclamp hc]; exact hn) hq
-        (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
+        (by rw [Test.eval_agree _ (GameState.count_of_xclampAt hc) hqa (by omega)]; exact ht') r', hc'⟩
   | seq h₁ _ ih₁ ih₂ =>
       intro hb hhp g₂ hc hs
       simp only [Effect.tmax] at hb

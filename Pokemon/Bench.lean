@@ -495,10 +495,10 @@ inductive HitAt : Effect → GameState → GameState → Prop where
   | damage (a : Amt) (g : GameState) : HitAt (.damage a) g g
   | drain (a : Amt) (g : GameState) : HitAt (.drain a) g g
   | iteT {t : Test} {a b : Effect} {g h : GameState} {p : InPlay}
-      (hp : g.activeOf t.whose = some p) (ht : t.eval p = true) :
+      (hp : g.activeOf t.whose = some p) (ht : t.eval g p = true) :
       HitAt a g h → HitAt (.ite t a b) g h
   | iteF {t : Test} {a b : Effect} {g h : GameState} {p : InPlay}
-      (hp : g.activeOf t.whose = some p) (ht : t.eval p = false) :
+      (hp : g.activeOf t.whose = some p) (ht : t.eval g p = false) :
       HitAt b g h → HitAt (.ite t a b) g h
   | seqL {a b : Effect} {g h : GameState} : HitAt a g h → HitAt (.seq a b) g h
   | seqR {a b : Effect} {g g₁ h : GameState} : Run a g g₁ → HitAt b g₁ h → HitAt (.seq a b) g h

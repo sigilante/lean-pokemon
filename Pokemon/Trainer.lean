@@ -44,10 +44,10 @@ inductive TRunG : Effect → GameState → GameState → Prop where
       (hn : g.winner = none) (hr : Run e g g₁) (hk : Resolve g₁ g₂) : TRunG e g g₂
   | stop {e : Effect} {g : GameState} (hn : g.winner ≠ none) : TRunG e g g
   | iteT {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} (hs : Settled g)
-      (hn : g.winner = none) (h : g.activeOf t.whose = some p) (ht : t.eval p = true) :
+      (hn : g.winner = none) (h : g.activeOf t.whose = some p) (ht : t.eval g p = true) :
       TRunG a g g' → TRunG (.ite t a b) g g'
   | iteF {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} (hs : Settled g)
-      (hn : g.winner = none) (h : g.activeOf t.whose = some p) (ht : t.eval p = false) :
+      (hn : g.winner = none) (h : g.activeOf t.whose = some p) (ht : t.eval g p = false) :
       TRunG b g g' → TRunG (.ite t a b) g g'
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       TRunG a g₁ g₂ → TRunG b g₂ g₃ → TRunG (.seq a b) g₁ g₃

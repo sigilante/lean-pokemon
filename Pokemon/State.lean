@@ -167,14 +167,7 @@ def Test.whose : Test → Whose
   | .cond w _ => w
   | .marked w _ => w
   | .isType w _ => w
-
-/-- The value of a test on the Active Pokémon it reads. -/
-def Test.eval : Test → InPlay → Bool
-  | .atLeast _ n, p => Nat.ble n p.damage
-  | .exactly _ n, p => Nat.beq p.damage n
-  | .cond _ c, p => p.has c
-  | .marked _ m, p => p.marks.get m
-  | .isType _ t, p => decide (p.type = t)
+  | .countGe _ _ => .own
 
 def optCards : Option InPlay → Nat
   | none => 0
@@ -418,5 +411,31 @@ def GameState.allCards (g : GameState) : List Card :=
   g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium
 
 def benchLimit : Nat := 5
+
+/-- The cards of a pile. -/
+def Pile.get : Pile → PlayerState → List Card
+  | .hand, s => s.hand
+  | .deck, s => s.deck
+  | .discard, s => s.discard
+
+/-- The value of a count in a state. -/
+def Count.val : Count → GameState → Nat
+  | .pile w z f, g => (z.get (g.side w)).countP f.eval
+  | .prizes w, g => (g.side w).prizes.length
+  | .bench w f, g => ((g.side w).bench.map InPlay.top).countP fun p => f.eval (.pokemon p)
+  | .energy w f, g => (((g.side w).active.map InPlay.energy).getD []).countP f.eval
+  | .energyAll w f, g =>
+      ((((g.side w).active.map InPlay.energy).getD []) ++
+        ((g.side w).bench.map InPlay.energy).flatten).countP f.eval
+
+/-- The value of a test in a state, on the Active Pokémon `p` it reads (a count test reads the
+state instead). -/
+def Test.eval : Test → GameState → InPlay → Bool
+  | .atLeast _ n, _, p => Nat.ble n p.damage
+  | .exactly _ n, _, p => Nat.beq p.damage n
+  | .cond _ c, _, p => p.has c
+  | .marked _ m, _, p => p.marks.get m
+  | .isType _ t, _, p => decide (p.type = t)
+  | .countGe c n, g, _ => Nat.ble n (c.val g)
 
 end Pokemon
