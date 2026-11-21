@@ -247,6 +247,29 @@ theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Fra
   refine ⟨fun hn => ?_, f1 hw.2.1, f2 hw.2.2⟩
   rw [f3, f4]; exact hw.1 (f5 ▸ hn)
 
+/-- The frame of an effect's resolution seen from the other side (milestone M8b). -/
+theorem Run.Frame.unswap {g g₁ : GameState} (h : Run.Frame g.swap g₁) : Run.Frame g g₁.swap := by
+  obtain ⟨f1, f2, f3, f4, f5, f6, f7⟩ := h
+  refine ⟨f2, f1, f4, f3, f5, ?_, f7⟩
+  show (!g₁.curIsFirst) = g.curIsFirst
+  rw [f6]; show (!!g.curIsFirst) = g.curIsFirst; rw [Bool.not_not]
+
+theorem Run.Frame.trans {g₁ g₂ g₃ : GameState} (a : Run.Frame g₁ g₂) (b : Run.Frame g₂ g₃) :
+    Run.Frame g₁ g₃ := by
+  obtain ⟨a1, a2, a3, a4, a5, a6, a7⟩ := a
+  obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := b
+  exact ⟨fun h => b1 (a1 h), fun h => b2 (a2 h), b3.trans a3, b4.trans a4, b5.trans a5,
+    b6.trans a6, b7.trans a7⟩
+
+/-- **A trigger resolution keeps the Benches as the rules leave them, the Prize cards and the
+outcome** (milestone M8b). -/
+theorem Fire.frame {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g') :
+    Run.Frame g g' := by
+  induction h with
+  | nil => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
+  | run _ hr _ ih => exact hr.frame.unswap.trans ih
+  | decline _ _ ih => exact ih
+
 theorem mem_append_cons_of_mem {α : Type} {x : α} {b₁ b₂ : List α} (y : α)
     (h : x ∈ b₁ ++ b₂) : x ∈ b₁ ++ y :: b₂ := by
   rcases List.mem_append.1 h with h | h
@@ -363,6 +386,30 @@ theorem Promote.exists_of {a : Option InPlay} {b : List InPlay}
       cases b with
       | nil => simp at h
       | cons q qs => exact ⟨_, _, .pick (b₁ := [])⟩
+
+/-- After a batch step with no outcome both Active Spots are filled (milestone M8b). -/
+theorem KOBatch.bothActive {g g₁ : GameState} (h : KOBatch g g₁) (hw : g₁.winner = none) :
+    g₁.BothActive := by
+  cases h with
+  | won _ hk => exact absurd hw hk
+  | go _ _ hc ho =>
+      have e : ∀ {a b a' b'}, Promote a b a' b' → a'.isSome = true := by
+        intro a b a' b' hp; cases hp <;> rfl
+      exact ⟨e hc, e ho⟩
+
+/-- **The triggers of a batch step can always be resolved** (milestone M8b): every batch step is
+followed by some resolution of the triggers it fires, so the batch move exists whenever the step
+does. -/
+theorem KOBatch.trigs_exist {g g₁ : GameState} (h : KOBatch g g₁) :
+    ∃ g' l, l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g' := by
+  cases hw : g₁.winner with
+  | some o =>
+      refine ⟨g₁, [], ?_, .nil _⟩
+      rw [GameState.batchTrigs_of_won (by rw [hw]; exact fun e => nomatch e)]
+  | none =>
+      obtain ⟨g', ht⟩ := Fire.exists (l := g.batchTrigs g₁)
+        (fun _ hab => GameState.batchTrigs_trigOk hab) (h.bothActive hw)
+      exact ⟨g', _, .refl _, ht⟩
 
 /-- **A batch Knock Out step exists** from every state that is not `Settled`: the check, and, if
 nobody wins, a promotion for each player with an empty Active Spot (who has a Benched Pokémon,
@@ -515,9 +562,10 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.wellFormed (hu.wellFormed hw)
   | onPlay hp _ _ _ _ _ hr => exact hr.wellFormed (hp.wellFormed hw)
-  | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame
+  | attack ha hm hc hs hn hf hbt hst hr _ _ _ _ ht =>
+      exact WellFormed.of_frame (WellFormed.of_frame hw hr.frame) ht.frame
   | attackConfused ha hm hc hs hn hf => exact hw
-  | knockOuts h => exact h.wellFormed hw
+  | knockOuts h _ ht => exact WellFormed.of_frame (h.wellFormed hw) ht.frame
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2, hcc.benched ?_⟩
       intro p hp
@@ -719,19 +767,27 @@ The step now Knocks Out every pending Pokémon at once, and the statement names 
 gives both players' Prize lists, each the old list with its top `koVal` cards dropped. When exactly
 one Pokémon is pending, one `koVal` is its Prize value and the other is 0 (`drop 0`: that list is
 unchanged), which gives the old Prize conclusions, but not the old statement, which named the
-Pokémon. The hypotheses `WellFormed g` and `g.winner = none` are
+Pokémon. Milestone M8b changed it once more: the move is the batch step `g₁` followed by the
+`koByAttack` triggers it fires (`Fire`, from `g₁` to the move's result `g'`; none before the turn's
+attack, and then `g' = g₁`); the conclusions about Prize cards, discard piles and survivors are
+about the batch step `g₁`, as before. The hypotheses `WellFormed g` and `g.winner = none` are
 no longer used (the old moves needed the taker to have a Prize card left); the statement keeps
 them. -/
 theorem Move.knockOut_of_pending {g : GameState} (_hw : WellFormed g) (_hn : g.winner = none)
     (hk : ¬ DamageBounded g) :
-    ∃ g', Move g g' ∧ KOBatch g g' ∧ 0 < g.koVal .own + g.koVal .opp ∧
-      g'.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
-      g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
-      g'.cur.discard = (g.koOf .own).discard ∧ g'.opp.discard = (g.koOf .opp).discard ∧
-      (∀ w sp x, g'.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) := by
-  obtain ⟨g', hb⟩ := KOBatch.exists_of (fun hs => hk hs.1)
+    ∃ g₁ g', Move g g' ∧ KOBatch g g₁ ∧
+      (∃ l, l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∧ (g.attacked = false → g' = g₁) ∧
+      0 < g.koVal .own + g.koVal .opp ∧
+      g₁.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
+      g₁.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
+      g₁.cur.discard = (g.koOf .own).discard ∧ g₁.opp.discard = (g.koOf .opp).discard ∧
+      (∀ w sp x, g₁.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) := by
+  obtain ⟨g₁, hb⟩ := KOBatch.exists_of (fun hs => hk hs.1)
   obtain ⟨p1, p2, d1, d2, -⟩ := hb.piles
-  refine ⟨g', .knockOuts hb, hb, ?_, ?_, ?_, d1, d2, fun w sp x hx => hb.survivor hx⟩
+  obtain ⟨g', l, hl, ht⟩ := hb.trigs_exist
+  refine ⟨g₁, g', .knockOuts hb hl ht, hb, ⟨l, hl, ht⟩,
+    fun ha => Move.eq_of_batchTrigs_nil hl ht (GameState.batchTrigs_of_not_attacked ha), ?_, ?_, ?_,
+    d1, d2, fun w sp x hx => hb.survivor hx⟩
   · apply Nat.pos_of_ne_zero
     intro h0
     have h1 : g.koVal .own = 0 := by omega
@@ -750,11 +806,13 @@ lists, discard piles and survivors of `Move.knockOut_of_pending` (statement chan
 M3 and batch-KO, see there). -/
 theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g)
     (hn : g.winner = none) (hk : ¬ DamageBounded g) :
-    ∃ g', Move g g' ∧ KOBatch g g' ∧ 0 < g.koVal .own + g.koVal .opp ∧
-      g'.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
-      g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
-      g'.cur.discard = (g.koOf .own).discard ∧ g'.opp.discard = (g.koOf .opp).discard ∧
-      (∀ w sp x, g'.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) :=
+    ∃ g₁ g', Move g g' ∧ KOBatch g g₁ ∧
+      (∃ l, l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∧ (g.attacked = false → g' = g₁) ∧
+      0 < g.koVal .own + g.koVal .opp ∧
+      g₁.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
+      g₁.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
+      g₁.cur.discard = (g.koOf .own).discard ∧ g₁.opp.discard = (g.koOf .opp).discard ∧
+      (∀ w sp x, g₁.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) :=
   Move.knockOut_of_pending (h.wellFormed h₀) hn hk
 
 /-- Whether a Knock Out is pending is decided by looking at the Pokémon in play (no choice
@@ -799,8 +857,9 @@ theorem Move.exists_move (g : GameState) : ∃ g', Move g g' := by
             match hd : g.cur.deck with
             | [] => exact ⟨_, .deckOut hbt ha hb hk hd⟩
             | c :: d => exact ⟨_, .startTurn hbt ha hb hk hd⟩
-  · obtain ⟨g', hm⟩ := KOBatch.exists_of hs
-    exact ⟨g', .knockOuts hm⟩
+  · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs
+    obtain ⟨g', l, hl, ht⟩ := hm.trigs_exist
+    exact ⟨g', .knockOuts hm hl ht⟩
 
 /-- **No deadlock.** In a well-formed state with no winner, some move is legal (`Move.exists_move`,
 which needs neither hypothesis). Since milestone batch-KO the proof uses neither hypothesis; the

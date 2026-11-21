@@ -858,6 +858,73 @@ theorem UseAt.xclamp_sim {g₁ g₁' g₂ : GameState} {x : InPlay} {sp : Spot}
         simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
           List.map_cons, h1, h3, InPlay.clamp_of_agree hr.markUsed]⟩
 
+/-! ## Triggers under the exact-store clamp (milestone M8b) -/
+
+/-- Equal `xclampAt` is equal `clampAt` (with the Bench cap on both Benches) and equal stores. -/
+theorem GameState.xclampAt_iff {K : Nat} {co cp cb : Cap} {g₁ g₂ : GameState} :
+    g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb ↔
+      g₁.clampAt co cp cb cb K = g₂.clampAt co cp cb cb K ∧ g₁.cur.mods = g₂.cur.mods ∧
+        g₁.opp.mods = g₂.opp.mods := by
+  constructor
+  · intro h
+    obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv h
+    exact ⟨by simp only [GameState.clampAt, hc₂, ha₂, he₁, he₂], rfl, rfl⟩
+  · rintro ⟨h, h1, h2⟩
+    obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, -, -, he₁, he₂⟩ := GameState.clamp_inv h
+    simp only at h1 h2
+    subst h1 h2
+    simp only [GameState.xclampAt, hc₂, ha₂, he₁, he₂]
+
+/-- **A trigger resolution is simulated under the exact-store clamp, at any caps.** -/
+theorem Fire.xclamp_sim {K : Nat} {co cp cb : Cap} {ev : TrigEvent} {l : List Ability}
+    {g₁ g₁' g₂ : GameState} (h : Fire ev l g₁ g₁')
+    (hc : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) :
+    ∃ g₂', Fire ev l g₂ g₂' ∧ g₁'.xclampAt K co cp cb = g₂'.xclampAt K co cp cb := by
+  obtain ⟨hc', h1, h2⟩ := GameState.xclampAt_iff.1 hc
+  obtain ⟨g₂', h₂, e⟩ := h.clamp_sim hc'
+  have z₁ := h.zoneOnly
+  have z₂ := h₂.zoneOnly
+  exact ⟨g₂', h₂, GameState.xclampAt_iff.2 ⟨e, by rw [z₁.cur_mods, z₂.cur_mods, h1],
+    by rw [z₁.opp_mods, z₂.opp_mods, h2]⟩⟩
+
+/-- Whether the opponent's Active Pokémon's damage rose, read through the damage alone. -/
+theorem GameState.damagedB_eq (g g' : GameState) : g.damagedB g' =
+    (match g.opp.active.map InPlay.damage, g'.opp.active.map InPlay.damage with
+      | some a, some b => decide (a < b)
+      | _, _ => false) := by
+  unfold GameState.damagedB
+  cases g.opp.active <;> cases g'.opp.active <;> rfl
+
+theorem opt_exact_agree {K : Nat} {o₁ o₂ : Option InPlay}
+    (h : o₂.map (InPlay.clampWith K .exact) = o₁.map (InPlay.clampWith K .exact)) (ev : TrigEvent) :
+    o₂.map InPlay.damage = o₁.map InPlay.damage ∧ optTrigs ev o₂ = optTrigs ev o₁ := by
+  have d : ∀ o : Option InPlay,
+      o.map InPlay.damage = (o.map (InPlay.clampWith K .exact)).map InPlay.damage := by
+    intro o; cases o <;> rfl
+  have t : ∀ o : Option InPlay, optTrigs ev o = optTrigs ev (o.map (InPlay.clampWith K .exact)) := by
+    intro o; cases o <;> rfl
+  exact ⟨by rw [d o₂, d o₁, h], by rw [t o₂, t o₁, h]⟩
+
+/-- **Which `damaged` triggers an attack fires is the same under the exact clamp.** -/
+theorem HitTrig.xclamp_sim {K : Nat} {atk : Attack} {g₁ g₁' g₂ g₂' : GameState} {l : List Ability}
+    (h : HitTrig atk g₁ g₁' l) (hc : g₁.xrclamp K = g₂.xrclamp K)
+    (hc' : g₁'.xrclamp K = g₂'.xrclamp K) : HitTrig atk g₂ g₂' l := by
+  obtain ⟨a1, -⟩ := opt_exact_agree (congrArg (fun g => g.opp.active) hc).symm .damaged
+  obtain ⟨a2, t2⟩ := opt_exact_agree (congrArg (fun g => g.opp.active) hc').symm .damaged
+  have key : g₂.damagedB g₂' = g₁.damagedB g₁' := by
+    rw [GameState.damagedB_eq, GameState.damagedB_eq, a1, a2]
+  cases h with
+  | quiet hq => exact .quiet fun hcl => key.trans (hq hcl)
+  | fire hd hl => exact .fire (key.trans hd) (t2 ▸ hl)
+
+/-- The triggers a check fires are the same in two states with the same `xclamp`. -/
+theorem GameState.koTrigs_of_xclamp {g₁ g₂ : GameState} (hc : g₁.xclamp K = g₂.xclamp K)
+    (hH : g₁.HpBelow K) (hH₂ : g₂.HpBelow K) : g₁.koTrigs = g₂.koTrigs := by
+  have e : ∀ {g : GameState}, g.HpBelow K → (g.xclamp K).koTrigs = g.koTrigs := fun {g} h =>
+    GameState.koTrigs_mapPlay (f := InPlay.clampWith K .hp) (m := id) (g := g)
+      (fun _ => rfl) (fun _ => rfl) (fun w sp p hp => decide_le_min (h w sp p hp))
+  rw [← e hH, hc, e hH₂]
+
 /-- **The kernel of `xclamp` is a bisimulation for `Move`**, for a state that is `XFit k`, with
 no hypothesis on damage reduction, `drain` or modifiers: if `g₁` and `g₂` have the same
 `xclamp`, every move from `g₁` is matched by a move from `g₂` to a state with the same `xclamp`.
@@ -1007,18 +1074,22 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
         (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf) hnd hbh,
         hc'⟩
-  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw =>
+  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw l g'' hd ht' =>
       have hs' := hs₂ hst
       have hb := hF.attack ha hm
-      obtain ⟨g₂', hr', hc''⟩ := Run.xcap_sim hr hb (GameState.xrclamp_of_xclamp hc hst.1 hH)
+      have hxr := GameState.xrclamp_of_xclamp hc hst.1 hH
+      obtain ⟨g₂', hr', hc''⟩ := Run.xcap_sim hr hb hxr
+      have hd' := hd.xclamp_sim hxr hc''
+      obtain ⟨g₂'', ht₂, hc'''⟩ := ht'.xclamp_sim (co := .exact) (cp := .exact) (cb := .exact) hc''
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' hl hgx hw, ?_⟩
+        (by rw [hq.rot]; exact hs) (by exact hn) (by exact hf) (by exact hbt) hs' hr' (by exact hl)
+        (by exact hgx) hw hd' ht₂, ?_⟩
       have := congrArg (fun g : GameState => ({ g with
         attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
-        GameState)) hc''
+        GameState)) hc'''
       exact GameState.xclamp_of_xrclamp this
   | attackConfused ha hm hc' hs hn hf hbt hst hl hgx hw =>
       have hs' := hs₂ hst
@@ -1029,10 +1100,15 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx hw, by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩
-  | knockOuts h =>
-      subst hg
-      obtain ⟨g₂', h₂, e⟩ := h.xclamp_sim hc hH
-      exact ⟨g₂', .knockOuts h₂, e⟩
+  | @knockOuts g₁m g' l h hl ht =>
+      obtain ⟨g₂m, h₂, e⟩ := h.xclamp_sim hc hH
+      have hbt : g₁.batchTrigs g₁m = g₂.batchTrigs g₂m := by
+        have hat : g₁.attacked = g₂.attacked := congrArg (fun g => g.attacked) hc
+        simp only [GameState.batchTrigs, hat, GameState.winner_of_xclamp e,
+          GameState.koTrigs_of_xclamp hc hH
+            (GameState.hpBelow_of_clamp (GameState.clamp_of_xclamp hc) hH)]
+      obtain ⟨g₂', ht₂, e'⟩ := ht.xclamp_sim (co := .hp) (cp := .hp) (cb := .hp) e
+      exact ⟨g₂', .knockOuts h₂ (hbt ▸ hl) ht₂, e'⟩
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       have hk' := hk₂ hk
       subst hg

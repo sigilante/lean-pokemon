@@ -1012,6 +1012,103 @@ def Ability.CondOk (ab : Ability) (g : GameState) : Prop :=
   | none => True
   | some t => ∃ p, g.activeOf t.whose = some p ∧ t.eval g p = true
 
+/-! ## Triggered Abilities (milestone M8b)
+
+Two shapes, the commonest of today's Standard (survey S12): "if this Pokémon is in the Active Spot
+and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), …"
+(`TrigEvent.damaged`) and "if this Pokémon is Knocked Out by damage from an attack from your
+opponent's Pokémon, …" (`TrigEvent.koByAttack`). Both belong to the player whose turn it is not, so
+their effects resolve from that player's side: on the state with the players exchanged
+(`GameState.swap`), by `Run`, and the result exchanged back (`Fire`).
+
+When they resolve. A `damaged` trigger resolves at the end of the attack, after the attack's
+script and before the Knock Out check (`Move.attack`, `HitTrig`): "even if this Pokémon is Knocked
+Out" means the Pokémon is still there when it resolves, and Knock Outs it causes (damage counters on
+the Attacking Pokémon) are taken by the one check after the attack, together with the attack's own
+(a double Knock Out, `TriggerWitness`). A `koByAttack` trigger resolves in the Knock Out check after
+the attack (`Move.knockOuts`): after the batch step (removal, Prize cards, outcome, promotions), so
+the Pokémon and its cards are in the discard pile, as printed effects need ("put it into your hand
+instead of the discard pile" is the one that would need otherwise, and is not expressible). It
+fires for every Pokémon of the opponent of the player to move that a batch Knocks Out while the
+turn's attack has been made (`GameState.attacked`), and only if the game goes on. The Knock Outs its
+effect causes are taken by the next batch: the check repeats.
+
+Order. Several triggers fire at once (several Pokémon Knocked Out by one check; a Pokémon and its
+Tool). The 2023 rulebook says nothing about their order, and the 2026 rule on who orders
+simultaneous triggers (survey S8) is unverified; the model resolves them one after another in any
+order (`List.Perm`, a nondeterministic choice that covers whoever orders them), each as a whole.
+
+Departures (Known gaps): a trigger's effect resolves as a whole, by `Run`, with the Knock Out check
+after it, not after each of its steps as for a Trainer card (`TRun`); the effects of the fragment
+read no damage (`Effect.trigOk`), so the only difference is that a later step can still act on a
+Pokémon an earlier step brought to its HP, which is what a printed sentence that is one effect does.
+"The Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves: for a
+`koByAttack` trigger after the promotions, so if the attacker was Knocked Out by the same check, the
+trigger acts on its replacement instead of on nothing. "Knocked Out by damage from an attack" is
+read as "Knocked Out by a check while the turn's attack has been made": it includes Knock Outs by
+damage counters the attack placed and by later rounds of the check. -/
+
+/-- The state as the opponent sees it: the two players exchanged (milestone M8b). Effects of the
+language act for the player to move (`.own`); a trigger of the other player resolves on the
+exchanged state. -/
+def GameState.swap (g : GameState) : GameState :=
+  { g with cur := g.opp, opp := g.cur, curIsFirst := !g.curIsFirst }
+
+@[simp] theorem GameState.swap_swap (g : GameState) : g.swap.swap = g := by
+  cases g; simp only [GameState.swap, Bool.not_not]
+
+/-- The triggered Abilities of a Pokémon in play at `sp` that fire on `ev` (`Ability.trigOn`), its
+own and those its Tools give it (`InPlay.abilities`). -/
+def InPlay.trigs (ev : TrigEvent) (sp : Spot) (p : InPlay) : List Ability :=
+  p.abilities.filter (Ability.trigOn ev sp)
+
+/-- The `ev` triggers of an optional Pokémon in the Active Spot. -/
+def optTrigs (ev : TrigEvent) : Option InPlay → List Ability
+  | none => []
+  | some p => p.trigs ev .active
+
+/-- **Resolving triggers** (milestone M8b): the triggers `l` of the opponent of the player to move,
+one after another, each with "this Pokémon" where the event leaves it (`TrigEvent.place`): its effect
+resolves on the exchanged state (`GameState.swap`) by `Run`, as a whole, and the state is exchanged
+back; an optional one (`AbilityUse.optional`, "you may") may be declined instead. -/
+inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → Prop where
+  | nil (g : GameState) : Fire ev [] g g
+  | run {ab : Ability} {l : List Ability} {g g₁ g₂ : GameState}
+      (hk : (ab.script ev.place).trigOk = true)
+      (hr : Run (ab.script ev.place) g.swap g₁) (ht : Fire ev l g₁.swap g₂) :
+      Fire ev (ab :: l) g g₂
+  | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
+      (ho : ab.use.optional = true) (ht : Fire ev l g g₂) : Fire ev (ab :: l) g g₂
+
+/-- Did the opponent's Active Pokémon's damage rise from `g` to `g'`? -/
+def GameState.damagedB (g g' : GameState) : Bool :=
+  match g.opp.active, g'.opp.active with
+  | some d, some d' => decide (d.damage < d'.damage)
+  | _, _ => false
+
+/-- **Which `damaged` triggers an attack fires** (milestone M8b), from the state `g` before its
+script and `g'` after it: none (`quiet`), or every `damaged` trigger of the opponent's Active
+Pokémon in some order (`fire`), which needs the opponent's Active Pokémon's damage to have risen.
+For an attack whose script is `Effect.oppClean` (no other writer of the Defending Pokémon's damage
+than the damage step, no switch), the rise is exactly "damaged by the attack", and `quiet` is then
+allowed only without it: the triggers fire exactly when the printed ones do. For other attacks the
+model may fire them on a rise and need not (a superset of firing decisions). -/
+inductive HitTrig (atk : Attack) (g g' : GameState) : List Ability → Prop where
+  | quiet (h : atk.script.oppClean = true → g.damagedB g' = false) : HitTrig atk g g' []
+  | fire {l : List Ability} (h : g.damagedB g' = true)
+      (hl : l.Perm (optTrigs .damaged g'.opp.active)) : HitTrig atk g g' l
+
+/-- The `koByAttack` triggers of the opponent's Pokémon that the check of `g` Knocks Out. -/
+def GameState.koTrigs (g : GameState) : List Ability :=
+  optTrigs .koByAttack (optFilter (g.koT .opp .active) g.opp.active) ++
+    (g.opp.bench.filter (g.koT .opp .bench)).flatMap (InPlay.trigs .koByAttack .bench)
+
+/-- The triggers a batch Knock Out step from `g` to `g₁` fires (milestone M8b): the `koByAttack`
+triggers of the Pokémon of the opponent it Knocks Out, if the turn's attack has been made and the
+game goes on; none otherwise. -/
+def GameState.batchTrigs (g g₁ : GameState) : List Ability :=
+  if g.attacked && g₁.winner.isNone then g.koTrigs else []
+
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
@@ -1205,7 +1302,8 @@ inductive Move : GameState → GameState → Prop where
   `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
   its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
-  using it records that (`PlayerState.gxUsed`). -/
+  using it records that (`PlayerState.gxUsed`). Since milestone M8b the attack ends with the
+  opponent's `damaged` triggers (`HitTrig`, `Fire`), resolved before the Knock Out check. -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
@@ -1213,8 +1311,9 @@ inductive Move : GameState → GameState → Prop where
       (hst : Settled g)
       (hr : Run atk.script g g')
       (hl : g.cur.mods.live.noAttack = false)
-      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) :
-      Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } }
+      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true)
+      {l : List Ability} {g'' : GameState} (hd : HitTrig atk g g' l) (ht : Fire .damaged l g' g'') :
+      Move g { g'' with attacked := true, cur := { g''.cur with gxUsed := atk.gx || g''.cur.gxUsed } }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
   happen, and the attacker gets 3 damage counters; this still ends the turn (`attacked`). As for `attack`, a GX attack can be tried
   only by a player who has not used one in this game; the failed attempt does not use it up
@@ -1233,8 +1332,11 @@ inductive Move : GameState → GameState → Prop where
   take their Prize cards, the game ends if either player wins (Sudden Death if both win in as many
   ways), and otherwise each player with an empty Active Spot promotes a Benched Pokémon. Before
   milestone batch-KO this was eight moves (`knockOut`, `knockOutBench`, `promote`, `noPokemon` and
-  their `Own` versions), taken one at a time in any order. -/
-  | knockOuts {g g' : GameState} (h : KOBatch g g') : Move g g'
+  their `Own` versions), taken one at a time in any order. Since milestone M8b the step ends with
+  the `koByAttack` triggers of the opponent's Pokémon it Knocked Out, when the turn's attack has been
+  made and the game goes on (`GameState.batchTrigs`), in any order (`Fire`) -/
+  | knockOuts {g g₁ g' : GameState} {l : List Ability} (h : KOBatch g g₁)
+      (hl : l.Perm (g.batchTrigs g₁)) (ht : Fire .koByAttack l g₁ g') : Move g g'
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
   (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
   counters of both Benches, one coin flip per Pokémon (`BenchChar`: the opponent's Bench becomes
@@ -1336,16 +1438,64 @@ theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
 move needs `Settled` (`endTurn`, `startTurn` and `deckOut` need both Active Pokémon and no pending
 Knock Out, which is the same). -/
 theorem Move.batch_of_not_settled {g g' : GameState} (hm : Move g g') (hu : ¬ Settled g) :
-    KOBatch g g' := by
+    ∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g' := by
   have of : ∀ {a b : InPlay}, DamageBounded g → g.opp.active = some a → g.cur.active = some b →
       Settled g := fun hk ha hb =>
     ⟨hk, ⟨by rw [hb]; exact Option.some_ne_none _, by rw [ha]; exact Option.some_ne_none _⟩⟩
   cases hm with
-  | knockOuts h => exact h
+  | knockOuts h hl ht => exact ⟨_, _, h, hl, ht⟩
   | endTurn _ _ _ _ _ _ ha hb hk => exact absurd (of hk ha hb) hu
   | startTurn _ ha hb hk => exact absurd (of hk ha hb) hu
   | deckOut _ ha hb hk => exact absurd (of hk ha hb) hu
   | onPlay hp => exact absurd hp.settled hu
   | _ => exact absurd ‹Settled g› hu
+
+/-! ## Triggers: basic facts (milestone M8b) -/
+
+/-- No trigger, no change. -/
+theorem Fire.nil_eq {ev : TrigEvent} {g g' : GameState} (h : Fire ev [] g g') : g' = g := by
+  cases h; rfl
+
+/-- Before the turn's attack a batch fires no trigger. -/
+theorem GameState.batchTrigs_of_not_attacked {g g₁ : GameState} (h : g.attacked = false) :
+    g.batchTrigs g₁ = [] := by
+  simp only [GameState.batchTrigs, h, Bool.false_and, Bool.false_eq_true, ite_false]
+
+/-- A batch that ends the game fires no trigger. -/
+theorem GameState.batchTrigs_of_won {g g₁ : GameState} (h : g₁.winner ≠ none) :
+    g.batchTrigs g₁ = [] := by
+  have : g₁.winner.isNone = false := by
+    cases e : g₁.winner with
+    | none => exact absurd e h
+    | some _ => rfl
+  simp only [GameState.batchTrigs, this, Bool.and_false, Bool.false_eq_true, ite_false]
+
+/-- A batch that fires no trigger is the batch Knock Out step alone. -/
+theorem Move.knockOuts_of_nil {g g₁ : GameState} (h : KOBatch g g₁) (hn : g.batchTrigs g₁ = []) :
+    Move g g₁ :=
+  .knockOuts h (hn ▸ List.Perm.refl []) (.nil _)
+
+/-- Before the turn's attack the batch move is the batch Knock Out step (`Move.knockOuts` with no
+trigger). -/
+theorem Move.knockOuts' {g g₁ : GameState} (h : KOBatch g g₁) (ha : g.attacked = false) :
+    Move g g₁ :=
+  Move.knockOuts_of_nil h (GameState.batchTrigs_of_not_attacked ha)
+
+/-- A batch move whose step fires no trigger is that step. -/
+theorem Move.eq_of_batchTrigs_nil {g g₁ g' : GameState} {l : List Ability}
+    (hl : l.Perm (g.batchTrigs g₁)) (ht : Fire .koByAttack l g₁ g') (hn : g.batchTrigs g₁ = []) :
+    g' = g₁ := by
+  rw [hn] at hl
+  rw [List.Perm.eq_nil hl] at ht
+  exact ht.nil_eq
+
+/-- A move from a state that is not `Settled`, whose check ends the game, is the check alone: no
+trigger fires once the game is over. -/
+theorem Move.eq_koStep_of_won {g g' : GameState} (hm : Move g g') (hu : ¬ Settled g)
+    (hw : g.koStep.winner ≠ none) : g' = g.koStep := by
+  obtain ⟨g₁, l, h, hl, ht⟩ := hm.batch_of_not_settled hu
+  have e := h.eq_of_won hw
+  subst e
+  exact Move.eq_of_batchTrigs_nil hl ht (GameState.batchTrigs_of_won hw)
 
 end Pokemon

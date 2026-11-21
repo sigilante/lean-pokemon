@@ -159,7 +159,7 @@ theorem benchKO_reachable :
     .evolveBench (l₁ := [.energy .grass]) (l₂ := []) (p := weak) (q := lowBenched) (b₁ := [])
       (b₂ := []) rfl rfl rfl rfl rfl rfl
       benchStart_settled rfl
-  have h₂ : Move benchMid _ := .knockOuts (.go (by decide) rfl .keep .keep)
+  have h₂ : Move benchMid _ := Move.knockOuts_of_nil (.go (by decide) rfl .keep .keep) rfl
   refine ⟨benchStart, benchStart_wellFormed, benchStart_settled, _, _, h₁, h₂,
     .step (.step (.refl _) rfl h₁) rfl h₂, fun hk => ?_, .head _, rfl, rfl, rfl, rfl⟩
   have := hk .own .bench weakBenched (List.Mem.head _)
@@ -246,7 +246,7 @@ theorem charBench_reachable :
   have h₁ : Move charStart charMid :=
     .endTurn (bo := []) (bc := [charred.unfresh.addDamage 2]) false false false false false false
       rfl rfl hs.1 rfl .nil (.cons (.burn rfl) .nil)
-  have h₂ : Move charMid _ := .knockOuts (.won (by decide) (by decide))
+  have h₂ : Move charMid _ := Move.knockOuts_of_nil (.won (by decide) (by decide)) rfl
   refine ⟨charStart, charStart_wellFormed, hs, _, _, h₁, h₂, .step (.step (.refl _) rfl h₁) rfl h₂,
     fun hk => ?_, rfl, .head _⟩
   exact absurd (hk .opp .bench (charred.unfresh.addDamage 2) (List.Mem.head _))
@@ -371,7 +371,7 @@ theorem whirl_reachable :
         (.switch (b₁ := []) .opp rfl rfl))
   have hm : Move whirlStart _ :=
     .attack (atk := whirl) rfl (.head _) (.nil _) rfl rfl rfl rfl whirlStart_settled hr rfl
-      (fun h => nomatch h) rfl
+      (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
   exact ⟨whirlStart, whirlStart_wellFormed, whirlStart_settled, _, _, hm, .step (.refl _) rfl hm,
     rfl, rfl, rfl, rfl, ⟨rfl, rfl, rfl, rfl⟩⟩
 
@@ -703,7 +703,7 @@ theorem teraBench_reachable :
       ¬ DamageBounded g := by
   have hm : Move snipeStart _ :=
     .attack (atk := snipe) rfl (.head _) (.nil _) rfl rfl rfl rfl snipeStart_settled
-      (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl
+      (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
   refine ⟨snipeStart, snipeStart_wellFormed, snipeStart_settled, _, hm, .step (.refl _) rfl hm,
     rfl, fun hk => ?_⟩
   exact absurd (hk .opp .bench ((InPlay.ofBasic low).addDamage 5) (List.Mem.head _))
@@ -740,7 +740,7 @@ theorem benchDamage_reachable :
       ¬ DamageBounded g := by
   have hm : Move pokeStart _ :=
     .attack (atk := poke) rfl (.head _) (.nil _) rfl rfl rfl rfl pokeStart_settled
-      (.benchDamage (b₁ := []) .opp 5 rfl) rfl (fun h => nomatch h) rfl
+      (.benchDamage (b₁ := []) .opp 5 rfl) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
   refine ⟨pokeStart, pokeStart_wellFormed, pokeStart_settled, _, hm, .step (.refl _) rfl hm,
     rfl, fun hk => ?_⟩
   exact absurd (hk .opp .bench ((InPlay.ofBasic low).addDamage 5) (List.Mem.head _))
@@ -790,7 +790,7 @@ def lastHit (b : List InPlay) : GameState :=
 theorem move_lastHit (b : List InPlay) (hs : Settled (lastStart b)) :
     Move (lastStart b) (lastHit b) :=
   .attack (atk := both) rfl (.head _) (.nil _) rfl rfl rfl rfl hs
-    (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl (fun h => nomatch h) rfl
+    (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil rfl) (.nil _)
 
 /-- **Both players take their last Prize card: Sudden Death, whatever the order.** From a
 well-formed, `Settled` start in which each player has one Prize card left and a Benched Pokémon
@@ -810,7 +810,7 @@ theorem suddenDeath_forced :
   refine ⟨lastStart_wellFormed _ (fun p hp => by
       simp only [List.mem_singleton] at hp; subst hp; exact ⟨rfl, rfl, rfl, rfl⟩),
     hs, move_lastHit _ hs, fun hk => hu ⟨hk, by decide, by decide⟩, rfl, rfl, fun g₂ hm => ?_⟩
-  have e := (hm.batch_of_not_settled hu).eq_of_won (by decide)
+  have e := hm.eq_koStep_of_won hu (by decide)
   subst e
   exact ⟨by decide, rfl, rfl⟩
 
@@ -828,7 +828,7 @@ theorem bothWays_wins :
   have hu : ¬ Settled (lastHit []) := by decide
   refine ⟨lastStart_wellFormed _ (fun p hp => nomatch hp), hs, move_lastHit _ hs,
     fun hk => hu ⟨hk, by decide, by decide⟩, fun g₂ hm => ?_⟩
-  have e := (hm.batch_of_not_settled hu).eq_of_won (by decide)
+  have e := hm.eq_koStep_of_won hu (by decide)
   subst e
   exact ⟨by decide, rfl, rfl, rfl, rfl⟩
 

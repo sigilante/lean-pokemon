@@ -118,7 +118,9 @@ theorem Move.damageBounded_of_startTurn {g g' : GameState} (h : Move g g')
   cases h with
   | startTurn hbt ha hb hk hd => exact hk.congr rfl rfl rfl rfl rfl rfl
   | onPlay hp => exact absurd (hb.symm.trans hp.between) (by decide)
-  | knockOuts h => exact absurd (hb.symm.trans (h.same.2.2.2.1.symm.trans hb')) (by decide)
+  | knockOuts h _ ht =>
+      exact absurd (hb.symm.trans (h.same.2.2.2.1.symm.trans (ht.zoneOnly.between.symm.trans hb')))
+        (by decide)
   | _ =>
       first
       | exact absurd (hb.symm.trans hb') (by decide)
@@ -1082,6 +1084,56 @@ theorem GameState.koStep_clamp {k : Nat} {g : GameState} (hH : g.HpBelow k) :
     (g.clamp k).koStep = g.koStep.clamp k :=
   GameState.koStep_mapPlay (f := InPlay.clampWith k .hp) (m := Store.cap (2 * k)) (g := g)
     (fun _ => rfl) (fun _ => rfl) (fun w sp p hp => decide_le_min (hH w sp p hp))
+
+/-- Every Pokémon in play updated by `f`, every store by `m`. -/
+def GameState.mapPlayAll (f : InPlay → InPlay) (m : Store → Store) (g : GameState) : GameState :=
+  { g with cur := g.cur.mapPlay f m, opp := g.opp.mapPlay f m }
+
+/-- **The `koByAttack` triggers a check fires commute with a map of the Pokémon in play** that
+keeps each Pokémon's view and Abilities and the threshold test (milestone M8b). -/
+theorem GameState.koTrigs_mapPlay {f : InPlay → InPlay} {m : Store → Store} {g : GameState}
+    (hsv : ∀ p, (f p).sv = p.sv) (hab : ∀ p, (f p).abilities = p.abilities)
+    (ht : ∀ w sp p, g.In w sp p →
+      decide (g.hpOf w sp p ≤ (f p).damage) = decide (g.hpOf w sp p ≤ p.damage)) :
+    (g.mapPlayAll f m).koTrigs = g.koTrigs := by
+  have hsf : GameState.SameField g (g.mapPlayAll f m) :=
+    ⟨by simp only [GameState.mapPlayAll, PlayerState.field, PlayerState.mapPlay, fieldOf_map hsv hsv],
+      by simp only [GameState.mapPlayAll, PlayerState.field, PlayerState.mapPlay,
+        fieldOf_map hsv hsv], rfl, rfl⟩
+  have hk : ∀ w sp p, g.In w sp p → (g.mapPlayAll f m).koT w sp (f p) = g.koT w sp p :=
+    fun w sp p hp => by
+      simp only [GameState.koT]
+      rw [hsf.hpOf w sp (hsv p)]
+      exact ht w sp p hp
+  have htr : ∀ ev sp p, (f p).trigs ev sp = p.trigs ev sp := fun ev sp p => by
+    simp only [InPlay.trigs, hab p]
+  have hopt : ∀ ev (o : Option InPlay), optTrigs ev (o.map f) = optTrigs ev o := fun ev o => by
+    cases o with
+    | none => rfl
+    | some p => exact htr ev .active p
+  have hfl : ∀ (b : List InPlay), (b.map f).flatMap (InPlay.trigs .koByAttack .bench) =
+      b.flatMap (InPlay.trigs .koByAttack .bench) := fun b => by
+    induction b with
+    | nil => rfl
+    | cons p ps ih => simp only [List.map_cons, List.flatMap_cons, htr, ih]
+  have h1 : ∀ p, g.opp.active = some p →
+      (g.mapPlayAll f m).koT .opp .active (f p) = g.koT .opp .active p :=
+    fun p hp => hk .opp .active p hp
+  have h2 : ∀ p ∈ g.opp.bench, (g.mapPlayAll f m).koT .opp .bench (f p) = g.koT .opp .bench p :=
+    fun p hp => hk .opp .bench p hp
+  show optTrigs .koByAttack (optFilter ((g.mapPlayAll f m).koT .opp .active) (g.opp.active.map f)) ++
+      ((g.opp.bench.map f).filter ((g.mapPlayAll f m).koT .opp .bench)).flatMap
+        (InPlay.trigs .koByAttack .bench) = g.koTrigs
+  rw [optFilter_map h1, filter_map_of h2, hopt, hfl]
+  rfl
+
+/-- The triggers a check fires are the same in two states with the same clamp. -/
+theorem GameState.koTrigs_of_clamp {k : Nat} {g₁ g₂ : GameState} (hc : g₁.clamp k = g₂.clamp k)
+    (hH : g₁.HpBelow k) (hH₂ : g₂.HpBelow k) : g₁.koTrigs = g₂.koTrigs := by
+  have e : ∀ {g : GameState}, g.HpBelow k → (g.clamp k).koTrigs = g.koTrigs := fun {g} h =>
+    GameState.koTrigs_mapPlay (f := InPlay.clampWith k .hp) (m := Store.cap (2 * k)) (g := g)
+      (fun _ => rfl) (fun _ => rfl) (fun w sp p hp => decide_le_min (h w sp p hp))
+  rw [← e hH, hc, e hH₂]
 
 /-- Every derived HP at most `k` carries over to a state with the same clamp. -/
 theorem GameState.hpBelow_of_clamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.clamp k = g₂.clamp k)

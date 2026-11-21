@@ -1,4 +1,4 @@
-import Pokemon.Zone
+import Pokemon.Trigger
 
 /-!
 # Conservation of cards, and where finiteness can fail
@@ -326,6 +326,20 @@ theorem PlayFromHand.perm {g g₁ : GameState} {x : InPlay} {w : PlayWay}
   | evolve hh ha => perm_count [hh, ha]
   | evolveBench hh hb => perm_count [hh, hb]
 
+/-- Exchanging the players permutes the cards in the game. -/
+theorem GameState.swap_perm (g : GameState) : g.swap.allCards.Perm g.allCards := by
+  simp only [GameState.allCards, GameState.swap]
+  exact List.Perm.append_right _ List.perm_append_comm
+
+/-- **Resolving triggers permutes the cards** (milestone M8b). -/
+theorem Fire.perm {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g') :
+    g'.allCards.Perm g.allCards := by
+  induction h with
+  | nil => exact .refl _
+  | @run ab l g g₁ g₂ _ hr _ ih =>
+      exact ih.trans ((g₁.swap_perm).trans (hr.perm.trans g.swap_perm))
+  | decline _ _ ih => exact ih
+
 /-- A legal move permutes the cards in the game. -/
 theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCards := by
   cases h with
@@ -352,9 +366,9 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | toolBench hh hb ht => perm_count [hh, hb, ht]
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.perm.trans hu.perm
   | onPlay hp _ _ _ _ _ hr => exact hr.perm.trans hp.perm
-  | attack ha hm hc hs hn hf hbt hst hr => exact hr.perm
+  | attack ha hm hc hs hn hf hbt hst hr _ _ _ _ ht => exact ht.perm.trans hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
-  | knockOuts h => exact h.perm
+  | knockOuts h _ ht => exact ht.perm.trans h.perm
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh, hco.cardList,
         hcc.cardList, benchCardList_unfresh]
@@ -483,5 +497,109 @@ theorem GameState.mem_allCards_of_stadium {g : GameState} {o : Bool} {x : Card}
 theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.cur.hand) :
     x ∈ g.allCards := by
   simp [GameState.allCards, PlayerState.allCards, hx]
+
+theorem GameState.mem_allCards_of_opp_active {g : GameState} {a : InPlay}
+    (ha : g.opp.active = some a) {c : Card} (hc : c ∈ a.cardList) : c ∈ g.allCards := by
+  simp [GameState.allCards, PlayerState.allCards, optCardList, ha, hc]
+
+theorem GameState.mem_allCards_of_opp_bench {g : GameState} {a : InPlay}
+    (ha : a ∈ g.opp.bench) {c : Card} (hc : c ∈ a.cardList) : c ∈ g.allCards := by
+  have := mem_benchCardList hc ha
+  simp [GameState.allCards, PlayerState.allCards, this]
+
+/-! ## Decks without triggers (milestone M8b) -/
+
+/-- A card with no triggered Ability (of its own, or given by it as a Tool). -/
+def Card.trigFree (c : Card) : Bool := c.abilities.all fun ab => ab.use.event.isNone
+
+/-- No card of the game has a triggered Ability. Play keeps it (`GameState.TrigFree.of_perm`), and
+then no trigger ever fires: every move is the move of milestone M8a (`Pokemon/NoTriggers.lean`). -/
+def GameState.TrigFree (g : GameState) : Prop := ∀ c ∈ g.allCards, c.trigFree = true
+
+theorem GameState.TrigFree.of_perm {g g' : GameState} (h : g.TrigFree)
+    (hp : g'.allCards.Perm g.allCards) : g'.TrigFree :=
+  fun c hc => h c (hp.mem_iff.1 hc)
+
+theorem filter_nil_of {α : Type} {t : α → Bool} : ∀ {l : List α}, (∀ a ∈ l, t a = false) →
+    l.filter t = []
+  | [], _ => rfl
+  | a :: l, h => by
+      simp only [List.filter_cons, h a (.head _), Bool.false_eq_true, ite_false]
+      exact filter_nil_of fun b hb => h b (.tail _ hb)
+
+theorem flatMap_nil_of {α β : Type} {f : α → List β} : ∀ {l : List α}, (∀ a ∈ l, f a = []) →
+    l.flatMap f = []
+  | [], _ => rfl
+  | a :: l, h => by
+      simp only [List.flatMap_cons, h a (.head _), List.nil_append]
+      exact flatMap_nil_of fun b hb => h b (.tail _ hb)
+
+/-- A Pokémon made of trigger-free cards has no trigger. -/
+theorem InPlay.trigs_nil_of {p : InPlay} (h : ∀ c ∈ p.cardList, c.trigFree = true)
+    (ev : TrigEvent) (sp : Spot) : p.trigs ev sp = [] := by
+  unfold InPlay.trigs
+  refine filter_nil_of fun ab hab => ?_
+  have hev : ab.use.event = none := by
+    rcases List.mem_append.1 hab with h1 | h1
+    · have := h (.pokemon p.top) (.head _)
+      simp only [Card.trigFree, Card.abilities, List.all_eq_true] at this
+      exact Option.isNone_iff_eq_none.1 (this ab h1)
+    · obtain ⟨c, hc, hab'⟩ := List.mem_flatMap.1 h1
+      have := h c (.tail _ (List.mem_append_right _ hc))
+      simp only [Card.trigFree, List.all_eq_true] at this
+      exact Option.isNone_iff_eq_none.1 (this ab (Card.grantAbilities_sub hab'))
+  simp only [Ability.trigOn, hev]
+  cases ev <;> rfl
+
+theorem GameState.TrigFree.optTrigs_opp {g : GameState} (h : g.TrigFree) (ev : TrigEvent) :
+    optTrigs ev g.opp.active = [] := by
+  cases ha : g.opp.active with
+  | none => rfl
+  | some p =>
+      exact InPlay.trigs_nil_of (fun c hc => h c (GameState.mem_allCards_of_opp_active ha hc)) _ _
+
+theorem GameState.TrigFree.koTrigs {g : GameState} (h : g.TrigFree) : g.koTrigs = [] := by
+  have h1 : optTrigs .koByAttack (optFilter (g.koT .opp .active) g.opp.active) = [] := by
+    cases ha : g.opp.active with
+    | none => rfl
+    | some p =>
+        simp only [optFilter]
+        split
+        · exact InPlay.trigs_nil_of
+            (fun c hc => h c (GameState.mem_allCards_of_opp_active ha hc)) _ _
+        · rfl
+  have h2 : (g.opp.bench.filter (g.koT .opp .bench)).flatMap (InPlay.trigs .koByAttack .bench) = [] :=
+    flatMap_nil_of fun p hp => InPlay.trigs_nil_of
+      (fun c hc => h c (GameState.mem_allCards_of_opp_bench (List.mem_filter.1 hp).1 hc)) _ _
+  unfold GameState.koTrigs
+  rw [h1, h2]; rfl
+
+theorem GameState.TrigFree.batchTrigs {g : GameState} (h : g.TrigFree) (g₁ : GameState) :
+    g.batchTrigs g₁ = [] := by
+  unfold GameState.batchTrigs
+  split
+  · exact h.koTrigs
+  · rfl
+
+/-- With a trigger-free Defending Pokémon an attack fires no trigger. -/
+theorem HitTrig.nil_of {atk : Attack} {g g' : GameState} {l : List Ability}
+    (h : HitTrig atk g g' l) (hf : optTrigs .damaged g'.opp.active = []) : l = [] := by
+  cases h with
+  | quiet => rfl
+  | fire _ hl => rw [hf] at hl; exact List.Perm.eq_nil hl
+
+/-- A trigger an attack fires is a `damaged` trigger of the opponent's Active Pokémon. -/
+theorem HitTrig.mem {atk : Attack} {g g' : GameState} {l : List Ability} {ab : Ability}
+    (h : HitTrig atk g g' l) (hab : ab ∈ l) : ab ∈ optTrigs .damaged g'.opp.active := by
+  cases h with
+  | quiet => nomatch hab
+  | fire _ hl => exact hl.mem_iff.1 hab
+
+/-- An attack whose Defending Pokémon has no trigger has its (empty) choice of triggers. -/
+theorem HitTrig.exists_nil {atk : Attack} {g g' : GameState}
+    (hf : optTrigs .damaged g'.opp.active = []) : HitTrig atk g g' [] := by
+  cases hb : g.damagedB g' with
+  | false => exact .quiet fun _ => hb
+  | true => exact .fire hb (hf ▸ List.Perm.refl [])
 
 end Pokemon

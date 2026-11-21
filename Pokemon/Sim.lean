@@ -944,6 +944,45 @@ theorem PlayFromHand.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} {x : InPl
       simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append,
         List.map_cons, h1, h3]
 
+/-- A change of the zones only keeps the stores (milestone M8b). -/
+theorem GameState.ZoneOnly.noReduce {g g' : GameState} (z : GameState.ZoneOnly g g')
+    (h : g.NoReduce) : g'.NoReduce := by
+  unfold GameState.NoReduce
+  rw [z.cur_mods, z.opp_mods]
+  exact h
+
+/-- **Which `damaged` triggers an attack fires is the same under the clamp** (milestone M8b): the
+Defending Pokémon's damage before the attack is below the cap, so whether it rose is read exactly
+from the capped damage after it, and the Abilities of the Pokémon are kept. -/
+theorem HitTrig.clamp_sim {k : Nat} {atk : Attack} {g₁ g₁' g₂ g₂' : GameState} {l : List Ability}
+    (h : HitTrig atk g₁ g₁' l) {d₁ d₂ : InPlay} (h1 : g₁.opp.active = some d₁)
+    (h2 : g₂.opp.active = some d₂) (hd : d₂.damage = d₁.damage) (hk : d₁.damage < k)
+    (hc : g₁'.rclamp k = g₂'.rclamp k) : HitTrig atk g₂ g₂' l := by
+  have ha : g₂'.opp.active.map (InPlay.clampWith k (.upto k)) =
+      g₁'.opp.active.map (InPlay.clampWith k (.upto k)) :=
+    (congrArg (fun g => g.opp.active) hc).symm
+  have key : g₂.damagedB g₂' = g₁.damagedB g₁' ∧
+      optTrigs .damaged g₂'.opp.active = optTrigs .damaged g₁'.opp.active := by
+    cases e : g₁'.opp.active with
+    | none =>
+        rw [e] at ha
+        have hn := none_of_map ha
+        simp only [GameState.damagedB, h1, h2, e, hn, optTrigs]
+        constructor <;> first | trivial | rfl
+    | some p =>
+        rw [e] at ha
+        obtain ⟨q, hq', hq⟩ := agree_of_map ha
+        have hdm := hq.damage
+        simp only [Cap.dmg] at hdm
+        refine ⟨?_, ?_⟩
+        · simp only [GameState.damagedB, h1, h2, e, hq']
+          apply decide_eq_decide.2
+          constructor <;> intro <;> omega
+        · simp only [optTrigs, hq', InPlay.trigs, hq.grants.2]
+  cases h with
+  | quiet hq => exact .quiet fun hcl => key.1.trans (hq hcl)
+  | fire hd' hl => exact .fire (key.1.trans hd') (key.2 ▸ hl)
+
 theorem Move.noReduce {g g' : GameState} (h : Move g g')
     (ht : ∀ x ∈ g.allCards, x.tame = true) (hn : g.NoReduce) : g'.NoReduce := by
   cases h with
@@ -957,10 +996,10 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
       exact hr.noReduce (ht _ (GameState.mem_allCards_of_hand hx)) hn
   | @stadiumUse g' o n e ss hs _ _ _ _ hr =>
       exact hr.noReduce (ht _ (GameState.mem_allCards_of_stadium hs)) hn
-  | @attack g' a atk ha hm hc hs hn' hf hbt hst hr =>
+  | @attack g' a atk ha hm hc hs hn' hf hbt hst hr _ _ _ _ _ _ ht' =>
       obtain ⟨c, hc, hmc⟩ := InPlay.attack_mem hm
       have h2 := (Card.attack_tame (ht _ (GameState.mem_allCards_of_cur_active ha hc)) hmc).1
-      exact hr.noReduce (by rw [Attack.script_tame]; exact h2) hn
+      exact ht'.zoneOnly.noReduce (hr.noReduce (by rw [Attack.script_tame]; exact h2) hn)
   | @ability g₁ g' x sp ab hu hm _ _ _ _ _ _ _ hr =>
       obtain ⟨c, hc, hmc⟩ := InPlay.ability_mem hm
       exact hr.noReduce (Card.ability_tame (ht _ (hu.card_mem hc)) hmc _ (ab.script_mem _))
@@ -970,7 +1009,7 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
       simp only [Card.tame, Bool.and_eq_true] at h1
       exact hr.noReduce (abilitiesTame_mem h1.2 hm _ (ab.script_mem _)) (by cases hp <;> exact hn)
   | endTurn => exact ⟨hn.2.shift, hn.1.shift⟩
-  | knockOuts h => exact h.noReduce hn
+  | knockOuts h _ ht' => exact ht'.zoneOnly.noReduce (h.noReduce hn)
   | _ => exact hn
 
 /-- Play preserves `Fit k`: the cards are permuted, and no stored damage reduction comes into
@@ -1161,19 +1200,28 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (by cases hp <;> exact hF.2.2.2.1) (hcap.of_perm hp.perm) hcm (.inl hst₁)
       exact ⟨g₂', .onPlay hp' (hxt ▸ hm) hk hw hst₂ hcd' hr' hnd hbh, hc'⟩
-  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw =>
+  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw l g'' hd ht' =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.attack ha hm
       obtain ⟨g₂', hr', hc''⟩ := Run.cap_sim hF.1 hr ht hb hF.2.2.2.1 hcap
         (GameState.rclamp_of_clamp hc hst.1 hH)
+      obtain ⟨g₂'', ht₂, hc'''⟩ := ht'.clamp_sim (co := .exact) (cp := .upto k) (cbo := .exact)
+        (cbp := .upto k) hc''
+      obtain ⟨d₁, hd₁⟩ := Option.ne_none_iff_exists'.1 hst.2.2
+      have hlt : d₁.damage < k := hst.1.lt_bound hH (w := .opp) (sp := .active) hd₁
+      have hoa : g₂.opp.active.map (InPlay.clampWith k .hp) =
+          (some d₁).map (InPlay.clampWith k .hp) := by rw [hg, ← hd₁]; exact ha₂
+      obtain ⟨d₂, hd₂, hdq⟩ := agree_of_map hoa
+      have hd' := hd.clamp_sim hd₁ hd₂ (hdq.damage_eq_of_lt hlt) hlt hc''
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' (by rw [hfl.2.1]; exact hl) hgx hw, ?_⟩
+        (by rw [hq.rot]; exact hs) (by exact hn) (by exact hf) (by exact hbt) hs' hr'
+        (by rw [hfl.2.1]; exact hl) (by exact hgx) hw hd' ht₂, ?_⟩
       have := congrArg (fun g : GameState => ({ g with
         attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
-        GameState)) hc''
+        GameState)) hc'''
       exact GameState.clamp_of_rclamp this
   | attackConfused ha hm hc' hs hn hf hbt hst hl hgx hw =>
       have hs' := hs₂ hst
@@ -1184,10 +1232,14 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl) hgx hw, by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩
-  | knockOuts h =>
-      subst hg
-      obtain ⟨g₂', h₂, e⟩ := h.clamp_sim hc hH
-      exact ⟨g₂', .knockOuts h₂, e⟩
+  | @knockOuts g₁m g' l h hl ht =>
+      obtain ⟨g₂m, h₂, e⟩ := h.clamp_sim hc hH
+      have hbt : g₁.batchTrigs g₁m = g₂.batchTrigs g₂m := by
+        have hat : g₁.attacked = g₂.attacked := congrArg (fun g => g.attacked) hc
+        simp only [GameState.batchTrigs, hat, GameState.winner_of_clamp e,
+          GameState.koTrigs_of_clamp hc hH (GameState.hpBelow_of_clamp hc hH)]
+      obtain ⟨g₂', ht₂, e'⟩ := ht.clamp_sim (co := .hp) (cp := .hp) (cbo := .hp) (cbp := .hp) e
+      exact ⟨g₂', .knockOuts h₂ (hbt ▸ hl) ht₂, e'⟩
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       have hk' := hk₂ hk
       subst hg

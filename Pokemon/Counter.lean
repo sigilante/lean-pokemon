@@ -1047,11 +1047,14 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
 neither, and play permutes the cards, so this holds in every state reached from them; it dismisses
 the Stadium and Tool moves and keeps the Clock's and the Tape's attacks and Abilities their own. -/
 def NoTS (g : GameState) : Prop :=
-  ∀ c ∈ g.allCards, c.isStadium = false ∧ c.isTool = false ∧ c.statics = []
+  ∀ c ∈ g.allCards, c.isStadium = false ∧ c.isTool = false ∧ c.statics = [] ∧ c.trigFree = true
 
 /-- The construction's cards have no static effect (milestone M6): every derived quantity is the
 printed one. -/
-theorem NoTS.noStatics {g : GameState} (h : NoTS g) : g.NoStatics := fun c hc => (h c hc).2.2
+theorem NoTS.noStatics {g : GameState} (h : NoTS g) : g.NoStatics := fun c hc => (h c hc).2.2.1
+
+/-- The construction's cards have no triggered Ability (milestone M8b). -/
+theorem NoTS.trigFree {g : GameState} (h : NoTS g) : g.TrigFree := fun c hc => (h c hc).2.2.2
 
 theorem NoTS.tools {g : GameState} (h : NoTS g) {p : InPlay} (hp : g.cur.active = some p) :
     ∀ c ∈ p.tools, c.isTool = false := fun c hc =>
@@ -1158,8 +1161,11 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
           rw [hp] at ha; cases ha
           rw [(InPlay.attacks_of_noTool (hts.tools hp)).2, h1, hab] at hm'; cases hm'
       | bench hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
-  | @attack g'' a atk ha hm' _ _ _ _ _ _ hr _ _ =>
+  | @attack g'' a atk ha hm' _ _ _ _ _ _ hr _ _ _ l g''' hd ht =>
       rw [hp] at ha; cases ha
+      have hl := hd.nil_of ((hts.trigFree.of_perm hr.perm).optTrigs_opp _)
+      subst hl
+      cases ht
       exact .inr (.inr ⟨atk, g'', by rw [← h1, ← (InPlay.attacks_of_noTool (hts.tools hp)).1]; exact hm',
         hr, rfl⟩)
   | attackConfused ha _ _ hs' => rw [hp] at ha; cases ha; rw [h2] at hs'; cases hs'
@@ -1207,7 +1213,7 @@ theorem Good.hpB {M : Machine} {s : Abs} (hg : Good M s) (st hd : Bool) :
 /-- An attack from a state of known shape, given what its effect does. -/
 theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Shape kc ko g)
     (hatk : atk ∈ kc.top.attacks) (hcost : atk.cost = [])
-    (hD : Does atk.script kc ko kc' ko') (hns : g.NoStatics)
+    (hD : Does atk.script kc ko kc' ko') (hns : g.NoStatics) (htf : g.TrigFree)
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hbt : g.between = false)
     (hn : g.attacked = false) (hf : g.firstTurn = false) (hgx : atk.gx = false)
     (hw : atk.wf = true) :
@@ -1217,7 +1223,8 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs hns
   have hfl := Run.flags hr
   refine ⟨_, .attack hp (List.mem_append_left _ (h1 ▸ hatk)) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
-    hbt (hs.settled hns hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw,
+    hbt (hs.settled hns hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw
+    (HitTrig.exists_nil ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _),
     ⟨(hsh _ hr).cur.setGx _, (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
 /-- Ending the turn from a state of known shape swaps the shape. -/
@@ -1295,7 +1302,7 @@ the first player's reduction minus the second player's bonus. -/
 def Encodes (M : Machine) (c : Config) (g : GameState) : Prop :=
   ∃ s : Abs, s.cfg = c ∧ Good M s ∧ s.rB = 0 ∧ s.halted = false ∧
     Shape (pkA M s false true) (pkB M s true false) g ∧ g.between = false ∧
-    g.attacked = false ∧ g.firstTurn = false ∧ g.winner = none ∧ g.NoStatics
+    g.attacked = false ∧ g.firstTurn = false ∧ g.winner = none ∧ g.NoStatics ∧ g.TrigFree
 
 /-- **The halt mark**: some Active Pokémon has an Imprison marker. -/
 def HaltMarked (g : GameState) : Prop :=
@@ -1310,11 +1317,12 @@ theorem start_noTS (M : Machine) (a b : Nat) : NoTS (start M a b) := by
   simp only [start, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
     InPlay.cardList, onPlay, stadiumCardList, List.append_nil, List.nil_append, List.cons_append,
     List.mem_cons, List.not_mem_nil, or_false] at hc
-  rcases hc with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl⟩
+  rcases hc with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem start_encodes (M : Machine) (a b : Nat) : Encodes M (Machine.init a b) (start M a b) := by
   refine ⟨⟨0, a, b, 0, 0, 0, 0, false⟩, rfl, ⟨M.span_pos, .inl rfl, Nat.zero_le _,
-    (fun e => by cases e)⟩, rfl, rfl, ⟨?_, ?_⟩, rfl, rfl, rfl, rfl, (start_noTS M a b).noStatics⟩
+    (fun e => by cases e)⟩, rfl, rfl, ⟨?_, ?_⟩, rfl, rfl, rfl, rfl, (start_noTS M a b).noStatics,
+    (start_noTS M a b).trigFree⟩
   · refine ⟨⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, (fun _ h => by cases h), fun c h => ?_,
       (by show storeOf 0 b = storeOf 0 (0 + b); rw [Nat.zero_add]), (fun e => by cases e),
       (fun _ => List.cons_ne_nil _ _)⟩
@@ -1354,27 +1362,33 @@ moves: the first player attacks with the Clock and ends the turn; the second pla
 attacks with the Tape and ends the turn; the first player draws.) -/
 theorem simulate {M : Machine} {c c' : Config} {g : GameState} (hst : M.Step c c')
     (he : Encodes M c g) : ∃ g', Reach g g' ∧ Encodes M c' g' := by
-  obtain ⟨s, rfl, hg, hb, hh, hsh, hbt, hat, hft, hw, hns⟩ := he
+  obtain ⟨s, rfl, hg, hb, hh, hsh, hbt, hat, hft, hw, hns, htf⟩ := he
   have hg₁ := (tickS_spec hg).1
   have hg₂ := (tockS_spec hg₁).1
   obtain ⟨g₁, m₁, s₁, b₁, f₁, w₁⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
-    (Does.attackA hg false true true false) hns (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
+    (Does.attackA hg false true true false) hns htf (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
     (atkA_wf M)
   have hns₁ := hns.of_perm m₁.perm
+  have htf₁ := htf.of_perm m₁.perm
   obtain ⟨g₂, m₂, s₂, b₂, a₂, f₂, w₂⟩ := endTurn_move s₁ hns₁ (hg₁.hpA _ _) (hg₁.hpB _ _)
     (mkOf_char _) rfl b₁
   have hns₂ := hns₁.of_perm m₂.perm
+  have htf₂ := htf₁.of_perm m₂.perm
   obtain ⟨g₃, m₃, s₃, b₃, a₃, f₃, w₃⟩ := startTurn_move s₂ hns₂ (hg₁.hpB _ _) (hg₁.hpA _ _) b₂ rfl
   have hns₃ := hns₂.of_perm m₃.perm
+  have htf₃ := htf₂.of_perm m₃.perm
   obtain ⟨g₄, m₄, s₄, b₄, f₄, w₄⟩ := attack_move (atk := atkB M) s₃ (.head _) rfl
-    (Does.attackB hg₁ false true true false) hns₃ (hg₁.hpB _ _) (hg₁.hpA _ _) b₃ (a₃.trans a₂)
+    (Does.attackB hg₁ false true true false) hns₃ htf₃ (hg₁.hpB _ _) (hg₁.hpA _ _) b₃ (a₃.trans a₂)
     (f₃.trans f₂) rfl (atkB_wf M)
   have hns₄ := hns₃.of_perm m₄.perm
+  have htf₄ := htf₃.of_perm m₄.perm
   obtain ⟨g₅, m₅, s₅, b₅, a₅, f₅, w₅⟩ := endTurn_move s₄ hns₄ (hg₂.hpB _ _) (hg₂.hpA _ _) rfl
     (mkOf_char _) b₄
   have hns₅ := hns₄.of_perm m₅.perm
+  have htf₅ := htf₄.of_perm m₅.perm
   obtain ⟨g₆, m₆, s₆, b₆, a₆, f₆, w₆⟩ := startTurn_move s₅ hns₅ (hg₂.hpA _ _) (hg₂.hpB _ _) b₅ rfl
   have hns₆ := hns₅.of_perm m₆.perm
+  have htf₆ := htf₅.of_perm m₆.perm
   obtain ⟨hc', hb', hh'⟩ := round_spec hg hb hh hst
   have wn₁ : g₁.winner = none := w₁.trans hw
   have wn₂ : g₂.winner = none := w₂.trans wn₁
@@ -1383,7 +1397,7 @@ theorem simulate {M : Machine} {c c' : Config} {g : GameState} (hst : M.Step c c
   have wn₅ : g₅.winner = none := w₅.trans wn₄
   refine ⟨g₆, .step (.step (.step (.step (.step (.step (.refl _) hw m₁) wn₁ m₂) wn₂ m₃) wn₃ m₄)
     wn₄ m₅) wn₅ m₆, ⟨_, hc', hg₂, hb', hh', s₆, b₆, a₆.trans a₅, f₆.trans f₅, w₆.trans wn₅,
-      hns₆⟩⟩
+      hns₆, htf₆⟩⟩
 
 /-- Every configuration the machine reaches is encoded by a reachable state. -/
 theorem reach_of_reaches {M : Machine} {c₀ c : Config} {g₀ : GameState} (he : Encodes M c₀ g₀)
@@ -1398,9 +1412,9 @@ theorem reach_of_reaches {M : Machine} {c₀ c : Config} {g₀ : GameState} (he 
 /-- From an encoding of a halted configuration, the Clock's attack sets the halt mark. -/
 theorem haltMarked_of_halted {M : Machine} {c : Config} {g : GameState} (he : Encodes M c g)
     (hH : M.Halted c) : ∃ g', Reach g g' ∧ HaltMarked g' := by
-  obtain ⟨s, rfl, hg, hb, -, hsh, hbt, hat, hft, hw, hns⟩ := he
+  obtain ⟨s, rfl, hg, hb, -, hsh, hbt, hat, hft, hw, hns, htf⟩ := he
   obtain ⟨g₁, m₁, s₁, -⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
-    (Does.attackA hg false true true false) hns (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
+    (Does.attackA hg false true true false) hns htf (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
     (atkA_wf M)
   obtain ⟨p, hp, -, -, -, -, -, hm⟩ := s₁.cur.active
   refine ⟨g₁, .step (.refl _) hw m₁, p, .inl hp, ?_⟩
