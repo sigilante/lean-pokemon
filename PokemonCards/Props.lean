@@ -28,6 +28,10 @@ statements the model's theorems use. Every check is stated with the model's own 
 * `nodupFp`: a check that a list of cards has no two equal terms, cheap enough for the kernel on
   the whole imported list (`nodup_of_nodupFp`).
 
+Since milestone M6 a card may carry static effects (`Card.statics`: a static Ability's, a Tool's
+static text, a Stadium's static text). `Faithful` has no clause about them and `Faithful.xfinite`
+holds with the clamp at `Enum.bound`, which bounds every derived HP.
+
 These are facts about the Lean terms; whether a term says what its printed card says is the
 importer's claim, checked by eye in survey S11, not by Lean.
 -/

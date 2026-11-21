@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 6 of 8 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.4.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.5.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,287 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part06
 open Pokemon
+
+/-- Fearow (me1-103). Records: me1-103. -/
+def me1_103 : Card := .pokemon
+  { name := "Fearow", stage := .stage1, evolvesFrom := some "Spearow",
+    hp := 10, type := .colorless, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Repeating Drill", cost := [.colorless], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 3)) (.choice (.damage (.const 6)) (.choice (.damage (.const 9)) (.choice (.damage (.const 12)) (.damage (.const 15)))))),
+        gx := false }] }
+
+/-- Mega Kangaskhan ex (me1-104). Records: me1-104, me1-164, me1-182. Caveats: onePerName. -/
+def me1_104 : Card := .pokemon
+  { name := "Mega Kangaskhan ex", stage := .basic, evolvesFrom := none,
+    hp := 30, type := .colorless, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .megaEx, tera := false,
+    abilities := [
+      { name := "Run Errand", use := .once,
+        spot := some .active, cond := none,
+        effect := .fx (.move .own (.top 2) .hand .any .all) }],
+    attacks := [
+      { name := "Rapid-Fire Combo", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .damage (.add (.const 20) (.many (.const 5))),
+        gx := false }] }
+
+/-- Lopunny (me1-108). Records: me1-108. Caveats: benchMods. -/
+def me1_108 : Card := .pokemon
+  { name := "Lopunny", stage := .stage1, evolvesFrom := some "Buneary",
+    hp := 11, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Dashing Kick", cost := [.colorless], damage := 0,
+        effect := .benchDamage .opp 5,
+        gx := false },
+      { name := "Spiral Kick", cost := [.colorless, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
+/-- Yungoos (me1-109). Records: me1-109. -/
+def me1_109 : Card := .pokemon
+  { name := "Yungoos", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Collect", cost := [.colorless], damage := 0,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false },
+      { name := "Gnaw", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Stufful (me1-111). Records: me1-111, me1-154. -/
+def me1_111 : Card := .pokemon
+  { name := "Stufful", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .colorless, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Light Punch", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Flop", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Boss's Orders (me1-114). Records: me1-114, me2pt5-183, me2pt5-256. Caveats: noopPlay. -/
+def me1_114 : Card := .trainer "Boss's Orders" .supporter
+    (.switch .opp)
+
+/-- Fighting Gong (me1-116). Records: me1-116, me1-168, me2pt5-187. -/
+def me1_116 : Card := .trainer "Fighting Gong" .item
+    (.seq (.move .own .deck .hand (.or (.energyOf .fighting) (.and .basic (.ptype .fighting))) (.upTo 1)) .shuffle)
+
+/-- Repel (me1-126). Records: me1-126. Caveats: noopPlay. -/
+def me1_126 : Card := .trainer "Repel" .item
+    (.switch .opp)
+
+/-- Switch (me1-130). Records: me1-130, me2-123, me55-127. Caveats: noopPlay. -/
+def me1_130 : Card := .trainer "Switch" .item
+    (.switch .own)
+
+/-- Ultra Ball (me1-131). Records: me1-131, me2pt5-213, me2pt5-264, me55-128. -/
+def me1_131 : Card := .trainer "Ultra Ball" .item
+    (.seq (.move .own .hand .discard .any (.exactly 2)) (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle))
+
+/-- Oddish (me2-1). Records: me2-1. -/
+def me2_1 : Card := .pokemon
+  { name := "Oddish", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Seed Bomb", cost := [.grass], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Gloom (me2-2). Records: me2-2. Caveats: benchMods. -/
+def me2_2 : Card := .pokemon
+  { name := "Gloom", stage := .stage1, evolvesFrom := some "Oddish",
+    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Disperse Drool", cost := [.grass], damage := 2,
+        effect := .seq (.spreadDamage .own 2) (.spreadDamage .opp 2),
+        gx := false }] }
+
+/-- Lotad (me2-5). Records: me2-5. -/
+def me2_5 : Card := .pokemon
+  { name := "Lotad", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Headbutt", cost := [.grass, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Lombre (me2-6). Records: me2-6. -/
+def me2_6 : Card := .pokemon
+  { name := "Lombre", stage := .stage1, evolvesFrom := some "Lotad",
+    hp := 9, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Mega Drain", cost := [.grass, .colorless], damage := 3,
+        effect := .heal 3,
+        gx := false }] }
+
+/-- Nymble (me2-9). Records: me2-9, me2-96. -/
+def me2_9 : Card := .pokemon
+  { name := "Nymble", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Flail Around", cost := [.grass], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.damage (.const 3)))),
+        gx := false }] }
+
+/-- Charmeleon (me2-12). Records: me2-12. -/
+def me2_12 : Card := .pokemon
+  { name := "Charmeleon", stage := .stage1, evolvesFrom := some "Charmander",
+    hp := 11, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Steady Firebreathing", cost := [.fire], damage := 4,
+        effect := .skip,
+        gx := false }] }
+
+/-- Darumaka (me2-15). Records: me2-15. -/
+def me2_15 : Card := .pokemon
+  { name := "Darumaka", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Blaze Ball", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .damage (.add (.const 1) (.count (.energy .own (.energyOf .fire)) 2)),
+        gx := false }] }
+
+/-- Darmanitan (me2-16). Records: me2-16. -/
+def me2_16 : Card := .pokemon
+  { name := "Darmanitan", stage := .stage1, evolvesFrom := some "Darumaka",
+    hp := 15, type := .fire, retreat := 3, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Blaze Ball", cost := [.colorless, .colorless, .colorless, .colorless], damage := 0,
+        effect := .damage (.add (.const 4) (.count (.energy .own (.energyOf .fire)) 4)),
+        gx := false }] }
+
+/-- Reshiram (me2-17). Records: me2-17. Caveats: recoil. -/
+def me2_17 : Card := .pokemon
+  { name := "Reshiram", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Combustion", cost := [.fire], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Burning Flare", cost := [.fire, .fire, .fire, .fire], damage := 24,
+        effect := .selfDamage 6,
+        gx := false }] }
+
+/-- Charcadet (me2-19). Records: me2-19. -/
+def me2_19 : Card := .pokemon
+  { name := "Charcadet", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gather Strength", cost := [.fire], damage := 0,
+        effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
+        gx := false },
+      { name := "Chop", cost := [.fire], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Seel (me2-21). Records: me2-21. -/
+def me2_21 : Card := .pokemon
+  { name := "Seel", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bubble Drain", cost := [.water, .colorless], damage := 2,
+        effect := .heal 2,
+        gx := false }] }
+
+/-- Dewgong (me2-22). Records: me2-22, me2-97. Caveats: staticBench. -/
+def me2_22 : Card := .pokemon
+  { name := "Dewgong", stage := .stage1, evolvesFrom := some "Seel",
+    hp := 13, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Thick Fat", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 3 (.or (.ptype .fire) (.ptype .water)) }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Slam", cost := [.water, .colorless], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 7)) (.damage (.const 14))),
+        gx := false }] }
+
+/-- Swinub (me2-23). Records: me2-23. -/
+def me2_23 : Card := .pokemon
+  { name := "Swinub", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .water, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stampede", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Icy Snow", cost := [.water, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Piloswine (me2-24). Records: me2-24. -/
+def me2_24 : Card := .pokemon
+  { name := "Piloswine", stage := .stage1, evolvesFrom := some "Swinub",
+    hp := 10, type := .water, retreat := 3, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Rising Lunge", cost := [.colorless, .colorless], damage := 0,
+        effect := .choice (.damage (.const 6)) (.damage (.const 3)),
+        gx := false },
+      { name := "Frost Smash", cost := [.water, .colorless, .colorless], damage := 7,
+        effect := .skip,
+        gx := false }] }
+
+/-- Suicune (me2-26). Records: me2-26. -/
+def me2_26 : Card := .pokemon
+  { name := "Suicune", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Crystal Fall", cost := [.water, .water], damage := 0,
+        effect := .ite (.countGe (.energyAll .own (.energyOf .water)) 4) (.damage (.const 12)) (.damage (.const 3)),
+        gx := false }] }
+
+/-- Piplup (me2-27). Records: me2-27, me2-98. -/
+def me2_27 : Card := .pokemon
+  { name := "Piplup", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Call for Support", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand (.kind .supporter) (.upTo 1)) .shuffle,
+        gx := false },
+      { name := "Tackle", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
 
 /-- Prinplup (me2-28). Records: me2-28. Caveats: benchMods. -/
 def me2_28 : Card := .pokemon
@@ -1201,6 +1482,22 @@ def me2pt5_174 : Card := .pokemon
 def me2pt5_185 : Card := .trainer "Canari" .supporter
     (.seq (.move .own .hand .discard .any (.exactly 1)) (.seq (.move .own .deck .hand (.ptype .lightning) (.upTo 4)) .shuffle))
 
+/-- Light Ball (me2pt5-191). Records: me2pt5-191. -/
+def me2pt5_191 : Card := .tool "Light Ball"
+  { holder := .named "Pikachu ex",
+    attacks := [],
+    abilities := [],
+    statics := [
+      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
+
+/-- Thick Scale (me2pt5-211). Records: me2pt5-211. Caveats: staticBench. -/
+def me2pt5_211 : Card := .tool "Thick Scale"
+  { holder := .ptype .dragon,
+    attacks := [],
+    abilities := [],
+    statics := [
+      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 5 (.or (.ptype .grass) (.or (.ptype .fire) (.or (.ptype .water) (.ptype .lightning)))) }] }
+
 /-- Urbain (me2pt5-214). Records: me2pt5-214. -/
 def me2pt5_214 : Card := .trainer "Urbain" .supporter
     (.move .own (.top 3) .hand .any .all)
@@ -1494,302 +1791,34 @@ def me3_37 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Probopass (me3-38). Records: me3-38, me3-96. -/
-def me3_38 : Card := .pokemon
-  { name := "Probopass", stage := .stage1, evolvesFrom := some "Nosepass",
-    hp := 14, type := .fighting, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rolling Rocks", cost := [.fighting, .fighting], damage := 6,
-        effect := .skip,
-        gx := false },
-      { name := "Obliterating Nose", cost := [.fighting, .fighting, .fighting, .colorless], damage := 26,
-        effect := .ite (.countGe (.energy .own .energy) 3) (.discardEnergy .own .active .energy (.exactly 3)) (.discardEnergy .own .active .energy .all),
-        gx := false }] }
-
-/-- Binacle (me3-42). Records: me3-42. -/
-def me3_42 : Card := .pokemon
-  { name := "Binacle", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fighting, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Double Draw", cost := [.fighting], damage := 0,
-        effect := .move .own (.top 2) .hand .any .all,
-        gx := false },
-      { name := "Scratch", cost := [.fighting, .fighting], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Barbaracle (me3-43). Records: me3-43. Caveats: mayFail. -/
-def me3_43 : Card := .pokemon
-  { name := "Barbaracle", stage := .stage1, evolvesFrom := some "Binacle",
-    hp := 13, type := .fighting, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Stone Arms", use := .once,
-        spot := none, cond := none,
-        effect := .fx (.choice (.attach .own .hand (.energyOf .fighting) .active (.ptype .fighting)) (.attach .own .hand (.energyOf .fighting) .bench (.ptype .fighting))) }],
-    attacks := [
-      { name := "Hammer In", cost := [.fighting, .fighting, .colorless], damage := 8,
-        effect := .skip,
-        gx := false }] }
-
-/-- Tyrunt (me3-44). Records: me3-44. -/
-def me3_44 : Card := .pokemon
-  { name := "Tyrunt", stage := .stage1, evolvesFrom := some "Antique Jaw Fossil",
-    hp := 10, type := .fighting, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Get Angry", cost := [.fighting, .colorless], damage := 0,
-        effect := .damage (.per .own 2),
-        gx := false }] }
-
-/-- Gastly (me3-48). Records: me3-48. -/
-def me3_48 : Card := .pokemon
-  { name := "Gastly", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Surprise Attack", cost := [.darkness], damage := 0,
-        effect := .choice (.damage (.const 3)) .skip,
-        gx := false }] }
-
-/-- Haunter (me3-49). Records: me3-49. -/
-def me3_49 : Card := .pokemon
-  { name := "Haunter", stage := .stage1, evolvesFrom := some "Gastly",
-    hp := 10, type := .darkness, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Haunt", cost := [.darkness], damage := 0,
-        effect := .counters 3,
-        gx := false }] }
-
-/-- Skorupi (me3-51). Records: me3-51. -/
-def me3_51 : Card := .pokemon
-  { name := "Skorupi", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .darkness, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Poison Jab", cost := [.darkness, .darkness], damage := 2,
-        effect := .inflict .poisoned,
-        gx := false }] }
-
-/-- Drapion (me3-52). Records: me3-52, me3-97. Caveats: recoil. -/
-def me3_52 : Card := .pokemon
-  { name := "Drapion", stage := .stage1, evolvesFrom := some "Skorupi",
-    hp := 14, type := .darkness, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Wrack Down", cost := [.darkness, .darkness], damage := 6,
-        effect := .skip,
-        gx := false },
-      { name := "Hazardous Tail", cost := [.darkness, .darkness, .darkness], damage := 10,
-        effect := .seq (.selfDamage 7) (.seq (.inflict .paralyzed) (.inflict .poisoned)),
-        gx := false }] }
-
-/-- Honedge (me3-56). Records: me3-56. -/
-def me3_56 : Card := .pokemon
-  { name := "Honedge", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .metal, retreat := 2, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Cut", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Aegislash (me3-58). Records: me3-58. Caveats: perPokemon. -/
-def me3_58 : Card := .pokemon
-  { name := "Aegislash", stage := .stage2, evolvesFrom := some "Doublade",
-    hp := 15, type := .metal, retreat := 3, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Slash", cost := [.colorless, .colorless, .colorless], damage := 8,
-        effect := .skip,
-        gx := false },
-      { name := "Metal Slash", cost := [.metal, .colorless, .colorless, .colorless], damage := 23,
-        effect := .linger .own .after (.lock .attack),
-        gx := false }] }
-
-/-- Rattata (me3-60). Records: me3-60. Caveats: recoil. -/
-def me3_60 : Card := .pokemon
-  { name := "Rattata", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Take Down", cost := [.colorless], damage := 3,
-        effect := .selfDamage 1,
-        gx := false }] }
-
-/-- Bunnelby (me3-64). Records: me3-64. -/
-def me3_64 : Card := .pokemon
-  { name := "Bunnelby", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Smash Kick", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Diggersby (me3-65). Records: me3-65. Caveats: benchMods. -/
-def me3_65 : Card := .pokemon
-  { name := "Diggersby", stage := .stage1, evolvesFrom := some "Bunnelby",
-    hp := 15, type := .colorless, retreat := 4, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Earthquake", cost := [.colorless], damage := 14,
-        effect := .spreadDamage .own 3,
-        gx := false },
-      { name := "Whap Down", cost := [.colorless, .colorless, .colorless], damage := 10,
-        effect := .skip,
-        gx := false }] }
-
-/-- Core Memory (me3-70). Records: me3-70. -/
-def me3_70 : Card := .tool "Core Memory"
-  { holder := .named "Mega Zygarde ex",
-    attacks := [
-      { name := "Geobuster", cost := [.fighting, .fighting, .fighting, .fighting], damage := 35,
-        effect := .discardEnergy .own .active .energy .all,
-        gx := false }],
-    abilities := [] }
-
-/-- Energy Search (me3-72). Records: me3-72. -/
-def me3_72 : Card := .trainer "Energy Search" .item
-    (.seq (.move .own .deck .hand .energy (.upTo 1)) .shuffle)
-
-/-- Hole-Digging Shovel (me3-74). Records: me3-74. -/
-def me3_74 : Card := .trainer "Hole-Digging Shovel" .item
-    (.move .own (.top 2) .discard .any .all)
-
-/-- Poké Ball (me3-80). Records: me3-80. -/
-def me3_80 : Card := .trainer "Poké Ball" .item
-    (.choice (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle) .skip)
-
-/-- Pokémon Catcher (me3-82). Records: me3-82, me6-129. Caveats: noopPlay. -/
-def me3_82 : Card := .trainer "Pokémon Catcher" .item
-    (.choice (.switch .opp) .skip)
-
-/-- Potion (me3-83). Records: me3-83. Caveats: noopPlay. -/
-def me3_83 : Card := .trainer "Potion" .item
-    (.ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3))
-
-/-- Tarragon (me3-85). Records: me3-85, me3-116. Caveats: upTo0. -/
-def me3_85 : Card := .trainer "Tarragon" .supporter
-    (.move .own .discard .hand (.or (.ptype .fighting) (.energyOf .fighting)) (.upTo 4))
-
-/-- Weedle (me4-1). Records: me4-1. -/
-def me4_1 : Card := .pokemon
-  { name := "Weedle", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Surprise Attack", cost := [.grass], damage := 0,
-        effect := .choice (.damage (.const 3)) .skip,
-        gx := false }] }
-
-/-- Chespin (me4-5). Records: me4-5, me4-87. -/
-def me4_5 : Card := .pokemon
-  { name := "Chespin", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Beat", cost := [.grass], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Spike Sting", cost := [.grass, .grass], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Quilladin (me4-6). Records: me4-6. -/
-def me4_6 : Card := .pokemon
-  { name := "Quilladin", stage := .stage1, evolvesFrom := some "Chespin",
-    hp := 10, type := .grass, retreat := 3, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Leafy Charge", cost := [.grass], damage := 2,
-        effect := .seq (.attach .own .deck (.energyOf .grass) .active .any) .shuffle,
-        gx := false },
-      { name := "Vine Whip", cost := [.grass, .grass, .colorless], damage := 8,
-        effect := .skip,
-        gx := false }] }
-
-/-- Vulpix (me4-8). Records: me4-8. -/
-def me4_8 : Card := .pokemon
-  { name := "Vulpix", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Singe", cost := [.fire], damage := 0,
-        effect := .inflict .burned,
-        gx := false }] }
-
-/-- Ho-Oh (me4-10). Records: me4-10. -/
-def me4_10 : Card := .pokemon
-  { name := "Ho-Oh", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flames of Revival", cost := [.fire], damage := 0,
-        effect := .seq (.putBench .own .discard .basic) (.seq (.putBench .own .discard .basic) (.putBench .own .discard .basic)),
-        gx := false },
-      { name := "Bright Wing", cost := [.fire, .fire, .fire], damage := 13,
-        effect := .ite (.countGe (.energy .own (.energyOf .fire)) 1) (.discardEnergy .own .active (.energyOf .fire) (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Fennekin (me4-11). Records: me4-11. -/
-def me4_11 : Card := .pokemon
-  { name := "Fennekin", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Call for Family", cost := [.colorless], damage := 0,
-        effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
-        gx := false },
-      { name := "Steady Firebreathing", cost := [.fire], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Braixen (me4-12). Records: me4-12. -/
-def me4_12 : Card := .pokemon
-  { name := "Braixen", stage := .stage1, evolvesFrom := some "Fennekin",
-    hp := 10, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flamethrower", cost := [.fire, .fire], damage := 8,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Litleo (me4-14). Records: me4-14. -/
-def me4_14 : Card := .pokemon
-  { name := "Litleo", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tackle", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_103,
+  me1_104,
+  me1_108,
+  me1_109,
+  me1_111,
+  me1_114,
+  me1_116,
+  me1_126,
+  me1_130,
+  me1_131,
+  me2_1,
+  me2_2,
+  me2_5,
+  me2_6,
+  me2_9,
+  me2_12,
+  me2_15,
+  me2_16,
+  me2_17,
+  me2_19,
+  me2_21,
+  me2_22,
+  me2_23,
+  me2_24,
+  me2_26,
+  me2_27,
   me2_28,
   me2_30,
   me2_31,
@@ -1888,6 +1917,8 @@ def cards : List Card := [
   me2pt5_173,
   me2pt5_174,
   me2pt5_185,
+  me2pt5_191,
+  me2pt5_211,
   me2pt5_214,
   me3_1,
   me3_2,
@@ -1911,35 +1942,7 @@ def cards : List Card := [
   me3_34,
   me3_35,
   me3_36,
-  me3_37,
-  me3_38,
-  me3_42,
-  me3_43,
-  me3_44,
-  me3_48,
-  me3_49,
-  me3_51,
-  me3_52,
-  me3_56,
-  me3_58,
-  me3_60,
-  me3_64,
-  me3_65,
-  me3_70,
-  me3_72,
-  me3_74,
-  me3_80,
-  me3_82,
-  me3_83,
-  me3_85,
-  me4_1,
-  me4_5,
-  me4_6,
-  me4_8,
-  me4_10,
-  me4_11,
-  me4_12,
-  me4_14]
+  me3_37]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
