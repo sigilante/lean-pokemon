@@ -482,7 +482,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage bonuses with a
   filter on the defender (Stadium 1, Postwick; Tools: Hop's Choice Band, Light Ball, Maximum Belt
   and others whose condition is a filter on a top card; Binding Mochi's "if this Pokémon is
-  Poisoned" and Brave Bangle's conditions are not expressible); damage reduction (Stadiums 2: Full
+  Poisoned" is not expressible; Brave Bangle's conditions are, as the static's filter `noRuleBox`
+  on the holder and the bonus filter "Pokémon with a Rule Box" on the defender, which is "Pokémon
+  ex" because `RuleBox` has no kind but `ex` and `megaEx`); damage reduction (Stadiums 2: Full
   Metal Lab, Granite Cave; Tools 2: Sacred Charm, Thick Scale; the Berries and Custom Vest are
   triggered or conditional); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort; Tools 2:
   Air Balloon, Gravity Gemstone; Rescue Board reads the remaining HP and is not expressible). These
