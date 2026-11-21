@@ -16,7 +16,9 @@ above `bound`.
 `Reach.clamp_mem` is the list-membership half alone, from a well-formed start with no tameness
 hypothesis. On its own it says nothing about play: for decks that are not tame the clamp is not
 a bisimulation (`Lingering.reduce_breaks_clamp`, for every cap `k ≥ 3`;
-`Lingering.drain_breaks_clamp`, for every `k ≥ 2`).
+`Lingering.drain_breaks_clamp`, for every `k ≥ 2`), and for some such decks the reachable states
+are not finite up to any equivalence that separates configurations of a two-counter machine
+(`Counter.not_finite_up_to`).
 
 This holds for the effect language with state-reading effects (`ite` on damage thresholds,
 exact damage and Special Conditions; `scale`; `selfDamage`; `healAll`), and for the

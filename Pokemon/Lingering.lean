@@ -44,8 +44,10 @@ Beyond the clamp. For decks that are not tame the obstacle is not the choice of 
 modifiers for the rest of the game (`Slot.always`, which never expires), the differences
 between one player's damage reduction and the other's damage bonus are two persistent,
 unbounded counters: `linger` raises either side, and `seq (damage 1) (ite (exactly opp d) …)`
-tests one of them against zero exactly. This is the reviewer's argument that the model, so
-generalised, simulates a two-counter machine. The printed cards do not do this: S7 found that
+tests one of them against zero exactly. `Pokemon/Counter.lean` turns this into a theorem: the
+model, so generalised, simulates every two-counter machine, and reachability of a halt mark is
+equivalent to halting (`Counter.universal`), so no finite quotient separating configurations
+exists for such decks (`Counter.not_finite_up_to`). The printed cards do not do this: S7 found that
 every lingering damage bonus or reduction is bounded by the copies of its card times a printed
 constant, and that the rest-of-game ones come from once-per-game GX attacks.
 -/

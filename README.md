@@ -67,8 +67,24 @@ Sleep, Paralysis, then Knock Outs). For that model it proves:
   tame the clamp is not a simulation, for any cap `k ≥ 3` with a damage reduction
   (`Lingering.reduce_breaks_clamp`) and any cap `k ≥ 2` with `drain`
   (`Lingering.drain_breaks_clamp`); with rest-of-game modifiers, a reduction on one player and a
-  bonus on the other are two persistent unbounded counters with an exact zero test, so no
-  finiteness result is claimed for such decks.
+  bonus on the other are two persistent unbounded counters with an exact zero test, and the
+  model then simulates two-counter machines (next item).
+* **universality, for the generalisation** (`Counter.universal`, `Pokemon/Counter.lean`): for
+  every two-counter (Minsky) machine `M` and inputs `a`, `b` there is a well-formed start state
+  `start M a b`, built from cards in the existing effect language with no change to the rules,
+  such that every configuration `M` reaches is encoded by a reachable state
+  (`Counter.simulate`: six fixed moves per machine step), and a state with the halt mark (an
+  Imprison marker) is reachable if and only if `M` halts. The converse direction
+  (`Counter.halts_of_haltMarked`) covers every line of play, not only the intended one. So the
+  halting problem for two-counter machines reduces to reachability in the model, which is
+  therefore undecidable by Minsky's theorem (1967); that last step is prose, not a Lean
+  theorem. Consequently no finite list covers the reachable states up to any equivalence that
+  separates encodings of different configurations (`Counter.not_finite_up_to`). The
+  construction uses the model's generalisations, not printed cards: rest-of-game damage bonuses
+  and reductions that add up without limit and are placed by an attack used every turn (printed
+  cards give rest-of-game modifiers only through once-per-game attacks, survey S7 §C);
+  `damage` read by an exact damage test; and a printed HP that grows with the machine. It says
+  nothing about whether the printed card pool is Turing complete.
 
 Markers alone did not change the statements: they are finitely many flags per Pokémon, not
 clamped, and enumerated by the list of `Reach.clamp_mem`. Printed Imprison and Shock-wave markers are uncapped counts; a flag
@@ -113,7 +129,9 @@ computed, depends on the start state, and gives no size bound. For tame decks, t
 quotient with the same moves (`Reach.finite`) means that reachability questions that depend only
 on the clamp could be decided by exploring it, given a computable successor function for the
 quotient; neither that function nor the decision procedure is formalized. For decks that are not
-tame nothing of the kind is proved, and none is expected (see above). These are theorems about the model, not yet about
+tame no such procedure exists in general: by the reduction of `Pokemon/Counter.lean` and
+Minsky's theorem, reachability of the halt mark is undecidable for its decks (the reduction is
+proved; the appeal to Minsky's theorem is not formalized). These are theorems about the model, not yet about
 the printed game: they cover only decks whose card text is expressible in `Pokemon.Effect`,
 and the model's departures from the rulebook are listed at the top of `Pokemon/Rules.lean`.
 For Knock Out timing inside Trainer effects the remaining simplifications are these: Knock

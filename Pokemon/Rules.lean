@@ -102,8 +102,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   bonus, is a bisimulation when no card adds a damage reduction or uses `drain` and no
   reduction is in effect at the start (`GameState.Fit`); with a reduction no cap `k ≥ 3` makes
   the clamp a simulation (`Lingering.reduce_breaks_clamp`), with `drain` no cap `k ≥ 2`
-  (`Lingering.drain_breaks_clamp`); for such decks the model is not claimed to be finite up to
-  any bisimulation (the rest-of-game modifiers give two unbounded counters with a zero test);
+  (`Lingering.drain_breaks_clamp`); for such decks the model is not finite up to any
+  equivalence that separates configurations of a two-counter machine: the rest-of-game
+  modifiers give two unbounded counters with an exact zero test, and the model simulates every
+  two-counter machine (`Counter.universal`, `Counter.not_finite_up_to`; this rests on the
+  over-approximation of rest-of-game modifiers just described, on `damage` read by an exact test,
+  and on a printed HP chosen for the machine);
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending
