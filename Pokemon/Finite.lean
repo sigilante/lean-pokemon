@@ -9,11 +9,15 @@ clamped game is a finite transition system that answers every question about leg
 does not read the damage above HP or the Poison strength above HP on either Active Pokémon.
 
 This holds for the effect language with state-reading effects (`ite` on damage thresholds,
-exact damage and Special Conditions; `scale`; `selfDamage`; `healAll`). Inside one effect these
-reads see damage above HP, so the HP clamp is not a simulation for `Run`
-(`Reads.run_clamp_not_sim`); but no move other than a Knock Out starts from a state with a
-Pokémon at or above its HP (`Settled`), and from such a state equal clamps mean equal damage.
-So the cap does not need to be larger than HP, and no constant from the cards' tests enters it.
+exact damage and Special Conditions; `scale`; `selfDamage`; `healAll`), and for the
+rulebook's Knock Out timing inside Item and Supporter effects (`TRun`: Knock Outs taken at once
+after each step, which can promote a new Active Pokémon or end the game in mid-effect). Inside
+an attack's effect these reads see damage above HP, so the HP clamp is not a simulation for
+`Run` (`Reads.run_clamp_not_sim`); but no move other than a Knock Out starts from a state with
+a Pokémon at or above its HP (`Settled`), and from such a state equal clamps mean equal damage.
+Inside a Trainer effect every step starts `Settled`, so the clamp simulates it step by step
+(`TRun.clamp_sim`). So the cap does not need to be larger than HP, and no constant from the
+cards' tests enters it.
 
 The clamp is needed even at turn boundaries. Inside one effect (a statement about `Run`,
 not `Reach`), `poisonUp_unbounded` raises the Poison strength of a Poisoned opposing Active

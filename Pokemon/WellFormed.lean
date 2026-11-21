@@ -54,6 +54,78 @@ theorem mem_append_cons_of_mem {α : Type} {x : α} {b₁ b₂ : List α} (y : �
   · exact List.mem_append_left _ h
   · exact List.mem_append_right _ (.tail _ h)
 
+/-- A Knock Out move preserves well-formedness. -/
+theorem KOMove.wellFormed {g g' : GameState} (h : KOMove g g') (hw : WellFormed g) :
+    WellFormed g' := by
+  cases h with
+  | knockOut ha hk hp =>
+      rename_i p c ps
+      refine ⟨fun hn => ?_, hw.2.1, hw.2.2⟩
+      cases ps with
+      | nil => simp at hn
+      | cons c' ps' =>
+          simp only [List.isEmpty_cons, Bool.false_eq_true, ite_false] at hn
+          exact ⟨List.cons_ne_nil _ _, (hw.1 hn).2⟩
+  | promote ha hb =>
+      refine ⟨hw.1, hw.2.1, fun p hp => hw.2.2 p ?_⟩
+      rw [hb]; exact mem_append_cons_of_mem _ hp
+  | noPokemon ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
+  | knockOutOwn ha hk hp =>
+      rename_i p c ps
+      refine ⟨fun hn => ?_, hw.2.1, hw.2.2⟩
+      cases ps with
+      | nil => simp at hn
+      | cons c' ps' =>
+          simp only [List.isEmpty_cons, Bool.false_eq_true, ite_false] at hn
+          exact ⟨(hw.1 hn).1, List.cons_ne_nil _ _⟩
+  | promoteOwn ha hb =>
+      refine ⟨hw.1, fun p hp => hw.2.1 p ?_, hw.2.2⟩
+      rw [hb]; exact mem_append_cons_of_mem _ hp
+  | noPokemonOwn ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
+
+theorem Resolve.wellFormed {g g' : GameState} (h : Resolve g g') (hw : WellFormed g) :
+    WellFormed g' := by
+  induction h with
+  | done => exact hw
+  | step _ hm _ ih => exact ih (hm.wellFormed hw)
+
+/-- Resolving a Trainer card's effect, Knock Outs included, preserves well-formedness. -/
+theorem TRun.wellFormed {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : WellFormed g) :
+    WellFormed g' := by
+  induction h with
+  | prim _ _ hr hk => exact hk.wellFormed (WellFormed.of_frame hw hr.frame)
+  | stop => exact hw
+  | iteT _ _ _ _ ih => exact ih hw
+  | iteF _ _ _ _ ih => exact ih hw
+  | seq _ _ ih₁ ih₂ => exact ih₂ (ih₁ hw)
+  | choiceL _ ih => exact ih hw
+  | choiceR _ ih => exact ih hw
+  | iterNil => exact hw
+  | iterCons _ _ ih₁ ih₂ => exact ih₂ (ih₁ hw)
+
+/-- Taking the Knock Outs ends in a `Settled` state or a finished game. -/
+theorem Resolve.settled_or_won {g g' : GameState} (h : Resolve g g') :
+    Settled g' ∨ g'.winner ≠ none := by
+  induction h with
+  | done h => exact h
+  | step _ _ _ ih => exact ih
+
+/-- **Trainer effects end settled.** A Trainer card's effect, resolved from a state that is
+`Settled` or finished, ends in a state that is `Settled` or finished: no Knock Out is left
+pending by it. -/
+theorem TRun.settled_or_won {e : Effect} {g g' : GameState} (h : TRun e g g')
+    (hs : Settled g ∨ g.winner ≠ none) : Settled g' ∨ g'.winner ≠ none := by
+  induction h with
+  | prim _ _ _ hk => exact hk.settled_or_won
+  | stop hn => exact .inr hn
+  | iteT _ _ _ _ ih => exact ih hs
+  | iteF _ _ _ _ ih => exact ih hs
+  | seq _ _ ih₁ ih₂ => exact ih₂ (ih₁ hs)
+  | choiceL _ ih => exact ih hs
+  | choiceR _ ih => exact ih hs
+  | iterNil => exact hs
+  | iterCons _ _ ih₁ ih₂ => exact ih₂ (ih₁ hs)
+
 /-- Legal play preserves well-formedness. -/
 theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
     WellFormed g' := by
@@ -76,8 +148,8 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         | head => exact ⟨hk, rfl, rfl, rfl, rfl⟩
         | tail _ hp =>
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
-  | item hh hbt hst hr => exact WellFormed.of_frame hw hr.frame
-  | supporter hh hs hbt hst hr => exact WellFormed.of_frame hw hr.frame
+  | item hh hbt hst hr => exact hr.wellFormed hw
+  | supporter hh hs hbt hst hr => exact hr.wellFormed hw
   | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | knockOut ha hk hp =>

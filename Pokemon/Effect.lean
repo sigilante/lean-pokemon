@@ -10,11 +10,22 @@ the right shape for reachability questions, and it is silent about probability.
 Effects read the state only through the two Active Pokémon: a test (`ite`) on the damage or
 the Special Conditions of either one, and `scale`, which places counters in proportion to the
 damage on either one. Inside one `Run` nothing is Knocked Out, so damage may exceed HP and
-these reads see the excess; `Pokemon.Rules` makes every Knock Out be taken before the next
-effect begins.
+these reads see the excess. `Run` is the semantics of an attack's effect, where the rulebook
+checks for Knock Outs only at the end of the attack. The effect of an Item or Supporter card is
+resolved by `TRun` (in `Pokemon.Rules`), which uses `Run` for one primitive step at a time and
+takes every Knock Out at once after each step.
 -/
 
 namespace Pokemon
+
+/-- A primitive effect: anything but `ite`, `seq`, `choice` and `iter`. Each primitive resolves
+in one step of `Run`, with no sub-derivation. -/
+def Effect.isPrim : Effect → Bool
+  | .ite .. => false
+  | .seq .. => false
+  | .choice .. => false
+  | .iter .. => false
+  | _ => true
 
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g

@@ -4,8 +4,9 @@ import Pokemon.WellFormed
 # Damage and Poison strength: what is bounded, and a clamp that makes the rest bounded
 
 Two numeric components of the state can be made large by legal play: damage on either Active
-Pokémon (inside one effect, `counters_unbounded`; an attack, Trainer card or Checkup can leave
-it far above HP, and the Knock Out is then the next move) and the Poison strength `poisonUp`
+Pokémon (inside an attack's effect, `counters_unbounded`; an attack or Checkup can leave it far
+above HP, and the Knock Out is then the next move; one step of a Trainer card's effect can too,
+and the Knock Out is taken at once, inside the same move) and the Poison strength `poisonUp`
 of a Poisoned Pokémon (`poisonUp_unbounded`). This file shows that the excess carries no
 information at the level of moves.
 
@@ -16,6 +17,9 @@ information at the level of moves.
   equal up to HP) is a bisimulation for `Run`. Effects read damage exactly, so inside an
   effect only Poison strength may be capped; `Reads.run_clamp_not_sim` shows that the HP clamp
   of damage is NOT a simulation for `Run` once effects read damage.
+* `TRun.clamp_sim` (with `KOMove.clamp_sim`, `Resolve.clamp_sim`): the kernel of `clamp` IS a
+  simulation for a Trainer card's effect started in a `Settled` (or finished) state, because
+  every test and primitive step of it starts `Settled` (`TRun.settled_or_won`).
 * `Move.clamp_sim`, `Reach.clamp_sim`: states with the same `clamp` have the same moves, up to
   the same clamp. So the kernel of `clamp` is a (strong) bisimulation for `Move`, and every
   question about legal play that does not read the capped quantities above HP can be asked of
@@ -27,10 +31,11 @@ Why the clamp is sound at the level of moves. Every move that resolves an effect
 other move except the six that resolve Knock Outs, requires the state to be `Settled`: no
 Pokémon in play is at or above its HP. In such a state the two clamps agree: damage below HP is
 not capped, so states with the same `clamp` have the same damage (`map_exact_of_clamp`), and
-`Run.exact_sim` applies to the effect. A Pokémon at or above its HP is read only by the Knock
-Out test `hp ≤ damage` and its negation, a threshold test at HP. Poison strength is read only
-by Checkup, which adds it to damage that is then capped at HP; `min (d + u) h` depends on `u`
-only through `min u h`. No effect reads Poison strength.
+`Run.exact_sim` applies to an attack's effect, and `TRun.clamp_sim` to a Trainer card's. A
+Pokémon at or above its HP is read only by the Knock Out test `hp ≤ damage` and its negation, a
+threshold test at HP. Poison strength is read only by Checkup, which adds it to damage that is
+then capped at HP; `min (d + u) h` depends on `u` only through `min u h`. No effect reads Poison
+strength.
 
 The previous version of this file capped the damage on the player's own Active Pokémon only
 between turns and bounded it during the turn by a separate invariant (`Reach.activeLe`, at most
@@ -497,6 +502,118 @@ theorem GameState.settled_of_clamp {g₁ g₂ : GameState} (h : g₁.clamp = g�
     simp only [GameState.clamp, GameState.clampAt, hn, Option.map_none] at e
     exact Option.map_eq_none_iff.1 e
 
+/-- The kernel of `clamp` is a simulation for Knock Out moves. -/
+theorem KOMove.clamp_sim {g₁ g₁' g₂ : GameState} (h : KOMove g₁ g₁')
+    (hc : g₁.clamp = g₂.clamp) : ∃ g₂', KOMove g₂ g₂' ∧ g₁'.clamp = g₂'.clamp := by
+  obtain ⟨c₂, a₂, hg, hc₂, ha₂⟩ := GameState.clamp_inv hc
+  subst hg
+  cases h with
+  | knockOut ha hk hp =>
+      rw [ha] at ha₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
+      exact ⟨_, .knockOut rfl (hq.ko hk) hp, by
+        simp only [GameState.clamp, GameState.clampAt, Option.map_none, hc₂, hq.cardList]⟩
+  | promote ha hb =>
+      rw [ha] at ha₂
+      have := none_of_map ha₂
+      subst this
+      exact ⟨_, .promote rfl hb, by simp only [GameState.clamp, GameState.clampAt, hc₂]⟩
+  | noPokemon ha hb =>
+      rw [ha] at ha₂
+      have := none_of_map ha₂
+      subst this
+      exact ⟨_, .noPokemon rfl hb, by
+        simp only [GameState.clamp, GameState.clampAt, hc₂, ha, Option.map_none]⟩
+  | knockOutOwn ha hk hp =>
+      rw [ha] at hc₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+      exact ⟨_, .knockOutOwn rfl (hq.ko hk) hp, by
+        simp only [GameState.clamp, GameState.clampAt, Option.map_none, ha₂, hq.cardList]⟩
+  | promoteOwn ha hb =>
+      rw [ha] at hc₂
+      have := none_of_map hc₂
+      subst this
+      exact ⟨_, .promoteOwn rfl hb, by simp only [GameState.clamp, GameState.clampAt, ha₂]⟩
+  | noPokemonOwn ha hb =>
+      rw [ha] at hc₂
+      have := none_of_map hc₂
+      subst this
+      exact ⟨_, .noPokemonOwn rfl hb, by
+        simp only [GameState.clamp, GameState.clampAt, ha₂, ha, Option.map_none]⟩
+
+theorem GameState.winner_of_clamp {g₁ g₂ : GameState} (h : g₁.clamp = g₂.clamp) :
+    g₂.winner = g₁.winner :=
+  (congrArg GameState.winner h).symm
+
+/-- The kernel of `clamp` is a simulation for taking the Knock Outs. -/
+theorem Resolve.clamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
+    ∀ {g₂ : GameState}, g₁.clamp = g₂.clamp →
+      ∃ g₂', Resolve g₂ g₂' ∧ g₁'.clamp = g₂'.clamp := by
+  induction h with
+  | done h =>
+      intro g₂ hc
+      refine ⟨g₂, .done ?_, hc⟩
+      rcases h with h | h
+      · exact .inl (GameState.settled_of_clamp hc h)
+      · exact .inr (by rw [GameState.winner_of_clamp hc]; exact h)
+  | step hn hm _ ih =>
+      intro g₂ hc
+      obtain ⟨m₂, hm₂, hcm⟩ := hm.clamp_sim hc
+      obtain ⟨g₂', hr₂, hc'⟩ := ih hcm
+      exact ⟨g₂', .step (by rw [GameState.winner_of_clamp hc]; exact hn) hm₂ hr₂, hc'⟩
+
+/-- **The kernel of `clamp` is a simulation for Trainer effects** (`TRun`), from a state that is
+`Settled` or finished. Unlike `Run` (`Reads.run_clamp_not_sim`), a Trainer effect never reads
+damage at or above HP: every test and primitive step starts `Settled` (`TRun.settled_or_won`),
+where equal clamps mean equal damage, so `Run.exact_sim` applies to each step and the Knock Outs
+that follow are simulated by `Resolve.clamp_sim`. -/
+theorem TRun.clamp_sim {e : Effect} {g₁ g₁' : GameState} (h : TRun e g₁ g₁') :
+    ∀ {g₂ : GameState}, g₁.clamp = g₂.clamp → (Settled g₁ ∨ g₁.winner ≠ none) →
+      ∃ g₂', TRun e g₂ g₂' ∧ g₁'.clamp = g₂'.clamp := by
+  induction h with
+  | prim he hn hr hk =>
+      intro g₂ hc hs
+      have hs : Settled _ := hs.resolve_right (fun h => h hn)
+      obtain ⟨m₂, hr₂, hcm⟩ := Run.exact_sim hr (GameState.exact_of_clamp hc hs.1)
+      obtain ⟨g₂', hk₂, hc'⟩ := hk.clamp_sim (GameState.clamp_of_exact hcm)
+      exact ⟨g₂', .prim he (by rw [GameState.winner_of_clamp hc]; exact hn) hr₂ hk₂, hc'⟩
+  | stop hn =>
+      intro g₂ hc _
+      exact ⟨g₂, .stop (by rw [GameState.winner_of_clamp hc]; exact hn), hc⟩
+  | iteT hn h ht _ ih =>
+      intro g₂ hc hs
+      have hs' : Settled _ := hs.resolve_right (fun h => h hn)
+      obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree (GameState.exact_of_clamp hc hs'.1) h
+      obtain ⟨g₂', r', hc'⟩ := ih hc hs
+      exact ⟨g₂', .iteT (by rw [GameState.winner_of_clamp hc]; exact hn) hq
+        (by rw [Test.eval_agree _ hqa]; exact ht) r', hc'⟩
+  | iteF hn h ht _ ih =>
+      intro g₂ hc hs
+      have hs' : Settled _ := hs.resolve_right (fun h => h hn)
+      obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree (GameState.exact_of_clamp hc hs'.1) h
+      obtain ⟨g₂', r', hc'⟩ := ih hc hs
+      exact ⟨g₂', .iteF (by rw [GameState.winner_of_clamp hc]; exact hn) hq
+        (by rw [Test.eval_agree _ hqa]; exact ht) r', hc'⟩
+  | seq h₁ _ ih₁ ih₂ =>
+      intro g₂ hc hs
+      obtain ⟨m₂, r₁, hcm⟩ := ih₁ hc hs
+      obtain ⟨g₂', r₂, hc'⟩ := ih₂ hcm (h₁.settled_or_won hs)
+      exact ⟨g₂', .seq r₁ r₂, hc'⟩
+  | choiceL _ ih =>
+      intro g₂ hc hs
+      obtain ⟨g₂', r, hc'⟩ := ih hc hs
+      exact ⟨g₂', .choiceL r, hc'⟩
+  | choiceR _ ih =>
+      intro g₂ hc hs
+      obtain ⟨g₂', r, hc'⟩ := ih hc hs
+      exact ⟨g₂', .choiceR r, hc'⟩
+  | iterNil a g => intro g₂ hc _; exact ⟨g₂, .iterNil a g₂, hc⟩
+  | iterCons h₁ _ ih₁ ih₂ =>
+      intro g₂ hc hs
+      obtain ⟨m₂, r₁, hcm⟩ := ih₁ hc hs
+      obtain ⟨g₂', r₂, hc'⟩ := ih₂ hcm (h₁.settled_or_won hs)
+      exact ⟨g₂', .iterCons r₁ r₂, hc'⟩
+
 /-- **The kernel of `clamp` is a bisimulation for `Move`**: if `g₁` and `g₂` have the same
 clamp, every move from `g₁` is matched by a move from `g₂` to a state with the same clamp.
 (The relation is symmetric, so this gives both directions.) -/
@@ -542,23 +659,18 @@ theorem Move.clamp_sim {g₁ g₁' g₂ : GameState} (h : Move g₁ g₁')
       simp only [GameState.clamp, GameState.clampAt, ha₂]
   | @item g' l₁ l₂ n e hh hbt hst hr =>
       have hs' := hs₂ hst
-      have hx' := hx hst.1
-      obtain ⟨c₃, a₃, hg', hc₃, ha₃⟩ := GameState.clamp_inv hx'
-      obtain ⟨g₂', hr', hc'⟩ := Run.exact_sim hr (g₂ := { g₂ with cur := { g₂.cur with
+      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim (g₂ := { g₂ with cur := { g₂.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g₂.cur.discard } })
-        (by subst hg'; simp only [GameState.clampAt, hc₃, ha₃])
-      exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr',
-        GameState.clamp_of_exact hc'⟩
+        (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂]) (.inl hst)
+      exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr', hc'⟩
   | @supporter g' l₁ l₂ n e hh hs hbt hst hr =>
       have hs' := hs₂ hst
-      have hx' := hx hst.1
-      obtain ⟨c₃, a₃, hg', hc₃, ha₃⟩ := GameState.clamp_inv hx'
-      obtain ⟨g₂', hr', hc'⟩ := Run.exact_sim hr (g₂ := { g₂ with cur := { g₂.cur with
+      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim (g₂ := { g₂ with cur := { g₂.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g₂.cur.discard } })
-        (by subst hg'; simp only [GameState.clampAt, hc₃, ha₃])
+        (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂]) (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
-        (by subst hg; exact hbt) hs' hr', GameState.clamp_of_exact hc'⟩
+        (by subst hg; exact hbt) hs' hr', hc'⟩
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr =>
       have hs' := hs₂ hst
       obtain ⟨g₂', hr', hc''⟩ := Run.exact_sim hr (hx hst.1)

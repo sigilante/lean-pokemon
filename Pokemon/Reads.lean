@@ -7,8 +7,10 @@ import Pokemon.Infinite
 The effect language reads the two Active Pokémon (`Effect.ite` on a `Test`: at least `n`
 damage counters, exactly `n`, a Special Condition; `Effect.scale`, `k` counters on the
 opponent's Active Pokémon per damage counter on either Active Pokémon), and can damage or fully
-heal the player's own Active Pokémon (`selfDamage`, `healAll`). Inside one effect nothing is
-Knocked Out, so these reads see damage above HP.
+heal the player's own Active Pokémon (`selfDamage`, `healAll`). Inside an attack's effect
+(`Run`) nothing is Knocked Out, so these reads see damage above HP. Inside an Item or Supporter
+effect (`TRun`) they do not: a Knock Out is taken at once after the step that causes it
+(`TRun.guarded`, in `Pokemon/Trainer.lean`).
 
 * `run_clamp_not_sim`: the HP clamp is NOT a simulation for `Run`. Two states whose opposing
   Active Pokémon have 5 and 6 damage counters on 5 HP have the same clamp, but the effect "if
@@ -17,21 +19,21 @@ Knocked Out, so these reads see damage above HP.
   above its HP: it stays as it is, or it leaves the Active Spot (is Knocked Out); and the turn
   does not pass. So no effect can read or heal over-HP damage between moves.
 * `activeLe_false`: the invariant `Reach.activeLe` of the previous version (during a turn, the
-  player's own Active Pokémon has at most `maxHp + 3` damage counters) is false once effects
-  can damage the player's own Pokémon. It is no longer needed.
+  player's own Active Pokémon has at most `maxHp + 3` damage counters) is false once an
+  attack's effect can damage the player's own Pokémon. It is no longer needed.
 
 What survives. Every move except a Knock Out starts from a `Settled` state, where damage on
 every Pokémon in play is below HP and so equal clamps mean equal damage; `Run.exact_sim`
-simulates effects with damage exact. Hence `Move.clamp_sim` and `Reach.clamp_sim` (the HP
-clamp is a bisimulation for moves) and `Reach.finite` (the clamps of the reachable states lie
-in one finite list) hold for the extended language, with the cap at HP; no larger cap computed
-from the constants in the cards is needed. In particular no combination of `iter`, `choice`,
-`selfDamage`, `scale`, `heal` and the tests inside one effect yields infinitely many states up
-to the clamp at move boundaries: within one effect the damage is unbounded, but at the end of
-the effect it is either below HP (finitely many values) or at or above HP, where only the
-Knock Out test reads it. This depends on the model's Knock Out timing (`Settled`); without it,
-`heal` would read over-HP damage across moves and the clamp would fail as above.
--/
+simulates an attack's effect with damage exact, and `TRun.clamp_sim` a Trainer card's. Hence
+`Move.clamp_sim` and `Reach.clamp_sim` (the HP clamp is a bisimulation for moves) and
+`Reach.finite` (the clamps of the reachable states lie in one finite list) hold for the extended
+language, with the cap at HP; no larger cap computed from the constants in the cards is needed.
+In particular no combination of `iter`, `choice`, `selfDamage`, `scale`, `heal` and the tests
+inside one effect yields infinitely many states up to the clamp at move boundaries: within one
+attack's effect the damage is unbounded, but at the end of the effect it is either below HP
+(finitely many values) or at or above HP, where only the Knock Out test reads it. This depends
+on the model's Knock Out timing (`Settled`); without it, `heal` would read over-HP damage across
+moves and the clamp would fail as above. -/
 
 namespace Pokemon
 
@@ -104,16 +106,19 @@ theorem run_clamp_not_sim :
       cases h
       exact absurd ht (by decide)
 
-/-- An Item that places 9 damage counters on the player's own Active Pokémon. -/
-def selfItem : Card := .trainer "SelfDamageItem" .item (.selfDamage 9)
+/-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
+on itself. -/
+def hurter : PokemonCard :=
+  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9⟩], 1⟩
 
 def start2 : GameState :=
-  ⟨side [selfItem] [] (InPlay.ofBasic mon), side [] [] (InPlay.ofBasic mon),
+  ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),
     true, false, false, false, none⟩
 
 def after2 : GameState :=
-  ⟨side [] [selfItem] { InPlay.ofBasic mon with damage := 9 }, side [] [] (InPlay.ofBasic mon),
-    true, false, false, false, none⟩
+  ⟨side [] [] { InPlay.ofBasic hurter with damage := 9 },
+    side [] [] { InPlay.ofBasic mon with damage := 0 + 0 },
+    true, false, true, false, none⟩
 
 theorem start2_damageBounded : DamageBounded start2 := by
   intro p hp
@@ -128,13 +133,17 @@ theorem start2_wellFormed : WellFormed start2 := by
     intro p hp <;> cases hp
 
 theorem reach_after2 : Reach start2 after2 :=
-  .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "SelfDamageItem") rfl rfl
-    ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩ (.selfDamage 9 rfl))
+  .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9⟩) rfl (.head _)
+    (Nat.zero_le _) rfl rfl rfl rfl
+    ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
+    (.seq (.counters 0 rfl) (.selfDamage 9 rfl)))
 
 /-- **The old bound on the player's own Active Pokémon is false.** From a well-formed start with
-no pending Knock Out, one Item reaches, during the turn, a state whose own Active Pokémon has
-more than `maxHp + 3` damage counters (`Reach.activeLe` of the previous version claimed at most
-`maxHp + 3`). The Knock Out is the next move (`Move.pending_untouched`). -/
+no pending Knock Out, one attack whose effect damages the attacker reaches, during the turn, a
+state whose own Active Pokémon has more than `maxHp + 3` damage counters (`Reach.activeLe` of
+the previous version claimed at most `maxHp + 3`). The Knock Out is the next move
+(`Move.pending_untouched`). An Item with the same effect would have its Knock Out taken in
+mid-effect, inside the same move (`TRun`; compare `Trainer.selfKO_reachable`). -/
 theorem activeLe_false :
     ∃ g₀, WellFormed g₀ ∧ DamageBounded g₀ ∧
       ∃ g p, Reach g₀ g ∧ g.between = false ∧ g.cur.active = some p ∧
