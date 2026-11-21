@@ -8,7 +8,7 @@ import Pokemon.Effect
 
 A turn has two phases, told apart by `GameState.between`. `endTurn` applies Pokémon Checkup
 to both Active Pokémon and hands the move to the opponent with `between = true`; in that
-phase only Knock Outs, promotions, and the draw that starts the turn proper (`startTurn`, or
+phase only the batch Knock Out step and the draw that starts the turn proper (`startTurn`, or
 `deckOut` if the deck is empty) are legal. Checkup is the only place where damage arrives
 without a player's action; the Knock Outs it causes are therefore taken before anything else
 can happen, as the rulebook requires.
@@ -18,25 +18,31 @@ Then, end your turn.", p. 9). `attack` and `attackConfused` (a Confused Pokémon
 attempt, which is still the turn's attack) set `GameState.attacked`, and every action of the
 turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `attack`,
 `attackConfused`, since milestone M8a `ability` and `onPlay`, and since milestone M5 `stadium`,
-`stadiumUse`, `tool` and `toolBench`) requires `attacked = false`; so after an attack only its Knock Outs (and
-promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
+`stadiumUse`, `tool` and `toolBench`) requires `attacked = false`; so after an attack only its Knock Outs (the batch
+step: Prize cards, the outcome, promotions) and `endTurn` are legal, and `endTurn` resets the flag. A player who
 does not attack ends the turn by `endTurn` at any point of the turn proper.
 
 Knock Out timing. The rulebook checks for Knock Outs at the end of every attack ("check to see
 if any Pokémon were Knocked Out by the attack", 2023 p. 14) and at the end of every Pokémon
 Checkup ("After both players have gone through these checks", p. 15). The model also takes a
 Knock Out at once whenever damage reaches HP at any other time; that third clause is not in the
-English rulebook (see the Known gaps for its source). The model follows these in two ways. Between moves: every move that is not part of resolving a Knock Out
-(the eight moves `knockOut`, `knockOutBench`, `promote`, `noPokemon` and their `Own` versions)
-requires the state
-to be `Settled`: no Pokémon in play is at or above its HP, and both Active Spots are filled.
-So once a move leaves a Pokémon at or above its HP, the next moves must Knock it Out (and
-promote a replacement) before anything else happens; nothing can read, heal or otherwise use
-an over-HP Pokémon between moves. Inside a move: an attack's effect is resolved as a whole by
-`Run`, so damage may exceed HP and the effect can read it, and the Knock Outs come after the
-attack, as the rulebook says; an Item or Supporter's effect is resolved by `TRun`, which takes
-every Knock Out at once after each primitive step (`Resolve`) and stops if the game is over, so
-no step of a Trainer effect runs while a Pokémon is at or above its HP (`TRun.guarded`).
+English rulebook (see the Known gaps for its source). Every Knock Out is taken by the batch
+Knock Out step (`KOBatch`, milestone batch-KO), the rulebook's single check: every Pokémon in play
+of both players is tested against its derived HP once, in the state before any removal; all those
+at or above their HP leave play together; both players take their Prize cards; the game is decided
+(`Outcome`: a win, or Sudden Death when both players win in as many ways); then each player with an
+empty Active Spot promotes. If the removals or promotions leave another Pokémon at or above its HP
+(derived HP can change), the check repeats. The model follows the timing in two ways. Between
+moves: every move other than the batch step (`Move.knockOuts`) requires the state to be `Settled`:
+no Pokémon in play is at or above its HP, and both Active Spots are filled; from any other state
+the batch step is the only move (`Move.batch_of_not_settled`). So once a move leaves a Pokémon at
+or above its HP, the next move Knocks it Out, with every other pending one, before anything else
+happens; nothing can read, heal or otherwise use an over-HP Pokémon between moves. Inside a move:
+an attack's effect is resolved as a whole by `Run`, so damage may exceed HP and the effect can read
+it, and the Knock Outs come after the attack, as the rulebook says; an Item or Supporter's effect
+is resolved by `TRun`, which takes the batch steps after each primitive step (`Resolve`) and stops
+if the game is over, so no step of a Trainer effect runs while a Pokémon is at or above its HP
+(`TRun.guarded`).
 
 Sources of the turn rules (milestone M1). The rulebook quoted is the *Scarlet & Violet—151*
 rulebook (©2023, `data/mew_rulebook_en.pdf`, survey S9); survey S8 read the *Surging Sparks*
@@ -62,8 +68,10 @@ follows the latest source; for the rules below the three agree except where note
   card text says otherwise") are, in today's Standard, one Tool (Technical Machine: Fluorite
   sv8-188) whose text says "discard it at the end of your turn" (survey S9 C10); the model has no
   end-of-turn discard.
-* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21); the 2026 post replaced it with
-  tiebreaker games (S8 J4, unverified against a rulebook); the model has neither (gaps).
+* Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21), and "if you win in both ways and
+  your opponent wins in only one way, you are the victor!"; the model ends the game with the
+  outcome `Outcome.suddenDeath` (milestone batch-KO) and does not play the new game; the 2026 post
+  replaced Sudden Death with tiebreaker games (S8 J4, unverified against a rulebook; gaps).
 * Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
   model's rule comes from another source (gaps).
 
@@ -110,45 +118,48 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   two Weaknesses or two Resistances on one card (dual-type Pokémon, S8 C6; a Pokémon has one
   type here), and effects that change or ignore Weakness or Resistance (S8 E2); Weakness and
   Resistance never apply to the Bench (milestone M3: attack damage to Benched Pokémon skips them);
-* Knock Outs are separate moves, forced by `Settled` (above) before any other move. Any
-  Pokémon in play whose damage reaches its HP is Knocked Out (milestone M3): an Active Pokémon
-  (`knockOut`, `knockOutOwn`, followed by a promotion) or a Benched one (`knockOutBench`,
-  `knockOutBenchOwn`: "If a player's Pokémon is Knocked Out, that player puts it and all cards
-  attached to it in the discard pile", rulebook 2023 p. 14; no promotion follows). Several
-  pending Knock Outs are taken one at a time, in any order, and all of them before any other
-  move. The order is nondeterministic because no rule fixes it: the 2023 rulebook says only
-  "check every Pokémon that was affected by the attack" (p. 14) and is silent on the order and
-  on who takes Prize cards first (survey S9); the 2026 rule changes were read by survey S8 only
-  through a summary and are unverified. So when both players take their last Prize card from
-  the same attack or Checkup the first Knock Out taken decides the game: there is no Sudden
-  Death (2023 rulebook p. 21), no tiebreaker game (2026, S8 J4), and no "if you win in both ways
-  and your opponent wins in only one way, you are the victor" (p. 21). A promotion may also be
-  made while a Benched Pokémon's Knock Out is pending, and may promote that Pokémon.
-  DEPARTURE (since milestone M6): with derived HP the order of Knock Outs and promotions changes
-  the outcome, and the model's one-at-a-time Knock Outs depart from the rulebook's single check
-  ("check to see if any Pokémon were Knocked Out by the attack … check every Pokémon that was
-  affected", and only then is a new Active Pokémon chosen; 2023 rulebook p. 14) in both
-  directions. (i) A Pokémon the rule Knocks Out can survive in the model: a Benched Pokémon with
-  printed HP 3 and a static "+3 HP while in the Active Spot" takes 3 counters from the attack that
-  Knocks Out its owner's Active Pokémon; the model takes the Active Pokémon's Knock Out first and
-  promotes the Benched Pokémon while its own Knock Out is pending, and in the Active Spot its HP
-  is 6, so it is no longer pending (`StaticWitness.promotion_rescues`). (ii) A double Knock Out
-  the rule takes is unreachable in the model: two Pokémon of one player each carry a static "your
-  Pokémon get −1 HP" (own selector) and are at HP 2 with 2 counters; whichever Knock Out is taken
-  first raises the other's HP to 3, so it is never Knocked Out by that attack
-  (`StaticWitness.double_knockOut_lost`, proved for both orders; that no other move intervenes is
-  read off the state, not proved). So in this respect the model is neither a
-  superset nor a subset of rulebook play. The finiteness and bisimulation theorems
-  (`Reach.finite`, `Faithful.xfinite`, `Reach.xclamp_bisim` and the rest) are statements about the
-  model's moves and are unaffected; what they do not cover is play the model lacks, and they
-  include play the rulebook lacks. The planned repair is a batch Knock Out step: compute the set
-  of pending Knock Outs once, remove those Pokémon together, and promote only afterwards. A
-  player with no Pokémon to promote loses at once. A Knock Out gives the
-  Prize cards of the Knocked Out Pokémon's rule box (`PokemonCard.prizeCount`: 1, 2 for
-  Pokémon ex, 3 for Mega Evolution Pokémon ex), the top ones of the Prize list
-  (`PlayerState.takePrizes`); with fewer left, all are taken and the taker wins
-  (`PlayerState.prizesOut`). Effects that change the number taken (Shedinja, "take 1 more Prize
-  card", S8 I5) are absent;
+* Knock Outs (milestone batch-KO; before it, separate moves taken one at a time in any order, a
+  DEPARTURE from the rulebook since milestone M6 that is now removed, see below): every Knock Out
+  is taken by the batch Knock Out step (`KOBatch`, the move `Move.knockOuts`, and the steps of
+  `Resolve` inside Trainer effects), forced by `Settled` before any other move. Any Pokémon in play
+  whose damage reaches its derived HP is Knocked Out (milestone M3): the check (`GameState.koStep`)
+  tests every Pokémon in play of both players once, in the state before any removal, and removes
+  all those at or above their HP together, each with every card attached to its owner's discard
+  pile ("If a player's Pokémon is Knocked Out, that player puts it and all cards attached to it in
+  the discard pile", rulebook 2023 p. 14); each player takes the Prize cards of the opponent's
+  Knocked Out Pokémon, added up by rule box (`PokemonCard.prizeCount`: 1, 2 for Pokémon ex, 3 for
+  Mega Evolution Pokémon ex; with fewer left, all are taken); the game is decided by counting each
+  player's ways of winning (the last Prize card taken; the opponent left with no Pokémon in play):
+  more ways win, equal nonzero ways are Sudden Death (`Outcome.ofWays`; "if you win in both ways
+  and your opponent wins in only one way, you are the victor!", p. 21); then each player with an
+  empty Active Spot promotes a Benched Pokémon (`Promote`). The departures the old order allowed
+  are gone and their statements are now false (`StaticWitness.promotion_rescues_false`,
+  `StaticWitness.double_knockOut_lost_false`); the same starts give the rulebook's outcome on every
+  move (`StaticWitness.guard_knocked_out`, `StaticWitness.double_knockOut_taken`), and when both
+  players take their last Prize card the outcome no longer depends on an order
+  (`Bench.suddenDeath_forced`, `Bench.bothWays_wins`). What remains of the gap:
+  - the Prize cards taken are the top ones of the Prize list (`PlayerState.takePrizes`), whereas
+    the rulebook lets the player choose which ones (a finite choice; item below);
+  - who promotes first when both players must: no rule was found (the 2023 rulebook says only "The
+    player whose Pokémon was Knocked Out chooses a new Active Pokémon from their Bench", p. 14);
+    the model makes both choices in one step, a nondeterministic choice that covers both orders,
+    and checks nothing between them, so every order gives the same states;
+  - the check repeats: after a batch, removals (a static Ability leaving play) and promotions (a
+    Pokémon whose static effect depends on its place) can change derived HP and leave another
+    Pokémon at or above its HP; the state is then not `Settled` and the next move is another batch
+    (`StaticWitness.chain_knock_out`), until the state is `Settled` or the game is over. The 2023
+    rulebook describes one check after an attack and one after Checkup and is silent on this case;
+    the repetition is the model's reading of the rule it uses for Knock Outs at other times (the
+    Asia rule, next item), and it ends (each batch from a pending state removes a Pokémon);
+  - Sudden Death is a new game, which the model does not play: `Outcome.suddenDeath` is a terminal
+    outcome of the model's game. The 2026 rules (Professor Program post, survey S8 J4) replaced
+    Sudden Death by a tiebreaker game; that was read only through a secondary summary and is
+    unverified against a rulebook. For the model it changes only the name of the outcome;
+  - the outcome counts the two ways of winning the rulebook names at a Knock Out (p. 21); a third
+    way, an opponent who cannot draw at the start of their turn (`deckOut`), never coincides with a
+    Knock Out check in the model (the draw is a separate move);
+  - effects that change the number of Prize cards taken (Shedinja, "take 1 more Prize card", S8
+    I5) and Knock Out triggers (milestone M8b) are absent;
 * the source of the Knock Out timing outside attacks and Checkup: survey S9 found no rule in
   the 2023 English rulebook (*Scarlet & Violet—151*) that Knock Outs are checked at once at
   other times, and survey S8 quotes none from the 2024 rulebook; the model's immediate Knock
@@ -169,21 +180,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   owner's choice, but outcomes in which later steps of the effect find an empty Active Spot
   are absent from the model); when a Prize ends the game, or its owner has no Pokémon to promote, the
   game ends and the rest of the effect is not resolved. Several Knock Outs after one step are
-  taken by `Resolve` in any order, as after an attack (with the same departure from a single
-  check);
+  taken together, by the batch Knock Out step, as after an attack (`Bench.doubleKO_reachable`);
 * a Knock Out takes the top Prize cards of the Prize list, whereas the rulebook lets the player
-  choose which Prize cards to take (a finite choice);
+  choose which Prize cards to take (a finite choice; since milestone batch-KO a player takes the
+  Prize cards of all the opponent's Pokémon Knocked Out by one check at once);
 * HP is derived (milestone M6; the survey's loophole L1): `GameState.hpOf` is the printed HP plus
   every `hpPlus` and less every `hpMinus` of the static effects in force (`Static`, from static
   Abilities, Tools and the Stadium in play), computed from the state and never stored, and every
-  Knock Out premise (`DamageBounded`, `Settled`, the Knock Out moves, `moveCounter`'s "without
+  Knock Out premise (`DamageBounded`, `Settled`, the batch Knock Out check, `moveCounter`'s "without
   Knocking it Out") reads it. When a source leaves play (a Tool discarded, a Stadium replaced,
   Energy removed, a Pokémon with a static Ability Knocked Out, a Pokémon moved out of the place its
   bonus needs) HP can drop below the damage; no card text or rule found says what then happens to
   the damage (survey S7 §A), and the model keeps the counters and takes the Knock Out by its
   ordinary timing (between moves, `Settled`; in mid-effect, `Resolve` inside `TRun`; after an
-  attack or Checkup), a reading recorded here as a modelling decision. Chains are taken in turn
-  (`StaticWitness.chain_knock_out`). Not expressible, and open: HP defined by copying another
+  attack or Checkup), a reading recorded here as a modelling decision. Chains are taken by
+  repeated batches (`StaticWitness.chain_knock_out`; item on Knock Outs above). Not expressible, and open: HP defined by copying another
   Pokémon's HP (Ditto dp6-27, base3-3: circular between two Dittos), an HP bonus keyed to the
   Retreat Cost combined with a Retreat Cost keyed to the remaining HP (Heavy Boots with Rescue
   Board: no condition of `Static` reads HP or the Retreat Cost, so HP is never defined in terms of
@@ -549,8 +560,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
-  state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
-  an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
+  state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
+  is (`Move.progress` no longer uses its hypotheses: the batch Knock Out step exists in every state
+  that is not `Settled`, `KOBatch.exists_of`); before it, from other starts (e.g. no winner and an
+  empty Prize list) a pending Knock Out could be impossible to take. Start states are not required to
   be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`; `attacked`
   with `between`): from a start with `firstTurn` true and the player's `hadTurn` already true,
   that player could evolve on the game's first turn. Consistency is `GameState.FlagsOk`
@@ -596,7 +609,7 @@ namespace Pokemon
 
 /-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP, its
 derived HP (`GameState.hpOf`, milestone M6: printed HP changed by the static effects in force in
-`g`). Every move except the Knock Out moves requires it (through `Settled`, or directly). It is NOT
+`g`). Every move except the batch Knock Out step requires it (through `Settled`, or directly). It is NOT
 an invariant of all reachable states: an attack or Trainer card can leave a Pokémon at or above
 its HP (then the Knock Out must be taken next), and so can Checkup
 (`Infinite.endTurn_pending_ko_reachable`), and since milestone M6 so can any move that removes a
@@ -637,7 +650,7 @@ or moves to the Bench, it recovers from all Special Conditions", rulebook 2023 p
 no Poison strength. Before milestone M3 this also asked that the Pokémon be below its HP; once
 Benched Pokémon can be damaged and Knocked Out, a Benched Pokémon at or above its HP is a pending
 Knock Out, which `DamageBounded` (and so `Settled`) excludes before every move other than the
-Knock Out moves, as for the Active Pokémon. -/
+batch Knock Out step, as for the Active Pokémon. -/
 def Benched (p : InPlay) : Prop :=
   p.rot = .none ∧ p.poisoned = false ∧ p.burned = false ∧ p.poisonUp = 0
 
@@ -651,9 +664,9 @@ def WellFormed (g : GameState) : Prop :=
     (∀ p ∈ g.cur.bench, Benched p) ∧ ∀ p ∈ g.opp.bench, Benched p
 
 /-- No Knock Out is pending (no Pokémon in play, Active or Benched, is at or above its HP) and
-both Active Spots are filled. Every move except the eight that resolve Knock Outs (`knockOut`,
-`knockOutBench`, `promote`, `noPokemon` and their `Own` versions) requires it, so every pending
-Knock Out is taken, and the Active Pokémon replaced, before any other move. -/
+both Active Spots are filled. Every move except the batch Knock Out step (`Move.knockOuts`)
+requires it, so every pending Knock Out is taken, and the Active Pokémon replaced, before any other
+move (`Move.batch_of_not_settled`). -/
 def Settled (g : GameState) : Prop :=
   DamageBounded g ∧ g.cur.active ≠ none ∧ g.opp.active ≠ none
 
@@ -875,8 +888,8 @@ resolution starts in a `Settled` state, so no step of a Trainer effect is execut
 Active Pokémon is at or above its HP.
 
 Several Pokémon can reach their HP in one step (`spreadCounters` damages every Benched Pokémon of
-a player, milestone M3); `Resolve` takes all of their Knock Outs, in any order, before the next
-step (`Bench.doubleKO_reachable`). -/
+a player, milestone M3); `Resolve` takes all of their Knock Outs together, by the batch Knock Out
+step, before the next step (`Bench.doubleKO_reachable`). -/
 inductive TRun : Effect → GameState → GameState → Prop where
   | prim {e : Effect} {g g₁ g₂ : GameState} (he : e.isPrim = true) (hn : g.winner = none)
       (hr : Run e g g₁) (hk : Resolve g₁ g₂) : TRun e g g₂

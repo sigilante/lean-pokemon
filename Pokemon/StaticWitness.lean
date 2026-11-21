@@ -28,18 +28,24 @@ derived HP is computed by `decide` (through `dbB`).
   base damage 30 is doubled by Weakness (step 3) and then reduced (step 5), 60 − 20 = 40, not
   (30 − 20) × 2 = 20.
 
-Two DEPARTURES from the rulebook, recorded so that they cannot be forgotten (see the Known gaps in
-`Pokemon/Rules.lean`). The rulebook checks every affected Pokémon for a Knock Out once, after the
-attack, and only then is a new Active Pokémon chosen (2023 rulebook p. 14); the model takes pending
-Knock Outs one at a time, in any order, with promotions in between, and with derived HP the order
-changes the outcome, in both directions:
+* `chain_knock_out` is also the repetition of the batch Knock Out check (milestone batch-KO): the
+  first batch removes the Pokémon whose Ability gave the bonus, and the second, the next move, the
+  Pokémon left at or above its HP.
 
-* `promotion_rescues`: a Pokémon the rulebook Knocks Out survives in the model (it is promoted while
-  its own Knock Out is pending, and its HP rises in the Active Spot);
-* `double_knockOut_lost`: a double Knock Out the rulebook takes is not taken in the model in
-  either order of the two Knock Outs (whichever comes first raises the other Pokémon's HP above
-  its damage). The theorem is about those two orders; that no other move is legal in that state
-  holds by inspection of `Move` (every other move needs `Settled`) and is not proved.
+Batch Knock Outs (milestone batch-KO). Until that milestone the model took pending Knock Outs one at
+a time, in any order, with promotions in between, and with derived HP the order changed the outcome
+in both directions; two DEPARTURES from the rulebook were recorded here (`promotion_rescues`: a
+Pokémon the rulebook Knocks Out was promoted while its Knock Out was pending and survived;
+`double_knockOut_lost`: a double Knock Out the rulebook takes was not taken in either order). The
+rulebook checks every Pokémon once, after the attack, and only then is a new Active Pokémon chosen
+(2023 rulebook p. 14); the batch Knock Out step does the same, and the departures are gone:
+
+* `guard_knocked_out`, `double_knockOut_taken`: from the same starts, after the same attacks, every
+  move is the batch Knock Out step, which Knocks Out both Pokémon, as the rulebook does; the attack
+  is the only move from the start that leads there (`move_r0`, `move_m0`);
+* `promotion_rescues_false`, `double_knockOut_lost_false`: the statements of the two departure
+  witnesses are false. (`promotion_rescues_alt`, which stated that the rulebook's outcome is also
+  reachable, is still true: it is now the only outcome.)
 -/
 
 namespace Pokemon.StaticWitness
@@ -222,7 +228,7 @@ theorem sg0_settled : Settled sg0 := settled_of_dbB rfl rfl (by decide)
 /-- **A Stadium's replacement Knocks Out a Benched Pokémon** (milestone M6): the Benched 30-HP
 Pokémon has 4 damage counters and survives only by `lively` (+30 HP, owned by the opponent);
 the player plays `plainStadium`, which replaces it (it goes to the opponent's discard pile); the
-Benched Pokémon is now at or above its HP, no move but a Knock Out move is legal (`Settled`
+Benched Pokémon is now at or above its HP, no move but the batch Knock Out step is legal (`Settled`
 fails), and it is Knocked Out. -/
 theorem stadium_replacement_knocks_out :
     Move sg0 sg1 ∧ ¬ DamageBounded sg1 ∧
@@ -303,9 +309,10 @@ theorem cg0_settled : Settled cg0 := settled_of_dbB rfl rfl (by decide)
 /-- **Two Knock Outs from one removal** (milestone M6): `dancer` (printed HP 3, 5 counters) gives
 the player's other Pokémon +30 HP; `small` (printed HP 3, 5 counters) survives on `lively` (+30)
 and `dancer` (+30): HP 9. `dancer` survives on `lively` alone: HP 6. Replacing `lively` leaves
-`dancer` at HP 3 (pending Knock Out) and `small` at HP 6 (not pending). Knocking `dancer` Out
-removes its Ability: `small` is now at HP 3 with 5 counters, a pending Knock Out, and it is Knocked
-Out in turn. -/
+`dancer` at HP 3 (pending Knock Out) and `small` at HP 6 (not pending). The batch Knock Out step
+Knocks Out `dancer` alone (the check sees `small` at HP 6) and removes its Ability: `small` is now at
+HP 3 with 5 counters, a pending Knock Out, and the check repeats: the next move, a second batch,
+Knocks it Out (milestone batch-KO; before it, two single Knock Out moves). -/
 theorem chain_knock_out :
     Settled cg0 ∧ Move cg0 cg1 ∧
       cg1.hpOf .own .bench (at_ dancer 5 [] []) = 3 ∧ cg1.hpOf .own .bench (at_ small 5 [] []) = 6 ∧

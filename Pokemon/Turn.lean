@@ -34,7 +34,8 @@ namespace Pokemon
 has attacked, every move is the batch Knock Out step (`KOBatch`: the Knock Outs the attack
 caused, the Prize cards, the outcome and the promotions) or the end of the turn, after which the opponent is to move, between
 turns, and has not attacked. No other action (playing a card, attaching Energy, evolving,
-retreating, attacking again) is legal. -/
+retreating, attacking again) is legal. (Milestone batch-KO replaced `KOMove`, the eight Knock Out
+moves, by `KOBatch` in the statement.) -/
 theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
     KOBatch g g' ∨ (g'.curIsFirst = !g.curIsFirst ∧ g'.between = true ∧ g'.attacked = false) := by
@@ -101,7 +102,8 @@ pending, and the result is `GameState.passTurn` for some Checkup coin flips and 
 the Benches. (Milestone M3 added the Benches' Char flips `bo`, `bc` to the statement; with no
 Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is
 (`BenchChar.eq_of_noChar`: `bo = g.opp.bench` and `bc = g.cur.bench.map InPlay.unfresh`), which
-is the old statement.) -/
+is the old statement. Milestone batch-KO replaced the first alternative, the eight Knock Out moves
+(`KOMove`), by the batch Knock Out step `KOBatch`, which takes them all at once.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
     KOBatch g g' ∨ ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),

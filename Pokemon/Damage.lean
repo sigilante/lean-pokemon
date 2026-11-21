@@ -1196,7 +1196,7 @@ def cxState : GameState :=
 /-- `Move.damageBounded_of_turn` (every move that passes the turn yields a state with no
 pending Knock Out) is false in the model with Checkup: ending the turn from a state with no
 pending Knock Out Poisons the opponent's 10-HP Active Pokémon to its HP. The Knock Out is then
-taken between turns (`knockOutOwn`), before `startTurn`.
+taken between turns (by the batch Knock Out step), before `startTurn`.
 
 The witness `cxState` is not well formed (both Prize lists are empty and there is no winner)
 and is not shown reachable; this theorem refutes only the statement about single moves.

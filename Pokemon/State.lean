@@ -198,7 +198,7 @@ Paralyzed). Poison places `1 + poisonUp` damage counters. Burn places 2, then a 
 (`burnHeads`) cures it on heads. Sleep is cured on heads (`sleepHeads`). Paralysis ends at the
 Checkup after its owner's turn (`ownersTurnEnded`). A Char counter makes the opponent flip a
 coin after every turn and puts 2 damage counters on its Pokémon on tails (`charTails`; Quilava
-neo1-47). Knock Outs are checked afterwards, by the Knock Out moves; Confusion has no Checkup
+neo1-47). Knock Outs are checked afterwards, by the batch Knock Out step; Confusion has no Checkup
 step. -/
 def checkup (ownersTurnEnded burnHeads sleepHeads charTails : Bool) (p : InPlay) : InPlay :=
   { p with

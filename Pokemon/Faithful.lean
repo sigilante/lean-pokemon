@@ -66,7 +66,8 @@ The writers are:
   during your turn" Ability by a Pokémon that has not used one, and each on-play trigger, spends at
   least one unit of a potential of the player to move (`GameState.abPot`: their Pokémon in play
   not yet used, still able to evolve, the free places in play, and the opponent's Prize cards),
-  which no move of the turn raises and which is at most `potBound` of the number of cards; each
+  which no move of the turn raises while the game goes on (a batch Knock Out step that ends the
+  game can raise it, milestone batch-KO) and which is at most `potBound` of the number of cards; each
   such use writes and recycles at most `Q` (`Ability.q`, `cardsAbQ`). The bound rests on there
   being no effect that returns a Pokémon in play to the hand or deck: a Pokémon leaves play only
   by a Knock Out, which costs a Prize card.
@@ -1249,7 +1250,11 @@ play (at most `benchLimit + 1`), and two for each Prize card the opponent has le
 no move raises it; using an Ability on an unused Pokémon lowers it by one; playing a Basic Pokémon
 or evolving lowers it by at least one (a new place is filled, or an evolution spent, and the new
 Pokémon is unused); Knocking Out one of the player's own Pokémon frees a place but gives the
-opponent at least one Prize card. So the uses of these Abilities in one turn are at most the
+opponent at least one Prize card. Since milestone batch-KO one check can Knock Out several of the
+player's Pokémon while the opponent has fewer Prize cards left than they take; the potential can
+then rise, but the opponent has taken their last Prize card and the game is over
+(`KOBatch.abPot_le` holds when the game goes on), so the per-turn invariant asks nothing of the
+potential of a finished game (`TInv.pot`, `TInv.turn`). So the uses of these Abilities in one turn are at most the
 potential at the start of the turn, which is at most `potBound` of the number of cards. The bound
 rests on the model having no effect that returns a Pokémon in play to the hand or deck (a Pokémon
 leaves play only by a Knock Out, which costs a Prize card); with such an effect (Scoop Up Cyclone)
@@ -2008,7 +2013,9 @@ def supT (P : Nat) (g : GameState) : Nat := if g.cur.supporterPlayed then P else
 theorem supT_le (P : Nat) (g : GameState) : supT P g ≤ P := by
   unfold supT; split <;> omega
 
-/-- **No move but the end of the turn raises the potential** (milestone M8a). -/
+/-- **No move but the end of the turn raises the potential** (milestone M8a), unless it ends the
+game (milestone batch-KO added the hypothesis `g'.winner = none`: a batch Knock Out step can
+Knock Out several of the player's Pokémon while the opponent's Prize cards run out). -/
 theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
     (hc : g'.curIsFirst = g.curIsFirst) (hw : g'.winner = none) : g'.abPot ≤ g.abPot := by
   cases hm with
@@ -2131,7 +2138,10 @@ Item writers that went to the discard piles (each such card played this turn), b
 by `Q` for each unit of potential spent (each "once during your turn" or on-play Ability used; `Q`
 bounds what one use writes, plus what it can recycle), and (milestone M5) by `R` for each Stadium
 use (`GameState.stPot` counts the uses still open, two at the start of a turn; `R` bounds what
-one use writes and recycles, `Card.stQ`). -/
+one use writes and recycles, `Card.stQ`). Since milestone batch-KO `pot` and `turn` are asked only
+while the game goes on (`g.winner = none`): a batch Knock Out step that ends the game can raise the
+potential (`KOBatch.abPot_le`), and no move follows it. The store bounds (`after`, `next`, `now`,
+`always`) hold in every state. -/
 structure TInv (S A P Q K R : Nat) (g : GameState) (X₀ X₁ X₂ D E : Nat) : Prop where
   x0 : X₀ ≤ P + P + Q * K + R * 2
   x1 : X₁ ≤ P + P + Q * K + R * 2
