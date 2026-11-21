@@ -378,6 +378,22 @@ def prizesOut (n : Nat) (s : PlayerState) : Bool := (s.prizes.drop n).isEmpty
 
 end PlayerState
 
+/-- How a finished game ended. `win b`: the player who went first won iff `b`. `suddenDeath`:
+both players won at the same time and neither won "in both ways" (rulebook 2023 p. 21: "You win
+if you take your last Prize card or if your opponent has no Benched Pokémon to replace their
+Active Pokémon if it is Knocked Out … This makes it possible for both players to win at the same
+time. If this happens, play Sudden Death. However, if you win in both ways and your opponent wins
+in only one way, you are the victor!"). Sudden Death is a new game ("In Sudden Death, you play a
+new game, but each player uses only 1 Prize card instead of the usual 6", p. 21), which the
+model does not play: `suddenDeath` is a terminal outcome of this game, like a win. The 2026 rule
+that replaced Sudden Death by a tiebreaker game (survey S8 J4) is recorded from a secondary
+summary and is unverified (Known gaps in `Pokemon/Rules.lean`); for the model it changes only
+the name of the new game. -/
+inductive Outcome where
+  | win (firstWon : Bool)
+  | suddenDeath
+  deriving DecidableEq
+
 /-- Whole-game state. `cur` is the player to move; the two swap at end of turn. -/
 structure GameState where
   cur : PlayerState
@@ -396,8 +412,10 @@ structure GameState where
   /-- between turns: Pokémon Checkup has been applied and its Knock Outs are being resolved;
   the player to move has not yet drawn for the turn -/
   between : Bool
-  /-- `some b`: the game is over, won by the first player iff `b` -/
-  winner : Option Bool
+  /-- `some o`: the game is over, with outcome `o` (`Outcome.win b`: won by the first player iff
+  `b`; `Outcome.suddenDeath`: both players won at once, a new game would be played). `none`: the
+  game goes on. -/
+  winner : Option Outcome
   /-- the Stadium in play, if any, with its owner (`true`: the player who went first). There is
   one Stadium slot for both players: "Only one Stadium can be in play at a time" (rulebook 2023
   p. 12). `Move.stadium` (milestone M5) puts a Stadium from the hand here, and the Stadium it

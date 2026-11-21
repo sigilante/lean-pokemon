@@ -675,38 +675,38 @@ inductive KOMove : GameState → GameState → Prop where
       KOMove g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
         cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
+        winner := if g.cur.prizesOut p.top.prizeCount then some (.win g.curIsFirst) else g.winner }
   | promote {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.opp.active = none) (hb : g.opp.bench = b₁ ++ q :: b₂) :
       KOMove g { g with opp := { g.opp with active := some q, bench := b₁ ++ b₂ } }
   | noPokemon {g : GameState} (ha : g.opp.active = none) (hb : g.opp.bench = []) :
-      KOMove g { g with winner := some g.curIsFirst }
+      KOMove g { g with winner := some (.win g.curIsFirst) }
   | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
       (ha : g.cur.active = some p) (hk : g.hpOf .own .active p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       KOMove g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
         opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
+        winner := if g.opp.prizesOut p.top.prizeCount then some (.win !g.curIsFirst) else g.winner }
   | promoteOwn {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.cur.active = none) (hb : g.cur.bench = b₁ ++ q :: b₂) :
       KOMove g { g with cur := { g.cur with active := some q, bench := b₁ ++ b₂ } }
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
-      KOMove g { g with winner := some (!g.curIsFirst) }
+      KOMove g { g with winner := some (.win !g.curIsFirst) }
   | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
       (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : g.hpOf .opp .bench p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       KOMove g { g with
         opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
         cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
+        winner := if g.cur.prizesOut p.top.prizeCount then some (.win g.curIsFirst) else g.winner }
   | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
       {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       KOMove g { g with
         cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
         opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
+        winner := if g.opp.prizesOut p.top.prizeCount then some (.win !g.curIsFirst) else g.winner }
 
 /-- `Resolve g g'`: take every pending Knock Out now. Knock Out moves (`KOMove`: a Prize to the
 other player, which may win the game; promotion of a Benched Pokémon chosen by its owner, a
@@ -1068,14 +1068,14 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
         cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
+        winner := if g.cur.prizesOut p.top.prizeCount then some (.win g.curIsFirst) else g.winner }
   /-- the opponent promotes a Benched Pokémon to the empty Active spot -/
   | promote {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.opp.active = none) (hb : g.opp.bench = b₁ ++ q :: b₂) :
       Move g { g with opp := { g.opp with active := some q, bench := b₁ ++ b₂ } }
   /-- the opponent has no Pokémon left to promote -/
   | noPokemon {g : GameState} (ha : g.opp.active = none) (hb : g.opp.bench = []) :
-      Move g { g with winner := some g.curIsFirst }
+      Move g { g with winner := some (.win g.curIsFirst) }
   /-- Knock Out the player's own Active Pokémon (after evolving into a card with less HP,
   after Confusion, after an effect that damages it, or after Checkup); the opponent takes a
   Prize card -/
@@ -1085,14 +1085,14 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
         opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
+        winner := if g.opp.prizesOut p.top.prizeCount then some (.win !g.curIsFirst) else g.winner }
   /-- the player promotes a Benched Pokémon to their own empty Active spot -/
   | promoteOwn {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
       (ha : g.cur.active = none) (hb : g.cur.bench = b₁ ++ q :: b₂) :
       Move g { g with cur := { g.cur with active := some q, bench := b₁ ++ b₂ } }
   /-- the player has no Pokémon left to promote -/
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
-      Move g { g with winner := some (!g.curIsFirst) }
+      Move g { g with winner := some (.win !g.curIsFirst) }
   /-- Knock Out one of the opponent's Benched Pokémon and take its Prize cards; no promotion
   follows (milestone M3) -/
   | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
@@ -1101,7 +1101,7 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with
         opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
         cur := g.cur.takePrizes p.top.prizeCount,
-        winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
+        winner := if g.cur.prizesOut p.top.prizeCount then some (.win g.curIsFirst) else g.winner }
   /-- Knock Out one of the player's own Benched Pokémon; the opponent takes its Prize cards -/
   | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
       {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
@@ -1109,7 +1109,7 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with
         cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
         opp := g.opp.takePrizes p.top.prizeCount,
-        winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
+        winner := if g.opp.prizesOut p.top.prizeCount then some (.win !g.curIsFirst) else g.winner }
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
   (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
   counters of both Benches, one coin flip per Pokémon (`BenchChar`: the opponent's Bench becomes
@@ -1141,7 +1141,7 @@ inductive Move : GameState → GameState → Prop where
   | deckOut {g : GameState} {a b : InPlay}
       (hbt : g.between = true) (ha : g.opp.active = some a) (hb : g.cur.active = some b)
       (hk : DamageBounded g) (hd : g.cur.deck = []) :
-      Move g { g with winner := some (!g.curIsFirst) }
+      Move g { g with winner := some (.win !g.curIsFirst) }
 
 /-- Reachability by legal play. No move is made once the game has a winner. -/
 inductive Reach : GameState → GameState → Prop where

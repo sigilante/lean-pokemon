@@ -308,7 +308,7 @@ def after3 : GameState :=
       [], false, false, false, false, false, Store.empty, true⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [], none, [InPlay.ofBasic big],
       false, false, false, false, false, Store.empty, true⟩,
-    true, false, false, false, some true, none, false, false⟩
+    true, false, false, false, some (.win true), none, false, false⟩
 
 theorem move_after3 : Move start3 after3 :=
   .item (l₁ := []) (l₂ := []) (n := "Win") rfl rfl start3_settled
@@ -321,7 +321,7 @@ player takes their last Prize card and wins, and the draw is not made (the deck 
 by `TRun.of_won` no resolution makes it). -/
 theorem winMidEffect_reachable :
     ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ g₀.winner = none ∧
-      ∃ g, Move g₀ g ∧ Reach g₀ g ∧ g.winner = some g₀.curIsFirst ∧
+      ∃ g, Move g₀ g ∧ Reach g₀ g ∧ g.winner = some (.win g₀.curIsFirst) ∧
         g.cur.deck = g₀.cur.deck :=
   ⟨start3, start3_wellFormed, start3_settled, rfl, after3, move_after3,
     .step (.refl _) rfl move_after3, rfl, rfl⟩

@@ -87,7 +87,7 @@ took it wins. -/
 theorem lastPrize_reachable :
     ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ g₀.winner = none ∧ g₀.cur.prizes.length = 1 ∧
       ∃ g, Move g₀ g ∧ Reach g₀ g ∧ g.cur.prizes = [] ∧ g.cur.hand.length = 1 ∧
-        g.winner = some g₀.curIsFirst := by
+        g.winner = some (.win g₀.curIsFirst) := by
   refine ⟨exStart [.energy .fire], exStart_wellFormed _ _, exStart_settled _, rfl, rfl, ?_⟩
   have hm : Move (exStart [.energy .fire]) _ :=
     .item (l₁ := []) (l₂ := []) (n := "Hit5") rfl rfl (exStart_settled _)
