@@ -142,12 +142,17 @@ before; damage done needs no cap, however large in either direction, since it is
 equal stores. What the exact clamp gives up is boundedness of the stores, and with it
 finiteness; the deck condition `Faithful` buys it back:
 
-* **exact-store bisimulation, every deck** (`Move.xclamp_sim`, `Reach.xclamp_bisim`): the kernel
-  of `xclamp` is a two-way bisimulation along reachable states, with no hypothesis on the cards;
+* **exact-store bisimulation, every deck** (`Move.xclamp_sim`, `Reach.xclamp_bisim`,
+  `GameState.xclamp_bisim`): the kernel of `xclamp` is a two-way bisimulation, with no
+  hypothesis on the cards; it holds for all pairs of states with equal `xclamp`, reachable or
+  not (the reachability premise of `Reach.xclamp_bisim` is vacuous: take the start to be the
+  state itself);
 * **finiteness on bounded stores** (`Reach.xfinite_bounded`, `Pokemon/Bounded.lean`): from a
   well-formed start, for every `B` one finite list (depending only on the start and `B`)
   contains the `xclamp` of every reachable state satisfying `BoundedStores B` (every slot's
-  bonus and reduction at most `B`);
+  bonus and reduction at most `B`). The bounded part is not closed under moves, so on its own
+  this gives a finite set of classes and a bisimulation that may leave that set, not a finite
+  quotient; the finite quotient is `Faithful.xfinite`;
 * **finiteness for faithful decks** (`Faithful.xfinite`, `Pokemon/Faithful.lean`): a start is
   `Faithful` if no card's effect has a damage bonus or reduction under `iter` (`LoopFree`) and
   only GX attacks write rest-of-game bonuses or reductions (`GXOnly`). Then every reachable state
@@ -163,22 +168,43 @@ finiteness; the deck condition `Faithful` buys it back:
   and in Trainer cards;
 * **the rule change**: `Attack` has a field `gx`, and `Move.attack` lets a player use a GX
   attack only if they have not used one in the game, and records it (`PlayerState.gxUsed`,
-  unused before). Every earlier theorem was re-proved; `Counter.universal` is unchanged;
+  unused before); `Move.attackConfused` (a Confused Pokémon's failed attempt) has the same
+  premise and does not record it (an unverified ruling, listed in the Known gaps of `Pokemon/Rules.lean`). Every earlier
+  theorem was re-proved; `Counter.universal` is unchanged;
 * **the dichotomy** (`Faithful.dichotomy`, `Pokemon/Dichotomy.lean`): the two-counter starts
   satisfy `LoopFree` (`Faithful.counter_loopFree`) and violate `GXOnly` whenever the machine's
   first instruction is not `halt` (`Faithful.counter_not_gxOnly`: their attacks, not GX attacks,
   write rest-of-game amounts); for `start countUp 0 0` the `xclamp`s of the reachable states lie
   in no finite list (`Faithful.xclamp_not_finite`, a statement about representation, as for
-  `Counter.not_finite_up_to`). So: finite for faithful decks; a two-counter machine for decks
-  that violate `GXOnly` alone.
+  `Counter.not_finite_up_to`). This is a sharpness result for the `GXOnly` clause, not a
+  classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
+  that violate only `GXOnly` (the two-counter starts) simulate every two-counter machine, so
+  that clause cannot be dropped from the theorem; nothing is proved about other decks that are
+  not faithful, and some of them are finite (tame decks that violate `GXOnly` are covered by
+  `Reach.finite`).
+
+Which theorem applies. `Reach.finite` needs tame cards (no damage reduction, no `drain`) and no
+reduction in effect at the start; it allows bonus writes under `iter` and rest-of-game bonuses
+in attacks that are not GX attacks, and gives a coarser quotient (the clamp caps stored
+bonuses). `Faithful.xfinite` allows damage reduction, `drain`, carried modifiers and Trainer
+modifiers; it forbids amounts written under `iter` and rest-of-game amounts written by attacks
+that are not GX attacks, and gives a finer quotient (the stores are kept exact). Neither class
+contains the other; for decks in both, both theorems apply.
 
 Not covered by `Faithful`, or not in the model: card recycling (returning Items from the
 discard pile would replay a carried-modifier Item such as Iron Defender without bound; the
 model has none, so "each Trainer once per game" is a fact about the model, not about the printed
 card pool); "attack twice", "attack again" after a Knock Out, and extra turns (absent: more than
 one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers, Abilities or Stadiums
-(absent). The guess-and-verify coupling of the Poet's second session (one replayable effect that
-writes a this-turn and a carried amount in lockstep) is excluded inside one effect by
+(absent); copy attacks, for instance copying a GX attack (absent); static modifiers and
+modifiers from Pokémon Tools, Abilities or Special Energy (absent: every modifier is written by
+an effect when it resolves); reductions restricted by type (printed Iron Defender protects Metal
+Pokémon only, whereas the model's reduction protects all of a player's Pokémon); effects that
+lock GX attacks (absent). The store bound rests on three absences in the model: no effect
+returns a card from a discard pile, at most one attack is made per turn, and there are no extra
+turns. Each exists on printed cards (Item- and Supporter-recycling cards; "attack twice"; "take
+another turn"), so adding any of them to the model reopens the bound. The guess-and-verify
+coupling of the Poet's second session (one replayable effect that writes a this-turn and a carried amount in lockstep) is excluded inside one effect by
 `LoopFree`, and across effects it lacks the replays it needs: an attack writes a bounded amount
 once per turn, and a Trainer card is played at most once per game. Recycling or extra attacks
 would reopen it.
@@ -206,8 +232,8 @@ computed, depends on the start state, and gives no size bound. For tame decks, t
 quotient with the same moves (`Reach.finite`) means that reachability questions that depend only
 on the clamp could be decided by exploring it, given a computable successor function for the
 quotient; neither that function nor the decision procedure is formalized. The same holds for
-faithful decks with the exact-store quotient (`Faithful.xfinite`). For decks that violate
-`GXOnly` no such procedure exists uniformly: by the reduction of `Pokemon/Counter.lean` and
+faithful decks with the exact-store quotient (`Faithful.xfinite`). For the two-counter starts,
+which violate `GXOnly` only, no such procedure exists uniformly: by the reduction of `Pokemon/Counter.lean` and
 Minsky's theorem, reachability of the halt mark, as a problem over the family of its start
 states, is undecidable in the generalised model (the reduction is proved; the appeal to
 Minsky's theorem is not formalized). These are theorems about the model, not yet about

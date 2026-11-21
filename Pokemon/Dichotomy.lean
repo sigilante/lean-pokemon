@@ -7,7 +7,13 @@ import Pokemon.Faithful
 `GameState.Faithful`, which has two clauses: `LoopFree` (no damage bonus or reduction under
 `iter`) and `GXOnly` (rest-of-game bonuses and reductions only in GX attacks).
 `Pokemon/Counter.lean` proves that the generalised model simulates every two-counter machine.
-This file shows where the line between them runs.
+This file shows that clause 2 cannot be dropped from the finiteness theorem: the two-counter
+starts satisfy clause 1, violate clause 2 (when the machine's first instruction is not `halt`),
+and simulate every two-counter machine. It is a sharpness result for clause 2, not a
+classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
+that violate only clause 2 (the two-counter starts) are universal; nothing is proved here about
+other non-faithful decks, and some of them are finite (for instance tame decks that violate
+clause 2, covered by `Reach.finite`).
 
 * `Faithful.counter_loopFree`: every two-counter start `Counter.start M a b` satisfies clause 1.
 * `Faithful.counter_not_gxOnly`: it violates clause 2 whenever the machine's initial
@@ -165,7 +171,11 @@ theorem xclamp_not_finite :
     (fun c c' g g' h h' e => Encodes.inj_xclamp h h' e) ⟨L, fun g h => ⟨g.xclamp, hL g h, ?_⟩⟩
   exact (xclamp_idem g).symm
 
-/-- **The dichotomy.**
+/-- **The dichotomy** (a sharpness result for clause 2, `GXOnly`, not a partition of decks).
+Items 2 and 3 show that clause 2 cannot be dropped from item 1. They concern the two-counter
+starts only: a deck that is not `Faithful` need not be universal or infinite (tame decks that
+violate clause 2 are finite by `Reach.finite`), and nothing is claimed about other
+non-faithful decks.
 
 1. *Finite side.* For every well-formed start whose cards satisfy `Faithful` (clause 1,
    `LoopFree`: no damage bonus or reduction under `iter`; clause 2, `GXOnly`: rest-of-game
@@ -179,7 +189,7 @@ theorem xclamp_not_finite :
    reachable states lie in no finite list.
 
 With Minsky's theorem (prose, not formalised), item 2 makes reachability of the halt mark
-undecidable over the family of starts that violate clause 2 only. -/
+undecidable over the family of two-counter starts, each of which violates clause 2 only. -/
 theorem dichotomy :
     (∀ g₀ : GameState, WellFormed g₀ → g₀.Faithful →
       (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧

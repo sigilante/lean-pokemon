@@ -43,7 +43,8 @@ What is proved about finiteness.
 
 * Both counterexamples reach two states whose stores differ only above the cap. The clamp with
   exact stores, `GameState.xclamp` (`Pokemon/Exact.lean`), does not identify them; its kernel is
-  a bisimulation for every deck (`Reach.xclamp_bisim`), and its reachable values are finite for
+  a bisimulation for every deck, on all pairs of states (`Reach.xclamp_bisim`,
+  `GameState.xclamp_bisim`), and its reachable values are finite for
   decks with no damage bonus or reduction under `iter` and rest-of-game bonuses and reductions
   only in GX attacks (`Faithful.xfinite`, `Pokemon/Faithful.lean`); such decks may use damage
   reduction and `drain`.

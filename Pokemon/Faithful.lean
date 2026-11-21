@@ -49,12 +49,24 @@ every reachable state, with `storeBound g₀ = storeTotal g₀ + cardsAmt C + 3 
   states. No tameness: damage reduction (Iron Defender), `drain`, carried bonuses and
   reductions, and rest-of-game modifiers from GX attacks are all allowed.
 * `Pokemon/Dichotomy.lean`: the two-counter starts of `Pokemon/Counter.lean` satisfy clause 1
-  and violate clause 2 (`Faithful.counter_loopFree`, `Faithful.counter_not_gxOnly`), and
-  `Faithful.dichotomy` states both sides together.
+  and, when the machine's first instruction is not `halt`, violate clause 2
+  (`Faithful.counter_loopFree`, `Faithful.counter_not_gxOnly`); `Faithful.dichotomy` states both
+  sides together. It shows that clause 2 cannot be dropped; it does not classify the decks that
+  are not faithful.
+
+**Which theorem applies.** `Reach.finite` (`Pokemon/Finite.lean`) needs tame cards (no damage
+reduction, no `drain`) and no reduction in effect at the start; it allows bonus writes under
+`iter` and rest-of-game bonuses in attacks that are not GX attacks, and its quotient is coarser
+(the clamp caps stored bonuses). `Faithful.xfinite` allows damage reduction, `drain`, carried
+modifiers and Trainer modifiers; it forbids amounts written under `iter` and rest-of-game
+amounts written by attacks that are not GX attacks, and its quotient is finer (the stores are
+kept exact). Neither class contains the other; for decks in both, both theorems apply.
 
 **Rule change** (in `Pokemon/Rules.lean` and `Pokemon/Card.lean`): `Attack` has a new field
 `gx`; `Move.attack` requires `atk.gx = true → g.cur.gxUsed = false` and sets the attacker's
-`gxUsed` when `atk.gx` (the result's `gxUsed` is `atk.gx || gxUsed`). Before, `gxUsed` was never
+`gxUsed` when `atk.gx` (the result's `gxUsed` is `atk.gx || gxUsed`). `Move.attackConfused`
+(the failed attempt of a Confused Pokémon) has the same premise and leaves `gxUsed` unchanged
+(an unverified ruling; see the Known gaps in `Pokemon/Rules.lean`). Before, `gxUsed` was never
 read or written. Every theorem that mentions attacks was re-proved; `Counter.universal` is
 unchanged in statement (its attacks have `gx = false`).
 
@@ -70,7 +82,20 @@ unchanged in statement (its attacks have `gx = false`).
   Supporter is played at most once per game, so the replays needed to guess an unbounded value
   do not exist; a recycling loop would bring them back;
 * rest-of-game modifiers from VSTAR Powers, Abilities or Stadiums are not modelled (`vstarUsed`
-  is unused).
+  is unused);
+* copy attacks (using another Pokémon's attack, for instance copying a GX attack) are not
+  modelled; the once-per-game rule and clause 2 are stated for the attacks printed on the
+  attacker;
+* static modifiers, and modifiers from Pokémon Tools, Abilities or Special Energy, are not
+  modelled: every modifier here is written by an effect when it resolves;
+* reductions restricted by type are not modelled: printed Iron Defender protects Metal Pokémon
+  only, whereas the model's reduction protects all of a player's Pokémon;
+* effects that lock GX attacks (forbid the opponent to use them) are not modelled.
+
+The store bound rests on three absences in the model: no effect returns a card from a discard
+pile, at most one attack is made per turn, and there are no extra turns. Each of the three
+exists on printed cards (Item- and Supporter-recycling cards; "attack twice"; "take another
+turn"), so adding any of them to the model reopens the bound.
 -/
 
 namespace Pokemon
@@ -668,7 +693,9 @@ reductions only from GX attacks, which the rules make once per player per game).
 
 So the quotient of the reachable states by `xclamp` is a finite transition system with the same
 moves. Unlike `Reach.finite`, this allows damage reduction, `drain`, and carried and
-rest-of-game modifiers. The list is not computed and the quotient's moves are not shown
+rest-of-game modifiers (the latter only from GX attacks and Trainer cards); unlike
+`Reach.finite`, it forbids amounts under `iter`. The bisimulation half holds for all pairs of
+states with equal `xclamp` (`GameState.xclamp_bisim`). The list is not computed and the quotient's moves are not shown
 computable. -/
 theorem xfinite {g₀ : GameState} (hw : WellFormed g₀) (hF : g₀.Faithful) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧

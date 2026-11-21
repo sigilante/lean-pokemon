@@ -13,11 +13,14 @@ of a state, not of the proof, and proves finiteness under it.
   list, depending only on `g₀` and `B`, that contains the `xclamp` of every reachable state
   satisfying `BoundedStores B`.
 * `Reach.xfinite_bounded`: that list, together with `Reach.xclamp_bisim`: the kernel of
-  `xclamp` is a two-way bisimulation along reachable states, for every deck. Since `xclamp`
-  keeps the stores, `BoundedStores B` is a property of the `xclamp` class
-  (`GameState.BoundedStores.of_xclamp`), so the reachable states satisfying it fall into
-  finitely many classes of a bisimulation. A move can leave the bounded part; the theorem says
-  nothing about where it goes then.
+  `xclamp` is a two-way bisimulation for every deck (stated along reachable states; it holds
+  for all pairs of states, `GameState.xclamp_bisim`). Since `xclamp` keeps the stores,
+  `BoundedStores B` is a property of the `xclamp` class (`GameState.BoundedStores.of_xclamp`),
+  so the reachable states satisfying it fall into finitely many classes of a bisimulation. The
+  bounded part is not closed under moves: a move can leave it, and the theorem says nothing
+  about where it goes then. So on its own it gives a finite set of classes and a bisimulation
+  that may leave that set, not a finite quotient; the finite quotient is `Faithful.xfinite`,
+  for decks whose reachable states all have bounded stores.
 
 Nothing here bounds the stores: whether play keeps them bounded depends on the deck.
 `Pokemon/Faithful.lean` gives a deck condition under which every reachable state satisfies
@@ -79,8 +82,12 @@ bound. Then
 
 There is no hypothesis on the cards: damage reduction, `drain`, rest-of-game modifiers and
 `linger` inside `iter` are allowed. The hypothesis is on the reached states, and a move from a
-state with bounded stores may lead to one without. As for `Reach.finite`, the list is not computed
-and the quotient's moves are not shown computable. -/
+state with bounded stores may lead to one without: the bounded part of the reachable states is
+not closed under moves. So this theorem alone gives a finite set of classes and a bisimulation
+that may leave that set; it is not a finite quotient of the reachable states. The genuine
+finite quotient is `Faithful.xfinite`, under a deck condition that keeps every reachable state
+in the bounded part. As for `Reach.finite`, the list is not computed and the quotient's moves
+are not shown computable. -/
 theorem Reach.xfinite_bounded {g₀ : GameState} (hw : WellFormed g₀) (B : Nat) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp ∈ L) ∧
       ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
