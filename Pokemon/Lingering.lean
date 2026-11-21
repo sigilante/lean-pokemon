@@ -41,6 +41,14 @@ What is proved about finiteness.
   in-attack self-damage for which the clamp is not a simulation: the heal reads the bonus exactly, and the attacker's own damage, raised above `k` by
   `selfDamage` earlier in the same attack, shows it.
 
+* Both counterexamples reach two states whose stores differ only above the cap. The clamp with
+  exact stores, `GameState.xclamp` (`Pokemon/Exact.lean`), does not identify them; its kernel is
+  a bisimulation for every deck, on all pairs of states (`Reach.xclamp_bisim`,
+  `GameState.xclamp_bisim`), and its reachable values are finite for
+  decks with no damage bonus or reduction under `iter` and rest-of-game bonuses and reductions
+  only in GX attacks (`Faithful.xfinite`, `Pokemon/Faithful.lean`); such decks may use damage
+  reduction and `drain`.
+
 Beyond the clamp. For some decks that are not tame the obstacle is not the choice of clamp.
 With modifiers for the rest of the game (`Slot.always`, which never expires), the differences
 between one player's damage reduction and the other's damage bonus are two persistent,
@@ -86,7 +94,7 @@ namespace Lingering
 
 /-- A Basic Pokémon with `h` counters of HP and one free attack: base damage 0, effect `e`. -/
 def mon (h : Nat) (e : Effect) : PokemonCard :=
-  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], 0, e⟩], 0⟩
+  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], 0, e, false⟩], 0⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], none, false, false, false,
@@ -192,8 +200,9 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_red₀ hk, tmax_red₀ hk,
     red k (k + 1), red k (k + 2), _, reach_red k true, reach_red k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
-    .attack (atk := ⟨"Hit", [], 0, .skip⟩) rfl (.head _) (Nat.zero_le _) rfl rfl rfl rfl
-      (settled_st _ _ _ _ _ _ (by decide) (by decide)) (.seq (.damage 0 rfl) (.skip _)) rfl,
+    .attack (atk := ⟨"Hit", [], 0, .skip, false⟩) rfl (.head _) (Nat.zero_le _) rfl rfl rfl
+      rfl (settled_st _ _ _ _ _ _ (by decide) (by decide)) (.seq (.damage 0 rfl) (.skip _)) rfl
+      (fun h => nomatch h),
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [red, st, side] at hh
@@ -314,9 +323,11 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
     ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_dr₀ hk, tmax_dr₀ hk,
     dr k (k + 1), dr k (k + 2), _, reach_dr k true, reach_dr k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
-    .attack (atk := ⟨"Hit", [], 0, .seq (.selfDamage (k + 2)) (.drain 0)⟩) rfl (.head _)
-      (Nat.zero_le _) rfl rfl rfl rfl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
-      (.seq (.damage 0 rfl) (.seq (.selfDamage _ rfl) (.drain 0 rfl rfl))) rfl,
+    .attack (atk := ⟨"Hit", [], 0, .seq (.selfDamage (k + 2)) (.drain 0), false⟩) rfl
+      (.head _) (Nat.zero_le _) rfl rfl rfl rfl
+      (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
+      (.seq (.damage 0 rfl) (.seq (.selfDamage _ rfl) (.drain 0 rfl rfl))) rfl
+      (fun h => nomatch h),
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [dr, st, side] at hh

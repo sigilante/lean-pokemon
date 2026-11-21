@@ -564,7 +564,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
         (by subst hg; exact hbt) hs' hr', hc'⟩
-  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl =>
+  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.attack ha hm
       obtain ⟨g₂', hr', hc''⟩ := Run.cap_sim hF.1 hr ht hb hF.2.2.2
@@ -574,17 +574,19 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       refine ⟨_, .attack rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' (by rw [hfl.2.1]; exact hl), ?_⟩
-      have := congrArg (fun g : GameState => ({ g with attacked := true } : GameState)) hc''
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' (by rw [hfl.2.1]; exact hl) hgx, ?_⟩
+      have := congrArg (fun g : GameState => ({ g with
+        attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
+        GameState)) hc''
       exact GameState.clamp_of_rclamp this
         (fun p hp => hhp _ (GameState.top_mem_opp_active (g := g') hp))
-  | attackConfused ha hm hc' hs hn hf hbt hst hl =>
+  | attackConfused ha hm hc' hs hn hf hbt hst hl hgx =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl), by
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl) hgx, by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3)]⟩
   | knockOut ha hk hp =>
