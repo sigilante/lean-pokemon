@@ -94,7 +94,7 @@ theorem reach_st (n : Nat) : Reach start (st n) := by
       (trun_iter_st n 0)
   rw [Nat.zero_add] at hr
   exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl
-    start_settled hr rfl rfl)
+    start_settled hr rfl rfl rfl)
 
 /-- Poison strength on the opponent's Active Pokémon. -/
 def oppPoisonUp (g : GameState) : Nat :=

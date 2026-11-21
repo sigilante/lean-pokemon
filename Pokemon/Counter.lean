@@ -23,9 +23,12 @@ each deck-and-hand; one Prize card each.
   counter two the first player's reduction minus the second player's bonus. `linger … .always
   (reduce 1)` increments one, `linger own .always (bonus 1)` decrements one. The inputs `a`, `b`
   are the start reductions.
-* Zero test. `damage 1` deals `1 + bonus − reduction`, truncated at 0: 1 if the counter read
-  in that direction is zero, 0 otherwise; `ite (exactly opp v)` then reads it exactly. The
-  Clock's attacks read counter one, the Tape's counter two.
+* Zero test. The damage step `damage (const 1)` deals `1 + bonus − reduction`, truncated at 0
+  (the Clock and the Tape have no Weakness and no Resistance): 1 if the counter read in that
+  direction is zero, 0 otherwise; `ite (exactly opp v)` then reads it exactly. The Clock's
+  attacks read counter one, the Tape's counter two. Each attack has its damage step in one
+  branch only, so it makes the rulebook's damage calculation at most once (`atkA_wf`,
+  `atkB_wf`).
 * Program counter: the damage on the Clock, set by `healAll` and `selfDamage`, read by
   `exactly own q` (the Clock) and `exactly opp q` (the Tape). The Clock writes `W + q'` after
   running an instruction (`W = 2 · span`); the Tape can only add damage to the Clock, so after
@@ -82,8 +85,11 @@ legal play.
    once-per-game attacks (GX attacks; survey S7 §C). Neither attack here is a GX attack
    (`Attack.gx = false`); this is exactly the clause `GXOnly` of `GameState.Faithful` that the
    construction violates (`Faithful.counter_not_gxOnly`, in `Pokemon/Dichotomy.lean`).
-2. `damage` read by a test later in the same attack (`ite (exactly opp v)` after `damage 1`):
-   this uses the model's freedom to order primitives inside one effect.
+2. The damage placed by an attack read by a test later in the same attack (`ite (exactly opp
+   v)` after the damage step `damage (const 1)`). The rulebook places damage and "then do[es]
+   all other effects" (2023 p. 20, step F), so reading it afterwards is in order; what is
+   general is that the effect tests the exact damage and branches on it, and that the damage
+   step sits inside a branch chosen by earlier tests of the same attack.
 3. Arbitrary printed HP: the Clock's HP, `3 · span + 1`, grows with the machine.
 4. The halt mark is a marker the Clock places on itself (`mark .own .imprison`); printed
    markers target the opponent. This affects only the observable, not the simulation.
@@ -94,11 +100,12 @@ legal play.
    `mark` and `handToBottom` as general primitives combined in one attack.
 
 It does not rely on an attack not ending the turn (each round ends the turn right after
-attacking); on a bonus being added to an attack with base damage 0 (both attacks have base
-damage 0, which does no damage, `dealtBy`; the zero test is `damage 1` inside the effect); on
-attack costs being counted rather than typed (both attacks cost nothing); on
-modifiers belonging to a player rather than to one Pokémon (each player has one Pokémon and no
-Bench); or on the absence of Weakness and Resistance.
+attacking); on a bonus being added to an attack with base damage 0 (both attacks have printed
+base damage 0; the zero test is the damage step `damage (const 1)` inside the effect, with base
+1); on attack costs being counted rather than typed (costs are typed since milestone M4, and
+both attacks cost nothing); on modifiers belonging to a player rather than to one Pokémon (each
+player has one Pokémon and no Bench); or on the absence of Weakness and Resistance (the Clock
+and the Tape have neither; the damage calculation is the rulebook's, made once per attack).
 
 So the construction is about this generalisation of the model, not about the printed game: it
 does not show that the printed card pool is Turing complete. On the printed side, same-turn
@@ -248,7 +255,7 @@ def stepAOf (w : Nat) : Instr → Effect
   | .inc .one q' => .seq (.linger .opp .always (.reduce 1)) (setPc (w + q'))
   | .inc .two q' => .seq (.linger .own .always (.reduce 1)) (setPc (w + q'))
   | .jz .one q₁ q₂ =>
-      .seq (.damage 1) (.ite (.exactly .opp 1) (setPc (w + q₁))
+      .seq (.damage (.const 1)) (.ite (.exactly .opp 1) (setPc (w + q₁))
         (.seq (.linger .own .always (.bonus 1)) (setPc (w + q₂))))
   | .jz .two _ _ => .skip
   | .halt => .mark .own .imprison
@@ -257,7 +264,7 @@ def stepAOf (w : Nat) : Instr → Effect
 only the zero test and decrement of counter two, which the Tape's attacks read. -/
 def stepBOf (w q : Nat) : Instr → Effect
   | .jz .two q₁ q₂ =>
-      .seq (.damage 1) (.ite (.exactly .opp (q + 1)) (.counters (w + q₁ - (q + 1)))
+      .seq (.damage (.const 1)) (.ite (.exactly .opp (q + 1)) (.counters (w + q₁ - (q + 1)))
         (.seq (.linger .own .always (.bonus 1)) (.counters (w + q₂ - q))))
   | _ => .skip
 
@@ -283,6 +290,50 @@ def effB (M : Machine) : Effect :=
 def atkA (M : Machine) : Attack := ⟨"Tick", [], 0, effA M, false⟩
 /-- The Tape's only attack: no cost, base damage 0, effect `effB`. -/
 def atkB (M : Machine) : Attack := ⟨"Tock", [], 0, effB M, false⟩
+
+theorem sel_hitFree {w : Whose} {f : Nat → Effect} : ∀ {l : List Nat},
+    (∀ v ∈ l, (f v).hitFree = true) → (sel w f l).hitFree = true
+  | [], _ => rfl
+  | v :: l, h => by
+      simp only [sel, Effect.hitFree, h v (.head _), sel_hitFree (fun u hu => h u (.tail _ hu)),
+        Bool.and_self]
+
+theorem sel_oneHit {w : Whose} {f : Nat → Effect} : ∀ {l : List Nat},
+    (∀ v ∈ l, (f v).oneHit = true) → (sel w f l).oneHit = true
+  | [], _ => rfl
+  | v :: l, h => by
+      simp only [sel, Effect.oneHit, h v (.head _), sel_oneHit (fun u hu => h u (.tail _ hu)),
+        Bool.and_self]
+
+theorem stepAOf_oneHit (w : Nat) (i : Instr) : (stepAOf w i).oneHit = true := by
+  cases i with
+  | inc r q => cases r <;> rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
+theorem stepBOf_oneHit (w q : Nat) (i : Instr) : (stepBOf w q i).oneHit = true := by
+  cases i with
+  | inc r q' => rfl
+  | jz r q₁ q₂ => cases r <;> rfl
+  | halt => rfl
+
+/-- The Clock's attack is well formed: its only damage step, the zero test of counter one, is
+in one branch, so it makes at most one damage calculation. -/
+theorem atkA_wf (M : Machine) : (atkA M).wf = true := by
+  have h1 : (normA M).hitFree = true := sel_hitFree fun _ _ => rfl
+  have h2 : (sel .own (fun q => stepAOf (W M) (M.instr q)) (List.range (V M))).oneHit = true :=
+    sel_oneHit fun _ _ => stepAOf_oneHit _ _
+  have h3 : (effA M).oneHit = true :=
+    Effect.oneHit_seq_right rfl (Effect.oneHit_seq_right h1 (by
+      simp only [Effect.oneHit, h2, Bool.and_self]))
+  simp only [Attack.wf, atkA, h3, decide_true, Bool.true_or, Bool.and_self]
+
+/-- The Tape's attack is well formed. -/
+theorem atkB_wf (M : Machine) : (atkB M).wf = true := by
+  have h3 : (effB M).oneHit = true :=
+    Effect.oneHit_seq_right rfl (Effect.oneHit_seq_right rfl
+      (sel_oneHit fun _ _ => stepBOf_oneHit _ _ _))
+  simp only [Attack.wf, atkB, h3, decide_true, Bool.true_or, Bool.and_self]
 
 /-- The first player's Pokémon: its damage is the program counter, so its HP exceeds every
 value the counter takes. -/
@@ -507,37 +558,49 @@ theorem Does.counters (n : Nat) (kc ko : Pk) :
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
 
-theorem dealt_shape {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (n : Nat) :
+/-- With no Weakness and no Resistance on the defender (the Clock and the Tape have neither),
+damage `n + 1` does `n + 1` plus the bonus less the reduction. -/
+theorem dealt_shape {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)
+    (hw : ko.top.weakness = none) (hr : ko.top.resistance = none) (n : Nat) :
     g.dealt (n + 1) = (n + 1 + kc.bonus) - ko.reduce := by
-  simp [GameState.dealt, dealtBy, hs.cur.mods, hs.opp.mods, storeOf, Store.live, Mods.merge,
-    Mods.empty]
+  obtain ⟨p, hp, -⟩ := hs.cur.active
+  obtain ⟨p', hp', h1', -⟩ := hs.opp.active
+  have hwk : g.weak = false := by
+    simp [GameState.weak, hp, hp', PokemonCard.weakTo, h1', hw]
+  have hrs : g.resist = 0 := by
+    simp [GameState.resist, hp, hp', PokemonCard.resistTo, h1', hr]
+  simp [GameState.dealt, dealtBy, hwk, hrs, hs.cur.mods, hs.opp.mods, storeOf, Store.live,
+    Mods.merge, Mods.empty]
 
 /-- Base damage 0 does no damage (the rulebook's "Stop if the base damage is 0"). -/
 theorem dealt_zero (g : GameState) : g.dealt 0 = 0 := by
   simp [GameState.dealt, dealtBy]
 
-theorem Does.damage (n : Nat) (kc ko : Pk) :
-    Does (.damage (n + 1)) kc ko kc
+theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
+    (hr : ko.top.resistance = none) :
+    Does (.damage (.const (n + 1))) kc ko kc
       { ko with dmg := ko.dmg + ((n + 1 + kc.bonus) - ko.reduce) } := by
   intro g hs
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hs.opp.active
-  refine ⟨⟨_, .damage (n + 1) hp⟩, fun g' h => ?_⟩
+  refine ⟨⟨_, .damage (.const (n + 1) g) hp⟩, fun g' h => ?_⟩
   cases h with
-  | damage _ h' =>
+  | damage hv h' =>
+      cases hv
       rw [hp] at h'; cases h'
       have hc := hs.opp
-      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5, dealt_shape hs], h6⟩, hc.bench,
-        hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
+      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5, dealt_shape hs hw hr], h6⟩,
+        hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
 
 /-- An attack with base damage 0 does no damage, whatever the modifiers. -/
-theorem Does.damageZero (kc ko : Pk) : Does (.damage 0) kc ko kc ko := by
+theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := by
   intro g hs
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hs.opp.active
-  refine ⟨⟨_, .damage 0 hp⟩, fun g' h => ?_⟩
+  refine ⟨⟨_, .damage (.const 0 g) hp⟩, fun g' h => ?_⟩
   cases h with
-  | damage _ h' =>
+  | damage hv h' =>
+      cases hv
       rw [hp] at h'; cases h'
       have hc := hs.opp
       exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5, dealt_zero, Nat.add_zero], h6⟩,
@@ -679,14 +742,14 @@ theorem Does.stepA {M : Machine} {s : Abs} (hr : s.rB = 0) (st hd st' hd' : Bool
       cases r with
       | one =>
           by_cases ha : s.a = 0
-          · refine ((Does.damage 0 _ _).seq (Does.ite_eq ?_ ((Does.healAll _ _).seq
+          · refine ((Does.damage 0 _ _ rfl rfl).seq (Does.ite_eq ?_ ((Does.healAll _ _).seq
               (Does.selfDamage _ _ _)))).of_eq ?_ ?_
             · simp only [rd, pkA, pkB]; omega
             · simp only [pkA, tickOf, ha, Pk.mk.injEq, ↓reduceIte, and_true, true_and, Nat.zero_add] <;>
               (repeat' apply And.intro) <;> first | rfl | trivial | omega
             · simp only [pkA, pkB, tickOf, ha, Pk.mk.injEq, ↓reduceIte, and_true, true_and, Nat.zero_add] <;>
               (repeat' apply And.intro) <;> first | rfl | trivial | omega
-          · refine ((Does.damage 0 _ _).seq (Does.ite_ne ?_ ((Does.bonusOwn 1 _ _).seq
+          · refine ((Does.damage 0 _ _ rfl rfl).seq (Does.ite_ne ?_ ((Does.bonusOwn 1 _ _).seq
               ((Does.healAll _ _).seq (Does.selfDamage _ _ _))))).of_eq ?_ ?_
             · simp only [rd, pkA, pkB]; omega
             · simp only [pkA, tickOf, ha, Pk.mk.injEq, ↓reduceIte, and_true, true_and, Nat.zero_add] <;>
@@ -708,13 +771,13 @@ theorem Does.stepB {M : Machine} {s : Abs} (hq : s.q < V M) (hr : s.rA = s.q)
       cases r with
       | two =>
           by_cases hb : s.b = 0
-          · refine ((Does.damage 0 _ _).seq (Does.ite_eq ?_
+          · refine ((Does.damage 0 _ _ rfl rfl).seq (Does.ite_eq ?_
               (Does.counters _ _ _))).of_eq ?_ ?_
             · simp only [rd, pkA, pkB]; omega
             · simp only [pkB, tockOf, hb, ↓reduceIte]
             · simp only [pkA, pkB, tockOf, hb, Pk.mk.injEq, ↓reduceIte, and_true, true_and, Nat.zero_add] <;>
               (repeat' apply And.intro) <;> first | rfl | trivial | omega
-          · refine ((Does.damage 0 _ _).seq (Does.ite_ne ?_ ((Does.bonusOwn 1 _ _).seq
+          · refine ((Does.damage 0 _ _ rfl rfl).seq (Does.ite_ne ?_ ((Does.bonusOwn 1 _ _).seq
               (Does.counters _ _ _)))).of_eq ?_ ?_
             · simp only [rd, pkA, pkB]; omega
             · simp only [pkB, tockOf, hb, Pk.mk.injEq, ↓reduceIte, and_true, true_and, Nat.zero_add] <;>
@@ -728,13 +791,10 @@ theorem Does.stepB {M : Machine} {s : Abs} (hq : s.q < V M) (hr : s.rA = s.q)
 /-- **The Clock's attack** (base damage, then `effA`) from a state of shape `pkA s`, `pkB s`
 ends in shape `pkA (tickS s)`, `pkB (tickS s)`, and can be resolved. -/
 theorem Does.attackA {M : Machine} {s : Abs} (hg : Good M s) (st hd st' hd' : Bool) :
-    Does (.seq (.damage 0) (effA M)) (pkA M s st hd) (pkB M s st' hd')
+    Does (effA M) (pkA M s st hd) (pkB M s st' hd')
       (pkA M (tickS M s) (st || hd) false) (pkB M (tickS M s) st' hd') := by
   obtain ⟨hq, hrA, hrB, -⟩ := hg
   have hW : W M = 2 * V M := rfl
-  have h0 : Does (.damage 0) (pkA M s st hd) (pkB M s st' hd') (pkA M s st hd)
-      (pkB M s st' hd') :=
-    Does.damageZero _ _
   have hn : Does (normA M) (pkA M s (st || hd) false) (pkB M s st' hd')
       (pkA M { s with rA := s.q } (st || hd) false) (pkB M { s with rA := s.q } st' hd') := by
     rcases hrA with h | h
@@ -746,7 +806,7 @@ theorem Does.attackA {M : Machine} {s : Abs} (hg : Good M s) (st hd st' hd' : Bo
       · simp only [rd, pkA, List.mem_map, List.mem_range]; exact ⟨s.q, hq, h.symm⟩
       · simp only [pkA, rd, Pk.mk.injEq, ↓reduceIte, and_true, true_and, Nat.zero_add] <;>
               (repeat' apply And.intro) <;> first | rfl | trivial | omega
-  refine h0.seq ((Does.handToBottom _ _).seq (hn.seq ?_))
+  refine (Does.handToBottom _ _).seq (hn.seq ?_)
   by_cases hb : s.rB = 0
   · have e : tickS M s = tickOf (W M) { s with rA := s.q } (M.instr s.q) := by
       simp only [tickS, hb, ↓reduceIte]
@@ -762,17 +822,14 @@ theorem Does.attackA {M : Machine} {s : Abs} (hg : Good M s) (st hd st' hd' : Bo
 /-- **The Tape's attack** (base damage, then `effB`) from a state of shape `pkB s`, `pkA s`
 ends in shape `pkB (tockS s)`, `pkA (tockS s)`, and can be resolved. -/
 theorem Does.attackB {M : Machine} {s : Abs} (hg : Good M s) (st hd st' hd' : Bool) :
-    Does (.seq (.damage 0) (effB M)) (pkB M s st hd) (pkA M s st' hd')
+    Does (effB M) (pkB M s st hd) (pkA M s st' hd')
       (pkB M (tockS M s) (st || hd) false) (pkA M (tockS M s) st' hd') := by
   obtain ⟨hq, hrA, hrB, -⟩ := hg
   have hW : W M = 2 * V M := rfl
   have hV := M.span_pos
-  have h0 : Does (.damage 0) (pkB M s st hd) (pkA M s st' hd') (pkB M s st hd)
-      (pkA M s st' hd') :=
-    Does.damageZero _ _
-  refine h0.seq ((Does.handToBottom _ _).seq (((Does.healAll _ _).of_eq
+  refine (Does.handToBottom _ _).seq (((Does.healAll _ _).of_eq
     (show _ = pkB M { s with rB := 0 } (st || hd) false from rfl)
-    (show _ = pkA M { s with rB := 0 } st' hd' from rfl)).seq ?_))
+    (show _ = pkA M { s with rB := 0 } st' hd' from rfl)).seq ?_)
   rcases hrA with h | h
   · have e : tockS M s = tockOf (W M) { s with rB := 0 } (M.instr s.q) := by
       simp only [tockS, h, ↓reduceIte]
@@ -993,7 +1050,7 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hcc : kc.marks.char = false)
     (hoc : ko.marks.char = false) :
     Shape kc.weak ko.weak g' ∨ Shape ko.weak kc.weak g' ∨
-      ∃ atk g'', atk ∈ kc.top.attacks ∧ Run (.seq (.damage atk.damage) atk.effect) g g'' ∧
+      ∃ atk g'', atk ∈ kc.top.attacks ∧ Run atk.script g g'' ∧
         g' = { g'' with
           attacked := true, cur := { g''.cur with gxUsed := atk.gx || g''.cur.gxUsed } } := by
   have hC := hs.cur
@@ -1053,16 +1110,17 @@ theorem Good.hpB {M : Machine} {s : Abs} (hg : Good M s) (st hd : Bool) :
 /-- An attack from a state of known shape, given what its effect does. -/
 theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Shape kc ko g)
     (hatk : atk ∈ kc.top.attacks) (hcost : atk.cost = [])
-    (hD : Does (.seq (.damage atk.damage) atk.effect) kc ko kc' ko')
+    (hD : Does atk.script kc ko kc' ko')
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hbt : g.between = false)
-    (hn : g.attacked = false) (hf : g.firstTurn = false) (hgx : atk.gx = false) :
+    (hn : g.attacked = false) (hf : g.firstTurn = false) (hgx : atk.gx = false)
+    (hw : atk.wf = true) :
     ∃ g', Move g g' ∧ Shape kc' ko' g' ∧ g'.between = false ∧ g'.firstTurn = false ∧
       g'.winner = g.winner := by
   obtain ⟨p, hp, h1, h2, -⟩ := hs.cur.active
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs
   have hfl := Run.flags hr
   refine ⟨_, .attack hp (h1 ▸ hatk) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
-    hbt (hs.settled hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h),
+    hbt (hs.settled hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw,
     ⟨(hsh _ hr).cur.setGx _, (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
 /-- Ending the turn from a state of known shape swaps the shape. -/
@@ -1193,13 +1251,13 @@ theorem simulate {M : Machine} {c c' : Config} {g : GameState} (hst : M.Step c c
   have hg₁ := (tickS_spec hg).1
   have hg₂ := (tockS_spec hg₁).1
   obtain ⟨g₁, m₁, s₁, b₁, f₁, w₁⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
-    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
+    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl (atkA_wf M)
   obtain ⟨g₂, m₂, s₂, b₂, a₂, f₂, w₂⟩ := endTurn_move s₁ (hg₁.hpA _ _) (hg₁.hpB _ _)
     (mkOf_char _) rfl b₁
   obtain ⟨g₃, m₃, s₃, b₃, a₃, f₃, w₃⟩ := startTurn_move s₂ (hg₁.hpB _ _) (hg₁.hpA _ _) b₂ rfl
   obtain ⟨g₄, m₄, s₄, b₄, f₄, w₄⟩ := attack_move (atk := atkB M) s₃ (.head _) rfl
     (Does.attackB hg₁ false true true false) (hg₁.hpB _ _) (hg₁.hpA _ _) b₃ (a₃.trans a₂)
-    (f₃.trans f₂) rfl
+    (f₃.trans f₂) rfl (atkB_wf M)
   obtain ⟨g₅, m₅, s₅, b₅, a₅, f₅, w₅⟩ := endTurn_move s₄ (hg₂.hpB _ _) (hg₂.hpA _ _) rfl
     (mkOf_char _) b₄
   obtain ⟨g₆, m₆, s₆, b₆, a₆, f₆, w₆⟩ := startTurn_move s₅ (hg₂.hpA _ _) (hg₂.hpB _ _) b₅ rfl
@@ -1227,7 +1285,7 @@ theorem haltMarked_of_halted {M : Machine} {c : Config} {g : GameState} (he : En
     (hH : M.Halted c) : ∃ g', Reach g g' ∧ HaltMarked g' := by
   obtain ⟨s, rfl, hg, hb, -, hsh, hbt, hat, hft, hw⟩ := he
   obtain ⟨g₁, m₁, s₁, -⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
-    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
+    (Does.attackA hg false true true false) (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl (atkA_wf M)
   obtain ⟨p, hp, -, -, -, -, -, hm⟩ := s₁.cur.active
   refine ⟨g₁, .step (.refl _) hw m₁, p, .inl hp, ?_⟩
   rw [hm]; simp only [pkA, tickS_halted hb hH]; rfl
@@ -1338,17 +1396,19 @@ gives details): (1) damage bonuses and reductions for the rest of the game that 
 limit (`linger … .always`, inside attacks used every turn), including a reduction granted to the
 opponent, by attacks that are not GX attacks (printed cards give rest-of-game modifiers only
 through once-per-game attacks, survey S7 §C; the model's GX rule would allow one such attack per
-player per game); (2) `damage` read by a test later in the same attack (`ite (exactly opp v)` after
-`damage 1`), using the model's freedom to order primitives; (3) a printed HP chosen for the
+player per game); (2) the damage an attack places read by an exact test later in the same attack
+(`ite (exactly opp v)` after the damage step `damage (const 1)`, which sits in a branch of
+earlier tests); (3) a printed HP chosen for the
 machine (the Clock has HP `3 · span + 1`); (4) a halt mark placed on the player's own Pokémon
 (printed markers target the opponent; this affects only the observable); (5) a hand-built start
 (an Active Pokémon and one Energy each, one Prize, no set-up), not shown reachable from a legal
 set-up, with padding to legal deck size not proved harmless; and (6) `ite`, `healAll`,
 `selfDamage`, `counters`, `mark` and `handToBottom` as general primitives combined in one
 attack. It does not rely on an attack not ending the turn, on a bonus being added to base
-damage 0 (its attacks have base damage 0, which does no damage), on costs being counted rather
-than typed (costs are empty), on modifiers being per player rather than per Pokémon (one Pokémon
-each, no Bench), or on the absence of Weakness and Resistance. It is a theorem about this
+damage 0 (its zero test has base damage 1), on costs being counted rather than typed (costs are
+typed, and empty), on modifiers being per player rather than per Pokémon (one Pokémon each, no
+Bench), or on the absence of Weakness and Resistance (the Clock and the Tape have neither, and
+each attack makes the damage calculation at most once). It is a theorem about this
 generalisation of the model, not about the printed game. -/
 theorem universal (M : Machine) (a b : Nat) :
     WellFormed (start M a b) ∧ Encodes M (Machine.init a b) (start M a b) ∧

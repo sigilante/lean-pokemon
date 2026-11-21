@@ -8,8 +8,10 @@ nondeterministic: player choices, coin flips and shuffles are all branches of it
 the right shape for reachability questions, and it is silent about probability.
 
 Effects read the state only through the two Active Pokémon: a test (`ite`) on the damage, the
-Special Conditions, the markers or the type of either one, and `scale`, which places counters in proportion to the
-damage on either one. Inside one `Run` nothing is Knocked Out, so damage may exceed HP and
+Special Conditions, the markers or the type of either one; `scale`, which places counters in
+proportion to the damage on either one; and the amount of the damage step (`Amt.per`), which
+reads the damage on either one. The damage step also reads the two Active Pokémon's types,
+Weakness and Resistance, and both players' modifiers (`GameState.dealt`). Inside one `Run` nothing is Knocked Out, so damage may exceed HP and
 these reads see the excess. `Run` is the semantics of an attack's effect, where the rulebook
 checks for Knock Outs only at the end of the attack. The effect of an Item or Supporter card is
 resolved by `TRun` (in `Pokemon.Rules`), which uses `Run` for one primitive step at a time and
@@ -38,6 +40,59 @@ def Effect.touch : Effect → Option (Whose × (Marks → Marks))
 def PlayerState.unmark (m : Marker) (s : PlayerState) : PlayerState :=
   { s with active := s.active.map (InPlay.setMarks (Marks.set m false)),
            bench := s.bench.map (InPlay.setMarks (Marks.set m false)) }
+
+/-- `Amt.Val a g n`: the amount `a` evaluates to `n` counters in state `g`. `per` reads the
+damage on an Active Pokémon (and needs one); `many` sums any number of values (a coin flipped
+until tails), so evaluation is a relation. -/
+inductive Amt.Val : Amt → GameState → Nat → Prop where
+  | const (n : Nat) (g : GameState) : Amt.Val (.const n) g n
+  | per {w : Whose} {g : GameState} {p : InPlay} (k : Nat) (h : g.activeOf w = some p) :
+      Amt.Val (.per w k) g (k * p.damage)
+  | add {a b : Amt} {g : GameState} {x y : Nat} :
+      Amt.Val a g x → Amt.Val b g y → Amt.Val (.add a b) g (x + y)
+  | sub {a b : Amt} {g : GameState} {x y : Nat} :
+      Amt.Val a g x → Amt.Val b g y → Amt.Val (.sub a b) g (x - y)
+  | manyNil (a : Amt) (g : GameState) : Amt.Val (.many a) g 0
+  | manyCons {a : Amt} {g : GameState} {x y : Nat} :
+      Amt.Val a g x → Amt.Val (.many a) g y → Amt.Val (.many a) g (x + y)
+
+/-- An amount evaluates the same in a state whose Active Pokémon have the same damage. -/
+theorem Amt.Val.congr {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val g₁ n)
+    (hc : ∀ w p, g₁.activeOf w = some p → ∃ q, g₂.activeOf w = some q ∧ q.damage = p.damage) :
+    a.Val g₂ n := by
+  induction h with
+  | const n g => exact .const n g₂
+  | per k h =>
+      obtain ⟨q, hq, hd⟩ := hc _ _ h
+      rw [← hd]; exact .per k hq
+  | add _ _ ih₁ ih₂ => exact .add (ih₁ hc) (ih₂ hc)
+  | sub _ _ ih₁ ih₂ => exact .sub (ih₁ hc) (ih₂ hc)
+  | manyNil a g => exact .manyNil a g₂
+  | manyCons _ _ ih₁ ih₂ => exact .manyCons (ih₁ hc) (ih₂ hc)
+
+/-- An amount that has a value in one state has one in every state with Active Pokémon where
+the first has them (the values may differ). -/
+theorem Amt.Val.transfer {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val g₁ n)
+    (hc : ∀ w p, g₁.activeOf w = some p → ∃ q, g₂.activeOf w = some q) : ∃ m, a.Val g₂ m := by
+  induction h with
+  | const n g => exact ⟨n, .const n g₂⟩
+  | per k h =>
+      obtain ⟨q, hq⟩ := hc _ _ h
+      exact ⟨_, .per k hq⟩
+  | add _ _ ih₁ ih₂ =>
+      obtain ⟨x, hx⟩ := ih₁ hc
+      obtain ⟨y, hy⟩ := ih₂ hc
+      exact ⟨_, .add hx hy⟩
+  | sub _ _ ih₁ ih₂ =>
+      obtain ⟨x, hx⟩ := ih₁ hc
+      obtain ⟨y, hy⟩ := ih₂ hc
+      exact ⟨_, .sub hx hy⟩
+  | manyNil a g => exact ⟨0, .manyNil a g₂⟩
+  | manyCons _ _ _ _ => exact ⟨0, .manyNil _ g₂⟩
+
+/-- A printed number evaluates to itself. -/
+theorem Amt.Val.const_inv {n m : Nat} {g : GameState} (h : (Amt.const n).Val g m) : m = n := by
+  cases h; rfl
 
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g
@@ -93,12 +148,15 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.unmark w m) g (g.updSide w (PlayerState.unmark m))
   | linger (w : Whose) (s : Slot) (m : Mod) (g : GameState) :
       Run (.linger w s m) g (g.updSide w fun p => { p with mods := p.mods.add s m })
-  | damage {g : GameState} {p : InPlay} (n : Nat) (h : g.opp.active = some p) :
-      Run (.damage n) g
+  /-- the damage step: the amount evaluates to `n`, and the calculation `GameState.dealt n`
+  gives the damage placed -/
+  | damage {g : GameState} {p : InPlay} {a : Amt} {n : Nat} (hv : a.Val g n)
+      (h : g.opp.active = some p) :
+      Run (.damage a) g
         { g with opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } }
-  | drain {g : GameState} {p q : InPlay} (n : Nat) (h : g.opp.active = some p)
-      (hq : g.cur.active = some q) :
-      Run (.drain n) g
+  | drain {g : GameState} {p q : InPlay} {a : Amt} {n : Nat} (hv : a.Val g n)
+      (h : g.opp.active = some p) (hq : g.cur.active = some q) :
+      Run (.drain a) g
         { g with cur := { g.cur with active := some { q with damage := q.damage - g.dealt n } },
                  opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } }
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :

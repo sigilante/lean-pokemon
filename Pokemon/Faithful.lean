@@ -147,6 +147,20 @@ def Effect.amtAt (s : Slot) : Effect → Nat
 def Effect.amt (e : Effect) : Nat :=
   e.amtAt .now + e.amtAt .next + e.amtAt .after + e.amtAt .always
 
+/-- The script of an attack writes what its effect writes: the base damage writes nothing. -/
+theorem Attack.script_loopFree (atk : Attack) : atk.script.loopFree = atk.effect.loopFree := by
+  unfold Attack.script
+  split
+  · rfl
+  · simp only [Effect.loopFree, Bool.true_and]
+
+theorem Attack.script_amtAt (atk : Attack) (s : Slot) :
+    atk.script.amtAt s = atk.effect.amtAt s := by
+  unfold Attack.script
+  split
+  · rfl
+  · simp only [Effect.amtAt, Nat.zero_add]
+
 theorem Effect.amtAt_le_amt (e : Effect) (s : Slot) : e.amtAt s ≤ e.amt := by
   cases s <;> simp only [Effect.amt] <;> omega
 
@@ -602,17 +616,17 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         simp only [Card.atkAmt] at h2
         omega
       have hk := hr.keeps
-      have hsl := hr.slot_le (by simp only [Effect.loopFree, hlf, Bool.and_self])
+      have hsl := hr.slot_le (by rw [Attack.script_loopFree]; exact hlf)
       have hs' : ∀ s, (atkRes atk g'').slotAmt s ≤ g.slotAmt s + A := by
         intro s
         have h1 := hsl s
         have h2 := atk.effect.amtAt_le_amt s
-        simp only [Effect.amtAt, Nat.zero_add] at h1
+        rw [Attack.script_amtAt] at h1
         rw [atkRes_slotAmt]
         omega
       refine hi.attack hn rfl hs' ?_ hk.disc
       have hal := hsl .always
-      simp only [Effect.amtAt, Nat.zero_add] at hal
+      rw [Attack.script_amtAt] at hal
       rw [atkRes_slotAmt]
       cases hgv : atk.gx with
       | false =>

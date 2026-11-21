@@ -48,8 +48,10 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
 
-/-- **Base damage 0 does no damage**, whatever the bonuses, reductions and prevention. -/
-theorem dealtBy_zero (own opp : Store) : dealtBy 0 own opp = 0 := rfl
+/-- **Base damage 0 does no damage**, whatever the bonuses, reductions and prevention, and
+whatever the Weakness and Resistance. -/
+theorem dealtBy_zero (weak : Bool) (resist : Nat) (own opp : Store) :
+    dealtBy 0 weak resist own opp = 0 := rfl
 
 @[inherit_doc dealtBy_zero]
 theorem GameState.dealt_zero (g : GameState) : g.dealt 0 = 0 := rfl

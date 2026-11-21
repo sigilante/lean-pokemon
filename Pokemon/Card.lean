@@ -227,6 +227,25 @@ inductive Test where
   | isType (w : Whose) (t : EType)
   deriving DecidableEq
 
+/-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
+as the attack text will tell you" when "an ×, –, or + is printed next to it" (rulebook 2023
+p. 20, step 1), before any modifier. It is evaluated once, when the attack's damage is placed
+(`Amt.Val`, `Effect.damage`). -/
+inductive Amt where
+  /-- a printed number -/
+  | const (n : Nat)
+  /-- `k` for each damage counter on the `w` Active Pokémon ("20 damage plus 10 more for each
+  damage counter on your opponent's Active Pokémon" is `add (const 2) (per opp 1)`, Jynx
+  base1-31) -/
+  | per (w : Whose) (k : Nat)
+  | add (a b : Amt)
+  /-- `a` less `b`, at least 0 ("10 less damage for each damage counter on this Pokémon") -/
+  | sub (a b : Amt)
+  /-- the sum of any number of values of `a`: "Flip a coin until you get tails. This attack does
+  30 damage for each heads" is `many (const 3)` -/
+  | many (a : Amt)
+  deriving DecidableEq
+
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
 `iter` covers "flip until tails" and "as often as you like". -/
 inductive Effect where
@@ -274,16 +293,17 @@ inductive Effect where
   | color (w : Whose) (t : EType)
   /-- the `w` player gets the lingering modifier `m` for the turns `s` -/
   | linger (w : Whose) (s : Slot) (m : Mod)
-  /-- the attack does `n` damage to the opponent's Active Pokémon, `n` being its base damage as
-  printed or as the attack's text computes it: nothing if `n = 0` (the rulebook's "Stop if the
-  base damage is 0"), else `n` plus the player's damage bonus, minus the opponent's damage
-  reduction, or nothing if the opponent has damage prevention (`GameState.dealt`, `dealtBy`).
-  `Move.attack` does the printed base damage (`Attack.damage`) this way; an effect may do more
-  `damage` (an attack whose text sets or adds to its damage) -/
-  | damage (n : Nat)
-  /-- as `damage n`, and heal the player's Active Pokémon by the damage done ("heal from this
+  /-- the attack's damage step: evaluate the amount `a` to a base damage `n` (`Amt.Val`) and do
+  the damage the rulebook's calculation gives (`dealtBy`, rulebook 2023 p. 20: stop at base 0;
+  the attacker's bonus; Weakness; Resistance; the defender's reduction and prevention) to the
+  opponent's Active Pokémon. An attack has at most one damage step on each line of resolution
+  (`Effect.oneHit`, required by `Move.attack`), so the calculation is made once per attack, and
+  Item and Supporter effects have none (`Effect.hitFree`, required by `Move.item` and
+  `Move.supporter`): printed Trainer cards place damage counters, not attack damage -/
+  | damage (a : Amt)
+  /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
-  | drain (n : Nat)
+  | drain (a : Amt)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -291,15 +311,85 @@ inductive Effect where
 
 structure Attack where
   name : String
+  /-- the Energy symbols of the cost, paid by matching (`Pays`) -/
   cost : List EType
-  /-- base damage, in counters (0 for an attack printed with no damage, or whose damage the
-  text computes; that damage is then an `Effect.damage` in the effect) -/
+  /-- the printed base damage, in counters, when the text does not change it; 0 for an attack
+  printed with no damage, or whose damage the text computes, which then places it with a
+  damage step (`Effect.damage`, `Effect.drain`) in its effect (`Attack.script`) -/
   damage : Nat
   effect : Effect
   /-- a GX attack: each player can use at most one GX attack in a game (`PlayerState.gxUsed`;
   "You can't use more than 1 GX attack in a game") -/
   gx : Bool
   deriving DecidableEq
+
+/-- No damage step (`damage` or `drain`) anywhere in the effect. -/
+def Effect.hitFree : Effect → Bool
+  | .damage _ => false
+  | .drain _ => false
+  | .ite _ a b => a.hitFree && b.hitFree
+  | .seq a b => a.hitFree && b.hitFree
+  | .choice a b => a.hitFree && b.hitFree
+  | .iter a => a.hitFree
+  | _ => true
+
+/-- At most one damage step on each line of resolution: the branches of `ite` and `choice` may
+each have one, a `seq` may have one in either part but not both, and nothing under `iter` may
+have one. So resolving the effect makes the damage calculation at most once. -/
+def Effect.oneHit : Effect → Bool
+  | .ite _ a b => a.oneHit && b.oneHit
+  | .seq a b => (a.oneHit && b.hitFree) || (a.hitFree && b.oneHit)
+  | .choice a b => a.oneHit && b.oneHit
+  | .iter a => a.hitFree
+  | _ => true
+
+/-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
+damage, then place damage counters, and then do all other effects"). An attack with printed base
+damage `n ≠ 0` and no damage step in its text does its damage first, then its effect. An attack
+with base damage 0 resolves its effect, which places its damage, if any, with its own damage
+step: this is how an attack writes damage computed by its text ("×", "+", "–"), damage that
+depends on a coin flip or a choice made in the same effect, or effects before the damage. -/
+def Attack.script (atk : Attack) : Effect :=
+  if atk.damage = 0 then atk.effect else .seq (.damage (.const atk.damage)) atk.effect
+
+/-- A well-formed attack: at most one damage step on each line of resolution, and none in the
+text when a printed base damage is done first. `Move.attack` requires it. -/
+def Attack.wf (atk : Attack) : Bool :=
+  atk.effect.oneHit && (decide (atk.damage = 0) || atk.effect.hitFree)
+
+theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneHit = true
+  | .damage _, h => by simp [Effect.hitFree] at h
+  | .drain _, h => by simp [Effect.hitFree] at h
+  | .ite _ a b, h => by
+      simp only [Effect.hitFree, Bool.and_eq_true] at h
+      simp only [Effect.oneHit, oneHit_of_hitFree h.1, oneHit_of_hitFree h.2, Bool.and_self]
+  | .seq a b, h => by
+      simp only [Effect.hitFree, Bool.and_eq_true] at h
+      simp only [Effect.oneHit, oneHit_of_hitFree h.1, h.2, oneHit_of_hitFree h.2, h.1,
+        Bool.and_self, Bool.or_self]
+  | .choice a b, h => by
+      simp only [Effect.hitFree, Bool.and_eq_true] at h
+      simp only [Effect.oneHit, oneHit_of_hitFree h.1, oneHit_of_hitFree h.2, Bool.and_self]
+  | .iter a, h => by simpa only [Effect.hitFree, Effect.oneHit] using h
+  | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
+  | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
+  | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
+  | .linger _ _ _, _ => rfl
+
+theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
+    (Effect.seq a b).oneHit = true := by
+  simp only [Effect.oneHit, ha, hb, Bool.and_self, Bool.or_true]
+
+/-- **One damage calculation per attack**: the script of a well-formed attack has at most one
+damage step on each line of resolution. -/
+theorem Attack.script_oneHit {atk : Attack} (h : atk.wf = true) : atk.script.oneHit = true := by
+  simp only [Attack.wf, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] at h
+  unfold Attack.script
+  split
+  · exact h.1
+  · rcases h.2 with h0 | hf
+    · contradiction
+    · simp only [Effect.oneHit, Effect.hitFree, hf, Bool.and_self, Bool.true_or]
 
 structure PokemonCard where
   name : String
@@ -401,6 +491,21 @@ def Card.tmax : Card → Nat
   | .pokemon p => attacksTmax p.attacks
   | .energy _ => 0
   | .trainer _ _ e => e.tmax
+
+/-- The script of an attack is tame when its effect is: the base damage adds no reduction and
+no `drain`. -/
+theorem Attack.script_tame (atk : Attack) : atk.script.tame = atk.effect.tame := by
+  unfold Attack.script
+  split
+  · rfl
+  · simp only [Effect.tame, Bool.true_and]
+
+/-- The script of an attack has the test constants of its effect. -/
+theorem Attack.script_tmax (atk : Attack) : atk.script.tmax = atk.effect.tmax := by
+  unfold Attack.script
+  split
+  · rfl
+  · simp only [Effect.tmax, Nat.zero_max]
 
 def Card.tame : Card → Bool
   | .pokemon p => attacksTame p.attacks

@@ -198,7 +198,7 @@ theorem move_after1 : Move start1 after1 := by
     (.seq (.prim rfl rfl (.selfDamage 5 rfl)
       (.step rfl (.knockOutOwn rfl (by decide) rfl)
         (.step rfl (.promoteOwn (b₁ := []) rfl rfl) (.done (.inl ?_)))))
-      (.prim rfl rfl (.heal 5 rfl) (.done (.inl ?_)))) rfl rfl
+      (.prim rfl rfl (.heal 5 rfl) (.done (.inl ?_)))) rfl rfl rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
@@ -257,7 +257,7 @@ theorem move_after2 : Move start2 after2 := by
     (.iterCons (.prim rfl rfl (.counters 5 rfl)
       (.step rfl (.knockOut rfl (by decide) rfl)
         (.step rfl (.promote (b₁ := []) rfl rfl) (.done (.inl ?_)))))
-      (.iterCons (.prim rfl rfl (.counters 5 rfl) (.done (.inl ?_))) (.iterNil _ _))) rfl rfl
+      (.iterCons (.prim rfl rfl (.counters 5 rfl) (.done (.inl ?_))) (.iterNil _ _))) rfl rfl rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
@@ -310,7 +310,7 @@ def after3 : GameState :=
 theorem move_after3 : Move start3 after3 :=
   .item (l₁ := []) (l₂ := []) (n := "Win") rfl rfl start3_settled
     (.seq (.prim rfl rfl (.counters 5 rfl) (.step rfl (.knockOut rfl (by decide) rfl)
-      (.done (.inr (by decide))))) (.stop (by decide))) rfl rfl
+      (.done (.inr (by decide))))) (.stop (by decide))) rfl rfl rfl
 
 /-- **Witness: the win condition fires inside an Item's effect.** From a well-formed, `Settled`
 start, `seq (counters 5) draw` Knocks Out the opponent's Active Pokémon in its first step, the

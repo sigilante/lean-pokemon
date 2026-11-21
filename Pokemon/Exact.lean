@@ -4,8 +4,8 @@ import Pokemon.Finite
 # A clamp with exact stores: a bisimulation for every deck
 
 `GameState.clamp k` (in `Pokemon/Damage.lean`) caps the damage bonuses and reductions in the
-modifier stores at `k`, and that is why it fails for decks with damage reduction or `drain`
-(`Lingering.reduce_breaks_clamp`, `Lingering.drain_breaks_clamp`): both counterexamples
+modifier stores (at `2 * k`), and that is why it fails for decks with damage reduction or
+`drain` (`Lingering.reduce_breaks_clamp`, `Lingering.drain_breaks_clamp`): both counterexamples
 reach two states whose stores differ only above the cap. This file keeps every store exact and
 clamps only what Knock Outs make irrelevant.
 
@@ -13,46 +13,40 @@ clamps only what Knock Outs make irrelevant.
   to move and `clampWith cp` to the opponent's (damage as the cap says, Poison strength capped
   at the printed HP); nothing else changes, the modifier stores included.
 * `GameState.xclamp` is `xclampAt .hp .hp`, the clamp at move boundaries. It has no parameter.
-  `GameState.xrclamp k` is `xclampAt .exact (.upto k)`, the relation used inside an attack's
-  effect: the player's own damage exact, the opponent's capped at `k`.
-* `Run.xcap_sim`: inside an attack's effect, the kernel of `xrclamp k` is a simulation for
-  every effect whose test constants are below `k`. No tameness: damage reduction and `drain`
-  are allowed.
+  `GameState.xrclamp` is `xclampAt .exact .exact`, the relation used inside an attack's effect:
+  damage exact on both Active Pokémon, Poison strength capped at HP. (Before milestone M4 the
+  opponent's damage was capped at a constant `k` inside attacks; since an attack's damage step
+  can read that damage, `Amt.per`, and `drain` writes the amount to the attacker, it is kept
+  exact.)
+* `Run.xcap_sim`: inside an attack's effect, the kernel of `xrclamp` is a simulation for every
+  effect whose test constants are below `k` (the bound is no longer needed, and kept). No
+  tameness: damage reduction and `drain` are allowed.
 * `TRun.xclamp_sim`, `Move.xclamp_sim`, `Reach.xclamp_sim`: the kernel of `xclamp` is a
   simulation for Trainer effects and a (strong) bisimulation for moves and for reachability,
-  under `GameState.XFit k`: every printed HP is at most `k` and every test constant is below
-  `k`. Nothing is assumed about modifiers, damage reduction or `drain`.
+  under `GameState.XFit k`: every printed HP and Resistance is at most `k` and every test
+  constant is below `k`. Nothing is assumed about modifiers, damage reduction or `drain`.
 * `Reach.xclamp_bisim`, `GameState.xclamp_bisim`: with `k` computed from the cards, the kernel
   of `xclamp` is a two-way bisimulation for every deck. The first is stated along states
   reachable from a start `g₀`; that premise is vacuous (take `g₀ = g₁`), and the second states
   it for all pairs of states with equal `xclamp`.
 
-Why this works, reader by reader. Two states with the same `xrclamp k` have identical stores,
-identical Benches, hands, decks, discard piles, flags and markers, the same Active Pokémon
-except in damage and Poison strength, the player's own Active Pokémon with the same damage, and
-the opponent's with damage equal or both at least `k`.
-* `damage n` and `drain n` compute `dealtBy n` from the stores, which are equal, so both states
-  add the same amount, however large and whether or not a reduction offsets a bonus; `drain`
-  heals the player's own Active Pokémon, whose damage is exact, by that same amount.
-* Tests (`ite`): the player's own damage is exact; the opponent's is read only against test
-  constants below `k`; conditions, markers and types are equal.
-* `scale w k'`: from the player's own Pokémon it adds the same amount; from the opponent's,
-  `d + k'·d` is at least `k` when `d` is (`min_add_mul`).
+Why this works, reader by reader. Two states with the same `xrclamp` have identical stores,
+identical Benches, hands, decks, discard piles, flags and markers, and the same Active Pokémon
+except in Poison strength above HP.
+* The damage step (`damage a`, `drain a`): the amount evaluates the same (`Amt.Val.of_xrclamp`),
+  Weakness and Resistance are read from the same cards and types, and the stores are equal, so
+  `dealtBy` is the same in both states, however large and whether or not a reduction offsets a
+  bonus; `drain` heals the attacker by that same amount. Weakness, which doubles a quantity
+  containing an unbounded stored bonus, is harmless here because the stores are exact.
+* Tests (`ite`) and `scale` read damage, which is equal.
 * Locks and prevention are flags in the stores, which are equal: the same attacks, retreats and
   Items are legal, and prevention zeroes damage in both states alike.
 * Checkup reads damage only from `Settled` states (`endTurn` requires `DamageBounded`), where
   capping at HP loses nothing, and Poison strength above HP adds at least HP either way.
 * Store shifting at `endTurn` acts on equal stores.
-* Trainer effects (`TRun`): each primitive step starts `Settled`, where `xclamp` and
-  `xrclamp k` agree; Knock Outs in mid-effect read damage only against HP.
-
-The cap on damage. Inside an attack the opponent's damage is capped at `k`, which must exceed
-every test constant (tests read it) and be at least every printed HP (so the cap at `k` still
-decides every Knock Out after the attack). Attack damage can now be large in either direction
-(a bonus far above every HP, or a reduction that brings damage to 0), but it is the same in
-both states, since it is computed from equal stores; no cap on damage done is needed, and none
-on the stores. `XFit` asks exactly for these two conditions, and `bound` (larger than every HP
-and test constant) gives them (`GameState.xfit_bound`).
+* Every move that resolves an effect (an attack, an Item, a Supporter, each step of a Trainer
+  effect under `TRun`) starts `Settled`, where `xclamp` and `xrclamp` agree; Knock Outs read
+  damage only against HP, and `xrclamp` determines `xclamp`.
 
 What the stores cost. The clamp no longer bounds the stores, so finiteness of the reachable
 clamps needs a separate bound on the stores; that is `Pokemon/Bounded.lean`.
@@ -70,9 +64,13 @@ def GameState.xclampAt (co cp : Cap) (g : GameState) : GameState :=
 Active Pokémon capped at the printed HP; the modifier stores, and everything else, exact. -/
 def GameState.xclamp (g : GameState) : GameState := g.xclampAt .hp .hp
 
-/-- The relation used inside an attack's effect: the player's own damage exact, the opponent's
-capped at `k`, Poison strength capped at HP, the stores exact. -/
-def GameState.xrclamp (k : Nat) (g : GameState) : GameState := g.xclampAt .exact (.upto k)
+/-- The relation used inside an attack's effect: damage on both Active Pokémon exact, Poison
+strength capped at HP, the stores exact. (Before milestone M4 the opponent's damage was capped
+at a constant `k` here. An attack's damage step can now read the opponent's damage (`Amt.per`)
+and, through `drain`, write the amount to the player's own Pokémon, so damage above any cap can
+reach the attacker's exact damage; inside an attack damage is therefore kept exact. Every move
+that resolves an effect starts `Settled`, where `xclamp` already determines the damage.) -/
+def GameState.xrclamp (g : GameState) : GameState := g.xclampAt .exact .exact
 
 /-- Two states with the same `xclampAt co cp` differ at most in the two Active Pokémon, as
 `InPlay.Agree` allows. -/
@@ -99,37 +97,55 @@ theorem GameState.mods_of_xclamp {co cp : Cap} {g₁ g₂ : GameState}
   ⟨congrArg (fun g => g.cur.mods) h, congrArg (fun g => g.opp.mods) h⟩
 
 /-- The Active Pokémon read by a test, in states with the same `xrclamp k`. -/
-theorem GameState.xactiveOf_agree {k : Nat} {g₁ g₂ : GameState}
-    (h : g₁.xrclamp k = g₂.xrclamp k) {w : Whose} {p : InPlay} (hp : g₁.activeOf w = some p) :
-    ∃ q, g₂.activeOf w = some q ∧ InPlay.Agree (.upto k) q p := by
+theorem GameState.xactiveOf_exact {g₁ g₂ : GameState}
+    (h : g₁.xrclamp = g₂.xrclamp) {w : Whose} {p : InPlay} (hp : g₁.activeOf w = some p) :
+    ∃ q, g₂.activeOf w = some q ∧ InPlay.Agree .exact q p := by
   cases w with
   | own =>
       have e := (congrArg (fun g => g.cur.active) h).symm
       simp only [GameState.xrclamp, GameState.xclampAt] at e
       rw [show g₁.cur.active = some p from hp] at e
-      obtain ⟨q, hq, ha⟩ := agree_of_map e
-      exact ⟨q, hq, ha.recap ha.damage_eq⟩
+      exact agree_of_map e
   | opp =>
       have e := (congrArg (fun g => g.opp.active) h).symm
       simp only [GameState.xrclamp, GameState.xclampAt] at e
       rw [show g₁.opp.active = some p from hp] at e
       exact agree_of_map e
 
+theorem GameState.xactiveOf_agree {k : Nat} {g₁ g₂ : GameState}
+    (h : g₁.xrclamp = g₂.xrclamp) {w : Whose} {p : InPlay} (hp : g₁.activeOf w = some p) :
+    ∃ q, g₂.activeOf w = some q ∧ InPlay.Agree (.upto k) q p := by
+  obtain ⟨q, hq, ha⟩ := GameState.xactiveOf_exact h hp
+  exact ⟨q, hq, ha.recap ha.damage_eq⟩
+
+/-- An amount of damage evaluates the same in states with the same `xrclamp`. -/
+theorem Amt.Val.of_xrclamp {a : Amt} {g₁ g₂ : GameState} {n : Nat} (hv : a.Val g₁ n)
+    (h : g₁.xrclamp = g₂.xrclamp) : a.Val g₂ n :=
+  hv.congr fun _ _ hp => by
+    obtain ⟨q, hq, ha⟩ := GameState.xactiveOf_exact h hp
+    exact ⟨q, hq, ha.damage_eq⟩
+
+/-- Weakness and Resistance in effect agree in states with the same `xclampAt`. -/
+theorem GameState.wr_of_xclampAt {co cp : Cap} {g₁ g₂ : GameState}
+    (h : g₁.xclampAt co cp = g₂.xclampAt co cp) :
+    g₂.weak = g₁.weak ∧ g₂.resist = g₁.resist := by
+  obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.xclamp_inv h
+  exact GameState.wr_congr (map_type_top_of_map hc₂).1 (map_type_top_of_map ha₂).2
+
 /-- With no pending Knock Out, equal `xclamp` gives equal `xrclamp k`. -/
-theorem GameState.xrclamp_of_xclamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.xclamp = g₂.xclamp)
-    (hk : DamageBounded g₁) : g₁.xrclamp k = g₂.xrclamp k := by
+theorem GameState.xrclamp_of_xclamp {g₁ g₂ : GameState} (h : g₁.xclamp = g₂.xclamp)
+    (hk : DamageBounded g₁) : g₁.xrclamp = g₂.xrclamp := by
   obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.xclamp_inv h
   simp only [GameState.xrclamp, GameState.xclampAt,
     map_exact_of_hp hc₂ fun p hp => hk p (Or.inl hp),
-    map_recap (c := .upto k) (map_exact_of_hp ha₂ fun p hp => hk p (Or.inr (Or.inr (Or.inl hp))))]
+    map_exact_of_hp ha₂ fun p hp => hk p (Or.inr (Or.inr (Or.inl hp)))]
 
-/-- Equal `xrclamp k` gives equal `xclamp` when the opponent's Active Pokémon has HP at most
-`k`. -/
-theorem GameState.xclamp_of_xrclamp {k : Nat} {g₁ g₂ : GameState}
-    (h : g₁.xrclamp k = g₂.xrclamp k) (hk : ∀ p, g₁.opp.active = some p → p.top.hp ≤ k) :
+/-- Equal `xrclamp` gives equal `xclamp`. -/
+theorem GameState.xclamp_of_xrclamp {g₁ g₂ : GameState} (h : g₁.xrclamp = g₂.xrclamp) :
     g₁.xclamp = g₂.xclamp := by
   obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.xclamp_inv h
-  simp only [GameState.xclamp, GameState.xclampAt, map_recap (c := .hp) hc₂, map_hp_of_upto ha₂ hk]
+  simp only [GameState.xclamp, GameState.xclampAt, map_recap (c := .hp) hc₂,
+    map_recap (c := .hp) ha₂]
 
 /-- Equal `xclamp` gives equal `clamp k`, for every `k`. -/
 theorem GameState.clamp_of_xclamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.xclamp = g₂.xclamp) :
@@ -209,14 +225,13 @@ theorem Resolve.xclamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
 
 /-! ## Inside an attack's effect -/
 
-/-- **Inside an attack's effect, the kernel of `xrclamp k` is a simulation**, for every effect
+/-- **Inside an attack's effect, the kernel of `xrclamp` is a simulation**, for every effect
 whose test constants are below `k`: damage reduction, `drain`, rest-of-game modifiers and
-`linger` inside `iter` are all allowed. Two states that agree except in the opponent's damage
-at or above `k` and in Poison strength above HP have the same effect resolutions, up to the same
-relation. -/
+`linger` inside `iter` are all allowed. Two states that agree except in Poison strength above
+HP have the same effect resolutions, up to the same relation. -/
 theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e g₁ g₁') :
-    e.tmax < k → ∀ {g₂ : GameState}, g₁.xrclamp k = g₂.xrclamp k →
-      ∃ g₂', Run e g₂ g₂' ∧ g₁'.xrclamp k = g₂'.xrclamp k := by
+    e.tmax < k → ∀ {g₂ : GameState}, g₁.xrclamp = g₂.xrclamp →
+      ∃ g₂', Run e g₂ g₂' ∧ g₁'.xrclamp = g₂'.xrclamp := by
   induction h with
   | skip g => intro _ g₂ hc; exact ⟨g₂, .skip g₂, hc⟩
   | draw h =>
@@ -279,13 +294,13 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
   | iteT h ht' _ ih =>
       intro hb g₂ hc
       simp only [Effect.tmax] at hb
-      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree hc h
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) hc h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hc
       exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
   | iteF h ht' _ ih =>
       intro hb g₂ hc
       simp only [Effect.tmax] at hb
-      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree hc h
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) hc h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hc
       exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
   | @scale g p q w k' hs h =>
@@ -298,7 +313,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           change g.cur.active = some p at hs
           rw [hs] at hc₂
           obtain ⟨s, rfl, hsa⟩ := agree_of_map hc₂
-          have hq' : InPlay.Agree (.upto k) { q₂ with damage := q₂.damage + k' * s.damage }
+          have hq' : InPlay.Agree .exact { q₂ with damage := q₂.damage + k' * s.damage }
               { q with damage := q.damage + k' * p.damage } := by
             rw [hsa.damage_eq]; exact hq.upd.2.1 _
           exact ⟨_, .scale .own k' rfl rfl, by
@@ -308,12 +323,9 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           change g.opp.active = some p at hs
           have e : q = p := Option.some.inj (h.symm.trans hs)
           subst e
-          have hd := hq.damage
-          simp only [Cap.dmg] at hd
-          have hq' : InPlay.Agree (.upto k) { q₂ with damage := q₂.damage + k' * q₂.damage }
-              { q with damage := q.damage + k' * q.damage } :=
-            ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
-              hq.marks, by simp only [Cap.dmg]; exact min_add_mul hd k', hq.poisonUp⟩
+          have hq' : InPlay.Agree .exact { q₂ with damage := q₂.damage + k' * q₂.damage }
+              { q with damage := q.damage + k' * q.damage } := by
+            rw [hq.damage_eq]; exact hq.setDamage _
           exact ⟨_, .scale .opp k' rfl rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, Option.map_some, hc₂,
               InPlay.clamp_of_agree hq']⟩
@@ -370,29 +382,39 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       cases w <;>
         exact ⟨_, .linger _ s m _, by
           simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂]⟩
-  | @damage g p n h =>
+  | @damage g p a n hv h =>
       intro _ g₂ hc
+      have hv₂ := hv.of_xrclamp hc
+      have hwr := GameState.wr_of_xclampAt hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.xclamp_inv hc
       rw [h] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-      exact ⟨_, .damage n rfl, by
-        simp only [GameState.xrclamp, GameState.xclampAt, GameState.dealt, Option.map_some, hc₂,
-          InPlay.clamp_of_agree (hq.upd.2.1 (dealtBy n g.cur.mods g.opp.mods))]⟩
-  | @drain g p q n h hq =>
+      have e : GameState.dealt n
+          { g with cur := { g.cur with active := c₂ },
+                   opp := { g.opp with active := some q } } = g.dealt n := by
+        simp only [GameState.dealt, hwr.1, hwr.2]
+      exact ⟨_, .damage hv₂ rfl, by
+        simp only [GameState.xrclamp, GameState.xclampAt, e, Option.map_some, hc₂,
+          InPlay.clamp_of_agree (hq.upd.2.1 (g.dealt n))]⟩
+  | @drain g p q a n hv h hq =>
       intro _ g₂ hc
+      have hv₂ := hv.of_xrclamp hc
+      have hwr := GameState.wr_of_xclampAt hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.xclamp_inv hc
       rw [h] at ha₂
       rw [hq] at hc₂
       obtain ⟨p₂, rfl, hp₂⟩ := agree_of_map ha₂
       obtain ⟨q₂, rfl, hq₂⟩ := agree_of_map hc₂
+      have e : GameState.dealt n
+          { g with cur := { g.cur with active := some q₂ },
+                   opp := { g.opp with active := some p₂ } } = g.dealt n := by
+        simp only [GameState.dealt, hwr.1, hwr.2]
       have hq' : InPlay.Agree .exact
-          { q₂ with damage := q₂.damage - dealtBy n g.cur.mods g.opp.mods }
-          { q with damage := q.damage - dealtBy n g.cur.mods g.opp.mods } := by
+          { q₂ with damage := q₂.damage - g.dealt n } { q with damage := q.damage - g.dealt n } := by
         rw [hq₂.damage_eq]; exact hq₂.setDamage _
-      exact ⟨_, .drain n rfl rfl, by
-        simp only [GameState.xrclamp, GameState.xclampAt, GameState.dealt, Option.map_some,
-          InPlay.clamp_of_agree hq',
-          InPlay.clamp_of_agree (hp₂.upd.2.1 (dealtBy n g.cur.mods g.opp.mods))]⟩
+      exact ⟨_, .drain hv₂ rfl rfl, by
+        simp only [GameState.xrclamp, GameState.xclampAt, e, Option.map_some,
+          InPlay.clamp_of_agree hq', InPlay.clamp_of_agree (hp₂.upd.2.1 (g.dealt n))]⟩
   | shuffle h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.xclamp_inv hc
@@ -444,8 +466,7 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
       have hs : Settled _ := hs.resolve_right (fun h => h hn)
       obtain ⟨m₂, hr₂, hcm⟩ := Run.xcap_sim hr hb (GameState.xrclamp_of_xclamp hc hs.1)
       have hhp' := hhp.of_perm hr.perm
-      obtain ⟨g₂', hk₂, hc'⟩ := hk.xclamp_sim
-        (GameState.xclamp_of_xrclamp hcm fun p hp => hhp' _ (GameState.top_mem_opp_active hp))
+      obtain ⟨g₂', hk₂, hc'⟩ := hk.xclamp_sim (GameState.xclamp_of_xrclamp hcm)
       exact ⟨g₂', .prim he (by rw [GameState.winner_of_xclamp hc]; exact hn) hr₂ hk₂, hc'⟩
   | stop hn =>
       intro _ _ g₂ hc _
@@ -454,7 +475,7 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
       intro hb hhp g₂ hc hs
       have hs' : Settled _ := hs.resolve_right (fun h => h hn)
       simp only [Effect.tmax] at hb
-      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (GameState.xrclamp_of_xclamp (k := k) hc hs'.1) h
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) (GameState.xrclamp_of_xclamp hc hs'.1) h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hhp hc hs
       exact ⟨g₂', .iteT (by rw [GameState.winner_of_xclamp hc]; exact hn) hq
         (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
@@ -462,7 +483,7 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
       intro hb hhp g₂ hc hs
       have hs' : Settled _ := hs.resolve_right (fun h => h hn)
       simp only [Effect.tmax] at hb
-      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (GameState.xrclamp_of_xclamp (k := k) hc hs'.1) h
+      obtain ⟨q, hq, hqa⟩ := GameState.xactiveOf_agree (k := k) (GameState.xrclamp_of_xclamp hc hs'.1) h
       obtain ⟨g₂', r', hc'⟩ := ih (by omega) hhp hc hs
       exact ⟨g₂', .iteF (by rw [GameState.winner_of_xclamp hc]; exact hn) hq
         (by rw [Test.eval_agree _ hqa (by omega)]; exact ht') r', hc'⟩
@@ -492,8 +513,10 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
 /-! ## Moves -/
 
 /-- The conditions under which the kernel of `xclamp` is a bisimulation for moves: every
-Pokémon card has HP at most `k`, and every card's test constants are below `k`. Nothing about
-modifiers, damage reduction or `drain`. -/
+Pokémon card has HP and Resistance at most `k` (`GameState.HpLe`), and every card's test
+constants are below `k`. Nothing about modifiers, damage reduction or `drain`. (Since milestone
+M4 damage inside an attack is kept exact, so the proof of `Move.xclamp_sim` no longer needs the
+bound on HP and Resistance; the definition keeps it, and the statements are unchanged.) -/
 def GameState.XFit (k : Nat) (g : GameState) : Prop :=
   g.HpLe k ∧ ∀ x ∈ g.allCards, x.tmax < k
 
@@ -510,7 +533,8 @@ theorem Reach.xfit {k : Nat} {g₀ g : GameState} (h : Reach g₀ g) (hF : g₀.
 /-- Every start state is `XFit` at `bound` of its cards. -/
 theorem GameState.xfit_bound (g₀ : GameState) : g₀.XFit (Enum.bound g₀.allCards) := by
   refine ⟨fun p hp => ?_, fun x hx => ?_⟩
-  · have := hp_le_maxHp hp; simp only [Enum.bound]; omega
+  · have := hp_le_maxHp hp; have := resist_le_maxResist hp; simp only [Enum.bound]
+    exact ⟨by omega, by omega⟩
   · have := tmax_le_cardsTmax hx; simp only [Enum.bound]; omega
 
 /-- `XFit k` transfers along equal `xclamp`. -/
@@ -526,11 +550,11 @@ theorem GameState.XFit.of_xclamp {k : Nat} {g₁ g₂ : GameState} (hF : g₁.XF
 /-- The effect an attack resolves has test constants below `k`. -/
 theorem GameState.XFit.attack {k : Nat} {g : GameState} (hF : g.XFit k) {a : InPlay}
     {atk : Attack} (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks) :
-    (Effect.seq (.damage atk.damage) atk.effect).tmax < k := by
+    atk.script.tmax < k := by
   have hb := hF.2 _ (GameState.top_mem_cur_active ha)
   simp only [Card.tmax] at hb
   have h2 := attacksTmax_mem (as := a.top.attacks) hm
-  simp only [Effect.tmax]; omega
+  rw [Attack.script_tmax]; omega
 
 /-- **The kernel of `xclamp` is a bisimulation for `Move`**, for a state that is `XFit k`, with
 no hypothesis on damage reduction, `drain` or modifiers: if `g₁` and `g₂` have the same
@@ -575,7 +599,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by rw [hq.rot]; exact hs) hbt hs' hl hat, ?_⟩
       rw [e]
       simp only [GameState.xclamp, GameState.xclampAt, ha₂]
-  | @item g' l₁ l₂ n e hh hbt hst hr hl hat =>
+  | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .item e ∈ g₁.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -589,8 +613,8 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂])
         (.inl hst)
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
-        (by subst hg; exact hl) (by subst hg; exact hat), hc'⟩
-  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf =>
+        (by subst hg; exact hl) (by subst hg; exact hat) hnd, hc'⟩
+  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .supporter e ∈ g₁.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -606,29 +630,28 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂])
         (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
-        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf), hc'⟩
-  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx =>
+        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf) hnd,
+        hc'⟩
+  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw =>
       have hs' := hs₂ hst
       have hb := hF.attack ha hm
       obtain ⟨g₂', hr', hc''⟩ := Run.xcap_sim hr hb (GameState.xrclamp_of_xclamp hc hst.1)
-      have hhp := hF.1.of_perm hr.perm
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       refine ⟨_, .attack rfl (by rw [hq.top]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' hl hgx, ?_⟩
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr' hl hgx hw, ?_⟩
       have := congrArg (fun g : GameState => ({ g with
         attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
         GameState)) hc''
       exact GameState.xclamp_of_xrclamp this
-        (fun p hp => hhp _ (GameState.top_mem_opp_active (g := g') hp))
-  | attackConfused ha hm hc' hs hn hf hbt hst hl hgx =>
+  | attackConfused ha hm hc' hs hn hf hbt hst hl hgx hw =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx, by
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx hw, by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3)]⟩
   | knockOut ha hk hp =>

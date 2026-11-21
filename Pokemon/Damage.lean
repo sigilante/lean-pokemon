@@ -15,9 +15,11 @@ or reduction is added up without limit (`Effect.linger` inside `iter`).
   `GameState.clampAt co cp k` applies `clampWith co` to the Active Pokémon of the player to move
   and `clampWith cp` to the opponent's, and caps every damage bonus and reduction in both
   players' stores at `k`; nothing else changes.
-* `GameState.clamp k` is `clampAt .hp .hp k`: the clamp at move boundaries. `GameState.rclamp k`
-  is `clampAt .exact (.upto k) k`: the relation used inside an attack's effect (`Pokemon/Sim`),
-  where the player's own damage is read exactly and the opponent's above `k` is not.
+* `GameState.clamp k` is `clampAt .hp .hp (2 * k)`: the clamp at move boundaries.
+  `GameState.rclamp k` is `clampAt .exact (.upto k) (2 * k)`: the relation used inside an
+  attack's effect (`Pokemon/Sim`), where the player's own damage is read exactly and the
+  opponent's above `k` is not. The stores are capped at twice the damage cap because Resistance
+  is subtracted after the bonus (`dealtBy_cap`; milestone M4).
 * `KOMove.clamp_sim`, `Resolve.clamp_sim`: the kernel of `clamp k` is a simulation for Knock
   Outs. The effect and move simulations are in `Pokemon/Sim.lean`.
 * `Move.damageBounded_of_startTurn`: the turn proper starts with no pending Knock Out.
@@ -63,12 +65,17 @@ def GameState.clampAt (co cp : Cap) (k : Nat) (g : GameState) : GameState :=
                                mods := g.opp.mods.cap k } }
 
 /-- The clamp at move boundaries: damage and Poison strength on both Active Pokémon capped at
-the printed HP, damage bonuses and reductions capped at `k`. -/
-def GameState.clamp (k : Nat) (g : GameState) : GameState := g.clampAt .hp .hp k
+the printed HP, damage bonuses and reductions capped at `2 * k`. The stores are capped at twice
+the damage cap because Resistance subtracts a card constant after the bonus is added: a bonus of
+`2 * k` or more still does at least `k` damage after a Resistance of at most `k`
+(`dealtBy_cap`); with the stores capped at `k` itself the kernel would not be a simulation (a
+bonus of `k` and of `k + 1` against Resistance 3 do `k - 2` and `k - 1` damage from base damage
+1). Weakness doubles, which can only raise the damage, and needs no larger cap. -/
+def GameState.clamp (k : Nat) (g : GameState) : GameState := g.clampAt .hp .hp (2 * k)
 
 /-- The relation used inside an attack's effect: the player's own damage exact, the opponent's
-capped at `k`, bonuses and reductions capped at `k`. -/
-def GameState.rclamp (k : Nat) (g : GameState) : GameState := g.clampAt .exact (.upto k) k
+capped at `k`, bonuses and reductions capped at `2 * k`. -/
+def GameState.rclamp (k : Nat) (g : GameState) : GameState := g.clampAt .exact (.upto k) (2 * k)
 
 /-! ## Turn boundaries -/
 
@@ -424,27 +431,37 @@ theorem Store.NoReduce.of_cap {k : Nat} (hk : 0 < k) {a b : Store} (h : a.cap k 
   obtain ⟨b1, b2, b3, b4⟩ := hb
   refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
 
-/-- With no damage reduction, the damage done is the base damage plus the bonus, or nothing
-(base damage 0, or prevention). -/
-theorem dealtBy_of_noReduce {own opp : Store} (h : opp.NoReduce) (n : Nat) :
-    dealtBy n own opp = if n = 0 then 0 else if opp.live.prevent then 0 else n + own.live.bonus := by
+/-- With no damage reduction, the damage done is the base damage plus the bonus, doubled under
+Weakness, less Resistance; or nothing (base damage 0, or prevention). -/
+theorem dealtBy_of_noReduce {own opp : Store} (h : opp.NoReduce) (n : Nat) (w : Bool) (r : Nat) :
+    dealtBy n w r own opp = if n = 0 then 0 else if opp.live.prevent then 0 else
+      (if w then 2 * (n + own.live.bonus) else n + own.live.bonus) - r := by
   simp only [dealtBy, h.live, Nat.sub_zero]
 
-/-- With no damage reduction, damage done agrees at the cap `k` when the stores do. -/
-theorem dealtBy_cap {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store} (hc : c₂.cap k = c₁.cap k)
-    (ho : o₂.cap k = o₁.cap k) (hn : o₁.NoReduce) (n : Nat) :
-    min (dealtBy n c₂ o₂) k = min (dealtBy n c₁ o₁) k := by
-  have hn₂ := Store.NoReduce.of_cap hk ho hn
+/-- **The cap survives Weakness and Resistance.** With no damage reduction and a Resistance of
+at most `k`, damage done agrees at the cap `k` when the stores agree at the cap `2 * k`. If the
+two bonuses differ, both are at least `2 * k`, and the damage is at least `n + 2 * k - r ≥ k` in
+both states, with or without Weakness: doubling a quantity of at least `2 * k` keeps it at least
+`2 * k` (`min (2 * b) …` and `2 * min b …` agree above the cap), so Weakness is harmless; it is
+the subtraction of Resistance that needs the stores capped above the damage cap. -/
+theorem dealtBy_cap {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
+    (hc : c₂.cap (2 * k) = c₁.cap (2 * k)) (ho : o₂.cap (2 * k) = o₁.cap (2 * k))
+    (hn : o₁.NoReduce) (n : Nat) (w : Bool) {r : Nat} (hr : r ≤ k) :
+    min (dealtBy n w r c₂ o₂) k = min (dealtBy n w r c₁ o₁) k := by
+  have hn₂ := Store.NoReduce.of_cap (by omega) ho hn
   rw [dealtBy_of_noReduce hn, dealtBy_of_noReduce hn₂]
   have hc' := Mods.cap_iff.1 (Store.live_cap hc)
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
+  have hb := hc'.1
   rw [ho'.2.2.1]
   by_cases h0 : n = 0
   · simp only [h0, ↓reduceIte]
   · simp only [h0, ↓reduceIte]
     split
     · rfl
-    · omega
+    · cases w
+      · simp only [Bool.false_eq_true, ↓reduceIte]; omega
+      · simp only [↓reduceIte]; omega
 
 /-- The flags in effect agree when the stores agree at a cap. -/
 theorem Store.flags_of_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
@@ -473,6 +490,39 @@ theorem GameState.clamp_inv {co cp : Cap} {k : Nat} {g₁ g₂ : GameState}
   refine e.trans ?_
   rw [← h]
   rfl
+
+/-- A clamp keeps the type and the top card of a Pokémon in play. -/
+theorem map_type_top_of_map {c : Cap} {o₁ o₂ : Option InPlay}
+    (h : o₂.map (InPlay.clampWith c) = o₁.map (InPlay.clampWith c)) :
+    o₂.map InPlay.type = o₁.map InPlay.type ∧ o₂.map InPlay.top = o₁.map InPlay.top := by
+  cases o₁ with
+  | none =>
+      cases o₂ with
+      | none => exact ⟨rfl, rfl⟩
+      | some q => simp at h
+  | some p =>
+      cases o₂ with
+      | none => simp at h
+      | some q =>
+          simp only [Option.map_some, Option.some.injEq] at h ⊢
+          exact ⟨(congrArg InPlay.type h : _), (congrArg InPlay.top h : _)⟩
+
+/-- Weakness and Resistance depend only on the attacker's type and the defender's card. -/
+theorem GameState.wr_congr {g₁ g₂ : GameState}
+    (hc : g₂.cur.active.map InPlay.type = g₁.cur.active.map InPlay.type)
+    (ho : g₂.opp.active.map InPlay.top = g₁.opp.active.map InPlay.top) :
+    g₂.weak = g₁.weak ∧ g₂.resist = g₁.resist := by
+  unfold GameState.weak GameState.resist
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;> cases h3 : g₁.opp.active <;>
+    cases h4 : g₂.opp.active <;> simp_all
+
+/-- The Resistance in effect is at most that printed on the opponent's Active Pokémon. -/
+theorem GameState.resist_le {g : GameState} {k : Nat}
+    (h : ∀ p, g.opp.active = some p → p.top.resistAmt ≤ k) : g.resist ≤ k := by
+  unfold GameState.resist
+  split
+  · next a d _ hd => exact Nat.le_trans (d.top.resistTo_le _) (h d hd)
+  · exact Nat.zero_le _
 
 /-- From `o.map f = some (f a)`, a `q` with `o = some q` that agrees with `a`. -/
 theorem agree_of_map {c : Cap} {o : Option InPlay} {a : InPlay}
@@ -661,6 +711,22 @@ theorem hp_le_maxHp {p : PokemonCard} : ∀ {cs : List Card}, Card.pokemon p ∈
       | tail _ h =>
           have := hp_le_maxHp h
           cases c <;> simp only [maxHp] <;> omega
+
+/-- The largest Resistance printed on a Pokémon card of a list. -/
+def maxResist : List Card → Nat
+  | [] => 0
+  | .pokemon p :: cs => max p.resistAmt (maxResist cs)
+  | _ :: cs => maxResist cs
+
+theorem resist_le_maxResist {p : PokemonCard} : ∀ {cs : List Card}, Card.pokemon p ∈ cs →
+    p.resistAmt ≤ maxResist cs
+  | [], h => nomatch h
+  | c :: cs, h => by
+      cases h with
+      | head => simp only [maxResist]; omega
+      | tail _ h =>
+          have := resist_le_maxResist h
+          cases c <;> simp only [maxResist] <;> omega
 
 /-- The largest test constant in the effects of a list of cards. -/
 def cardsTmax : List Card → Nat
