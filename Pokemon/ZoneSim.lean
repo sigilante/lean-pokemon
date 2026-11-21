@@ -25,7 +25,7 @@ structure PlayerState.ZAgree (c cb : Cap) (s₁ s₂ : PlayerState) : Prop where
 
 theorem Src.get_congr {c cb : Cap} {s₁ s₂ : PlayerState} (h : PlayerState.ZAgree c cb s₁ s₂)
     (src : Src) : src.get s₂ = src.get s₁ := by
-  cases src <;> simp only [Src.get, h.deck, h.hand]
+  cases src <;> simp only [Src.get, h.deck, h.hand, h.discard]
 
 theorem Src.set_agree {c cb : Cap} {s₁ s₂ : PlayerState} (h : PlayerState.ZAgree c cb s₁ s₂)
     (src : Src) (r : List Card) : PlayerState.ZAgree c cb (src.set r s₁) (src.set r s₂) := by

@@ -256,12 +256,15 @@ inductive Filter where
 
 /-- Where a zone move takes its cards from, in the zones of one player: the deck (searched: any
 cards of it), the top `n` cards of the deck ("look at the top 7 cards of your deck"; drawing and
-milling take from here), or the hand. Milestone MV, stage 1: no source is the discard pile (the
-recycling stage adds it). -/
+milling take from here), the hand, or the discard pile (recycling: "Put up to 2 Basic Energy cards
+from your discard pile into your hand", "Shuffle up to 5 Pokémon from your discard pile into your
+deck", "Attach a Basic Energy card from your discard pile to this Pokémon", "Put up to 2 Basic
+Pokémon from your discard pile onto your Bench"). -/
 inductive Src where
   | deck
   | top (n : Nat)
   | hand
+  | discard
   deriving DecidableEq
 
 /-- Where a zone move puts the cards it takes: the hand, the discard pile, the top or the bottom

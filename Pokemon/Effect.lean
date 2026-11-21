@@ -122,12 +122,14 @@ def Src.get : Src → PlayerState → List Card
   | .deck, s => s.deck
   | .top n, s => s.deck.take n
   | .hand, s => s.hand
+  | .discard, s => s.discard
 
 /-- Replace the cards of a source by `r` (the cards not taken, in their order). -/
 def Src.set : Src → List Card → PlayerState → PlayerState
   | .deck, r, s => { s with deck := r }
   | .top n, r, s => { s with deck := r ++ s.deck.drop n }
   | .hand, r, s => { s with hand := r }
+  | .discard, r, s => { s with discard := r }
 
 /-- `Split f l t r`: the cards `t` are taken from `l`, each passing `f`, and `r` are the others;
 both keep the order of `l`. -/
