@@ -27,6 +27,16 @@ written as the model's `Static` effects only in the shapes listed there (HP plus
 before Weakness and Resistance, a damage reduction after them, Retreat Cost more or less, with the
 model's selectors, filters, places and Energy conditions); everything else static is refused with a
 reason code (`STATIC_CODES`), stacking rules included.
+
+Milestone MV3 (importer 0.8.0): the five "This attack's damage isn't affected by …" variants (`Effect.damage a ig`,
+rule 'damage-ignores'); "A. If you do, B." as `Effect.ifDone t a b` over the actions listed above `done_action`, each
+with the test that holds exactly when the action can be done; "… If you can't [discard N cards in this way], this
+attack does nothing." over the exact costs of `cost_action`; "discard up to N / any amount …, and this attack does K
+damage for each card you discarded in this way" and "Discard all F Energy from this Pokémon. This attack does K damage
+for each card you discarded in this way." as an unfolded `Effect.forUpTo` (`Parser.mv3_step`); static "Prevent all
+damage done to this Pokémon by attacks from your opponent's F" as `SEff.prevent` (`static_ability_sentence`). Not
+written: `Effect.mayDo`, consequences of `attach` / `putBench` / `moveEnergy` (which may do nothing in the model),
+"damage from and effects of attacks" (prevention of effects), filtered lingering prevention.
 """
 import re
 
@@ -99,6 +109,19 @@ CAVEATS = {
     'movedUpPromotion': "'moved from your Bench to the Active Spot this turn' is `InPlay.movedUp`, which a promotion after a "
                         "Knock Out of the player's own Active Pokémon in their own turn does not set (Known gaps, one-turn "
                         "history, milestone MV2: an under-model)",
+    'staticPreventBench': "a static prevention ('Prevent all damage done to this Pokémon by attacks from your opponent's F', "
+                          "`SEff.prevent`, milestone MV3) protects the Pokémon only in the Active Spot: attack damage to a "
+                          "Benched Pokémon reads no static effect in the model (Known gaps, milestone M3: Bench damage takes "
+                          "no bonus, reduction or prevention; `GameState.sPrevent` is read at step 5, for the Active Pokémon)",
+    'ignFxStadium': "'isn't affected by any effects on your opponent's Active Pokémon' (`Ign.fx`, milestone MV3) switches "
+                    "off step 5 of the damage calculation, which in the model includes the reductions and preventions a "
+                    "Stadium gives the defender (Known gaps, Weakness and Resistance item: `Ign`, step 5); whether the "
+                    "printed text ignores a Stadium's effect was not checked against a ruling",
+    'anyAmount60': "'discard any amount … for each card you discarded in this way' is `forUpTo` with the bound 60, the "
+                   "cards of a legal deck (2026 rulebook p. 21): exact for every state in which the player has at most 60 "
+                   "cards that could be discarded (`Run.forUpTo_complete`, `discardActive_le`); the model does not require "
+                   "this of a start state, and beyond it a larger discard is forbidden (Known gaps, zone moves item: "
+                   "'exact once the bound covers the cards that can be taken')",
 }
 
 
@@ -136,6 +159,11 @@ CAVEAT_DIRECTION = {
                                    # is then absent, and the model's bonus is an outcome the printed card lacks
     'koCheckup': 'forbids some',   # if a Checkup Knock Out counts in print, the model's test is false where it is true
     'movedUpPromotion': 'forbids some',  # the printed bonus after such a promotion is not available
+    'staticPreventBench': 'both',  # a Benched Pokémon takes damage the printed card prevents (Knock Outs the printed
+                                   # card forbids; the printed survivals are absent)
+    'ignFxStadium': 'both',        # if print keeps a Stadium's reduction, the model's damage is larger (and the
+                                   # printed smaller damage is absent)
+    'anyAmount60': 'forbids some', # more than 60 cards cannot be discarded
 }
 
 
@@ -486,6 +514,16 @@ def parse_test(c, ctx):
     m = re.match(r'^you have any (.+?) on your Bench$', c)
     if m:
         return [('countGe', ('bench', OWN, parse_filter(m.group(1), ctx)), 1)], False
+    # importer 0.8.0 (S15 §2, "If you don't have …, this attack does nothing": already expressible): the negations
+    m = re.match(r"^you don't have (?:any )?(.+?) on your Bench$", c)
+    if m and not re.search(r',| and |\d', m.group(1)):
+        f = parse_filter(m.group(1), ctx)
+        if not is_pokemon_filter(f):
+            raise Refuse('condition not expressible: ' + c)
+        return [('countGe', ('bench', OWN, f), 1)], True
+    m = re.match(r"^you don't have (\d+) or more (.+?) in your discard pile$", c)
+    if m:
+        return [('countGe', ('pile', OWN, ('discard',), parse_filter(m.group(2), ctx)), num(m.group(1)))], True
     m = re.match(r'^you have no cards in your hand$', c)
     if m:
         return [('countGe', ('pile', OWN, ('hand',), ('any',)), 1)], True
@@ -786,6 +824,31 @@ def _(m, ctx):
 def _(m, ctx):
     n = counters(m.group(1))
     return Eff(seq(('spreadDamage', OWN, n), ('spreadDamage', OPP, n)), {'benchMods'})
+
+
+# ---- milestone MV3, stage 1: a damage step that ignores steps of the damage calculation (`Ign`, Pokemon/Ignore.lean)
+
+IGN_TEXT = {
+    'Weakness': {'weak': True},
+    'Resistance': {'resist': True},
+    'Weakness or Resistance': {'weak': True, 'resist': True},
+    "any effects on your opponent's Active Pokémon": {'fx': True},
+    "Weakness or Resistance, or by any effects on your opponent's Active Pokémon": {'weak': True, 'resist': True, 'fx': True},
+}
+
+
+@rule('damage-ignores', r"This attack's damage isn't affected by (" + '|'.join(re.escape(k) for k in IGN_TEXT) + r")\.", 'A',
+      'damage a {weak/resist/fx := true} on every damage step to the opponent\'s Active Pokémon')
+def _(m, ctx):
+    # `Effect.damage a ig`: the damage is `GameState.dealtI ig n`, the rulebook's calculation (2026 p. 19) with step 3
+    # (Weakness, `weak`), step 4 (Resistance, `resist`) or step 5 (every effect on the defender: its stored reduction and
+    # prevention and the static reductions and preventions in force on it, `fx`) switched off; step 2, the attacker's
+    # bonuses, always applies, as the printed text names only the defender. Exact for the five printed variants. The flags
+    # go on every damage step of the attack's damage tree (`build_attack`); Bench damage takes no Weakness, Resistance or
+    # modifier in the model in any case (its caveat `benchMods` is unchanged). With `fx`, step 5 also drops a Stadium's
+    # reduction or prevention on the defender: caveat `ignFxStadium`.
+    ig = IGN_TEXT[m.group(1)]
+    return Dmg('ign', ig, cavs={'ignFxStadium'} if ig.get('fx') else set())
 
 
 # ---- milestone MV2, (B): damage and counters on several chosen Pokémon (Pokemon/Spread.lean)
@@ -1222,6 +1285,17 @@ def _(m, ctx):
     return Eff(min_take(('pile', OWN, ('hand',), ('any',)), n, mk, ctx))
 
 
+@rule('discard-own-hand-kind', r"Discard (an?|\d+) (?!cards?\b)(.+?) from your hand\.", 'A',
+      'ite (countGe (pile own hand F) n) (move own hand discard F (exactly n)) (... all | skip)')
+def _(m, ctx):
+    # importer 0.8.0 (milestone MV3: the cost of "If you can't, this attack does nothing"): a discard of a kind of
+    # card from the hand, as the any-card rule above, with the filter; alone it does what it can (min_take)
+    n = num(m.group(1))
+    f = parse_filter(m.group(2), ctx)
+    mk = lambda q: ('move', OWN, ('hand',), ('discard',), f, q)
+    return Eff(min_take(('pile', OWN, ('hand',), f), n, mk, ctx))
+
+
 @rule('hand-into-deck', r'Shuffle your hand into your deck\.', 'B', 'move own hand shuffle any all')
 def _(m, ctx):
     return Eff(('move', OWN, ('hand',), ('shuffle',), ('any',), ('all',)))
@@ -1486,6 +1560,96 @@ def gap_reason(sent):
     return None
 
 
+
+# ------------------------------------------------------------------ "if you do" and "in this way" (milestone MV3, stage 2)
+#
+# `Effect.ifDone t a b = ite t (seq a b) skip` (Pokemon/IfDo.lean, `Run.ifDone_iff`) is exact only when the test `t`
+# holds exactly when the action `a` can be done, and `a` then has no resolution that does nothing. The importer
+# writes it only over the actions below, each read against its `Run` / `ZStep` rule (Pokemon/Effect.lean):
+#
+#   action (printed)                                   a                                       t
+#   "Discard a card [a F] from your hand." (attack)    move own hand discard F (exactly 1)     countGe (pile own hand F) 1
+#   "Draw N cards."                                    move own (top N) hand any all           countGe (pile own deck any) 1
+#   "Switch this Pokémon / your Active Pokémon with    switch own                              countGe (bench own pokemon) 1
+#    1 of your Benched Pokémon."
+#   "Switch in 1 of your opponent's Benched Pokémon    switch opp                              countGe (bench opp pokemon) 1
+#    to the Active Spot."
+#
+# * `move … (exactly k)` (`ZStep.move`): a resolution is a `Split f l t r` with `t.length = k`, and a `Split` takes
+#   only cards passing `f` (`Split.take`), so there is one exactly when at least k cards of the source pass `f`, the
+#   value of `Count.pile own hand f` (`Count.val`, `countP`); every resolution moves k ≥ 1 cards. No other `Run` rule
+#   applies to `move` (`Effect.touch` is `none` on it; `Run.zone` is its only rule).
+# * `move … (top N) … all` (draw): `Qty.all` takes every card of the top N that passes `any`, so the one resolution
+#   draws min(N, deck) cards: at least one exactly when the deck has a card.
+# * `switch w` (`Run.switch`, `Run.switchNone`): a switch needs a Benched Pokémon (`bench = b₁ ++ q :: b₂`), and the
+#   do-nothing resolution `switchNone` exists only when the Bench is empty; `Count.bench w pokemon` counts the
+#   Benched Pokémon (every top card is a Pokémon card), so the test is "the Bench is not empty".
+#
+# Never written over `attach`, `putBench`, `moveEnergy` or `discardEnergy … bench`, which have a do-nothing rule
+# (`attachNone`, `putBenchNone`, `moveNone`, `discardNone`) in every state: such cards stay refused ("If you
+# attached / put onto your Bench in this way"). `Effect.mayDo` is not used: the printed "You may A. If you do, B"
+# shapes of the pool have an A that is a damage choice or an action outside the list. The test is read in the state
+# before `a`, as `ite` does; in an attack and in a Trainer the player has an Active Pokémon then (`Run.ite`).
+
+def done_action(e):
+    """(test, action) for an item that is exactly an action of the table above, or None. Accepts the attack form
+    of a one-card discard (`min_take`: `ite (countGe c 1) (move … (exactly 1)) skip`)."""
+    if e[0] == 'ite' and e[3] == SKIP and e[1][0] == 'countGe' and e[1][2] == 1:
+        a = e[2]
+        if (a[0] == 'move' and a[1] == OWN and a[2] in (('hand',), ('discard',)) and a[5] == ('exactly', 1)
+                and e[1][1] == ('pile', OWN, a[2], a[4])):
+            return e[1], a
+        return None
+    if e[0] == 'move' and e[1] == OWN and e[2][0] == 'top' and e[3:] == (('hand',), ('any',), ('all',)):
+        return ('countGe', ('pile', OWN, ('deck',), ('any',)), 1), e
+    if e[0] == 'switch':
+        return ('countGe', ('bench', e[1], ('pokemon',)), 1), e
+    return None
+
+
+def cost_action(e):
+    """(test, action, k) for a printed cost "Discard k F from your hand / from this Pokémon" in its attack form
+    (`min_take`: `ite (countGe c k) (A (exactly k)) fallback`), A a move from the hand or discard pile or an Energy
+    discard from the player's Active Pokémon; None otherwise. `A (exactly k)` has a resolution exactly when at least
+    k cards of its source pass its filter (`ZStep.move`, `ZStep.discardActive`: a `Split` taking k cards, each
+    passing the filter; for the Active Pokémon the source is `a.energy`, counted by `Count.energy own f`), and none
+    that does nothing (k ≥ 1)."""
+    if e[0] != 'ite' or e[1][0] != 'countGe':
+        return None
+    cnt, k = e[1][1], e[1][2]
+    a = e[2]
+    if k < 1:
+        return None
+    if (a[0] == 'move' and a[1] == OWN and a[2] in (('hand',), ('discard',)) and a[5] == ('exactly', k)
+            and cnt == ('pile', OWN, a[2], a[4])):
+        return e[1], a, k
+    if (a[0] == 'discardEnergy' and a[1] == OWN and a[2] == ('active',) and a[4] == ('exactly', k)
+            and cnt == ('energy', OWN, a[3])):
+        return e[1], a, k
+    return None
+
+
+# The most cards one player can discard in a legal game: a deck has 60 cards (2026 rulebook p. 21), and the
+# Energy attached to a player's Pokémon and the cards in their hand are that player's own cards.
+ANY_BOUND = 60
+
+FU_RE = re.compile(r"^(?:You may discard|Discard) (up to (\d+)|any amount of|any number of) (.+?) from (this Pokémon|your hand), "
+                   r"and this attack does (\d+) (more )?damage for each (?:card|Energy card|Energy) (?:you )?discarded in this way\.$")
+
+
+def fu_source(np, src, ctx):
+    """The discard of exactly i cards of the printed kind, as a function of i, from "this Pokémon" (its attached
+    Energy) or "your hand"."""
+    if src == 'this Pokémon':
+        mm = re.match(r'^(?:(Basic) )?(?:' + TYPE_RE + r' )?Energy(?: cards?)?$', np)
+        if not mm:
+            raise Refuse('card kind with no filter: ' + np)
+        f = energy_filter(mm.group(1), mm.group(2))
+        return lambda i: ('discardEnergy', OWN, ('active',), f, ('exactly', i))
+    f = parse_filter(np, ctx)
+    return lambda i: ('move', OWN, ('hand',), ('discard',), f, ('exactly', i))
+
+
 class Parser:
     """Walks the sentences of one text (an attack's or a Trainer's), collecting items, and refusals
     for the sentences it cannot translate."""
@@ -1544,6 +1708,10 @@ class Parser:
         nxt = S[i + 1] if i + 1 < len(S) else ''
         if ctx['kind'] == 'ability':
             j = self.ability_step(S, i, nxt)
+            if j is not None:
+                return j
+        if ctx['kind'] in ('attack', 'trainer'):
+            j = self.mv3_step(S, i, nxt)
             if j is not None:
                 return j
         # one coin: "Flip a coin. If heads, X. [If tails, Y.]"
@@ -1618,7 +1786,7 @@ class Parser:
             return i + 1
         # a condition: "If C, X."
         m = re.match(r'^If (.+?), (this attack does .+|.+)$', s)
-        if m and not s.startswith('If you do') and not s.startswith("If you can't"):
+        if m and not s.startswith('If you do,') and not s.startswith("If you can't"):
             ctx.pop('_tc', None)
             tests, neg = parse_test(m.group(1), ctx)
             tc = ctx.pop('_tc', set())
@@ -1693,6 +1861,87 @@ class Parser:
         it = self.one(s)
         self.items.append((i, it))
         return i + 1
+
+    def prev_item(self, i, what):
+        """The item of the sentence just before sentence i, which a consequence refers to: a plain effect."""
+        if not self.items or self.items[-1][0] != i - 1:
+            raise Refuse(what + ' with no action in the sentence before it')
+        it = self.items[-1][1]
+        if not isinstance(it, Eff) or it.pre:
+            raise Refuse(what + ' after an action that is not a plain effect')
+        return it
+
+    def mv3_step(self, S, i, nxt):
+        """Milestone MV3 forms of attacks and Trainers (importer 0.8.0); None if none applies."""
+        s = S[i]
+        ctx = self.ctx
+        if s.startswith('If you do, '):
+            # "A. If you do, B.": `Effect.ifDone t A B` over an action of the table above `done_action`
+            prev = self.prev_item(i, "'If you do'")
+            r = done_action(prev.e)
+            if r is None:
+                raise Refuse("'If you do' after an action with no exact feasibility test (the model's action may do "
+                             "nothing, or its test is not one count)", s)
+            t, a = r
+            X = self.clause(s[len('If you do, '):])
+            if not isinstance(X, Eff) or X.pre:
+                raise Refuse("'If you do' with a consequence that is not a plain effect", s)
+            self.used.append(('if-you-do', s))
+            self.items[-1] = (self.items[-1][0], Eff(T.if_done(t, a, X.e), prev.cavs | X.cavs))
+            return i + 1
+        m = re.match(r"^If you can't(?: discard (\d+) cards? in this way)?, this attack does nothing\.$", s)
+        if m and ctx['kind'] == 'attack':
+            # "Discard k F from your hand / this Pokémon. If you can't [discard k cards in this way], this attack does
+            # nothing.": the discard is a cost, resolved first (printed first; `pre`), and the whole attack happens
+            # only when it can be paid: `ite (countGe c k) (seq A rest) skip`, with the test of `cost_action`
+            prev = self.prev_item(i, "'If you can't'")
+            r = cost_action(prev.e)
+            if r is None:
+                raise Refuse("'If you can't' after an action with no exact feasibility test", s)
+            t, a, k = r
+            if m.group(1) and num(m.group(1)) != k:
+                raise Refuse("'If you can't discard N cards' with N not the printed cost", s)
+            self.used.append(('if-you-cant-nothing', s))
+            self.items[-1] = (self.items[-1][0], Eff(a, prev.cavs, pre=True))
+            self.items.append((i, ('wrapIf', [t], True)))
+            return i + 1
+        m = re.match(r"^If you don't have exactly (\d+) cards in your hand, this attack does nothing\.$", s)
+        if m and ctx['kind'] == 'attack':
+            # "exactly n" is `countGe … n` and not `countGe … (n + 1)` (S15 §2, "already expressible")
+            n = num(m.group(1))
+            c = ('pile', OWN, ('hand',), ('any',))
+            self.used.append(('if-not-exactly-hand-nothing', s))
+            self.items.append((i, ('wrapFn', lambda e, c=c, n=n: ite(('countGe', c, n), ite(('countGe', c, n + 1), SKIP, e), SKIP))))
+            return i + 1
+        m = FU_RE.match(s)
+        if m and ctx['kind'] == 'attack':
+            # "Discard up to N F from this Pokémon / your hand, and this attack does K damage for each card you
+            # discarded in this way.": `Effect.forUpTo f N` unfolded, f i = seq (discard exactly i) (damage (K·i)), the
+            # number discarded being the branch (`Run.forUpTo_iff`: the resolutions are those of f i for i ≤ N; f i has
+            # one exactly when i cards of the kind are there, `cost_action`'s reading of `exactly`). The discard
+            # comes first, as printed. "any amount" / "any number": N = ANY_BOUND (caveat anyAmount60). "You may
+            # discard up to N" is the same set (0 is one of the choices in an attack, 2026 rulebook p. 21).
+            mk = fu_source(m.group(3), m.group(4), ctx)
+            n = num(m.group(2)) if m.group(2) else ANY_BOUND
+            self.used.append(('for-each-discarded', s))
+            self.items.append((i, Dmg('forUpTo', mk, n, counters(m.group(5)), bool(m.group(6)),
+                                      cavs=set() if m.group(2) else {'anyAmount60'})))
+            return i + 1
+        m = re.match(r"^Discard all (?:(Basic) )?(?:" + TYPE_RE + r" )?Energy from this Pokémon\.$", s)
+        m2 = re.match(r"^This attack does (\d+) damage for each (?:card|Energy card) (?:you )?discarded in this way\.$", nxt)
+        if m and m2 and ctx['kind'] == 'attack':
+            # "Discard all F Energy from this Pokémon. This attack does K damage for each card you discarded in this
+            # way.": the branch i of `forUpTo` discards exactly i, and has a resolution only if no F Energy is left
+            # (`NO_PLAY`, no resolution), so the one resolution is i = the F Energy attached, as printed, with the
+            # discard before the damage step. Bound ANY_BOUND (caveat anyAmount60).
+            f = energy_filter(m.group(1), m.group(2))
+            k = counters(m2.group(1))
+            mk = lambda j, f=f: seq(('discardEnergy', OWN, ('active',), f, ('exactly', j)),
+                                     ite(('countGe', ('energy', OWN, f), 1), NO_PLAY, SKIP))
+            self.used.append(('discard-all-for-each', s + ' ' + nxt))
+            self.items.append((i, Dmg('forUpTo', mk, ANY_BOUND, k, False, cavs={'anyAmount60'})))
+            return i + 2
+        return None
 
     def ability_step(self, S, i, nxt):
         """Multi-sentence forms of Abilities; None if none applies."""
@@ -1781,6 +2030,8 @@ def tmap(tree, f):
         return ('choice', tmap(tree[1], f), tmap(tree[2], f))
     if tree[0] in ('T1', 'TM'):
         raise Refuse('computed damage to a chosen Pokémon')
+    if tree[0] == 'FU':
+        raise Refuse('another damage change with "for each card you discarded in this way"')
     raise AssertionError(tree)
 
 
@@ -1793,24 +2044,43 @@ def tbranch(tests, neg, a, b):
     return out
 
 
-def to_effect(tree, drain=False):
+def dmg(a, ig=None):
+    """A damage step to the opponent's Active Pokémon; with `ig` (milestone MV3) the steps of the calculation it
+    switches off (`Effect.damage a ig`; `{}` is the default and is not written)."""
+    return ('damage', a, ig) if ig else ('damage', a)
+
+
+def to_effect(tree, drain=False, ig=None):
+    if ig and drain:
+        raise Refuse('drain with a damage step that ignores Weakness, Resistance or effects')
     if tree[0] == 'L':
-        return ('drain' if drain else 'damage', tree[1])
+        return ('drain', tree[1]) if drain else dmg(tree[1], ig)
     if tree[0] == 'T1':
         if drain:
             raise Refuse('drain with damage to a chosen Pokémon')
         n = tree[1]
-        return one_of(OPP, ('damage', ('const', n)), ('benchDamage', OPP, n))
+        return one_of(OPP, dmg(('const', n), ig), ('benchDamage', OPP, n))
     if tree[0] == 'TM':
         # milestone MV2: `Effect.hitSome m n`, unfolded
         if drain:
             raise Refuse('drain with damage to chosen Pokémon')
         _, k, n = tree
-        return some_of(k, ('damage', ('const', n)), lambda j: ('benchSome', OPP, j, ('any',), True, n))
+        return some_of(k, dmg(('const', n), ig), lambda j: ('benchSome', OPP, j, ('any',), True, n))
+    if tree[0] == 'FU':
+        # milestone MV3: `Effect.forUpTo f n` unfolded as its definition reads (`forUpTo f 0 = f 0`,
+        # `forUpTo f (n + 1) = choice (forUpTo f n) (f (n + 1))`), f i = seq (discard exactly i) (damage (b + k·i))
+        if drain:
+            raise Refuse('drain with "for each card you discarded in this way"')
+        _, mk, n, k, b = tree
+        f = lambda i: seq(mk(i), dmg(('const', b + k * i), ig))  # noqa: E731
+        out = f(0)
+        for i in range(1, n + 1):
+            out = choice(out, f(i))
+        return out
     if tree[0] == 'ite':
-        return ite(tree[1], to_effect(tree[2], drain), to_effect(tree[3], drain))
+        return ite(tree[1], to_effect(tree[2], drain, ig), to_effect(tree[3], drain, ig))
     if tree[0] == 'choice':
-        return choice(to_effect(tree[1], drain), to_effect(tree[2], drain))
+        return choice(to_effect(tree[1], drain, ig), to_effect(tree[2], drain, ig))
     raise AssertionError(tree)
 
 
@@ -1855,6 +2125,7 @@ def build_attack(base, suffix, items, cost):
     post = []          # (index, effect)
     pre = []           # effects printed "Before doing damage", resolved before the damage step
     wraps = []         # (index, wrap)
+    ig = {}            # milestone MV3: the steps of the damage calculation the damage step switches off
     for idx, it in items:
         if isinstance(it, Eff) and it.pre:
             cavs |= it.cavs
@@ -1862,6 +2133,9 @@ def build_attack(base, suffix, items, cost):
         elif isinstance(it, Eff):
             cavs |= it.cavs
             post.append((idx, it.e))
+        elif isinstance(it, Dmg) and it.op == 'ign':
+            cavs |= it.cavs
+            ig.update(it.args[0])
         elif isinstance(it, Dmg):
             cavs |= it.cavs
             op, a = it.op, it.args
@@ -1934,6 +2208,16 @@ def build_attack(base, suffix, items, cost):
                 # effects printed before it (an Energy discard from this Pokémon) are resolved before it, as printed
                 pre += [e for i, e in post]
                 post = []
+            elif op == 'forUpTo':
+                mk, n, k, more = a
+                if more:
+                    if suffix != '+' or tree in (None, 'X') or tree[0] != 'L' or tree[1][0] != 'const':
+                        raise Refuse('"more damage for each card you discarded" without a printed "+"')
+                    tree = ('FU', mk, n, k, tree[1][1])
+                else:
+                    if suffix != '×' or tree != 'X' or k != base:
+                        raise Refuse('"damage for each card you discarded" does not match the printed damage')
+                    tree = ('FU', mk, n, k, 0)
             elif op == 'each':
                 if tree is not None:
                     raise Refuse('damage to each Pokémon with a printed base damage')
@@ -1944,7 +2228,7 @@ def build_attack(base, suffix, items, cost):
             modified = True
         elif isinstance(it, Drain):
             drain = True
-        elif isinstance(it, tuple) and it[0] in ('wrapFlip', 'wrapIf'):
+        elif isinstance(it, tuple) and it[0] in ('wrapFlip', 'wrapIf', 'wrapFn'):
             wraps.append((idx, it))
         elif isinstance(it, Cost):
             raise Refuse('a Trainer cost in an attack')
@@ -1956,18 +2240,23 @@ def build_attack(base, suffix, items, cost):
         raise Refuse('printed "%s" damage with no recognized amount' % suffix)
     if tree is not None and tree_reads(tree) and dmg_idx is not None and any(i < dmg_idx for i, _ in post):
         raise Refuse('an effect printed before damage that reads the state')
+    if tree is not None and tree[0] == 'FU' and any(i < dmg_idx for i, _ in post):
+        # the discard of each branch resolves with the damage step; an effect printed before it would follow it
+        raise Refuse('an effect printed before "discard …, and this attack does … for each card discarded"')
+    if ig and tree is None:
+        raise Refuse("'This attack's damage isn't affected by …' on an attack with no damage step")
     if tree is not None and any(test_reads_damage(e) for _, e in post):
         raise Refuse('an effect after the damage tests the damage on the opponent\'s Active Pokémon')
     if drain and tree is None:
         raise Refuse('drain with no damage')
     # Poison strength must follow the Poison it strengthens
     effs = [e for _, e in post]
-    plain = tree is not None and tree == ('L', ('const', base)) and not drain and not wraps and base
+    plain = tree is not None and tree == ('L', ('const', base)) and not drain and not wraps and base and not ig
     if plain:
         damage, eff = base, seq(*effs)
     else:
         damage = 0
-        eff = seq(to_effect(tree, drain) if tree is not None else SKIP, *effs)
+        eff = seq(to_effect(tree, drain, ig) if tree is not None else SKIP, *effs)
     if pre:
         # the printed order: these effects, then the damage step (`Attack.script` puts the printed base
         # damage first, so it becomes an explicit damage step after them)
@@ -1980,6 +2269,10 @@ def build_attack(base, suffix, items, cost):
             if damage:
                 eff, damage = seq(('damage', ('const', damage)), eff), 0
             eff = choice(eff, SKIP)
+        elif w[0] == 'wrapFn':
+            if damage:
+                eff, damage = seq(('damage', ('const', damage)), eff), 0
+            eff = w[1](eff)
         else:
             _, tests, neg = w
             if damage:
@@ -2634,6 +2927,15 @@ def static_ability_sentence(s, ctx, src=None, need=None):
     m = re.match(r"^This Pokémon's Retreat Cost is (\w+) (more|less)\.$", s)
     if m:
         return S('self', retreat_eff(m.group(1), m.group(2)))
+    # milestone MV3, stage 3: static damage prevention by a filter on the attacker (`SEff.prevent fr`): damage to this
+    # Pokémon in the Active Spot from attacks of Pokémon whose top card passes `fr` is 0 (step 5; not when the attack
+    # ignores effects on the defender, `Ign.fx`, as print says of such attacks). Damage only: "damage from and effects
+    # of attacks" is refused (no rule: its effect half would be dropped). On the Bench the model does not prevent it
+    # (caveat staticPreventBench, `static_caveats`).
+    m = re.match(r"^Prevent all damage (?:done to this Pokémon by attacks from|from attacks done to this Pokémon by) your "
+                 r"opponent's (.+?)\.$", s)
+    if m:
+        return S('self', ('prevent', prevent_filter(m.group(1), ctx)))
     m = re.match(r'^(?:All of your|Your|Each of your) (.+?)(?: in play)? gets? \+(\d+) HP\.$', s)
     if m:
         return S('own', ('hpPlus', ('const', counters(m.group(2)))), filt=static_filter(m.group(1), ctx))
@@ -2713,12 +3015,34 @@ def static_stadium_sentence(s, ctx):
 
 
 def static_caveats(ss):
-    """`staticBench`: a static damage reduction protects only the Active Pokémon in the model."""
+    """`staticBench`: a static damage reduction protects only the Active Pokémon in the model; `staticPreventBench`
+    (milestone MV3): so does a static prevention."""
     cv = set()
     for s in ss:
         if s['eff'][0] == 'reduce' and s['tgt'] != ('some', ('active',)):
             cv.add('staticBench')
+        if s['eff'][0] == 'prevent' and s['tgt'] != ('some', ('active',)):
+            cv.add('staticPreventBench')
     return cv
+
+
+# The attacker kinds of a static prevention (`SEff.prevent fr`, `fr` read on the attacker's top card, a printed
+# Pokémon card): "Pokémon ex" is `Filter.ex` (rule box ex or Mega Evolution ex; 2026 rulebook: a Mega Evolution Pokémon
+# ex is a Pokémon ex), "Pokémon that have an Ability" is `Filter.hasAbility` (the printed card's Abilities; a Tool's
+# text is not an Ability of its holder in print, and the model's Tools give Abilities only through `ToolGrant`, which
+# `hasAbility` does not read), "Tera Pokémon" `Filter.tera`.
+PREVENT_KINDS = {
+    'Pokémon ex': ('ex',),
+    'Basic Pokémon ex': ('and', ('basic',), ('ex',)),
+    'Pokémon that have an Ability': ('hasAbility',),
+    'Tera Pokémon': ('tera',),
+}
+
+
+def prevent_filter(np, ctx):
+    if np in PREVENT_KINDS:
+        return PREVENT_KINDS[np]
+    return static_filter(np, ctx)
 
 
 def parse_static(sents, kind, ctx):
