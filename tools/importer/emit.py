@@ -33,6 +33,14 @@ def card_src(term):
     if term[0] == 'trainer':
         return ('.trainer ' + lean_str(term[1]) + ' ' + lean(term[2], False) + '\n    '
                 + lean(term[3], False))
+    if term[0] == 'tool':
+        g = term[2]
+        atks = ('[\n' + ',\n'.join(attack_src(x, 6) for x in g['attacks']) + ']') if g['attacks'] else '[]'
+        abs_ = ('[\n' + ',\n'.join(ability_src(x, 6) for x in g['abilities']) + ']') if g['abilities'] else '[]'
+        return ('.tool ' + lean_str(term[1]) + '\n'
+                + '  { holder := ' + lean(g['holder']) + ',\n'
+                + '    attacks := ' + atks + ',\n'
+                + '    abilities := ' + abs_ + ' }')
     p = term[1]
     if p['attacks']:
         atks = '[\n' + ',\n'.join(attack_src(a, 6) for a in p['attacks']) + ']'

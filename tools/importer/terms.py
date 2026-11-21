@@ -293,7 +293,8 @@ def ability_safe(ab):
 # ---------------------------------------------------------------- filters, evaluated in Python
 
 def filter_eval(f, card):
-    """`Filter.eval` on a Python card term ('pokemon', fields) / ('energy', t) / ('trainer', n, k, e)."""
+    """`Filter.eval` on a Python card term ('pokemon', fields) / ('energy', t) / ('trainer', n, k, e) /
+    ('tool', n, grant)."""
     h = f[0]
     kind = card[0]
     if h == 'any':
@@ -329,6 +330,10 @@ def filter_eval(f, card):
         if h == 'kind':
             return card[2] == f[1]
         return False
+    if kind == 'tool':
+        if h == 'named':
+            return card[1] == f[1]
+        return h in ('trainer', 'tool')
     if kind == 'energy':
         if h == 'energy':
             return True
