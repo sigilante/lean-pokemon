@@ -26,4 +26,6 @@ import Pokemon.Bench
 import Pokemon.Recycle
 import Pokemon.Abilities
 import Pokemon.NoAbilities
+import Pokemon.NoStadiums
+import Pokemon.Stadiums
 import Pokemon.Audit

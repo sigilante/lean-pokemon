@@ -963,6 +963,15 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       subst hg
       exact ⟨_, .stadium hh hs hn hbt hs' hat, by
         simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂]⟩
+  | @stadiumUse g' o n e hs hu hbt hst hat hr hnd hbh =>
+      have hs' := hs₂ hst
+      have hb := hF.2 _ (GameState.mem_allCards_of_stadium hs)
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim hb hF.1
+        (g₂ := { g₂ with stadiumUsed := true })
+        (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂])
+        (.inl hst)
+      exact ⟨g₂', .stadiumUse (by subst hg; exact hs) (by subst hg; exact hu)
+        (by subst hg; exact hbt) hs' (by subst hg; exact hat) hr' hnd hbh, hc'⟩
   | @tool l₁ l₂ n gr a hh ha ht hbt hst hat =>
       have hs' := hs₂ hst
       subst hg

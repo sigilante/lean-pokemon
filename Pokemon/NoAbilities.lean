@@ -41,15 +41,19 @@ theorem cardsAbQ_zero (P : Nat) : ∀ C : List Card, (∀ x ∈ C, x.abilities =
       have ih := cardsAbQ_zero P cs (fun x hx => h x (.tail _ hx))
       simp [cardsAbQ, Card.abQ, h c (.head _), abilitiesQ, ih]
 
-/-- Without Abilities, the store bound is the bound of the model before Abilities. -/
+/-- Without Abilities, the Ability term of the store bound vanishes: what is left is the bound of
+the model before Abilities (milestone MV) and, since milestone M5, the Stadium term, which is 0
+for a deck without Stadium cards (`GameState.NoStadiums.storeBound_noAbilities`). -/
 theorem GameState.NoAbilities.storeBound {g : GameState} (h : g.NoAbilities) :
     Faithful.storeBound g =
-      g.storeTotal + 6 * cardsAmt g.allCards + 3 * cardsAtkAmt g.allCards := by
+      g.storeTotal + 6 * cardsAmt g.allCards + 6 * cardsStQ (cardsAmt g.allCards) g.allCards +
+        3 * cardsAtkAmt g.allCards := by
   simp [Faithful.storeBound, cardsAbQ_zero _ _ h]
 
-/-- Without Abilities, `Faithful` is its first three clauses. -/
+/-- Without Abilities, `Faithful` is its clauses other than clause 4 (milestone M5 added clause 5,
+`StadiumSafe`; before it this lemma read "its first three clauses"). -/
 theorem GameState.NoAbilities.faithful_iff {g : GameState} (h : g.NoAbilities) :
-    g.Faithful ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe :=
-  ⟨fun ⟨a, b, c, _⟩ => ⟨a, b, c⟩, fun ⟨a, b, c⟩ => ⟨a, b, c, h.safe⟩⟩
+    g.Faithful ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe ∧ g.StadiumSafe :=
+  ⟨fun ⟨a, b, c, _, d⟩ => ⟨a, b, c, d⟩, fun ⟨a, b, c, d⟩ => ⟨a, b, c, h.safe, d⟩⟩
 
 end Pokemon

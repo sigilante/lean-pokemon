@@ -47,6 +47,7 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | retreat _ _ _ _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | item _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | supporter _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | stadiumUse _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | stadium _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | tool _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | toolBench _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
@@ -123,6 +124,7 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | retreat _ _ _ _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | item _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | supporter _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
+  | stadiumUse _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | stadium _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | tool _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | toolBench _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
@@ -221,6 +223,52 @@ theorem PlayFromHand.sameTurn {g g₁ : GameState} {x : InPlay} {w : PlayWay}
     (h : PlayFromHand g x w g₁) : g.SameTurn g₁ := by
   cases h <;> exact .refl _
 
+/-- An effect's resolution leaves the Stadium flags alone (milestone M5). -/
+theorem Run.stFlags {e : Effect} {g g' : GameState} (h : Run e g g') :
+    g'.stadiumPlayed = g.stadiumPlayed ∧ g'.stadiumUsed = g.stadiumUsed := by
+  induction h with
+  | iteT _ _ _ ih => exact ih
+  | iteF _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact ⟨ih₂.1.trans ih₁.1, ih₂.2.trans ih₁.2⟩
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact ⟨rfl, rfl⟩
+  | iterCons _ _ ih₁ ih₂ => exact ⟨ih₂.1.trans ih₁.1, ih₂.2.trans ih₁.2⟩
+  | @touchActive e w f g p he h => cases w <;> exact ⟨rfl, rfl⟩
+  | @touchBench e w f g q b₁ b₂ he h => cases w <;> exact ⟨rfl, rfl⟩
+  | unmark w m g => cases w <;> exact ⟨rfl, rfl⟩
+  | benchCounters w n h => cases w <;> exact ⟨rfl, rfl⟩
+  | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl⟩
+  | switch w ha hb => cases w <;> exact ⟨rfl, rfl⟩
+  | benchDamage w n h => cases w <;> exact ⟨rfl, rfl⟩
+  | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl⟩
+  | linger w s m g => cases w <;> exact ⟨rfl, rfl⟩
+  | @zone e w g s' hw hz => cases w <;> exact ⟨rfl, rfl⟩
+  | _ => exact ⟨rfl, rfl⟩
+
+theorem KOMove.stFlags {g g' : GameState} (h : KOMove g g') :
+    g'.stadiumPlayed = g.stadiumPlayed ∧ g'.stadiumUsed = g.stadiumUsed := by
+  cases h <;> exact ⟨rfl, rfl⟩
+
+theorem Resolve.stFlags {g g' : GameState} (h : Resolve g g') :
+    g'.stadiumPlayed = g.stadiumPlayed ∧ g'.stadiumUsed = g.stadiumUsed := by
+  induction h with
+  | done => exact ⟨rfl, rfl⟩
+  | step _ hm _ ih => exact ⟨ih.1.trans hm.stFlags.1, ih.2.trans hm.stFlags.2⟩
+
+theorem TRun.stFlags {e : Effect} {g g' : GameState} (h : TRun e g g') :
+    g'.stadiumPlayed = g.stadiumPlayed ∧ g'.stadiumUsed = g.stadiumUsed := by
+  induction h with
+  | prim _ _ hr hk => exact ⟨hk.stFlags.1.trans hr.stFlags.1, hk.stFlags.2.trans hr.stFlags.2⟩
+  | stop => exact ⟨rfl, rfl⟩
+  | iteT _ _ _ _ ih => exact ih
+  | iteF _ _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact ⟨ih₂.1.trans ih₁.1, ih₂.2.trans ih₁.2⟩
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact ⟨rfl, rfl⟩
+  | iterCons _ _ ih₁ ih₂ => exact ⟨ih₂.1.trans ih₁.1, ih₂.2.trans ih₁.2⟩
+
 /-- Using an Ability (marking, then resolving its effect) changes no turn flag. -/
 theorem UseAt.sameTurn_run {e : Effect} {g g₁ g' : GameState} {x : InPlay} {sp : Spot}
     (hu : UseAt g x sp g₁) (hr : TRun e g₁ g') : g.SameTurn g' :=
@@ -251,6 +299,7 @@ theorem Move.flagsOk {g g' : GameState} (hm : Move g g') (hc : g.FlagsOk) : g'.F
       exact hc.of_flags ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1⟩
   | ability hu _ _ _ _ _ _ _ _ hr =>
       exact hc.of_sameTurn (hu.sameTurn_run hr)
+  | stadiumUse _ _ _ _ _ hr => exact hc.of_sameTurn hr.sameTurn
   | onPlay hp _ _ _ _ _ hr => exact hc.of_sameTurn (hp.sameTurn.trans hr.sameTurn)
   | attack ha hm hc' hs hn hf hbt hst hr =>
       have h := hr.sameTurn
@@ -281,6 +330,7 @@ theorem Move.firstTurn_no_attack {g g' : GameState} (hc : g.FlagsOk) (hf : g.fir
   cases hm with
   | item hh hbt hst hr => exact hr.sameTurn.2.2.1.trans ha
   | ability hu _ _ _ _ _ _ _ _ hr => exact (hu.sameTurn_run hr).2.2.1.trans ha
+  | stadiumUse _ _ _ _ _ hr => exact hr.sameTurn.2.2.1.trans ha
   | onPlay hp _ _ _ _ _ hr => exact (hp.sameTurn.trans hr.sameTurn).2.2.1.trans ha
   | supporter hh hs hbt hst hr _ hf' => exact absurd (hf.symm.trans hf') (by decide)
   | attack _ _ _ _ _ hf' => exact absurd (hf.symm.trans hf') (by decide)
@@ -296,6 +346,7 @@ theorem Move.firstTurn_no_supporter {g g' : GameState} (hf : g.firstTurn = true)
   cases hm with
   | item hh hbt hst hr => exact hr.sameTurn.2.2.2.2.2.2
   | ability hu _ _ _ _ _ _ _ _ hr => exact (hu.sameTurn_run hr).2.2.2.2.2.2
+  | stadiumUse _ _ _ _ _ hr => exact hr.sameTurn.2.2.2.2.2.2
   | onPlay hp _ _ _ _ _ hr => exact (hp.sameTurn.trans hr.sameTurn).2.2.2.2.2.2
   | supporter _ _ _ _ _ _ hf₀ => exact absurd (hf.symm.trans hf₀) (by decide)
   | attack _ _ _ _ _ hf₀ => exact absurd (hf.symm.trans hf₀) (by decide)

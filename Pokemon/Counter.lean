@@ -1041,6 +1041,63 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @zone e w g s' hw hz => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl⟩
 
+/-- No effect puts a card into the Stadium slot (milestone M5): an empty slot stays empty. -/
+theorem _root_.Pokemon.Run.stadium_none {e : Effect} {g g' : GameState} (h : Run e g g') :
+    g.stadium = none → g'.stadium = none := by
+  induction h with
+  | iteT _ _ _ ih => exact ih
+  | iteF _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact fun hn => ih₂ (ih₁ hn)
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact id
+  | iterCons _ _ ih₁ ih₂ => exact fun hn => ih₂ (ih₁ hn)
+  | @touchActive e w f g p he h => cases w <;> exact id
+  | @touchBench e w f g q b₁ b₂ he h => cases w <;> exact id
+  | unmark w m g => cases w <;> exact id
+  | benchCounters w n h => cases w <;> exact id
+  | spreadCounters w n g => cases w <;> exact id
+  | switch w ha hb => cases w <;> exact id
+  | benchDamage w n h => cases w <;> exact id
+  | spreadDamage w n g => cases w <;> exact id
+  | linger w s m g => cases w <;> exact id
+  | @zone e w g s' hw hz => cases w <;> exact id
+  | _ => exact id
+
+theorem _root_.Pokemon.TRun.stadium_none {e : Effect} {g g' : GameState} (h : TRun e g g') :
+    g.stadium = none → g'.stadium = none := by
+  have hres : ∀ {g g' : GameState}, Resolve g g' → g.stadium = none → g'.stadium = none := by
+    intro g g' hr
+    induction hr with
+    | done => exact id
+    | step _ hm _ ih => exact fun hn => ih (by cases hm <;> exact hn)
+  induction h with
+  | prim _ _ hr hk => exact fun hn => hres hk (hr.stadium_none hn)
+  | stop => exact id
+  | iteT _ _ _ _ ih => exact ih
+  | iteF _ _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact fun hn => ih₂ (ih₁ hn)
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact id
+  | iterCons _ _ ih₁ ih₂ => exact fun hn => ih₂ (ih₁ hn)
+
+/-- **An empty Stadium slot stays empty** in play from a state whose hand holds no Stadium card
+(milestone M5): only `Move.stadium` fills the slot, from the hand. -/
+theorem _root_.Pokemon.Move.stadium_none {g g' : GameState} (hm : Move g g') (hns : g.stadium = none)
+    (hh : ∀ c ∈ g.cur.hand, isEnergy c = true) : g'.stadium = none := by
+  cases hm with
+  | stadium hh' =>
+      have := hh _ (by rw [hh']; exact List.mem_append_right _ (.head _))
+      cases this
+  | item _ _ _ hr => exact hr.stadium_none hns
+  | supporter _ _ _ _ hr => exact hr.stadium_none hns
+  | stadiumUse _ _ _ _ _ hr => exact hr.stadium_none hns
+  | ability hu _ _ _ _ _ _ _ _ hr => exact hr.stadium_none (by cases hu <;> exact hns)
+  | onPlay hp _ _ _ _ _ hr => exact hr.stadium_none (by cases hp <;> exact hns)
+  | attack _ _ _ _ _ _ _ _ hr => exact hr.stadium_none hns
+  | _ => exact hns
+
 theorem Shape.damageBounded {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) : DamageBounded g := by
   obtain ⟨p, hp, ht, -, -, -, hd, -⟩ := hs.cur.active
@@ -1099,7 +1156,7 @@ deck out), or swaps it (end of turn). No other move is legal: hands hold only En
 are empty, nothing is Confused, and no Pokémon is at its HP. -/
 theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape kc ko g)
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hcc : kc.marks.char = false)
-    (hoc : ko.marks.char = false) (hab : kc.top.abilities = []) :
+    (hoc : ko.marks.char = false) (hab : kc.top.abilities = []) (hns : g.stadium = none) :
     Shape kc.weak ko.weak g' ∨ Shape ko.weak kc.weak g' ∨
       ∃ atk g'', atk ∈ kc.top.attacks ∧ Run atk.script g g'' ∧
         g' = { g'' with
@@ -1125,6 +1182,7 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim
   | stadium hh => exact (not_mem_hand hC hh rfl).elim
+  | stadiumUse hs => rw [hns] at hs; cases hs
   | tool hh => exact (not_mem_hand hC hh rfl).elim
   | toolBench hh => exact (not_mem_hand hC hh rfl).elim
   | onPlay hp =>
@@ -1370,12 +1428,12 @@ state that is `Good` and whose configuration the machine reaches, with either pl
 def Inv (M : Machine) (c₀ : Config) (g : GameState) : Prop :=
   ∃ s, Good M s ∧ M.Reaches c₀ s.cfg ∧
     (Shape (pkA M s false false) (pkB M s false false) g ∨
-      Shape (pkB M s false false) (pkA M s false false) g)
+      Shape (pkB M s false false) (pkA M s false false) g) ∧ g.stadium = none
 
-theorem Encodes.inv {M : Machine} {c : Config} {g : GameState} (he : Encodes M c g) :
-    Inv M c g := by
+theorem Encodes.inv {M : Machine} {c : Config} {g : GameState} (he : Encodes M c g)
+    (hns : g.stadium = none) : Inv M c g := by
   obtain ⟨s, rfl, hg, -, -, hsh, -⟩ := he
-  exact ⟨s, hg, .refl, .inl ⟨hsh.cur.weak, hsh.opp.weak⟩⟩
+  exact ⟨s, hg, .refl, .inl ⟨hsh.cur.weak, hsh.opp.weak⟩, hns⟩
 
 theorem reaches_of_spec {M : Machine} {c₀ : Config} {s t : Abs} (hr : M.Reaches c₀ s.cfg)
     (h : t.cfg = s.cfg ∨ M.Step s.cfg t.cfg) : M.Reaches c₀ t.cfg := by
@@ -1387,23 +1445,25 @@ theorem reaches_of_spec {M : Machine} {c₀ : Config} {s t : Abs} (hr : M.Reache
 machine (or do nothing), and every other legal move leaves the abstract state unchanged. -/
 theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g')
     (hi : Inv M c₀ g) : Inv M c₀ g' := by
-  obtain ⟨s, hg, hr, hs | hs⟩ := hi
-  · rcases move_shape hm hs (hg.hpA _ _) (hg.hpB _ _) (mkOf_char _) rfl rfl with h | h | ⟨atk, g'', ha, hr', rfl⟩
-    · exact ⟨s, hg, hr, .inl h⟩
-    · exact ⟨s, hg, hr, .inr h⟩
+  obtain ⟨s, hg, hr, hs | hs, hns⟩ := hi
+  · have hns' := hm.stadium_none hns hs.cur.hand
+    rcases move_shape hm hs (hg.hpA _ _) (hg.hpB _ _) (mkOf_char _) rfl rfl hns with h | h | ⟨atk, g'', ha, hr', rfl⟩
+    · exact ⟨s, hg, hr, .inl h, hns'⟩
+    · exact ⟨s, hg, hr, .inr h, hns'⟩
     · simp only [pkA, clock, List.mem_singleton] at ha
       subst ha
       have h := (Does.attackA hg false false false false g hs).2 g'' hr'
       exact ⟨_, (tickS_spec hg).1, reaches_of_spec hr (tickS_spec hg).2,
-        .inl ⟨h.cur.setGx _, h.opp⟩⟩
-  · rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) rfl with h | h | ⟨atk, g'', ha, hr', rfl⟩
-    · exact ⟨s, hg, hr, .inr h⟩
-    · exact ⟨s, hg, hr, .inl h⟩
+        .inl ⟨h.cur.setGx _, h.opp⟩, hns'⟩
+  · have hns' := hm.stadium_none hns hs.cur.hand
+    rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) rfl hns with h | h | ⟨atk, g'', ha, hr', rfl⟩
+    · exact ⟨s, hg, hr, .inr h, hns'⟩
+    · exact ⟨s, hg, hr, .inl h, hns'⟩
     · simp only [pkB, tape, List.mem_singleton] at ha
       subst ha
       have h := (Does.attackB hg false false false false g hs).2 g'' hr'
       exact ⟨_, (tockS_spec hg).1, reaches_of_spec hr (tockS_spec hg).2,
-        .inr ⟨h.cur.setGx _, h.opp⟩⟩
+        .inr ⟨h.cur.setGx _, h.opp⟩, hns'⟩
 
 theorem reach_inv {M : Machine} {c₀ : Config} {g₀ g : GameState} (h₀ : Inv M c₀ g₀)
     (h : Reach g₀ g) : Inv M c₀ g := by
@@ -1414,7 +1474,7 @@ theorem reach_inv {M : Machine} {c₀ : Config} {g₀ g : GameState} (h₀ : Inv
 /-- In a state satisfying the invariant, the halt mark means the machine halts. -/
 theorem Inv.halts {M : Machine} {c₀ : Config} {g : GameState} (hi : Inv M c₀ g)
     (hm : HaltMarked g) : M.Halts c₀ := by
-  obtain ⟨s, ⟨-, -, -, hh⟩, hr, hs⟩ := hi
+  obtain ⟨s, ⟨-, -, -, hh⟩, hr, hs, -⟩ := hi
   obtain ⟨p, hp, hi⟩ := hm
   refine ⟨s.cfg, hr, hh ?_⟩
   have key : ∀ (kA kB : Pk), kA.marks = mkOf s.halted → kB.marks = Marks.empty →
@@ -1441,7 +1501,7 @@ theorem Inv.halts {M : Machine} {c₀ : Config} {g : GameState} (hi : Inv M c₀
 machine halts from `init a b`. Every line of play is covered, whatever either player does. -/
 theorem halts_of_haltMarked {M : Machine} {a b : Nat} {g : GameState}
     (h : Reach (start M a b) g) (hm : HaltMarked g) : M.Halts (Machine.init a b) :=
-  (reach_inv (start_encodes M a b).inv h).halts hm
+  (reach_inv ((start_encodes M a b).inv rfl) h).halts hm
 
 /-- **Completeness.** If the machine halts from `init a b`, a state with the halt mark is
 reachable from `start M a b`. -/

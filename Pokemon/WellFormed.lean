@@ -431,6 +431,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
   | item hh hbt hst hr => exact hr.wellFormed hw
   | supporter hh hs hbt hst hr => exact hr.wellFormed hw
+  | stadiumUse _ _ _ _ _ hr => exact hr.wellFormed hw
   | stadium => exact hw
   | tool => exact hw
   | @toolBench l₁ l₂ n gr q b₁ b₂ hh hb =>

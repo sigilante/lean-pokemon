@@ -17,7 +17,8 @@ An attack ends the turn: "Once you attack, your turn is over" (rulebook 2023 p. 
 Then, end your turn.", p. 9). `attack` and `attackConfused` (a Confused Pokémon's failed
 attempt, which is still the turn's attack) set `GameState.attacked`, and every action of the
 turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `attack`,
-`attackConfused`, and since milestone M8a `ability` and `onPlay`) requires `attacked = false`; so after an attack only its Knock Outs (and
+`attackConfused`, since milestone M8a `ability` and `onPlay`, and since milestone M5 `stadium`,
+`stadiumUse`, `tool` and `toolBench`) requires `attacked = false`; so after an attack only its Knock Outs (and
 promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
 does not attack ends the turn by `endTurn` at any point of the turn proper.
 
@@ -52,8 +53,15 @@ follows the latest source; for the rules below the three agree except where note
 * A new Poison replaces the old one (2023 p. 16; 2024 the same, S8 G7). That Croagunk's
   stacked increase ends with the replaced Poison is the model's reading; no ruling was found.
 * Nine Basic Energy types (2023 glossary p. 39; S8 D1); `BasicEnergy`.
-* One Stadium in play at a time (2023 p. 12; 2024 the same, S8 B9): one shared slot, state
-  only.
+* Stadiums (2023 p. 12; 2024 the same, S8 B9): one shared slot; one Stadium played per turn; not
+  one with the name of the Stadium in play; the replaced Stadium goes to its owner's discard pile;
+  "Once during each player's turn" effects usable by whoever is taking their turn (milestone M5).
+* Pokémon Tools (2023 glossary p. 40, "Each Pokémon can have only 1 Pokémon Tool attached at a
+  time"; p. 9, "as many Item and Pokémon Tool cards as you like"): milestone M5. Technical
+  Machines (glossary p. 41: an Item "you can attach to your Pokémon"; "remain attached unless the
+  card text says otherwise") are, in today's Standard, one Tool (Technical Machine: Fluorite
+  sv8-188) whose text says "discard it at the end of your turn" (survey S9 C10); the model has no
+  end-of-turn discard.
 * Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21); the 2026 post replaced it with
   tiebreaker games (S8 J4, unverified against a rulebook); the model has neither (gaps).
 * Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
@@ -378,7 +386,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   not while a Stadium of the same name is in play; the Stadium it replaces goes to its owner's
   discard pile), and a Tool is attached from the hand to a Pokémon with no Tool (`Move.tool`,
   `Move.toolBench`; any number per turn; it stays attached and leaves play with the Pokémon).
-  In this stage neither has an effect: a Stadium or Tool occupies its place and does nothing;
+  A Stadium's "Once during each player's turn, that player may …" effect is used by
+  `Move.stadiumUse`; static Stadium text is not modelled (a Stadium whose effect is `skip`
+  occupies the slot and does nothing). In this stage a Tool has no effect: it occupies its
+  place and does nothing;
 * Abilities (milestone M8a): a Pokémon card has a list of Abilities (`PokemonCard.abilities`;
   every Standard Pokémon has at most one, survey S9), each with a use limit, a place, an optional
   printed condition and an effect (`Ability`). Activated Abilities, "once during your turn" (per
@@ -805,6 +816,21 @@ inductive Move : GameState → GameState → Prop where
       (ht : q.tools = []) (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, bench := b₁ ++ { q with tools := [Card.tool n gr] } :: b₂ } }
+  /-- use the effect of the Stadium in play (milestone M5): "Once during each player's turn, that
+  player may …" (Academy at Night sv6pt5-54, Levincia sv10-244, Prism Tower me4-80). Whoever owns
+  the Stadium, the player to move may use it once in their turn (`GameState.stadiumUsed`, cleared
+  at the end of the turn and when a new Stadium is played); its effect (`Card.trainer`'s `effect`)
+  acts for that player (`.own` is the player to move) and resolves as a Trainer card's does
+  (`TRun`, Knock Outs taken after each step), during the turn proper, before attacking, with no
+  Knock Out pending, and with no attack damage step. A use spends no allowance of the turn. So at
+  most two Stadium effects are used in one turn: the Stadium in play, and the one Stadium the
+  player may play after using it -/
+  | stadiumUse {g g' : GameState} {o : Bool} {n : String} {e : Effect}
+      (hs : g.stadium = some (o, Card.trainer n .stadium e)) (hu : g.stadiumUsed = false)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+      (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
+      (hbh : e.benchHitFree = true) :
+      Move g g'
   /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, Active or
   Benched as the Ability allows (`Ability.spotOk`), during the turn proper and before attacking
   (rulebook 2023 p. 9: "2) … F. Use Abilities (as many as you want). 3) Attack. Then, end your

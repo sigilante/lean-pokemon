@@ -870,6 +870,8 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
       have hx : Card.trainer n .supporter e ∈ g.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
       exact hr.noReduce (ht _ (GameState.mem_allCards_of_hand hx)) hn
+  | @stadiumUse g' o n e hs _ _ _ _ hr =>
+      exact hr.noReduce (ht _ (GameState.mem_allCards_of_stadium hs)) hn
   | @attack g' a atk ha hm hc hs hn' hf hbt hst hr =>
       have h1 := ht _ (GameState.top_mem_cur_active ha)
       simp only [Card.tame, Bool.and_eq_true] at h1
@@ -1022,6 +1024,15 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       subst hg
       exact ⟨_, .stadium hh hs hn hbt hs' hat, by
         simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂]⟩
+  | @stadiumUse g' o n e hs hu hbt hst hat hr hnd hbh =>
+      have hs' := hs₂ hst
+      obtain ⟨ht, hb⟩ := hF.2.2.1 _ (GameState.mem_allCards_of_stadium hs)
+      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 ht hb hF.2.2.2 hF.2.1
+        (g₂ := { g₂ with stadiumUsed := true })
+        (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂])
+        (.inl hst)
+      exact ⟨g₂', .stadiumUse (by subst hg; exact hs) (by subst hg; exact hu)
+        (by subst hg; exact hbt) hs' (by subst hg; exact hat) hr' hnd hbh, hc'⟩
   | @tool l₁ l₂ n gr a hh ha ht hbt hst hat =>
       have hs' := hs₂ hst
       subst hg

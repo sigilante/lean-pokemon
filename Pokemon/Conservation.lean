@@ -286,6 +286,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
       simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,
         List.count_nil, stadiumCardList, hh] at this ⊢
       omega
+  | stadiumUse _ _ _ _ _ hr => exact hr.perm
   | tool hh ha ht => perm_count [hh, ha, ht]
   | toolBench hh hb ht => perm_count [hh, hb, ht]
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.perm.trans hu.perm
@@ -403,6 +404,11 @@ theorem GameState.top_mem_opp_bench {g : GameState} {a : InPlay}
     (ha : a ∈ g.opp.bench) : Card.pokemon a.top ∈ g.allCards := by
   have := mem_benchCardList (x := Card.pokemon a.top) (.head _) ha
   simp [GameState.allCards, PlayerState.allCards, this]
+
+/-- The card in the Stadium slot is in the game (milestone M5). -/
+theorem GameState.mem_allCards_of_stadium {g : GameState} {o : Bool} {x : Card}
+    (hs : g.stadium = some (o, x)) : x ∈ g.allCards := by
+  simp [GameState.allCards, stadiumCardList, hs]
 
 theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.cur.hand) :
     x ∈ g.allCards := by

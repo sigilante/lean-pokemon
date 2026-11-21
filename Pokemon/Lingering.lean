@@ -229,6 +229,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | item hh => simp [red, st, side] at hh
   | supporter hh => simp [red, st, side] at hh
   | stadium hh => simp [red, st, side] at hh
+  | stadiumUse hs => simp [red, st, side] at hs
   | tool hh => simp [red, st, side] at hh
   | toolBench hh => simp [red, st, side] at hh
   | ability hu hm =>
@@ -385,6 +386,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | item hh => simp [dr, st, side] at hh
   | supporter hh => simp [dr, st, side] at hh
   | stadium hh => simp [dr, st, side] at hh
+  | stadiumUse hs => simp [dr, st, side] at hs
   | tool hh => simp [dr, st, side] at hh
   | toolBench hh => simp [dr, st, side] at hh
   | ability hu hm =>

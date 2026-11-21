@@ -69,6 +69,7 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
   | item _ _ hst _ => exact bounded hst.1 _ _
   | supporter _ _ _ hst _ => exact bounded hst.1 _ _
   | stadium _ _ _ _ hst => exact bounded hst.1 _ _
+  | stadiumUse _ _ _ hst => exact bounded hst.1 _ _
   | tool _ _ _ _ hst => exact bounded hst.1 _ _
   | toolBench _ _ _ _ hst => exact bounded hst.1 _ _
   | ability _ _ _ _ _ _ _ hst _ => exact bounded hst.1 _ _
