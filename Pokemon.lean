@@ -15,4 +15,5 @@ import Pokemon.Markers
 import Pokemon.Lingering
 import Pokemon.Counter
 import Pokemon.Exact
+import Pokemon.Bounded
 import Pokemon.Audit
