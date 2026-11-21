@@ -328,7 +328,7 @@ finiteness; the deck condition `Faithful` buys it back:
   bonus and reduction at most `B`). The bounded part is not closed under moves, so on its own
   this gives a finite set of classes and a bisimulation that may leave that set, not a finite
   quotient; the finite quotient is `Faithful.xfinite`;
-* **finiteness for faithful decks** (`Faithful.xfinite`, `Pokemon/Faithful.lean`): a start is
+* **finiteness for faithful decks** (`Faithful.xfinite`, `Pokemon/Faithful/Invariant.lean`, imported by `Pokemon/Faithful.lean`): a start is
   `Faithful` if no card's effect has a damage bonus or reduction under `iter` (`LoopFree`), only
   GX attacks write rest-of-game bonuses or reductions (`GXOnly`), and, since milestone MV, no
   Item or Supporter effect can return from a discard pile an Item card that writes a bonus or
