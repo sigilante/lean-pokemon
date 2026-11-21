@@ -291,7 +291,7 @@ theorem atkAmt_le_cardsAtkAmt {x : Card} : ∀ {cs : List Card}, x ∈ cs → x.
 effects included). -/
 def Card.loopFree : Card → Bool
   | .pokemon p => (p.attacks.all fun a => a.effect.loopFree) &&
-      p.abilities.all fun a => a.effect.loopFree
+      p.abilities.all fun a => a.scripts.all fun e => e.loopFree
   | .energy _ => true
   | .trainer _ _ e => e.loopFree
 
@@ -311,9 +311,10 @@ theorem Card.loopFree_attack {p : PokemonCard} (h : (Card.pokemon p).loopFree = 
   exact List.all_eq_true.1 h.1 atk hm
 
 theorem Card.loopFree_ability {p : PokemonCard} (h : (Card.pokemon p).loopFree = true)
-    {ab : Ability} (hm : ab ∈ p.abilities) : ab.effect.loopFree = true := by
+    {ab : Ability} (hm : ab ∈ p.abilities) {e : Effect} (he : e ∈ ab.scripts) :
+    e.loopFree = true := by
   simp only [Card.loopFree, Bool.and_eq_true] at h
-  exact List.all_eq_true.1 h.2 ab hm
+  exact List.all_eq_true.1 (List.all_eq_true.1 h.2 ab hm) e he
 
 theorem GameState.LoopFree.of_perm {g g' : GameState} (h : g.LoopFree)
     (hp : g'.allCards.Perm g.allCards) : g'.LoopFree :=
@@ -783,23 +784,25 @@ theorem Attack.script_recFilters (atk : Attack) :
 /-- The recycling filters of a list of Abilities (milestone M8a). -/
 def abilitiesRec : List Ability → List Filter
   | [] => []
-  | a :: as => a.effect.recFilters ++ abilitiesRec as
+  | a :: as => a.scripts.flatMap Effect.recFilters ++ abilitiesRec as
 
 /-- The recycling filters of the "as often as you like" Abilities of a list (milestone M8a). -/
 def unlimitedRec : List Ability → List Filter
   | [] => []
-  | a :: as => (if a.use = .unlimited then a.effect.recFilters else []) ++ unlimitedRec as
+  | a :: as => (if a.use = .unlimited then a.scripts.flatMap Effect.recFilters else []) ++
+      unlimitedRec as
 
-theorem abilitiesRec_mem {ab : Ability} {f : Filter} :
-    ∀ {as : List Ability}, ab ∈ as → f ∈ ab.effect.recFilters → f ∈ abilitiesRec as
-  | _ :: _, .head _, hf => List.mem_append_left _ hf
-  | _ :: _, .tail _ h, hf => List.mem_append_right _ (abilitiesRec_mem h hf)
+theorem abilitiesRec_mem {ab : Ability} {e : Effect} {f : Filter} :
+    ∀ {as : List Ability}, ab ∈ as → e ∈ ab.scripts → f ∈ e.recFilters → f ∈ abilitiesRec as
+  | _ :: _, .head _, he, hf => List.mem_append_left _ (List.mem_flatMap.2 ⟨e, he, hf⟩)
+  | _ :: _, .tail _ h, he, hf => List.mem_append_right _ (abilitiesRec_mem h he hf)
 
-theorem unlimitedRec_mem {ab : Ability} {f : Filter} :
-    ∀ {as : List Ability}, ab ∈ as → ab.use = .unlimited → f ∈ ab.effect.recFilters →
+theorem unlimitedRec_mem {ab : Ability} {e : Effect} {f : Filter} :
+    ∀ {as : List Ability}, ab ∈ as → ab.use = .unlimited → e ∈ ab.scripts → f ∈ e.recFilters →
       f ∈ unlimitedRec as
-  | _ :: _, .head _, hu, hf => List.mem_append_left _ (by simp only [hu, ite_true]; exact hf)
-  | _ :: _, .tail _ h, hu, hf => List.mem_append_right _ (unlimitedRec_mem h hu hf)
+  | _ :: _, .head _, hu, he, hf =>
+      List.mem_append_left _ (by simp only [hu, ite_true]; exact List.mem_flatMap.2 ⟨e, he, hf⟩)
+  | _ :: _, .tail _ h, hu, he, hf => List.mem_append_right _ (unlimitedRec_mem h hu he hf)
 
 theorem unlimitedRec_sub {f : Filter} : ∀ {as : List Ability}, f ∈ unlimitedRec as →
     f ∈ abilitiesRec as
@@ -904,9 +907,23 @@ theorem GameState.NoRecycle.of_perm {g g' : GameState} (h : g.NoRecycle)
 /-- The amount one use of an Ability can add to what is written in a turn, against the per-turn
 count (milestone M8a): what its effect writes, plus `P` if it recycles (it may then return
 Trainer writers of total amount at most `P`, the Trainer amounts of all the cards, to be played
-again). -/
-def Ability.q (P : Nat) (ab : Ability) : Nat :=
-  ab.effect.amt + (if ab.effect.recFilters = [] then 0 else P)
+again). For an Ability, the largest over its scripts. -/
+def Effect.q (P : Nat) (e : Effect) : Nat :=
+  e.amt + (if e.recFilters = [] then 0 else P)
+
+def effectsQ (P : Nat) : List Effect → Nat
+  | [] => 0
+  | e :: es => max (e.q P) (effectsQ P es)
+
+theorem effectsQ_mem {P : Nat} {e : Effect} : ∀ {es : List Effect}, e ∈ es → e.q P ≤ effectsQ P es
+  | a :: as, hm => by
+      simp only [effectsQ]
+      cases hm with
+      | head => omega
+      | tail _ hm => have := effectsQ_mem (P := P) hm; omega
+
+@[inherit_doc Effect.q]
+def Ability.q (P : Nat) (ab : Ability) : Nat := effectsQ P ab.scripts
 
 def abilitiesQ (P : Nat) : List Ability → Nat
   | [] => 0
@@ -939,6 +956,9 @@ theorem abQ_le_cardsAbQ {P : Nat} {x : Card} : ∀ {cs : List Card}, x ∈ cs �
           have := abQ_le_cardsAbQ (P := P) h
           simp only [cardsAbQ]; omega
 
+theorem Ability.q_script {P : Nat} {ab : Ability} {e : Effect} (he : e ∈ ab.scripts) :
+    e.q P ≤ ab.q P := effectsQ_mem he
+
 theorem Ability.q_le {P : Nat} {C : List Card} {p : PokemonCard} (hp : Card.pokemon p ∈ C)
     {ab : Ability} (hm : ab ∈ p.abilities) : ab.q P ≤ cardsAbQ P C :=
   Nat.le_trans (abilitiesQ_mem hm) (abQ_le_cardsAbQ (x := .pokemon p) hp)
@@ -948,8 +968,8 @@ bonus or reduction, and no Ability writes a rest-of-game one. "Once during your 
 Abilities may write modifiers and recycle (within clause 3 (b)): they are used at most
 `GameState.abPot` times in a turn. Decidable. Every deck without Abilities satisfies it. -/
 def Card.abilitySafe : Card → Bool
-  | .pokemon p => p.abilities.all fun ab =>
-      (ab.use != .unlimited || ab.effect.amt == 0) && ab.effect.amtAt .always == 0
+  | .pokemon p => p.abilities.all fun ab => ab.scripts.all fun e =>
+      (ab.use != .unlimited || e.amt == 0) && e.amtAt .always == 0
   | _ => true
 
 @[inherit_doc Card.abilitySafe]
@@ -959,9 +979,9 @@ instance (g : GameState) : Decidable g.AbilitySafe := by
   unfold GameState.AbilitySafe; infer_instance
 
 theorem GameState.AbilitySafe.get {g : GameState} (h : g.AbilitySafe) {p : PokemonCard}
-    (hp : Card.pokemon p ∈ g.allCards) {ab : Ability} (hm : ab ∈ p.abilities) :
-    (ab.use = .unlimited → ab.effect.amt = 0) ∧ ab.effect.amtAt .always = 0 := by
-  have := List.all_eq_true.1 (h _ hp) ab hm
+    (hp : Card.pokemon p ∈ g.allCards) {ab : Ability} (hm : ab ∈ p.abilities) {e : Effect}
+    (he : e ∈ ab.scripts) : (ab.use = .unlimited → e.amt = 0) ∧ e.amtAt .always = 0 := by
+  have := List.all_eq_true.1 (List.all_eq_true.1 (h _ hp) ab hm) e he
   rw [Bool.and_eq_true] at this
   obtain ⟨h1, h2⟩ := this
   refine ⟨fun hu => ?_, Nat.eq_of_beq_eq_true h2⟩
@@ -976,7 +996,8 @@ theorem GameState.AbilitySafe.of_perm {g g' : GameState} (h : g.AbilitySafe)
 per-game bound of decks that recycle nothing (`reach_boundedStores_noRecycle`) survives
 Abilities. Every deck without Abilities satisfies it. -/
 def GameState.AbilityQuiet (g : GameState) : Prop :=
-  ∀ p : PokemonCard, Card.pokemon p ∈ g.allCards → ∀ ab ∈ p.abilities, ab.effect.amt = 0
+  ∀ p : PokemonCard, Card.pokemon p ∈ g.allCards → ∀ ab ∈ p.abilities, ∀ e ∈ ab.scripts,
+    e.amt = 0
 
 theorem GameState.AbilityQuiet.of_perm {g g' : GameState} (h : g.AbilityQuiet)
     (hp : g'.allCards.Perm g.allCards) : g'.AbilityQuiet :=
@@ -999,11 +1020,11 @@ theorem attacksRec_nil {p : PokemonCard} (h : (Card.pokemon p).allRec = []) {atk
       rw [h] at h'; nomatch h'
 
 theorem abilitiesRec_nil {p : PokemonCard} (h : (Card.pokemon p).allRec = []) {ab : Ability}
-    (hm : ab ∈ p.abilities) : ab.effect.recFilters = [] := by
-  cases e : ab.effect.recFilters with
+    (hm : ab ∈ p.abilities) {e' : Effect} (he : e' ∈ ab.scripts) : e'.recFilters = [] := by
+  cases e : e'.recFilters with
   | nil => rfl
   | cons f fs =>
-      have := abilitiesRec_mem (f := f) hm (by rw [e]; exact .head _)
+      have := abilitiesRec_mem (f := f) hm he (by rw [e]; exact .head _)
       have h' : f ∈ (Card.pokemon p).allRec := List.mem_append_right _ this
       rw [h] at h'; nomatch h'
 
@@ -1197,6 +1218,30 @@ theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
         (by simp only [hb, List.length_append, List.length_cons] at h4 ⊢; omega))
   | moveNone => exact Nat.le_refl _
 
+/-- Moving a damage counter keeps the weights and the number of Pokémon in play. -/
+theorem CMove.abPot {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
+    (h : CMove f noKO a b a' b') :
+    abWo a' + abWs b' = abWo a + abWs b ∧ optN a' + b'.length = optN a + b.length := by
+  cases h with
+  | @ab x q b₁ b₂ =>
+      have e1 : InPlay.abW { x with damage := x.damage - 1 } = x.abW := rfl
+      have e2 : (q.addDamage 1).abW = q.abW := rfl
+      simp only [abWo, optN, abWs_append, abWs, e1, e2, List.length_append, List.length_cons,
+        and_self]
+  | @ba x q b₁ b₂ =>
+      have e1 : (x.addDamage 1).abW = x.abW := rfl
+      have e2 : InPlay.abW { q with damage := q.damage - 1 } = q.abW := rfl
+      simp only [abWo, optN, abWs_append, abWs, e1, e2, List.length_append, List.length_cons,
+        and_self]
+  | @bb a q r b₁ b₂ c₁ c₂ hq hd hc =>
+      have e3 := congrArg abWs hc
+      have e4 := congrArg List.length hc
+      have e1 : InPlay.abW { q with damage := q.damage - 1 } = q.abW := rfl
+      have e2 : (r.addDamage 1).abW = r.abW := rfl
+      simp only [abWs_append, abWs, e1, List.length_append, List.length_cons] at e3 e4
+      simp only [abWs_append, abWs, e2, List.length_append, List.length_cons]
+      exact ⟨by omega, by omega⟩
+
 /-- **No step of an effect raises the potential.** -/
 theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot ≤ g.abPot := by
   induction h with
@@ -1295,6 +1340,10 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot,
             abWs_map (InPlay.abW_hitBench n), List.length_map]; omega
       | opp => exact Nat.le_refl _
+  | moveCounter h =>
+      obtain ⟨h1, h2⟩ := h.abPot
+      simp only [GameState.abPot, PlayerState.abPot]
+      omega
   | _ => exact Nat.le_refl _
 
 theorem prizes_takePrizes_le {n : Nat} {s : PlayerState} {c : Card} {ps : List Card}
@@ -1539,22 +1588,25 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
       · simp only [GameState.discAmt, cardsAmt, Card.amt]; omega
   | @onPlay g₁ g'' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
       have hxC := hp.top_mem
-      have hlf := Card.loopFree_ability (hL _ hxC) hm
-      have hk' := hr.keeps (abilitiesRec_nil (hN _ hxC) hm)
-      have h0 := hQ _ hxC ab hm
+      have he := ab.script_mem none
+      have hlf := Card.loopFree_ability (hL _ hxC) hm he
+      have hk' := hr.keeps (abilitiesRec_nil (hN _ hxC) hm he)
+      have h0 := hQ _ hxC ab hm _ he
       have hsl := hr.slot_le hlf
       refine hi.keeps ⟨by rw [← hp.discAmt]; exact hk'.disc, hk'.attacked.trans hp.flags.attacked,
         hk'.gxCur.trans hp.flags.gxCur, hk'.gxOpp.trans hp.flags.gxOpp⟩ fun s => ?_
-      have h1 := hsl s; have h2 := ab.effect.amtAt_le_amt s; rw [hp.slotAmt] at h1; omega
+      have h1 := hsl s; have h2 := (ab.script none).amtAt_le_amt s; rw [hp.slotAmt] at h1; omega
   | @ability g₁ g'' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
       have hxC := hu.top_mem
-      have hlf := Card.loopFree_ability (hL _ hxC) hm
-      have hk' := hr.keeps (abilitiesRec_nil (hN _ hxC) hm)
-      have h0 := hQ _ hxC ab hm
+      have he := ab.script_mem (some sp)
+      have hlf := Card.loopFree_ability (hL _ hxC) hm he
+      have hk' := hr.keeps (abilitiesRec_nil (hN _ hxC) hm he)
+      have h0 := hQ _ hxC ab hm _ he
       have hsl := hr.slot_le hlf
       refine hi.keeps ⟨by rw [← hu.discAmt]; exact hk'.disc, hk'.attacked.trans hu.flags.attacked,
         hk'.gxCur.trans hu.flags.gxCur, hk'.gxOpp.trans hu.flags.gxOpp⟩ fun s => ?_
-      have h1 := hsl s; have h2 := ab.effect.amtAt_le_amt s; rw [hu.slotAmt] at h1; omega
+      have h1 := hsl s; have h2 := (ab.script (some sp)).amtAt_le_amt s; rw [hu.slotAmt] at h1
+      omega
   | @attack g'' a atk ha hm hc hs hn hf hbt hst hr hl hgx =>
       show Inv S A (atkRes atk g'')
       have hmem := GameState.top_mem_cur_active ha
@@ -1825,7 +1877,7 @@ theorem TInv.bounded_use {S A P Q K X₀ X₁ X₂ D E : Nat} {g g₁ g' : GameS
     (hfl : Flags g g₁) (hsp : g₁.cur.supporterPlayed = g.cur.supporterPlayed)
     (hp₁ : g₁.allCards.Perm g.allCards)
     (hr : TRun e g₁ g') (hlf : e.loopFree = true) (hal : e.amtAt .always = 0)
-    (hq : e.amt + (if e.recFilters = [] then 0 else P) ≤ Q)
+    (hq : e.q P ≤ Q)
     (hrec : ∀ f ∈ e.recFilters, ∀ y ∈ g.allCards, f.eval y = true → y.alAmt = 0)
     (hP : cardsAmt g.allCards ≤ P) :
     TInv S A P Q K g' (X₀ + e.amt) X₁ X₂ D E := by
@@ -1858,6 +1910,7 @@ theorem TInv.bounded_use {S A P Q K X₀ X₁ X₂ D E : Nat} {g g₁ g' : GameS
   have hQp : Q * g'.abPot + Q ≤ Q * g.abPot := by
     have := Nat.mul_le_mul_left Q hp
     rw [Nat.mul_add, Nat.mul_one] at this; exact this
+  unfold Effect.q at hq
   have hW : g.discW Card.wAmt + e.amt ≤ g'.discW Card.wAmt + Q := by
     by_cases hrf : e.recFilters = []
     · simp only [hrf, ite_true] at hq
@@ -1978,74 +2031,67 @@ theorem TInv.move {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm : 
         fun _ => Nat.le_trans hp hpg, fun _ => by omega, by omega, by omega, by omega, by omega⟩
   | @ability g₁ g' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
       have hxC := hu.top_mem
-      have hlf := Card.loopFree_ability (hL _ hxC) hm
-      have hsafe := hAb.get hxC hm
-      have hq := hQ _ hxC ab hm
-      have hp₁ := hu.perm
-      have hAl₀ := hr.disc_mono Card.alAmt_tw (C := g.allCards)
-        (fun f hf y hy hfy => hR.2 _ hxC f (List.mem_append_right _ (abilitiesRec_mem hm hf)) y hy
-          hfy) fun y hy => hp₁.mem_iff.1 hy
-      have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt := by rw [← hu.discW]; exact hAl₀
-      have hsl := hr.slot_le hlf
-      have hpu := hu.abPot
-      have hp2 := hr.abPot_le
-      have hfk := hr.flags_keep
-      have hfu := hu.flags
-      have hst' := hr.sameTurn
-      have hsup : supT P g' = supT P g := by
-        simp only [supT, show g'.cur.supporterPlayed = g.cur.supporterPlayed from
-          hst'.2.2.2.2.2.2.trans hu.supporterPlayed]
-      have hat' : atkT A g' = atkT A g := atkT_congr (hfk.attacked.trans hfu.attacked)
-      have hgx : gxT A g' = gxT A g := gxT_congr (hfk.gxCur.trans hfu.gxCur)
-        (hfk.gxOpp.trans hfu.gxOpp)
-      have hturn := hi.turn hat
-      have hpg := hi.pot hat
-      have hs' : ∀ s, g'.slotAmt s ≤ g.slotAmt s + ab.effect.amtAt s := fun s => by
-        rw [← hu.slotAmt s]; exact hsl s
-      have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now; have h4 := hs' .always
-      have w1 := ab.effect.amtAt_le_amt .after; have w2 := ab.effect.amtAt_le_amt .next
-      have w3 := ab.effect.amtAt_le_amt .now
-      have := hi.after; have := hi.next; have := hi.now; have := hi.always
-      rw [hsafe.2] at h4
+      have he := ab.script_mem (some sp)
+      have hlf := Card.loopFree_ability (hL _ hxC) hm he
+      have hsafe := hAb.get hxC hm he
+      have hrec : ∀ f ∈ (ab.script (some sp)).recFilters, ∀ y ∈ g.allCards, f.eval y = true →
+          y.alAmt = 0 := fun f hf y hy hfy =>
+        hR.2 _ hxC f (List.mem_append_right _ (abilitiesRec_mem hm he hf)) y hy hfy
       cases hab : ab.use with
       | onPlay w => rw [hab] at hk; cases hk
+      | once =>
+          have hu0 : x.used = false := hn hab
+          have hpu := hu.abPot
+          rw [hu0] at hpu
+          exact ⟨_, _, _, _, _, hi.bounded_use hat (by simp at hpu; omega) hu.slotAmt (hu.discW _)
+            (hu.discW _) hu.flags hu.supporterPlayed hu.perm hr hlf hsafe.2
+            (Nat.le_trans (Ability.q_script he) (hQ _ hxC ab hm)) hrec hP⟩
       | unlimited =>
+          have hp₁ := hu.perm
+          have hAl₀ := hr.disc_mono Card.alAmt_tw (C := g.allCards) hrec
+            fun y hy => hp₁.mem_iff.1 hy
+          have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt := by rw [← hu.discW]; exact hAl₀
+          have hsl := hr.slot_le hlf
+          have hpu := hu.abPot
+          have hp2 := hr.abPot_le
+          have hfk := hr.flags_keep
+          have hfu := hu.flags
+          have hst' := hr.sameTurn
+          have hsup : supT P g' = supT P g := by
+            simp only [supT, show g'.cur.supporterPlayed = g.cur.supporterPlayed from
+              hst'.2.2.2.2.2.2.trans hu.supporterPlayed]
+          have hat' : atkT A g' = atkT A g := atkT_congr (hfk.attacked.trans hfu.attacked)
+          have hgx : gxT A g' = gxT A g := gxT_congr (hfk.gxCur.trans hfu.gxCur)
+            (hfk.gxOpp.trans hfu.gxOpp)
+          have hturn := hi.turn hat
+          have hpg := hi.pot hat
+          have hs' : ∀ s, g'.slotAmt s ≤ g.slotAmt s + (ab.script (some sp)).amtAt s := fun s => by
+            rw [← hu.slotAmt s]; exact hsl s
+          have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now
+          have h4 := hs' .always
+          have w1 := (ab.script (some sp)).amtAt_le_amt .after
+          have w2 := (ab.script (some sp)).amtAt_le_amt .next
+          have w3 := (ab.script (some sp)).amtAt_le_amt .now
+          have := hi.after; have := hi.next; have := hi.now; have := hi.always
+          rw [hsafe.2] at h4
           have h0 := hsafe.1 hab
           have hW₀ := hr.disc_mono Card.wAmt_tw (C := g.allCards)
-            (fun f hf y hy hfy => hR.1 _ hxC f (unlimitedRec_mem hm hab hf) y hy hfy)
+            (fun f hf y hy hfy => hR.1 _ hxC f (unlimitedRec_mem hm hab he hf) y hy hfy)
             fun y hy => hp₁.mem_iff.1 hy
           have hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt := by rw [← hu.discW]; exact hW₀
           have hp : g'.abPot ≤ g.abPot := Nat.le_trans hp2 (by omega)
           have hQp := Nat.mul_le_mul_left Q hp
           exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun _ => Nat.le_trans hp hpg,
             fun _ => by omega, by omega, by omega, by omega, by omega⟩
-      | once =>
-          have hu0 : x.used = false := hn hab
-          rw [hu0] at hpu
-          have hp : g'.abPot + 1 ≤ g.abPot := by simp at hpu; omega
-          have hQp : Q * g'.abPot + Q ≤ Q * g.abPot := by
-            have := Nat.mul_le_mul_left Q hp
-            rw [Nat.mul_add, Nat.mul_one] at this; exact this
-          have hW : g.discW Card.wAmt + ab.effect.amt ≤ g'.discW Card.wAmt + Q := by
-            unfold Ability.q at hq
-            by_cases hrf : ab.effect.recFilters = []
-            · simp only [hrf, ite_true] at hq
-              have hW₀ := hr.disc_mono Card.wAmt_tw (C := g.allCards) (Effect.recOk_nil hrf)
-                fun y hy => hp₁.mem_iff.1 hy
-              rw [hu.discW] at hW₀
-              omega
-            · simp only [hrf, ite_false] at hq
-              omega
-          exact ⟨X₀ + ab.effect.amt, X₁, X₂, D, E, by omega, hi.x1, hi.x2, hi.e,
-            fun _ => by omega, fun _ => by omega, by omega, by omega, by omega, by omega⟩
   | @onPlay g₁ g' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
       have hxC := hp.top_mem
-      have hsafe := hAb.get hxC hm
+      have he := ab.script_mem none
+      have hsafe := hAb.get hxC hm he
       exact ⟨_, _, _, _, _, hi.bounded_use hp.attacked hp.abPot hp.slotAmt (hp.discW _)
-        (hp.discW _) hp.flags hp.supporterPlayed hp.perm hr (Card.loopFree_ability (hL _ hxC) hm)
-        hsafe.2 (hQ _ hxC ab hm)
-        (fun f hf y hy hfy => hR.2 _ hxC f (List.mem_append_right _ (abilitiesRec_mem hm hf)) y hy
-          hfy) hP⟩
+        (hp.discW _) hp.flags hp.supporterPlayed hp.perm hr (Card.loopFree_ability (hL _ hxC) hm he)
+        hsafe.2 (Nat.le_trans (Ability.q_script he) (hQ _ hxC ab hm))
+        (fun f hf y hy hfy => hR.2 _ hxC f (List.mem_append_right _ (abilitiesRec_mem hm he hf)) y
+          hy hfy) hP⟩
   | @attack g'' a atk ha hm hc hs hn hf hbt hst hr hl hgx =>
       show ∃ Y₀ Y₁ Y₂ E' F, TInv S A P Q K (atkRes atk g'') Y₀ Y₁ Y₂ E' F
       have hmem := GameState.top_mem_cur_active ha

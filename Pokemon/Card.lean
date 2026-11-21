@@ -475,6 +475,15 @@ inductive Effect where
   /-- move one Energy card that passes `f` from one of the `w` player's Pokémon in play to another
   ("Move an Energy from 1 of your Benched Pokémon to your Active Pokémon"); or nothing -/
   | moveEnergy (w : Whose) (f : Filter)
+  /-- move one damage counter from one of the player's own Pokémon in play whose card passes `f`
+  to another of the player's Pokémon (milestone M8a: "move 1 damage counter from 1 of your Team
+  Rocket's Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an "as often as you
+  like" Ability). With `noKO`, a counter may not be moved onto a Pokémon it would bring to its HP
+  ("… in a way that would Knock Out …"). A move, not healing and not damage: no modifier applies.
+  It has no resolution when no counter can be moved, like a cost that cannot be paid. The
+  opponent's Pokémon are out of its reach (`Effect.moveCounter` moves the player's own counters
+  only) -/
+  | moveCounter (f : Filter) (noKO : Bool)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -552,6 +561,7 @@ def Effect.ownFree : Effect → Bool
   | .attach .own _ _ .active _ => false
   | .discardEnergy .own .active _ _ => false
   | .moveEnergy .own _ => false
+  | .moveCounter _ _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
   | .seq a b => a.ownFree && b.ownFree
   | .choice a b => a.ownFree && b.ownFree
@@ -607,7 +617,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ => rfl
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ => rfl
 
 /-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
 damage, then place damage counters, and then do all other effects"). An attack with printed base
@@ -645,7 +655,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ => rfl
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by
@@ -694,19 +704,107 @@ inductive AbilityUse where
   | onPlay (w : PlayWay)
   deriving DecidableEq
 
+/-- An effect on "this Pokémon", the Pokémon whose Ability resolves (milestone M8a): heal `n`
+damage counters from it; put `n` damage counters on it ("put 5 damage counters on this Pokémon",
+Feraligatr sv5-41); attach to it an Energy card that passes `f`, taken from `src` ("attach a Basic
+Energy card from your discard pile to this Pokémon", Team Rocket's Spidops me2pt5-19); switch it,
+on the Bench, with the Active Pokémon; move to it an Energy that passes `f` from another of the
+player's Pokémon ("Move an Energy from 1 of your other Pokémon to this Pokémon", Azumarill ex
+me2pt5-84). -/
+inductive SelfOp where
+  | heal (n : Nat)
+  | counters (n : Nat)
+  | attach (src : Src) (f : Filter)
+  | switchIn
+  | energyTo (f : Filter)
+  deriving DecidableEq
+
+/-- The effect of an Ability: effects of the language (`fx`) and effects on "this Pokémon"
+(`self`), in sequence or as a choice. -/
+inductive AbEff where
+  | fx (e : Effect)
+  | self (o : SelfOp)
+  | seq (a b : AbEff)
+  | choice (a b : AbEff)
+  deriving DecidableEq
+
+/-- A `SelfOp` as an effect of the language, for "this Pokémon" at `sp`. In the Active Spot it is
+exact (`heal`, `selfDamage`, `attach … .active`; a switch-in does nothing); on the Bench it acts on
+one Benched Pokémon chosen when it resolves (`benchHeal`, `benchCounters .own`, `attach … .bench`,
+`switch .own`), which includes this Pokémon: a superset of the printed outcomes. "Move an Energy to
+this Pokémon" is `moveEnergy .own f`, which moves an Energy between any two of the player's
+Pokémon: a superset in either place. -/
+def SelfOp.atS : Spot → SelfOp → Effect
+  | .active, .heal n => .heal n
+  | .bench, .heal n => .benchHeal n
+  | .active, .counters n => .selfDamage n
+  | .bench, .counters n => .benchCounters .own n
+  | .active, .attach src f => .attach .own src f .active .any
+  | .bench, .attach src f => .attach .own src f .bench .any
+  | .active, .switchIn => .skip
+  | .bench, .switchIn => .switch .own
+  | _, .energyTo f => .moveEnergy .own f
+
+/-- A `SelfOp` where "this Pokémon" is at `p`, or (`none`) at a place the model does not track:
+then the choice of both. -/
+def SelfOp.at : Option Spot → SelfOp → Effect
+  | some sp, o => o.atS sp
+  | none, o => .choice (o.atS .active) (o.atS .bench)
+
+/-- Where "this Pokémon" is after the `SelfOp`, if the model knows: after a switch-in from the
+Bench the place is unknown, since `switch .own` may switch in another Benched Pokémon. -/
+def SelfOp.after : Option Spot → SelfOp → Option Spot
+  | some .active, .switchIn => some .active
+  | _, .switchIn => none
+  | p, _ => p
+
+/-- Where "this Pokémon" is after the effect, if the model knows: an effect of the language that
+may switch the player's Active Pokémon (`Effect.switchesOwn`) loses track of it. -/
+def AbEff.after : Option Spot → AbEff → Option Spot
+  | p, .fx e => if e.switchesOwn then none else p
+  | p, .self o => o.after p
+  | p, .seq a b => b.after (a.after p)
+  | p, .choice a b => if a.after p = b.after p then a.after p else none
+
+/-- **The effect an Ability resolves**, with "this Pokémon" at `p` (milestone M8a), compiled to
+the effect language. The model does not follow "this Pokémon" if it is Knocked Out in mid-effect:
+the later steps then act on the Pokémon in its place (the new Active Pokémon), which the printed
+card does not do (Known gaps). -/
+def AbEff.compile : Option Spot → AbEff → Effect
+  | _, .fx e => e
+  | p, .self o => o.at p
+  | p, .seq a b => .seq (a.compile p) (b.compile (a.after p))
+  | p, .choice a b => .choice (a.compile p) (b.compile p)
+
 /-- An Ability (milestone M8a). `spot` is where the Pokémon must be to use it, as printed ("if
 this Pokémon is in the Active Spot": `some .active`; "if this Pokémon is on your Bench":
 `some .bench`; no restriction: `none`); `cond` is a further printed condition, a `Test` that must
-hold when the Ability is used; `effect` resolves as a Trainer card's effect does (`TRun`). An
-Ability belongs to the Pokémon card: a Pokémon in play has the Abilities of its top card, so it
-loses them on leaving play and an evolved Pokémon has the new card's Abilities. -/
+hold when the Ability is used; `effect` (`AbEff`) resolves as a Trainer card's effect does
+(`TRun`), compiled with "this Pokémon" at the place of the Pokémon that uses it
+(`Ability.script`). An Ability belongs to the Pokémon card: a Pokémon in play has the Abilities of
+its top card, so it loses them on leaving play and an evolved Pokémon has the new card's
+Abilities ("A Pokémon cannot use the attacks or Abilities of its previous Evolution unless a card
+says so", rulebook 2023 p. 11). -/
 structure Ability where
   name : String
   use : AbilityUse
   spot : Option Spot
   cond : Option Test
-  effect : Effect
+  effect : AbEff
   deriving DecidableEq
+
+/-- The effect the Ability resolves with "this Pokémon" at `p` (`none`: not tracked). -/
+def Ability.script (ab : Ability) (p : Option Spot) : Effect := ab.effect.compile p
+
+/-- Every effect the Ability can resolve: with "this Pokémon" Active, Benched, or not tracked. The
+conditions on cards (`Card.tame`, `Card.tmax`, the clauses of `Faithful`) read all three. -/
+def Ability.scripts (ab : Ability) : List Effect :=
+  [ab.script (some .active), ab.script (some .bench), ab.script none]
+
+theorem Ability.script_mem (ab : Ability) : ∀ p : Option Spot, ab.script p ∈ ab.scripts
+  | some .active => .head _
+  | some .bench => .tail _ (.head _)
+  | none => .tail _ (.tail _ (.head _))
 
 /-- An Ability that a player uses during their turn by choice (`once` or `unlimited`), as opposed
 to an on-play trigger. -/
@@ -872,9 +970,14 @@ def attacksTame : List Attack → Bool
   | [] => true
   | a :: as => a.effect.tame && attacksTame as
 
-/-- The largest test constant of an Ability: its condition's and its effect's. -/
+/-- The largest test constant of a list of effects. -/
+def effectsTmax : List Effect → Nat
+  | [] => 0
+  | e :: es => max e.tmax (effectsTmax es)
+
+/-- The largest test constant of an Ability: its condition's and its effects'. -/
 def Ability.tmax (ab : Ability) : Nat :=
-  max (match ab.cond with | some t => t.bound | none => 0) ab.effect.tmax
+  max (match ab.cond with | some t => t.bound | none => 0) (effectsTmax ab.scripts)
 
 /-- The largest test constant over a list of Abilities. -/
 def abilitiesTmax : List Ability → Nat
@@ -883,7 +986,7 @@ def abilitiesTmax : List Ability → Nat
 
 def abilitiesTame : List Ability → Bool
   | [] => true
-  | a :: as => a.effect.tame && abilitiesTame as
+  | a :: as => (a.scripts.all fun e => e.tame) && abilitiesTame as
 
 def Card.tmax : Card → Nat
   | .pokemon p => max (attacksTmax p.attacks) (abilitiesTmax p.abilities)

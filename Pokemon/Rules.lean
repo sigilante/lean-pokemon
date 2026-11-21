@@ -735,16 +735,16 @@ inductive Move : GameState → GameState → Prop where
   your Active and Benched Pokémon"), with no
   Knock Out pending (`Settled`), and when its printed condition holds (`Ability.CondOk`). A
   "once during your turn" Ability (`AbilityUse.once`) needs the Pokémon not to have used an
-  Ability this turn (`InPlay.used`); every use marks the Pokémon (`UseAt`). The effect resolves
-  as a Trainer card's does (`TRun`, Knock Outs taken after each step) and, like a Trainer card's,
-  has no attack damage. Using an Ability spends no allowance of the turn: not the Supporter, the
+  Ability this turn (`InPlay.used`); every use marks the Pokémon (`UseAt`). The effect resolves,
+  with "this Pokémon" at `sp` (`Ability.script`), as a Trainer card's does (`TRun`, Knock Outs
+  taken after each step) and, like a Trainer card's, has no attack damage. Using an Ability spends no allowance of the turn: not the Supporter, the
   Energy attachment or the retreat. -/
   | ability {g g₁ g' : GameState} {x : InPlay} {sp : Spot} {ab : Ability}
       (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use.activated = true)
       (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
-      (hr : TRun ab.effect g₁ g') (hnd : ab.effect.hitFree = true)
-      (hbh : ab.effect.benchHitFree = true) :
+      (hr : TRun (ab.script (some sp)) g₁ g') (hnd : (ab.script (some sp)).hitFree = true)
+      (hbh : (ab.script (some sp)).benchHitFree = true) :
       Move g g'
   /-- play a Pokémon from the hand (onto the Bench, or to evolve) and resolve an on-play Ability
   of the card played (milestone M8a: "When you play this Pokémon from your hand onto your Bench
@@ -754,12 +754,13 @@ inductive Move : GameState → GameState → Prop where
   may") is that move itself. The effect resolves as a Trainer card's does (`TRun`), from the state
   after the play, which must have no pending Knock Out (a Pokémon evolved into a card whose HP its
   damage reaches is Knocked Out first, and the model then offers no trigger); the printed
-  condition is read there. The Ability's `spot` is not read. -/
+  condition is read there. The Ability's `spot` is not read, and "this Pokémon" is not tracked
+  (`Ability.script none`: an effect on it acts on the Active Pokémon or on a Benched one). -/
   | onPlay {g g₁ g' : GameState} {x : InPlay} {how w : PlayWay} {ab : Ability}
       (hp : PlayFromHand g x how g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use = .onPlay w)
       (hw : w.fires how = true) (hst : Settled g₁) (hc : ab.CondOk g₁)
-      (hr : TRun ab.effect g₁ g') (hnd : ab.effect.hitFree = true)
-      (hbh : ab.effect.benchHitFree = true) :
+      (hr : TRun (ab.script none) g₁ g') (hnd : (ab.script none).hitFree = true)
+      (hbh : (ab.script none).benchHitFree = true) :
       Move g g'
   /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage

@@ -527,6 +527,12 @@ theorem HitAt.not_ownFree {e : Effect} {g h : GameState} (hh : HitAt e g h) :
 Energy and Tools are not part of it). -/
 def InPlay.pokemonCards (p : InPlay) : List Card := Card.pokemon p.top :: p.under
 
+/-- Moving a damage counter leaves the same Pokémon in the Active Spot (milestone M8a). -/
+theorem CMove.active_pokemonCards {f : Filter} {noKO : Bool} {a a' : Option InPlay}
+    {b b' : List InPlay} (h : CMove f noKO a b a' b') :
+    a'.map InPlay.pokemonCards = a.map InPlay.pokemonCards := by
+  cases h <;> rfl
+
 /-- A zone step leaves the same Pokémon (top card and the cards under it) in its player's Active
 Spot; it may attach or discard Energy there. -/
 theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
@@ -591,6 +597,7 @@ theorem Run.cardList_of_switchesOwn {e : Effect} {g g' : GameState} (h : Run e g
   | spreadCounters w _ _ => cases w <;> rfl
   | @benchDamage _ _ _ _ w _ _ => cases w <;> rfl
   | spreadDamage w _ _ => cases w <;> rfl
+  | moveCounter h => exact h.active_pokemonCards
   | _ => rfl
 
 /-- **The attacker stays the attacker.** In a `switchSafe` effect, every damage step is reached

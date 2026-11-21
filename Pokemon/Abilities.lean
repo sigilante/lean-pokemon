@@ -41,7 +41,7 @@ open Recycle
 
 /-- "As often as you like during your turn, you may use this Ability. During your opponent's next
 turn, your Pokémon take 30 less damage from attacks": no printed card has it. -/
-def guardUp : Ability := ⟨"Guard Up", .unlimited, none, none, .linger .own .next (.reduce 3)⟩
+def guardUp : Ability := ⟨"Guard Up", .unlimited, none, none, .fx (.linger .own .next (.reduce 3))⟩
 
 def warden : PokemonCard :=
   ⟨"Warden", .basic, none, 10, .metal, [], 1, none, none, .none, false, [guardUp]⟩
@@ -97,7 +97,8 @@ theorem wgs_recycleSafe : (wgs 0 false).RecycleSafe := by
 
 theorem wgs_not_abilitySafe : ¬ (wgs 0 false).AbilitySafe := by
   intro h
-  have := (h.get (p := warden) (by rw [wgs_allCards]; simp) (List.mem_singleton.2 rfl)).1 rfl
+  have := (h.get (p := warden) (by rw [wgs_allCards]; simp) (List.mem_singleton.2 rfl)
+    (guardUp.script_mem (some .active))).1 rfl
   exact absurd this (by decide)
 
 /-- The carried reduction of the player to move. -/
@@ -135,7 +136,7 @@ theorem unlimited_writer_breaks_bound :
 /-- "As often as you like during your turn, you may put an Iron Defender from your discard pile
 into your hand": no printed card has it. -/
 def retrieve (u : AbilityUse) : Ability :=
-  ⟨"Retrieve", u, none, none, .move .own .discard .hand (.named "Iron Defender") (.upTo 1)⟩
+  ⟨"Retrieve", u, none, none, .fx (.move .own .discard .hand (.named "Iron Defender") (.upTo 1))⟩
 
 def keeper (u : AbilityUse) : PokemonCard :=
   ⟨"Keeper", .basic, none, 10, .metal, [], 1, none, none, .none, false, [retrieve u]⟩

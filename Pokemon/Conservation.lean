@@ -108,6 +108,20 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
       InPlay.inflict_energy, InPlay.inflict_tools, stadiumCardList, $hs,*] <;>
     omega))
 
+/-- Moving a damage counter moves no card (milestone M8a). -/
+theorem CMove.cardLists {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
+    (h : CMove f noKO a b a' b') :
+    optCardList a' = optCardList a ∧ benchCardList b' = benchCardList b := by
+  cases h with
+  | ab => exact ⟨rfl, by simp only [benchCardList_append, benchCardList, InPlay.cardList,
+      InPlay.addDamage]⟩
+  | ba => exact ⟨rfl, by simp only [benchCardList_append, benchCardList, InPlay.cardList]⟩
+  | @bb _ q r b₁ b₂ c₁ c₂ hq hd hc hne hk =>
+      refine ⟨rfl, ?_⟩
+      have e := congrArg benchCardList hc
+      simp only [benchCardList_append, benchCardList, InPlay.cardList] at e
+      simp only [benchCardList_append, benchCardList, InPlay.cardList, InPlay.addDamage, ← e]
+
 /-- Resolving an effect permutes the cards in the game: no card is created, destroyed or
 changed. -/
 theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
@@ -170,6 +184,10 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | handToBottom h =>
       have := fun x => h.count_eq x
       perm_count [this]
+  | moveCounter h =>
+      obtain ⟨h1, h2⟩ := h.cardLists
+      simp only [GameState.allCards, PlayerState.allCards, h1, h2]
+      exact .refl _
   | @zone e w g s' hw hz =>
       rw [hz.updSide]
       cases w with

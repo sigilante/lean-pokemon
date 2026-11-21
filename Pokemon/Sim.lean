@@ -152,6 +152,59 @@ theorem min_add_mul {a b k : Nat} (h : min a k = min b k) (c : Nat) :
     have h2 : k ≤ b + c * b := Nat.le_trans hb (Nat.le_add_right _ _)
     rw [Nat.min_eq_right h1, Nat.min_eq_right h2]
 
+/-- **Moving a damage counter reads exact values** (milestone M8a): between the player's own
+Pokémon, whose damage both `rclamp` and `xrclamp` keep exact, a counter move from one state is
+matched by the same move from a state whose Pokémon in play agree exactly (up to Poison strength
+above HP), to states that agree exactly. -/
+theorem CMove.sim {f : Filter} {noKO : Bool} {a a' a₂ : Option InPlay} {b b' b₂ : List InPlay}
+    (h : CMove f noKO a b a' b')
+    (ha : a₂.map (InPlay.clampWith .exact) = a.map (InPlay.clampWith .exact))
+    (hb : b₂.map (InPlay.clampWith .exact) = b.map (InPlay.clampWith .exact)) :
+    ∃ a₂' b₂', CMove f noKO a₂ b₂ a₂' b₂' ∧
+      a₂'.map (InPlay.clampWith .exact) = a'.map (InPlay.clampWith .exact) ∧
+      b₂'.map (InPlay.clampWith .exact) = b'.map (InPlay.clampWith .exact) := by
+  cases h with
+  | @ab x q b₁ b₂' hx hd hk =>
+      obtain ⟨x₂, rfl, hx₂⟩ := agree_of_map ha
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split hb
+      have hr := InPlay.agree_of_clamp h2
+      have k1 := hx₂.clamp_map (c' := .exact) hx₂.damage_eq
+        (fun y => { y with damage := y.damage - 1 }) (fun _ => rfl) rfl rfl
+      have k2 := hr.clamp_map (c' := .exact) hr.damage_eq (InPlay.addDamage 1) (fun _ => rfl)
+        rfl rfl
+      refine ⟨_, _, .ab (by rw [hx₂.top]; exact hx) (by rw [hx₂.damage_eq]; exact hd)
+        (fun h => by rw [hr.damage_eq, hr.top]; exact hk h), ?_, ?_⟩
+      · simp only [Option.map_some, k1]
+      · simp only [List.map_append, List.map_cons, h1, h3, k2]
+  | @ba x q b₁ b₂' hq hd hk =>
+      obtain ⟨x₂, rfl, hx₂⟩ := agree_of_map ha
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split hb
+      have hr := InPlay.agree_of_clamp h2
+      have k1 := hx₂.clamp_map (c' := .exact) hx₂.damage_eq (InPlay.addDamage 1) (fun _ => rfl)
+        rfl rfl
+      have k2 := hr.clamp_map (c' := .exact) hr.damage_eq
+        (fun y => { y with damage := y.damage - 1 }) (fun _ => rfl) rfl rfl
+      refine ⟨_, _, .ba (by rw [hr.top]; exact hq) (by rw [hr.damage_eq]; exact hd)
+        (fun h => by rw [hx₂.damage_eq, hx₂.top]; exact hk h), ?_, ?_⟩
+      · simp only [Option.map_some, k1]
+      · simp only [List.map_append, List.map_cons, h1, h3, k2]
+  | @bb _ q r b₁ b₂' c₁ c₂ hq hd hc hne hk =>
+      obtain ⟨d₁, q₂, d₂, rfl, h1, h2, h3⟩ := map_eq_split hb
+      have hq₂ := InPlay.agree_of_clamp h2
+      have k1 := hq₂.clamp_map (c' := .exact) hq₂.damage_eq
+        (fun y => { y with damage := y.damage - 1 }) (fun _ => rfl) rfl rfl
+      have hB : (d₁ ++ { q₂ with damage := q₂.damage - 1 } :: d₂).map (InPlay.clampWith .exact) =
+          (c₁ ++ r :: c₂).map (InPlay.clampWith .exact) := by
+        rw [← hc]; simp only [List.map_append, List.map_cons, h1, h3, k1]
+      obtain ⟨e₁, r₂, e₂, hc₂, i1, i2, i3⟩ := map_eq_split hB
+      have hr₂ := InPlay.agree_of_clamp i2
+      have k2 := hr₂.clamp_map (c' := .exact) hr₂.damage_eq (InPlay.addDamage 1) (fun _ => rfl)
+        rfl rfl
+      refine ⟨a₂, _, .bb (by rw [hq₂.top]; exact hq) (by rw [hq₂.damage_eq]; exact hd) hc₂
+        (by rw [length_of_map i1, length_of_map h1]; exact hne)
+        (fun h => by rw [hr₂.damage_eq, hr₂.top]; exact hk h), ha, ?_⟩
+      simp only [List.map_append, List.map_cons, i1, i3, k2]
+
 /-- **Inside an attack's effect, the kernel of `rclamp k` is a simulation**, for a tame effect
 whose test constants are below `k`, from a state with no damage reduction. Two states that agree
 except in the opponent's damage at or above `k`, the damage bonuses at or above `k`, and Poison
@@ -412,6 +465,12 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂, he₁, he₂,
             bench_map_agree (U := InPlay.addDamage n) (fun x y h => h.upd.2.1 n) he₁,
             bench_map_agree (U := InPlay.addDamage n) (fun x y h => h.upd.2.1 n) he₂]⟩
+  | moveCounter h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      obtain ⟨a₂', b₂', hm, ha', hb'⟩ := h.sim hc₂ he₁
+      exact ⟨_, .moveCounter hm, by
+        simp only [GameState.rclamp, GameState.clampAt, ha', hb', ha₂, hm₁, hm₂, he₂]⟩
   | @benchHeal g q b₁ b₂ n h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
@@ -677,11 +736,11 @@ theorem GameState.Fit.trainer {k : Nat} {g : GameState} (hF : g.Fit k) {n : Stri
   exact hF.2.2.1 _ (GameState.mem_allCards_of_hand hx)
 
 theorem abilitiesTame_mem {ab : Ability} : ∀ {as : List Ability}, abilitiesTame as = true →
-    ab ∈ as → ab.effect.tame = true
+    ab ∈ as → ∀ e ∈ ab.scripts, e.tame = true
   | a :: as, h, hm => by
       simp only [abilitiesTame, Bool.and_eq_true] at h
       cases hm with
-      | head => exact h.1
+      | head => exact List.all_eq_true.1 h.1
       | tail _ hm => exact abilitiesTame_mem h.2 hm
 
 theorem abilitiesTmax_mem {ab : Ability} : ∀ {as : List Ability}, ab ∈ as →
@@ -702,7 +761,7 @@ theorem Card.ability_tmax {p : PokemonCard} {ab : Ability} (hm : ab ∈ p.abilit
 condition's included, are below `k` (milestone M8a). -/
 theorem GameState.Fit.ability_of_mem {k : Nat} {g : GameState} (hF : g.Fit k) {p : PokemonCard}
     (hp : Card.pokemon p ∈ g.allCards) {ab : Ability} (hm : ab ∈ p.abilities) :
-    ab.effect.tame = true ∧ ab.tmax < k := by
+    (∀ e ∈ ab.scripts, e.tame = true) ∧ ab.tmax < k := by
   obtain ⟨ht, hb⟩ := hF.2.2.1 _ hp
   simp only [Card.tame, Bool.and_eq_true] at ht
   have := Card.ability_tmax hm
@@ -710,10 +769,19 @@ theorem GameState.Fit.ability_of_mem {k : Nat} {g : GameState} (hF : g.Fit k) {p
 
 theorem GameState.Fit.ability {k : Nat} {g g₁ : GameState} (hF : g.Fit k) {x : InPlay}
     {sp : Spot} {ab : Ability} (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) :
-    ab.effect.tame = true ∧ ab.tmax < k :=
+    (∀ e ∈ ab.scripts, e.tame = true) ∧ ab.tmax < k :=
   hF.ability_of_mem hu.top_mem hm
 
-theorem Ability.effect_tmax_le (ab : Ability) : ab.effect.tmax ≤ ab.tmax := by
+theorem effectsTmax_mem {e : Effect} : ∀ {es : List Effect}, e ∈ es → e.tmax ≤ effectsTmax es
+  | a :: as, hm => by
+      simp only [effectsTmax]
+      cases hm with
+      | head => omega
+      | tail _ hm => have := effectsTmax_mem hm; omega
+
+theorem Ability.script_tmax_le (ab : Ability) (p : Option Spot) :
+    (ab.script p).tmax ≤ ab.tmax := by
+  have := effectsTmax_mem (ab.script_mem p)
   simp only [Ability.tmax]; omega
 
 /-- An Ability's condition holds in a state with the same clamp, with no Knock Out pending
@@ -810,11 +878,11 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
   | @ability g₁ g' x sp ab hu hm _ _ _ _ _ _ _ hr =>
       have h1 := ht _ hu.top_mem
       simp only [Card.tame, Bool.and_eq_true] at h1
-      exact hr.noReduce (abilitiesTame_mem h1.2 hm) (by cases hu <;> exact hn)
+      exact hr.noReduce (abilitiesTame_mem h1.2 hm _ (ab.script_mem _)) (by cases hu <;> exact hn)
   | @onPlay g₁ g' x how w ab hp hm _ _ _ _ hr =>
       have h1 := ht _ hp.top_mem
       simp only [Card.tame, Bool.and_eq_true] at h1
-      exact hr.noReduce (abilitiesTame_mem h1.2 hm) (by cases hp <;> exact hn)
+      exact hr.noReduce (abilitiesTame_mem h1.2 hm _ (ab.script_mem _)) (by cases hp <;> exact hn)
   | endTurn => exact ⟨hn.2.shift, hn.1.shift⟩
   | _ => exact hn
 
@@ -954,7 +1022,8 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       obtain ⟨ht, hb⟩ := hF.ability hu hm
       have hcd' := hcd.of_clamp hc hst.1 hb
       obtain ⟨x', g₂m, hu', hxt, hxu, hcm⟩ := hu.clamp_sim hc
-      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 ht (Nat.lt_of_le_of_lt ab.effect_tmax_le hb)
+      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 (ht _ (ab.script_mem _))
+        (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (by cases hu <;> exact hF.2.2.2) (hF.2.1.of_perm hu.perm) hcm (.inl (hu.settled hst))
       exact ⟨g₂', .ability hu' (hxt ▸ hm) hk hsp (hxu ▸ hn) hcd' (by subst hg; exact hbt) hs'
         (by subst hg; exact hat) hr' hnd hbh, hc'⟩
@@ -963,7 +1032,8 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       obtain ⟨x', g₂m, hp', hxt, hcm⟩ := hp.clamp_sim hc
       have hst₂ := GameState.settled_of_clamp hcm hst₁
       have hcd' := hcd.of_clamp hcm hst₁.1 hb
-      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 ht (Nat.lt_of_le_of_lt ab.effect_tmax_le hb)
+      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 (ht _ (ab.script_mem _))
+        (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (by cases hp <;> exact hF.2.2.2) (hF.2.1.of_perm hp.perm) hcm (.inl hst₁)
       exact ⟨g₂', .onPlay hp' (hxt ▸ hm) hk hw hst₂ hcd' hr' hnd hbh, hc'⟩
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw =>

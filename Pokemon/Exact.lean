@@ -536,6 +536,12 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁, he₂,
             bench_map_comm (InPlay.clampWith_exact_addDamage n) he₁,
             bench_map_comm (InPlay.clampWith_exact_addDamage n) he₂]⟩
+  | moveCounter h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      obtain ⟨a₂', b₂', hm, ha', hb'⟩ := h.sim hc₂ he₁
+      exact ⟨_, .moveCounter hm, by
+        simp only [GameState.xrclamp, GameState.xclampAt, ha', hb', ha₂, he₂]⟩
   | @benchHeal g q b₁ b₂ n h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -949,7 +955,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       obtain ⟨x', g₂m, hp', hxt, hcm⟩ := hp.xclamp_sim hc
       have hst₂ := GameState.settled_of_xclamp hcm hst₁
       have hcd' := hcd.of_xclamp hcm hst₁.1 hb
-      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt ab.effect_tmax_le hb)
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (hF.1.of_perm hp.perm) hcm (.inl hst₁)
       exact ⟨g₂', .onPlay hp' (hxt ▸ hm) hk hw hst₂ hcd' hr' hnd hbh, hc'⟩
   | @ability g₁m g' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
@@ -957,7 +963,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       have hb := hF.ability hu hm
       have hcd' := hcd.of_xclamp hc hst.1 hb
       obtain ⟨x', g₂m, hu', hxt, hxu, hcm⟩ := hu.xclamp_sim hc
-      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt ab.effect_tmax_le hb)
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (hF.1.of_perm hu.perm) hcm (.inl (hu.settled hst))
       exact ⟨g₂', .ability hu' (hxt ▸ hm) hk hsp (hxu ▸ hn) hcd' (by subst hg; exact hbt) hs'
         (by subst hg; exact hat) hr' hnd hbh, hc'⟩
