@@ -12,8 +12,8 @@ Poison strength on every Pokémon in play (Active and, since milestone M3, Bench
 damage bonus and reduction at
 `2 * bound` (twice, because Resistance is subtracted after the bonus). So for tame decks the
 clamped game is a finite transition system that answers every question about legal play that
-does not read the damage or Poison strength above HP on either Active Pokémon, or a damage bonus
-above `2 * bound`.
+does not read the damage or Poison strength above HP on any Pokémon in play (Active or Benched),
+or a damage bonus above `2 * bound`.
 
 `Reach.clamp_mem` is the list-membership half alone, from any start with no tameness
 hypothesis. On its own it says nothing about play: for every cap `k ≥ 3` there is a deck with
@@ -365,9 +365,10 @@ reduction in effect; `GameState.fit_bound` gives this). Then
 
 So the quotient of the reachable states by the clamp is a finite transition system with the same
 moves, and any question about play whose answer depends only on the clamp (every question that
-does not read damage or Poison strength above HP on an Active Pokémon, or a damage bonus above
-`2 * k`) has the same answer in it. The list is not computed, and the move relation of the quotient
-is not shown to be computable, so decidability of such questions is not formalized. -/
+does not read damage or Poison strength above HP on a Pokémon in play, Active or Benched, or a
+damage bonus above `2 * k`) has the same answer in it. The list is not computed, and the move
+relation of the quotient is not shown to be computable, so decidability of such questions is not
+formalized. -/
 theorem Reach.finite {g₀ : GameState} (hF : g₀.Fit (bound g₀.allCards)) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L) ∧
       ∀ g₁ g₂, Reach g₀ g₁ → g₁.clamp (bound g₀.allCards) = g₂.clamp (bound g₀.allCards) →

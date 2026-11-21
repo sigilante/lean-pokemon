@@ -5,9 +5,15 @@ import Pokemon.Infinite
 # Effects that read the state: what changes, and what survives
 
 The effect language reads the two Active Pokémon (`Effect.ite` on a `Test`: at least `n`
-damage counters, exactly `n`, a Special Condition; `Effect.scale`, `k` counters on the
-opponent's Active Pokémon per damage counter on either Active Pokémon), and can damage or fully
-heal the player's own Active Pokémon (`selfDamage`, `healAll`). Inside an attack's effect
+damage counters, exactly `n`, a Special Condition, a marker, a type; `Effect.scale`, `k` counters
+on the opponent's Active Pokémon per damage counter on either Active Pokémon; the amount of the
+damage step, `Amt.per`), and can damage or heal the player's own Active Pokémon (`selfDamage`,
+`heal`, `healAll`, `drain`). Since milestone M3 it also places damage counters and attack damage
+on Benched Pokémon of either player (`benchCounters`, `spreadCounters`, `benchDamage`,
+`spreadDamage`), heals one of the player's own Benched Pokémon (`benchHeal`, whose truncated
+subtraction is the only read of a Benched Pokémon's damage), and switches either player's Active
+Pokémon with a Benched one (`switch`), which brings a Benched Pokémon's damage within reach of
+the readers of the Active Pokémon. Inside an attack's effect
 (`Run`) nothing is Knocked Out, so these reads see damage above HP. Inside an Item or Supporter
 effect (`TRun`) they do not: a Knock Out is taken at once after the step that causes it
 (`TRun.guarded`, in `Pokemon/Trainer.lean`).

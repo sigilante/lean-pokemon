@@ -84,12 +84,24 @@ def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List I
     curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
     between := true, winner := g.winner, stadium := g.stadium }
 
+/-- With no Char counter on any Pokémon of a Bench, the Benches' Char step leaves it as it is. -/
+theorem BenchChar.eq_of_noChar {b b' : List InPlay} (h : BenchChar b b')
+    (hc : ∀ p ∈ b, p.marks.char = false) : b' = b := by
+  induction h with
+  | nil => rfl
+  | cons hs _ ih =>
+      rw [ih (fun q hq => hc q (.tail _ hq))]
+      cases hs with
+      | keep => rfl
+      | burn h => exact absurd (h.symm.trans (hc _ (.head _))) (by decide)
+
 /-- **An attack ends the turn, exactly.** After an attack (or a failed Confused attempt), a move
 is a Knock Out move, or it ends the turn: both Active Pokémon are present, no Knock Out is
 pending, and the result is `GameState.passTurn` for some Checkup coin flips and Char flips on
 the Benches. (Milestone M3 added the Benches' Char flips `bo`, `bc` to the statement; with no
-Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is, `bo = g.opp.bench`,
-which is the old statement.) -/
+Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is
+(`BenchChar.eq_of_noChar`: `bo = g.opp.bench` and `bc = g.cur.bench.map InPlay.unfresh`), which
+is the old statement.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
     KOMove g g' ∨ ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),

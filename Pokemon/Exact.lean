@@ -13,8 +13,8 @@ clamps only what Knock Outs make irrelevant.
   to move, `clampWith cp` to the opponent's, and `clampWith cb` to every Benched Pokémon
   (milestone M3) (damage as the cap says, Poison strength capped at the printed HP); nothing else
   changes, the modifier stores included.
-* `GameState.xclamp` is `xclampAt .hp .hp`, the clamp at move boundaries. It has no parameter.
-  `GameState.xrclamp` is `xclampAt .exact .exact`, the relation used inside an attack's effect:
+* `GameState.xclamp` is `xclampAt .hp .hp .hp`, the clamp at move boundaries. It has no parameter.
+  `GameState.xrclamp` is `xclampAt .exact .exact .exact`, the relation used inside an attack's effect:
   damage exact on every Pokémon in play, Poison strength capped at HP. (Before milestone M4 the
   opponent's damage was capped at a constant `k` inside attacks; since an attack's damage step
   can read that damage, `Amt.per`, and `drain` writes the amount to the attacker, it is kept
@@ -32,8 +32,9 @@ clamps only what Knock Outs make irrelevant.
   it for all pairs of states with equal `xclamp`.
 
 Why this works, reader by reader. Two states with the same `xrclamp` have identical stores,
-identical Benches, hands, decks, discard piles, flags and markers, and the same Active Pokémon
-except in Poison strength above HP.
+hands, decks, discard piles, flags and markers, and the same Pokémon in play (both Active
+Pokémon and, since milestone M3, every Benched Pokémon, which effects can damage, heal and switch
+into the Active Spot) except in Poison strength above HP.
 * The damage step (`damage a`, `drain a`): the amount evaluates the same (`Amt.Val.of_xrclamp`),
   Weakness and Resistance are read from the same cards and types, and the stores are equal, so
   `dealtBy` is the same in both states, however large and whether or not a reduction offsets a
@@ -76,8 +77,8 @@ reach the attacker's exact damage; inside an attack damage is therefore kept exa
 that resolves an effect starts `Settled`, where `xclamp` already determines the damage.) -/
 def GameState.xrclamp (g : GameState) : GameState := g.xclampAt .exact .exact .exact
 
-/-- Two states with the same `xclampAt co cp` differ at most in the two Active Pokémon, as
-`InPlay.Agree` allows. -/
+/-- Two states with the same `xclampAt co cp cb` differ at most in the Pokémon in play (both
+Active Pokémon and both Benches), each Pokémon only as its cap allows. -/
 theorem GameState.xclamp_inv {co cp cb : Cap} {g₁ g₂ : GameState}
     (h : g₁.xclampAt co cp cb = g₂.xclampAt co cp cb) :
     ∃ c₂ a₂ e₁ e₂, g₂ = { g₁ with
