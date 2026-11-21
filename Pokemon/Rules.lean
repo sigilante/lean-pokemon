@@ -98,11 +98,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, Weakness and type changes, "attack
   twice" and "take another turn", and "that much more damage" (damage taken last turn).
-  **Finiteness is proved only for tame decks**: the clamp, which caps every bonus, is a
-  bisimulation when no card adds a damage reduction or uses `drain` and no reduction is in
-  effect at the start (`GameState.Fit`); with either, no cap works
-  (`Lingering.reduce_breaks_clamp`, `Lingering.drain_breaks_clamp`), and finiteness for such
-  decks is open;
+  **Finiteness is proved only for tame decks** (`Reach.finite`): the clamp, which caps every
+  bonus, is a bisimulation when no card adds a damage reduction or uses `drain` and no
+  reduction is in effect at the start (`GameState.Fit`); with a reduction no cap `k ≥ 3` makes
+  the clamp a simulation (`Lingering.reduce_breaks_clamp`), with `drain` no cap `k ≥ 2`
+  (`Lingering.drain_breaks_clamp`); for such decks the model is not claimed to be finite up to
+  any bisimulation (the rest-of-game modifiers give two unbounded counters with a zero test);
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending

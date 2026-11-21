@@ -17,9 +17,11 @@ leave play with it.
   with all three, so the flag model and the count model have the same observable behaviour.
 * `Move.evolve_marks`, `Move.retreat_marks`: evolving or retreating keeps the markers.
 
-`Reach.perm`, `Move.wellFormed`, `Reach.progress`, `Move.clamp_sim` and `Reach.finite` hold
-with markers, with unchanged statements: markers are finitely many flags, they are not clamped,
-and `Reach.finite` enumerates them.
+`Reach.perm`, `Move.wellFormed`, `Reach.progress`, `Move.clamp_sim`, `Reach.clamp_mem` and
+`Reach.finite` hold with markers. Markers are finitely many flags, they are not clamped, and the
+finite list of `Reach.clamp_mem` enumerates them; markers alone needed no change to these
+statements. (The statements of `Move.clamp_sim` and `Reach.finite` did change later, for
+lingering modifiers: both now assume `GameState.Fit`, see `Pokemon/Lingering.lean`.)
 -/
 
 namespace Pokemon.Markers

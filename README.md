@@ -1,11 +1,15 @@
 # lean-pokemon
 
 A Lean 4 model of the Pokémon Trading Card Game, built to settle whether the game is Turing
-complete. The working hypothesis is that it is not: the game has no token generation, and a
-Pokémon whose damage reaches its HP is Knocked Out, so no usable unbounded store exists.
+complete. The working hypothesis for the printed game is that it is not: the game has no token
+generation, and a Pokémon whose damage reaches its HP is Knocked Out, and the survey of the
+English card pool (S3) found no unbounded store that play can both write and read. The model
+generalises some card text beyond what printed cards do (for instance, lingering damage
+modifiers add up without limit); with those generalisations the model does have unbounded
+stores, and the finiteness results below need a hypothesis on the deck that excludes them.
 
-Status: early. The model covers a core of the rules: state; an effect language of sixteen
-primitive effects and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 23 constructors) of nineteen
+primitive effects (`skip` included) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
@@ -50,36 +54,43 @@ Sleep, Paralysis, then Knock Outs). For that model it proves:
   is stuck (`Reach.progress`), and if a Knock Out is pending, a move that Knocks Out an Active
   Pokémon and takes a Prize card is legal (`Reach.knockOut_of_pending`); a move never changes
   an Active Pokémon at or above its HP except by Knocking it Out (`Move.pending_untouched`);
-* the reachable states are finite up to a clamp (`Reach.finite`, from a well-formed start):
-  cap at the Pokémon's HP the damage and the Poison strength on both Active Pokémon, and cap
-  every damage bonus and reduction at `bound` (a constant computed from the cards: more than
-  every printed HP and every test constant); the clamps of all reachable states lie in one
-  finite list. For decks whose cards are *tame* (no damage reduction, no `drain`) and a start
-  with no reduction in effect, the clamp is a bisimulation for moves (`Move.clamp_sim`,
-  `Reach.clamp_sim`, under `GameState.Fit`, which `GameState.fit_bound` gives at `bound`), so
-  these excesses cannot be observed by play. Both hold with the Trainer timing above. For decks
-  that are not tame the clamp is not a bisimulation, for any cap (`Lingering.reduce_breaks_clamp`,
-  `Lingering.drain_breaks_clamp`), and whether their reachable states are finite up to some other
-  bisimulation is open.
+* **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at the Pokémon's HP the
+  damage and the Poison strength on both Active Pokémon, and cap every damage bonus and
+  reduction at `bound` (a constant computed from the cards: more than every printed HP and every
+  test constant). From a well-formed start whose cards are *tame* (no damage reduction, no
+  `drain`) and with no reduction in effect (`GameState.Fit` at `bound`, which
+  `GameState.fit_bound` gives), the clamps of all reachable states lie in one finite list, and
+  the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
+  `Reach.clamp_sim`), so the excesses the clamp removes cannot be observed by play. This holds
+  with the Trainer timing above. The list half alone (`Reach.clamp_mem`) holds from every
+  well-formed start, but without tameness it says nothing about play: for decks that are not
+  tame the clamp is not a simulation, for any cap `k ≥ 3` with a damage reduction
+  (`Lingering.reduce_breaks_clamp`) and any cap `k ≥ 2` with `drain`
+  (`Lingering.drain_breaks_clamp`); with rest-of-game modifiers, a reduction on one player and a
+  bonus on the other are two persistent unbounded counters with an exact zero test, so no
+  finiteness result is claimed for such decks.
 
-Markers do not change the statements: they are finitely many flags per Pokémon, not clamped, and
-enumerated by `Reach.finite`. Printed Imprison and Shock-wave markers are uncapped counts; a flag
+Markers alone did not change the statements: they are finitely many flags per Pokémon, not
+clamped, and enumerated by the list of `Reach.clamp_mem`. Printed Imprison and Shock-wave markers are uncapped counts; a flag
 is exact for them because the cards only place one, remove all, and test for any
 (`Markers.flag_exact`), and this is a stated assumption about the card pool.
 
 Lingering modifiers change the statements: the clamp takes a cap `k`, and the bisimulation needs
-a hypothesis on the deck. An unbounded damage bonus can be capped because it is read only through
+a hypothesis on the deck (tameness, `GameState.Fit`). An unbounded damage bonus can be capped because it is read only through
 the damage it adds to the opponent's Active Pokémon, which is read only by tests against card
 constants and by the Knock Out test at HP; a bonus of `bound` or more acts as `bound` does. A
 damage reduction breaks this: damage done is `n + bonus - reduction`, and a bonus above any cap
-matters when an equally large reduction offsets it. So does `drain` after in-attack
-self-damage, which reads the bonus exactly through the heal. Expiry follows the turn structure:
+matters when an equally large reduction offsets it (`Lingering.reduce_breaks_clamp`, for every
+cap `k ≥ 3`). So does `drain` after in-attack
+self-damage, which reads the bonus exactly through the heal (`Lingering.drain_breaks_clamp`, for
+every `k ≥ 2`). Expiry follows the turn structure:
 `endTurn` shifts both stores, and `Store.add_now_shift` .. `Store.add_always_shift` state when
 each kind of modifier is in effect. Printed bonuses and reductions are bounded by copies of their
-cards times printed constants (survey S7), so the printed game does not reach the unbounded
-case; the model over-approximates them on purpose.
+cards times printed constants, and rest-of-game ones come only from once-per-game attacks
+(survey S7), so the printed game does not reach the unbounded case; the model over-approximates
+them on purpose, and the finiteness theorem covers only the tame decks.
 
-Effects that read damage do not break finiteness, but they change why it holds. Inside an
+For tame decks, effects that read damage do not break finiteness, but they change why it holds. Inside an
 attack's effect the clamp is not a simulation: a test against 6 counters separates 5 from 6
 counters on a 5-HP Pokémon (`Reads.run_clamp_not_sim`). Attack effects are instead simulated
 with the player's own damage exact and the opponent's capped at `bound` (`Run.cap_sim`), and
@@ -98,8 +109,11 @@ arbitrarily many damage counters before the Knock Out is taken (`counters_unboun
 can leave a Pokémon at or above its HP when the turn passes, in play reached from a
 well-formed start (`Infinite.endTurn_pending_ko_reachable`); the Knock Out is taken between
 turns, before the next draw (`Move.damageBounded_of_startTurn`). The finite list is not
-computed, depends on the start state, and gives no size bound; decidability of reachability
-follows in principle but is not formalized. These are theorems about the model, not yet about
+computed, depends on the start state, and gives no size bound. For tame decks, the finite
+quotient with the same moves (`Reach.finite`) means that reachability questions that depend only
+on the clamp could be decided by exploring it, given a computable successor function for the
+quotient; neither that function nor the decision procedure is formalized. For decks that are not
+tame nothing of the kind is proved, and none is expected (see above). These are theorems about the model, not yet about
 the printed game: they cover only decks whose card text is expressible in `Pokemon.Effect`,
 and the model's departures from the rulebook are listed at the top of `Pokemon/Rules.lean`.
 For Knock Out timing inside Trainer effects the remaining simplifications are these: Knock

@@ -7,7 +7,9 @@ import Pokemon.Damage
 damage bonus and reduction in both players' stores at `k`. This file proves that its kernel is a
 bisimulation for moves, for a deck whose cards are *tame* (no damage reduction, no `drain`),
 whose test constants are below `k`, and whose printed HP is at most `k` (`GameState.Fit`).
-`Pokemon/Lingering.lean` shows that neither tameness condition can be dropped.
+`Pokemon/Lingering.lean` shows that neither tameness condition can be dropped: with a damage
+reduction the kernel of `clamp k` is not a simulation for any `k ≥ 3`, with `drain` for any
+`k ≥ 2`.
 
 * `Run.cap_sim`: inside an attack's effect, the kernel of `rclamp k` (the player's own damage
   exact; the opponent's damage, and the damage bonuses, capped at `k`) is a simulation. A bonus

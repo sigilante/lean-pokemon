@@ -19,8 +19,9 @@ no damage until Checkup, so each resulting state `Infinite.st n` is `DamageBound
   well-formed start by `endTurn` (compare `Move.endTurn_pending_ko`, whose witness is not
   reachable from a well-formed state).
 
-The excess Poison strength is invisible to play up to `clamp` (`Reach.clamp_sim`), and
-`Reach.finite` bounds the clamped states; these theorems concern the unclamped states only.
+The excess Poison strength is invisible to play up to `clamp` (`Reach.clamp_sim`; the Item here
+is tame, so `GameState.Fit` holds), and `Reach.finite` bounds the clamped states; these theorems
+concern the unclamped states only.
 -/
 
 namespace Pokemon.Infinite

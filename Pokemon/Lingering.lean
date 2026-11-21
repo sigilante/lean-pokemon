@@ -25,26 +25,29 @@ What is proved about finiteness.
   every bonus at `k = bound` (more than every printed HP and every test constant in the cards),
   is a bisimulation (`Move.clamp_sim`, `Reach.clamp_sim`, under `GameState.Fit k`; `Fit` holds
   at `bound` by `GameState.fit_bound`), and the clamps of the reachable states lie in a finite
-  list (`Reach.finite`, which holds for every deck). The reason: a bonus is read only by
-  `damage`, which adds it to the opponent's damage, and that damage is read only by tests
-  against constants below `k` and by the Knock Out test at HP, so a bonus of `k` or more acts
-  as `k` does.
-* `reduce_breaks_clamp`: with damage reduction, no cap works. Damage done is `(n + bonus) -
-  reduction`, so a bonus above the cap matters when a reduction above the cap offsets it: for
-  every `k ≥ 3` there is a well-formed start, `Fit k` except that one card adds a damage
-  reduction, from which two states with the same clamp are reachable whose attacks do 1 and 2
-  damage.
-* `drain_breaks_clamp`: with `drain` and in-attack self-damage, no cap works either: the heal
-  reads the bonus exactly, and the attacker's own damage, raised above `k` by `selfDamage`
-  earlier in the same attack, shows it.
+  list (`Reach.finite` states both; the list half alone, `Reach.clamp_mem`, holds for every deck
+  but says nothing about play without `Fit`). The reason: a bonus is read only by `damage`,
+  which adds it to the opponent's damage, and that damage is read only by tests against
+  constants below `k` and by the Knock Out test at HP, so a bonus of `k` or more acts as `k`
+  does.
+* `reduce_breaks_clamp`: with damage reduction, no cap `k ≥ 3` works (smaller caps are not
+  considered: `Fit k` asks for every printed HP to be at most `k`, and the witness has a 3-HP
+  Pokémon). Damage done is `(n + bonus) - reduction`, so a bonus above the cap matters when a
+  reduction above the cap offsets it: for every `k ≥ 3` there is a well-formed start, `Fit k`
+  except that one card adds a damage reduction, from which two states with the same clamp are
+  reachable whose attacks do 1 and 2 damage.
+* `drain_breaks_clamp`: with `drain` and in-attack self-damage, no cap `k ≥ 2` works either:
+  the heal reads the bonus exactly, and the attacker's own damage, raised above `k` by
+  `selfDamage` earlier in the same attack, shows it.
 
-What is not proved: whether, for decks with both a damage bonus and a damage reduction (or a
-`drain`), the reachable states are finite up to some other bisimulation. The obstacle is that
-bonus and reduction are two unbounded counters whose difference is observable: with modifiers
-for the rest of the game, an attack used every turn could raise one and the opponent's attack
-lower it, and `damage` tests the difference against zero. The printed cards do not do this:
-S7 found that every lingering damage bonus or reduction is bounded by the copies of its card
-times a printed constant, and that the rest-of-game ones come from once-per-game GX attacks.
+Beyond the clamp. For decks that are not tame the obstacle is not the choice of clamp. With
+modifiers for the rest of the game (`Slot.always`, which never expires), the differences
+between one player's damage reduction and the other's damage bonus are two persistent,
+unbounded counters: `linger` raises either side, and `seq (damage 1) (ite (exactly opp d) …)`
+tests one of them against zero exactly. This is the reviewer's argument that the model, so
+generalised, simulates a two-counter machine. The printed cards do not do this: S7 found that
+every lingering damage bonus or reduction is bounded by the copies of its card times a printed
+constant, and that the rest-of-game ones come from once-per-game GX attacks.
 -/
 
 namespace Pokemon

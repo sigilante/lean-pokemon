@@ -3,17 +3,20 @@ import Pokemon.Sim
 /-!
 # Finiteness
 
-`Reach.finite`: from a well-formed start state, the clamps `clamp (bound g₀.allCards)` of all
-reachable states lie in one finite list. `bound C` is larger than every printed HP and every
-test constant in the cards `C`; the clamp caps damage and Poison strength on both Active Pokémon
-at HP and every damage bonus and reduction at `bound`. For a start whose cards are tame (no
-damage reduction, no `drain`) and with no reduction in effect, the kernel of this clamp is a
-bisimulation for moves (`Reach.clamp_sim` with `GameState.fit_bound`), so the clamped game is a
-finite transition system that answers every question about legal play that does not read the
-damage or Poison strength above HP on either Active Pokémon, or a damage bonus above `bound`.
-For other decks `Reach.finite` still holds but the clamp is not a bisimulation
-(`Lingering.reduce_breaks_clamp`, `Lingering.drain_breaks_clamp`), so it says nothing about
-play.
+`Reach.finite`, the headline: from a well-formed start state that is `Fit` at
+`k = bound g₀.allCards` (tame cards: no damage reduction, no `drain`; no reduction in effect),
+the clamps `clamp k` of all reachable states lie in one finite list, and the kernel of the clamp
+is a bisimulation for moves along reachable states. `bound C` is larger than every printed HP
+and every test constant in the cards `C`; the clamp caps damage and Poison strength on both
+Active Pokémon at HP and every damage bonus and reduction at `bound`. So for tame decks the
+clamped game is a finite transition system that answers every question about legal play that
+does not read the damage or Poison strength above HP on either Active Pokémon, or a damage bonus
+above `bound`.
+
+`Reach.clamp_mem` is the list-membership half alone, from a well-formed start with no tameness
+hypothesis. On its own it says nothing about play: for decks that are not tame the clamp is not
+a bisimulation (`Lingering.reduce_breaks_clamp`, for every cap `k ≥ 3`;
+`Lingering.drain_breaks_clamp`, for every `k ≥ 2`).
 
 This holds for the effect language with state-reading effects (`ite` on damage thresholds,
 exact damage and Special Conditions; `scale`; `selfDamage`; `healAll`), and for the
@@ -320,19 +323,52 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h : Rea
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
     exact hA q (GameState.top_mem_opp_active hq)
 
-/-- **Finiteness.** From a well-formed start state, there is a finite list of states containing
-the clamp (`GameState.clamp`) of every reachable state. -/
-theorem Reach.finite {g₀ : GameState} (hw : WellFormed g₀) :
+/-- **The clamps of reachable states lie in a finite list.** From a well-formed start state,
+there is a finite list of states containing the clamp (`GameState.clamp`) of every reachable
+state.
+
+This is a statement about the clamp, not about play. Without a hypothesis that makes the clamp
+a bisimulation (the tameness hypothesis `GameState.Fit` of `Reach.finite`) it says nothing about
+which questions of play the finite list answers: for decks with damage reduction or `drain` the
+kernel of the clamp is not a simulation (`Lingering.reduce_breaks_clamp` for every cap `k ≥ 3`,
+`Lingering.drain_breaks_clamp` for every `k ≥ 2`), and play can then separate states with the
+same clamp. -/
+theorem Reach.clamp_mem {g₀ : GameState} (hw : WellFormed g₀) :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L := by
   refine ⟨states g₀.allCards, fun g h => mem_states ?_ (h.clamp_bounded hw)⟩
   rw [GameState.allCards_clamp]; exact h.perm
 
 /-- A start state with tame cards (no damage reduction, no `drain`) and no damage reduction in
-effect is `Fit` at `bound`, so `Reach.clamp_sim` applies to the clamp of `Reach.finite`. -/
+effect is `Fit` at `bound`, so `Reach.finite` applies to it. -/
 theorem GameState.fit_bound {g₀ : GameState} (ht : ∀ x ∈ g₀.allCards, x.tame = true)
     (hn : g₀.NoReduce) : g₀.Fit (bound g₀.allCards) := by
   refine ⟨by simp only [bound]; omega, fun p hp => ?_, fun x hx => ⟨ht x hx, ?_⟩, hn⟩
   · have := hp_le_maxHp hp; simp only [bound]; omega
   · have := tmax_le_cardsTmax hx; simp only [bound]; omega
+
+/-- **Finiteness, for tame decks.** Let `g₀` be a well-formed start state that is `Fit` at
+`k = bound g₀.allCards` (every card tame, that is without damage reduction or `drain`; no damage
+reduction in effect; `GameState.fit_bound` gives this). Then
+
+* the clamps `g.clamp k` of all states reachable from `g₀` lie in one finite list `L`; and
+* the kernel of the clamp is a bisimulation along reachable states: if `g₁` is reachable and
+  `g₂` has the same clamp, every move from either one is matched by a move from the other to a
+  state with the same clamp.
+
+So the quotient of the reachable states by the clamp is a finite transition system with the same
+moves, and any question about play whose answer depends only on the clamp (every question that
+does not read damage or Poison strength above HP on an Active Pokémon, or a damage bonus above
+`k`) has the same answer in it. The list is not computed, and the move relation of the quotient
+is not shown to be computable, so decidability of such questions is not formalized. -/
+theorem Reach.finite {g₀ : GameState} (hw : WellFormed g₀) (hF : g₀.Fit (bound g₀.allCards)) :
+    (∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L) ∧
+      ∀ g₁ g₂, Reach g₀ g₁ → g₁.clamp (bound g₀.allCards) = g₂.clamp (bound g₀.allCards) →
+        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧
+            g₁'.clamp (bound g₀.allCards) = g₂'.clamp (bound g₀.allCards)) ∧
+        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧
+            g₂'.clamp (bound g₀.allCards) = g₁'.clamp (bound g₀.allCards)) := by
+  refine ⟨Reach.clamp_mem hw, fun g₁ g₂ h hc => ⟨fun g₁' hm => ?_, fun g₂' hm => ?_⟩⟩
+  · exact hm.clamp_sim (h.fit hF) hc
+  · exact hm.clamp_sim ((h.fit hF).of_clamp hc) hc.symm
 
 end Pokemon

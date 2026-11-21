@@ -27,8 +27,9 @@ every Pokémon in play is below HP and so equal clamps mean equal damage; `Run.c
 simulates an attack's effect with the player's own damage exact (and the opponent's capped at a
 constant above every HP and test constant, which the damage bonus of `Pokemon/Lingering.lean`
 requires), and `TRun.clamp_sim` a Trainer card's. Hence `Move.clamp_sim` and `Reach.clamp_sim`
-(the clamp is a bisimulation for moves, for tame decks) and `Reach.finite` (the clamps of the
-reachable states lie in one finite list) hold for the extended language, with the damage cap at
+(the clamp is a bisimulation for moves, for tame decks), `Reach.clamp_mem` (the clamps of the
+reachable states lie in one finite list) and `Reach.finite` (both together, for tame decks) hold
+for the extended language, with the damage cap at
 HP. (`run_clamp_not_sim` is stated for every cap `k` on the damage bonuses; its states have no
 modifiers.)
 In particular no combination of `iter`, `choice`, `selfDamage`, `scale`, `heal` and the tests
