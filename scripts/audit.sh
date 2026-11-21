@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Axiom gate: every `#print axioms` line in the build log may name only propext and Quot.sound.
+# Axiom gate, second line. `#audit_namespace` in Pokemon/Audit.lean fails the build itself on a
+# bad axiom; this script fails CI unless the build log shows the gate's success line, and fails
+# on any error or `sorry` warning.
 set -euo pipefail
 log="$1"
-grep -q "axioms" "$log" || { echo "audit: no '#print axioms' output in $log"; exit 1; }
-bad=$(grep "depends on axioms" "$log" \
-  | grep -v -E "depends on axioms: \[(propext|Quot\.sound|propext, Quot\.sound)\]$" || true)
-if [ -n "$bad" ]; then echo "audit: unexpected axioms:"; echo "$bad"; exit 1; fi
-if grep -n "sorry" "$log"; then echo "audit: sorry found"; exit 1; fi
-echo "audit: clean ($(grep -c "axioms" "$log") theorems)"
+if grep -n -E "error|sorry" "$log"; then
+  echo "audit: error or sorry in $log"; exit 1
+fi
+ok=$(grep -E "audit: [1-9][0-9]* theorems \(\+[0-9]+ generated\), axioms ⊆ \{propext, Quot\.sound\}" "$log" || true)
+[ -n "$ok" ] || { echo "audit: success line missing from $log"; exit 1; }
+echo "$ok"
