@@ -20,6 +20,8 @@ import Pokemon.Lingering
 import Pokemon.Counter
 import Pokemon.Exact
 import Pokemon.Bounded
+import Pokemon.Faithful.Deck
+import Pokemon.Faithful.Invariant
 import Pokemon.Faithful
 import Pokemon.Dichotomy
 import Pokemon.Turn
