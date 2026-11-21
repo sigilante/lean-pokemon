@@ -424,9 +424,10 @@ theorem Store.NoReduce.of_cap {k : Nat} (hk : 0 < k) {a b : Store} (h : a.cap k 
   obtain ⟨b1, b2, b3, b4⟩ := hb
   refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
 
-/-- With no damage reduction, the damage done is the base damage plus the bonus, or nothing. -/
+/-- With no damage reduction, the damage done is the base damage plus the bonus, or nothing
+(base damage 0, or prevention). -/
 theorem dealtBy_of_noReduce {own opp : Store} (h : opp.NoReduce) (n : Nat) :
-    dealtBy n own opp = if opp.live.prevent then 0 else n + own.live.bonus := by
+    dealtBy n own opp = if n = 0 then 0 else if opp.live.prevent then 0 else n + own.live.bonus := by
   simp only [dealtBy, h.live, Nat.sub_zero]
 
 /-- With no damage reduction, damage done agrees at the cap `k` when the stores do. -/
@@ -438,9 +439,12 @@ theorem dealtBy_cap {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store} (hc : c
   have hc' := Mods.cap_iff.1 (Store.live_cap hc)
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
   rw [ho'.2.2.1]
-  split
-  · rfl
-  · omega
+  by_cases h0 : n = 0
+  · simp only [h0, ↓reduceIte]
+  · simp only [h0, ↓reduceIte]
+    split
+    · rfl
+    · omega
 
 /-- The flags in effect agree when the stores agree at a cap. -/
 theorem Store.flags_of_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :

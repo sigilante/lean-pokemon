@@ -92,10 +92,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Modifiers belong to a player, not to one Pokémon: "this Pokémon takes 30 less damage during
   your opponent's next turn" protects whichever Pokémon that player has Active, and does not
   end when the Pokémon leaves the Active Spot or follow it to the Bench. Damage done by an
-  attack (`Effect.damage`, used for base damage) is `n + bonus - reduction`, or nothing under
-  prevention; Weakness and Resistance are absent, so the order "bonus, then Weakness and
-  Resistance, then reduction" collapses to this; `counters` (damage counters, not damage) is
-  not modified, as in the rulebook. `damage` and `drain` are also usable in Trainer effects,
+  attack (`Effect.damage n`, used for base damage) is nothing if `n = 0` (the rulebook's "Stop
+  if the base damage is 0", 2023 p. 20, 2024 the same), and otherwise `n + bonus - reduction`,
+  or nothing under prevention; Weakness and Resistance are absent, so the order "bonus, then
+  Weakness and Resistance, then reduction" collapses to this; `counters` (damage counters, not
+  damage) is not modified, as in the rulebook. The rulebook computes one damage per attack;
+  the model applies the modifiers to each `damage` primitive of the attack, so an effect with
+  several `damage` steps (written for "flip N coins, 20 damage for each heads", say) adds the
+  bonus once per step and stops at 0 per step rather than once for the attack's total (an
+  over-approximation for attacks whose text computes their damage in several parts). `damage` and `drain` are also usable in Trainer effects,
   where the printed game has no attack damage (an over-approximation). Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, Weakness and type changes, "attack
@@ -127,13 +132,6 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   finite up to the exact-store clamp, nor up to any equivalence fine enough to recover the
   machine's configuration, a statement about representation, not play
   (`Faithful.xclamp_not_finite`, `Counter.not_finite_up_to`);
-* base damage 0: the rulebook stops an attack's damage calculation when its base damage is 0,
-  so a 0-damage attack does no damage whatever the bonuses; the model's `dealtBy` adds the
-  bonus to it, so `damage 0` deals `bonus - reduction` (an over-approximation). The two-counter
-  construction does not rely on this: both of its attacks have base damage 0, but in every state
-  it tracks (`Counter.pkA`, `Counter.pkB`) the defender's rest-of-game reduction is at least the
-  attacker's bonus (`x + a` against `x`), so the base damage deals 0 as the rulebook says; its
-  zero test is `damage 1` inside the effect, whose base is 1;
 * an attack places its base damage before its effect resolves (`Move.attack`), so an effect
   that reads damage sees the base damage already placed; a printed bonus computed from the
   damage before the attack ("20 damage plus 10 more for each damage counter on the Defending

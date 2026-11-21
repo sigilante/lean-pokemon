@@ -314,11 +314,16 @@ def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
 
-/-- The damage an attack of base `n` does to the opponent's Active Pokémon: nothing if the
-opponent has damage prevention in effect; otherwise `n` plus the player's damage bonus minus the
-opponent's damage reduction (at least 0). Weakness and Resistance are absent. -/
+/-- The damage an attack of base `n` does to the opponent's Active Pokémon, in the rulebook's
+order of damage calculation (rulebook 2023 p. 20, 2024 the same, survey S8 F2): if the base
+damage is 0 the calculation stops and the attack does no damage ("Stop if the base damage is 0
+(or if the attack does not do any damage at all)"), whatever the bonuses; otherwise nothing if
+the opponent has damage prevention in effect, and else `n` plus the player's damage bonus
+minus the opponent's damage reduction (at least 0: "If the damage is 0 or less, don't put on
+any damage counters"). Weakness and Resistance (steps 3 and 4) are absent, so the attacker's
+modifiers (step 2) and the defender's (step 5) are applied together. -/
 def dealtBy (n : Nat) (own opp : Store) : Nat :=
-  if opp.live.prevent then 0 else (n + own.live.bonus) - opp.live.reduce
+  if n = 0 then 0 else if opp.live.prevent then 0 else (n + own.live.bonus) - opp.live.reduce
 
 @[inherit_doc dealtBy]
 def GameState.dealt (n : Nat) (g : GameState) : Nat := dealtBy n g.cur.mods g.opp.mods

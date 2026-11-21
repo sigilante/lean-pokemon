@@ -10,7 +10,8 @@ for the `w` player's attacks, a damage reduction or prevention for attacks again
 player's Pokémon, or a lock on attacking, retreating or playing Items. Bonuses and reductions add
 up, without limit (`linger` is a general primitive, usable inside `iter`). `Effect.damage n`
 does `n` damage to the opponent's Active Pokémon with the modifiers in effect
-(`GameState.dealt`); an attack's base damage is done this way. `Effect.drain n` does the same
+(`GameState.dealt`), and nothing at all if `n = 0` (the rulebook stops the damage calculation
+at base damage 0); an attack's base damage is done this way. `Effect.drain n` does the same
 and heals the player's Active Pokémon by the damage done.
 
 Expiry. `Move.endTurn` shifts both players' stores (`Store.shift`): this turn's modifiers
@@ -32,10 +33,11 @@ What is proved about finiteness.
   does.
 * `reduce_breaks_clamp`: for every cap `k ≥ 3` there is a deck with damage reduction for which
   the clamp at `k` is not a simulation (smaller caps are not considered: `Fit k` asks for every
-  printed HP to be at most `k`, and the witness has a 3-HP Pokémon). Damage done is
-  `(n + bonus) - reduction`, so a bonus above the cap matters when a reduction above the cap
-  offsets it: the witness is a well-formed start, `Fit k` except that one card adds a damage
-  reduction, from which two states with the same clamp are reachable whose attacks do 1 and 2
+  printed HP to be at most `k`, and the witness has a 3-HP Pokémon). Damage done by base
+  damage `n ≥ 1` is `(n + bonus) - reduction` (base damage 0 does nothing, `dealtBy`), so a
+  bonus above the cap matters when a reduction above the cap offsets it: the witness is a
+  well-formed start, `Fit k` except that one card adds a damage reduction, from which two
+  states with the same clamp are reachable whose attacks, of base damage 1, do 1 and 2
   damage.
 * `drain_breaks_clamp`: likewise, for every cap `k ≥ 2` there is a deck with `drain` and
   in-attack self-damage for which the clamp is not a simulation: the heal reads the bonus exactly, and the attacker's own damage, raised above `k` by
@@ -92,9 +94,9 @@ theorem Store.add_always_shift (t : Store) (m : Mod) :
 
 namespace Lingering
 
-/-- A Basic Pokémon with `h` counters of HP and one free attack: base damage 0, effect `e`. -/
-def mon (h : Nat) (e : Effect) : PokemonCard :=
-  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], 0, e, false⟩], 0⟩
+/-- A Basic Pokémon with `h` counters of HP and one free attack: base damage `d`, effect `e`. -/
+def mon (h d : Nat) (e : Effect) : PokemonCard :=
+  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], none, false, false, false,
@@ -135,28 +137,29 @@ theorem bonusNow_cap (k : Nat) : (bonusNow (k + 1)).cap k = (bonusNow (k + 2)).c
 
 /-! ## Damage reduction breaks the cap -/
 
-/-- Give the opponent a damage reduction of `k` for this turn, and take a damage bonus of `k + 1`
-or `k + 2` for this turn. -/
+/-- Give the opponent a damage reduction of `k + 1` for this turn, and take a damage bonus of
+`k + 1` or `k + 2` for this turn. -/
 def redItem (k : Nat) : Card :=
-  .trainer "Reduce" .item (.seq (.linger .opp .now (.reduce k))
+  .trainer "Reduce" .item (.seq (.linger .opp .now (.reduce (k + 1)))
     (.choice (.linger .own .now (.bonus (k + 1))) (.linger .own .now (.bonus (k + 2)))))
 
-/-- The attacker: 1 HP counter, a free attack with base damage 0 and no effect. -/
-def hitter : PokemonCard := mon 1 .skip
+/-- The attacker: 1 HP counter, a free attack with base damage 1 (10 damage) and no effect.
+The base damage is not 0, so the bonus and the reduction both apply (`dealtBy`). -/
+def hitter : PokemonCard := mon 1 1 .skip
 
 /-- The target: 3 HP counters. -/
-def target : PokemonCard := mon 3 .skip
+def target : PokemonCard := mon 3 0 .skip
 
 def red₀ (k : Nat) : GameState :=
   st [redItem k] [] (InPlay.ofBasic hitter) (InPlay.ofBasic target) Store.empty Store.empty
 
 def red (k b : Nat) : GameState :=
   st [] [redItem k] (InPlay.ofBasic hitter) (InPlay.ofBasic target) (bonusNow b)
-    (Store.empty.add .now (.reduce k))
+    (Store.empty.add .now (.reduce (k + 1)))
 
 theorem reach_red (k : Nat) (i : Bool) : Reach (red₀ k) (red k (if i then k + 1 else k + 2)) := by
   have s₁ := settled_st [] [redItem k] (InPlay.ofBasic hitter) (InPlay.ofBasic target)
-    Store.empty (Store.empty.add .now (.reduce k)) (by decide) (by decide)
+    Store.empty (Store.empty.add .now (.reduce (k + 1))) (by decide) (by decide)
   cases i with
   | true =>
       exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) rfl rfl
@@ -188,9 +191,12 @@ theorem tmax_red₀ {k : Nat} (hk : 3 ≤ k) : ∀ x ∈ (red₀ k).allCards, x.
 well-formed, `Settled` start with no damage reduction in effect, every HP at most `k` and every
 test constant below `k` (so `GameState.Fit k` holds except that one card, an Item, adds a damage
 reduction), from which two states are reachable with the same `clamp k` (damage bonus `k + 1`
-and `k + 2`, both capped at `k`; the opponent's reduction `k`), such that an attack from the
-first does 1 damage and no move from the second reaches a state with the same clamp (every
-attack from it does 2). So the kernel of `clamp k` is not a simulation, whatever `k` is. -/
+and `k + 2`, both capped at `k`; the opponent's reduction `k + 1`), such that an attack with
+base damage 1 from the first does `1 + (k + 1) - (k + 1) = 1` damage counter and no move from
+the second reaches a state with the same clamp (every attack from it does 2). So the kernel of
+`clamp k` is not a simulation, whatever `k` is. (An earlier witness used base damage 0 and did
+damage through the bonus alone; the rulebook's stop at base damage 0, now in `dealtBy`, rules
+that out.) -/
 theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ g₀.NoReduce ∧ g₀.HpLe k ∧
       (∀ x ∈ g₀.allCards, x.tmax < k) ∧
@@ -200,8 +206,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_red₀ hk, tmax_red₀ hk,
     red k (k + 1), red k (k + 2), _, reach_red k true, reach_red k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
-    .attack (atk := ⟨"Hit", [], 0, .skip, false⟩) rfl (.head _) (Nat.zero_le _) rfl rfl rfl
-      rfl (settled_st _ _ _ _ _ _ (by decide) (by decide)) (.seq (.damage 0 rfl) (.skip _)) rfl
+    .attack (atk := ⟨"Hit", [], 1, .skip, false⟩) rfl (.head _) (Nat.zero_le _) rfl rfl rfl
+      rfl (settled_st _ _ _ _ _ _ (by decide) (by decide)) (.seq (.damage 1 rfl) (.skip _)) rfl
       (fun h => nomatch h),
     fun g₂' hm heq => ?_⟩
   cases hm with
@@ -264,12 +270,14 @@ def bonusItem (k : Nat) : Card :=
   .trainer "Bonus" .item (.choice (.linger .own .now (.bonus (k + 1)))
     (.linger .own .now (.bonus (k + 2))))
 
-/-- The attacker: 2 HP counters, a free attack with base damage 0 whose effect puts `k + 2`
-damage counters on itself and then does 0 damage, healing the attacker by the damage done. -/
-def drainer (k : Nat) : PokemonCard := mon 2 (.seq (.selfDamage (k + 2)) (.drain 0))
+/-- The attacker: 2 HP counters, a free attack with base damage 0 whose effect puts `k + 3`
+damage counters on itself and then does 1 damage (10 damage, plus the bonus), healing the
+attacker by the damage done. The `drain` has damage 1, not 0, so the bonus applies to it under
+the rulebook's stop at base damage 0 (`dealtBy`). -/
+def drainer (k : Nat) : PokemonCard := mon 2 0 (.seq (.selfDamage (k + 3)) (.drain 1))
 
 /-- The target: 1 HP counter. -/
-def prey : PokemonCard := mon 1 .skip
+def prey : PokemonCard := mon 1 0 .skip
 
 theorem drainer_ok (k : Nat) :
     (InPlay.ofBasic (drainer k)).damage < (InPlay.ofBasic (drainer k)).top.hp := Nat.zero_lt_two
@@ -312,8 +320,9 @@ below `k` (so `GameState.Fit k` holds except that one card's attack uses `drain`
 states are reachable with the same `clamp k` (damage bonus `k + 1` and `k + 2`), such that the
 attack from the first leaves the attacker with 1 damage counter and no move from the second
 reaches a state with the same clamp (the attack leaves it with none). The attack first puts
-`k + 2` counters on the attacker, above every cap, and `drain` then removes exactly the damage
-done. -/
+`k + 3` counters on the attacker, above every cap, and `drain 1` then removes exactly the damage
+done, `1 + k + 1` or `1 + k + 2`. (An earlier witness used `drain 0`, which did damage through
+the bonus alone; the rulebook's stop at base damage 0, now in `dealtBy`, rules that out.) -/
 theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
     ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ g₀.NoReduce ∧ g₀.HpLe k ∧
       (∀ x ∈ g₀.allCards, x.tmax < k) ∧
@@ -323,10 +332,10 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
     ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_dr₀ hk, tmax_dr₀ hk,
     dr k (k + 1), dr k (k + 2), _, reach_dr k true, reach_dr k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
-    .attack (atk := ⟨"Hit", [], 0, .seq (.selfDamage (k + 2)) (.drain 0), false⟩) rfl
+    .attack (atk := ⟨"Hit", [], 0, .seq (.selfDamage (k + 3)) (.drain 1), false⟩) rfl
       (.head _) (Nat.zero_le _) rfl rfl rfl rfl
       (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
-      (.seq (.damage 0 rfl) (.seq (.selfDamage _ rfl) (.drain 0 rfl rfl))) rfl
+      (.seq (.damage 0 rfl) (.seq (.selfDamage _ rfl) (.drain 1 rfl rfl))) rfl
       (fun h => nomatch h),
     fun g₂' hm heq => ?_⟩
   cases hm with

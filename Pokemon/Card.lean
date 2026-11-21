@@ -131,9 +131,12 @@ inductive Effect where
   | color (w : Whose) (t : EType)
   /-- the `w` player gets the lingering modifier `m` for the turns `s` -/
   | linger (w : Whose) (s : Slot) (m : Mod)
-  /-- the attack does `n` damage to the opponent's Active Pokémon: `n` plus the player's damage
-  bonus, minus the opponent's damage reduction, or nothing if the opponent has damage
-  prevention (`GameState.dealt`) -/
+  /-- the attack does `n` damage to the opponent's Active Pokémon, `n` being its base damage as
+  printed or as the attack's text computes it: nothing if `n = 0` (the rulebook's "Stop if the
+  base damage is 0"), else `n` plus the player's damage bonus, minus the opponent's damage
+  reduction, or nothing if the opponent has damage prevention (`GameState.dealt`, `dealtBy`).
+  `Move.attack` does the printed base damage (`Attack.damage`) this way; an effect may do more
+  `damage` (an attack whose text sets or adds to its damage) -/
   | damage (n : Nat)
   /-- as `damage n`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
@@ -146,7 +149,8 @@ inductive Effect where
 structure Attack where
   name : String
   cost : List EType
-  /-- base damage, in counters -/
+  /-- base damage, in counters (0 for an attack printed with no damage, or whose damage the
+  text computes; that damage is then an `Effect.damage` in the effect) -/
   damage : Nat
   effect : Effect
   /-- a GX attack: each player can use at most one GX attack in a game (`PlayerState.gxUsed`;
