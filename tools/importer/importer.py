@@ -666,8 +666,8 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
             len(rec), ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in rec)))
         L.append('')
         terms_ = [r['term'] for _, r in results if r['ok']]
-        L.append('Writers that clause 3 constrains: non-Supporter Trainers writing a bonus or reduction: %s; '
-                 'Trainers writing a rest-of-game bonus or reduction: %s.' % (
+        L.append('Writers that clause 3 constrains: Items writing a bonus or reduction (`Card.wAmt`): %s; '
+                 'Items or Supporters writing a rest-of-game bonus or reduction (`Card.alAmt`): %s.' % (
                      [t[1] for t in terms_ if w_amt(t)] or 'none', [t[1] for t in terms_ if al_amt(t)] or 'none'))
     return '\n'.join(L)
 

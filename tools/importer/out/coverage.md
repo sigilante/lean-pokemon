@@ -202,4 +202,4 @@ Imported cards that write any lingering modifier (85).
 
 RecycleSafe holds over the imported pool. Imported recyclers (18): Wooper (svp-155), Poltchageist (sv6-21), Phione (sv6-55), Night Stretcher (sv6pt5-61), Slowpoke (sv7-57), Dhelmise (sv8-10), Dedenne (sv8-87), Miracle Headset (sv8-183), Max Rod (sv8pt5-116), Audino (sv9-124), Levincia (sv9-150), Arven's Greedent (sv10-159), Energy Recycler (sv10-164), Sacred Ash (sv10-168), Energy Retrieval (rsv10pt5-82), Tarragon (me3-85), Pikachu (me55-48), Dialga (me55-103).
 
-Writers that clause 3 constrains: non-Supporter Trainers writing a bonus or reduction: none; Trainers writing a rest-of-game bonus or reduction: none.
+Writers that clause 3 constrains: Items writing a bonus or reduction (`Card.wAmt`): none; Items or Supporters writing a rest-of-game bonus or reduction (`Card.alAmt`): none.
