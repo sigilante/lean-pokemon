@@ -1121,13 +1121,6 @@ def Card.statics : Card → List Static
   | .trainer _ .stadium _ ss => ss
   | _ => []
 
-/-- A static damage reduction (milestone M6): like a stored one, it breaks the capped clamp
-(`Pokemon/Lingering.lean`), so `GameState.Fit` excludes it. -/
-def Static.reduces (s : Static) : Bool :=
-  match s.eff with
-  | .reduce _ _ => true
-  | _ => false
-
 /-- Is the card a Stadium? (milestone M5) -/
 def Card.isStadium : Card → Bool
   | .trainer _ .stadium _ _ => true

@@ -18,8 +18,9 @@ or reduction is added up without limit (`Effect.linger` inside `iter`).
   to move, `clampWith cp` to the opponent's, `clampWith cbo` and `clampWith cbp` to their Benched
   Pokémon (milestone M3), and caps every damage bonus and reduction in both players' stores at
   `k`; nothing else changes.
-* `GameState.clamp k` is `clampAt .hp .hp .hp .hp (2 * k)`: the clamp at move boundaries.
-  `GameState.rclamp k` is `clampAt .exact (.upto k) .exact (.upto k) (2 * k)`: the relation used
+* `GameState.clamp k` is `clampAt .hp .hp .hp .hp k`: the clamp at move boundaries (damage and
+  Poison strength capped at `k`; `clampAt` caps the stores at `2 * k` itself, milestone M6).
+  `GameState.rclamp k` is `clampAt .exact (.upto k) .exact (.upto k) k`: the relation used
   inside an attack's effect (`Pokemon/Sim`), where the player's own damage (Active and Bench) is
   read exactly and the opponent's above `k` is not. The stores are capped at twice the damage cap because Resistance
   is subtracted after the bonus (`dealtBy_cap`; milestone M4).
@@ -91,7 +92,8 @@ def GameState.clamp (k : Nat) (g : GameState) : GameState := g.clampAt .hp .hp .
 
 /-- The relation used inside an attack's effect: the damage on the player's own Pokémon (Active
 and Benched) exact, on the opponent's Pokémon (Active and Benched) capped at `k` (Poison strength
-capped at HP throughout), bonuses and reductions capped at `2 * k`. The opponent's Bench is
+capped at `k` throughout; milestone M6: before it, at the printed HP), bonuses and reductions capped
+at `2 * k`. The opponent's Bench is
 capped like the opponent's Active Pokémon because an effect can switch the two (`Effect.switch`,
 milestone M3), and no effect reads the damage on the opponent's Benched Pokémon except to add
 damage counters to it. -/
@@ -337,7 +339,7 @@ theorem map_clamp_setMarks {c : Cap} (f : Marks → Marks) {o₁ o₂ : Option I
     ← Option.map_map, h]
 
 /-- Checkup preserves agreement when the damage is equal, and then the results agree with
-damage capped at HP. -/
+damage capped at the bound `K` (`Cap.hp`). -/
 theorem InPlay.Agree.checkup {c : Cap} {q p : InPlay} (h : Agree K c q p)
     (hd : q.damage = p.damage) (o f s t : Bool) :
     Agree K .hp (q.checkup o f s t) (p.checkup o f s t) := by
@@ -521,6 +523,44 @@ theorem dealtBy_cap {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
     min (dealtBy n w r c₂ o₂) k = min (dealtBy n w r c₁ o₁) k := by
   have hn₂ := Store.NoReduce.of_cap (by omega) ho hn
   rw [dealtBy_of_noReduce hn, dealtBy_of_noReduce hn₂]
+  have hc' := Mods.cap_iff.1 (Store.live_cap hc)
+  have ho' := Mods.cap_iff.1 (Store.live_cap ho)
+  have hb := hc'.1
+  rw [ho'.2.2.1]
+  by_cases h0 : n = 0
+  · simp only [h0, ↓reduceIte]
+  · simp only [h0, ↓reduceIte]
+    split
+    · rfl
+    · cases w
+      · simp only [Bool.false_eq_true, ↓reduceIte]; omega
+      · simp only [↓reduceIte]; omega
+
+/-- With no stored reduction, adding a reduction `s` (as the static reduction enters the damage
+calculation, `GameState.dealt`) subtracts `s` from the damage done. -/
+theorem dealtBy_add_reduce {o : Store} (h : o.NoReduce) (n : Nat) (w : Bool) (r s : Nat)
+    (c : Store) : dealtBy n w r c (o.add .always (.reduce s)) = dealtBy n w r c o - s := by
+  obtain ⟨h1, -, -, h4⟩ := h
+  simp only [dealtBy, Store.add, Store.live, Mods.merge, Mods.addMod, h1, h4]
+  by_cases h0 : n = 0
+  · simp only [h0, ↓reduceIte, Nat.zero_sub]
+  · simp only [h0, ↓reduceIte]
+    split
+    · exact (Nat.zero_sub s).symm
+    · omega
+
+/-- **The cap survives one more bounded reduction** (milestone M6): `dealtBy_cap` with a reduction
+`s` subtracted after Resistance (the static reduction, `GameState.dealt`), the same in both states,
+and `r + s ≤ k`. If the two bonuses differ, both are at least `2 * k`, so the damage before the
+reduction is at least `2 * k - r ≥ k + s`, and after it at least `k`, in both states. -/
+theorem dealtBy_cap_reduce {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
+    (hc : c₂.cap (2 * k) = c₁.cap (2 * k)) (ho : o₂.cap (2 * k) = o₁.cap (2 * k))
+    (hn : o₁.NoReduce) (n : Nat) (w : Bool) {r s : Nat} (hr : r + s ≤ k) :
+    min (dealtBy n w r c₂ (o₂.add .always (.reduce s))) k =
+      min (dealtBy n w r c₁ (o₁.add .always (.reduce s))) k := by
+  have hn₂ := Store.NoReduce.of_cap (by omega) ho hn
+  rw [dealtBy_add_reduce hn, dealtBy_add_reduce hn₂, dealtBy_of_noReduce hn,
+    dealtBy_of_noReduce hn₂]
   have hc' := Mods.cap_iff.1 (Store.live_cap hc)
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
   have hb := hc'.1

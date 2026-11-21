@@ -6,10 +6,13 @@ import Pokemon.ZoneSim
 `GameState.clamp k` caps damage and Poison strength on every Pokémon in play (both Active Pokémon
 and, since milestone M3, every Benched Pokémon) at `k` (milestone M6: before it, at their printed
 HP), and every damage bonus and reduction in both players' stores at `2 * k`. This file proves that
-its kernel is a bisimulation for moves, for a deck whose cards are *tame* (no damage reduction, no
-`drain`, since M6 no static damage reduction), whose test constants are below `k`, and whose
-derived HP (bounded by `hpBound` of the cards) and printed Resistance are at most `k`
-(`GameState.Fit`, `GameState.HpLe`). Derived HP is read only by Knock Out premises, against the
+its kernel is a bisimulation for moves, for a deck whose cards are *tame* (no stored damage
+reduction, no `drain`), whose test constants are below `k`, whose derived HP (bounded by `hpBound`
+of the cards) is at most `k`, and whose printed Resistance plus the bound `sReduceBound` on the
+static damage reduction is at most `k` (`GameState.Fit`, `GameState.HpLe`, `GameState.ReduceLe`;
+milestone M6). A static reduction, unlike a stored one, is not an amount play can raise: the one in
+force is bounded by the cards (`GameState.sReduce_le`), and is subtracted after Resistance
+(`dealtBy_cap_reduce`). Derived HP is read only by Knock Out premises, against the
 same value in two states with the same clamp (`GameState.sameField_of_clampAt`), and damage at or
 above `k` is at or above every derived HP, so capping at `k` loses nothing. `Pokemon/Lingering.lean` shows that neither tameness
 condition can be dropped: with a damage reduction the kernel of `clamp k` is not a simulation for
@@ -121,14 +124,20 @@ theorem GameState.HpLe.resist {k : Nat} {g : GameState} (h : g.HpLe k) : g.resis
 theorem GameState.HpLe.below {k : Nat} {g : GameState} (h : g.HpLe k) : g.HpBelow k :=
   GameState.hpBelow_of_hpBound h.1
 
-/-- What `Run.cap_sim` and `TRun.clamp_sim` need of the cards (milestone M6): `HpLe k`, and no
-static damage reduction (`StaticTame`; a static reduction, like a stored one, would let an equally
-large bonus be read, `Pokemon/Lingering.lean`). -/
-def GameState.CapOk (k : Nat) (g : GameState) : Prop := g.HpLe k ∧ g.StaticTame
+/-- Every Pokémon card in the game has Resistance at most `k` less the static reduction bound of
+the cards (`sReduceBound`, milestone M6): Resistance and a static reduction are both subtracted
+after the bonus, and together they are at most `k` (`dealtBy_cap_reduce`). With no static effects
+this is the Resistance half of `HpLe k` (`sReduceBound_noStatics`). -/
+def GameState.ReduceLe (k : Nat) (g : GameState) : Prop :=
+  ∀ p : PokemonCard, Card.pokemon p ∈ g.allCards → p.resistAmt + sReduceBound g.allCards ≤ k
 
-theorem GameState.StaticTame.of_perm {g g' : GameState} (h : g.StaticTame)
-    (hp : g'.allCards.Perm g.allCards) : g'.StaticTame :=
-  fun c hc => h c (hp.mem_iff.1 hc)
+theorem GameState.ReduceLe.of_perm {k : Nat} {g g' : GameState} (h : g.ReduceLe k)
+    (hp : g'.allCards.Perm g.allCards) : g'.ReduceLe k :=
+  fun p hm => by rw [sReduceBound_perm hp]; exact h p (hp.mem_iff.1 hm)
+
+/-- What `Run.cap_sim` and `TRun.clamp_sim` need of the cards (milestone M6): `HpLe k`, and
+`ReduceLe k` (the Resistance and the static damage reduction in force are together at most `k`). -/
+def GameState.CapOk (k : Nat) (g : GameState) : Prop := g.HpLe k ∧ g.ReduceLe k
 
 /-- In states with the same `rclamp k`, an Active Pokémon of the first is matched by one of the
 second; with the same damage if the opponent's damage is below `k`. -/
@@ -174,7 +183,7 @@ theorem min_add_mul {a b k : Nat} (h : min a k = min b k) (c : Nat) :
 /-- **Moving a damage counter reads exact values** (milestone M8a): between the player's own
 Pokémon, whose damage both `rclamp` and `xrclamp` keep exact, a counter move from one state is
 matched by the same move from a state whose Pokémon in play agree exactly (up to Poison strength
-above HP), to states that agree exactly. -/
+above the bound), to states that agree exactly. -/
 theorem CMove.sim {f : Filter} {noKO : Bool} {hp hp₂ : Spot → InPlay → Nat}
     {a a' a₂ : Option InPlay} {b b' b₂ : List InPlay}
     (h : CMove f noKO hp a b a' b')
@@ -234,9 +243,10 @@ theorem GameState.CapOk.resist {k : Nat} {g : GameState} (h : g.CapOk k) : g.res
   h.1.resist
 
 /-- **Inside an attack's effect, the kernel of `rclamp k` is a simulation**, for a tame effect
-whose test constants are below `k`, from a state with no damage reduction. Two states that agree
-except in the opponent's damage at or above `k`, the damage bonuses at or above `k`, and Poison
-strength above HP have the same effect resolutions, up to the same relation. -/
+whose test constants are below `k`, from a state with no stored damage reduction and `CapOk k`.
+Two states that agree except in the opponent's damage at or above `k`, the damage bonuses at or
+above `2 * k`, and Poison strength above `k` have the same effect resolutions, up to the same
+relation. -/
 theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState}
     (h : Run e g₁ g₁') :
     e.tame = true → e.tmax < k → g₁.NoReduce → g₁.CapOk k → ∀ {g₂ : GameState},
@@ -415,8 +425,12 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       intro _ _ hn hR g₂ hc
       have hwr := GameState.wr_of_rclamp hc
       have hsf := GameState.sameField_of_clampAt hc
-      have hsr : g.sReduce = 0 := GameState.sReduce_of_staticTame hR.2
-      have hr : g.resist ≤ k := hR.resist
+      have hr : g.resist + g.sReduce ≤ k := by
+        have h1 := hR.2 _ (GameState.top_mem_opp_active h)
+        have h2 := g.sReduce_le
+        have h3 : g.resist ≤ p.top.resistAmt :=
+          GameState.resist_le fun d hd => by rw [h] at hd; cases hd; exact Nat.le_refl _
+        omega
       by_cases hlt : p.damage < k
       · have hv₂ := hv.congr (GameState.count_of_clampAt hc) fun w p' hp' => by
           obtain ⟨q', hq', hd'⟩ := GameState.activeOf_rclamp hc w p' hp'
@@ -431,13 +445,15 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
         obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
         refine ⟨_, .damage hv₂ rfl, ?_⟩
         have hq' : InPlay.Agree k (.upto k)
-            { q with damage := q.damage + dealtBy n g.weak g.resist (m₁.add .always (.bonus g.sBonus)) m₂ }
-            { p with damage := p.damage + dealtBy n g.weak g.resist (g.cur.mods.add .always (.bonus g.sBonus)) g.opp.mods } :=
+            { q with damage := q.damage + (dealtBy n g.weak g.resist
+                (m₁.add .always (.bonus g.sBonus)) (m₂.add .always (.reduce g.sReduce))) }
+            { p with damage := p.damage + (dealtBy n g.weak g.resist
+                (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce))) } :=
           ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
-            hq.marks, hq.used, hq.dmg_add_upto (dealtBy_cap hk0 (Store.cap_add hm₁ _ _) hm₂ hn.2 n
-              g.weak hr), hq.poisonUp⟩
+            hq.marks, hq.used, hq.dmg_add_upto (dealtBy_cap_reduce hk0 (Store.cap_add hm₁ _ _) hm₂
+              hn.2 n g.weak hr), hq.poisonUp⟩
         simp only [GameState.rclamp, GameState.clampAt, GameState.dealt, hwr.1, hwr.2, hsf.sBonus,
-          hsf.sReduce, hsr, Store.add_reduce_zero, Option.map_some, hc₂, hm₁, hm₂,
+          hsf.sReduce, Option.map_some, hc₂, hm₁, hm₂,
           InPlay.clamp_of_agree hq', he₁, he₂]
       · obtain ⟨n₂, hv₂⟩ := hv.transfer fun w p' hp' => by
           obtain ⟨q', hq', -⟩ := GameState.activeOf_rclamp hc w p' hp'
@@ -663,8 +679,9 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
 /-! ## Trainer effects -/
 
 /-- **The kernel of `clamp k` is a simulation for Trainer effects** (`TRun`), from a state that
-is `Settled` or finished, for a tame effect with test constants below `k`, with no damage
-reduction and every HP at most `k`. -/
+is `Settled` or finished, for a tame effect with test constants below `k`, with no stored damage
+reduction and `CapOk k` (every derived HP at most `k`; every Resistance plus the static reduction
+bound at most `k`). -/
 theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState}
     (h : TRun e g₁ g₁') :
     e.tame = true → e.tmax < k → g₁.NoReduce → g₁.CapOk k → ∀ {g₂ : GameState},
@@ -733,10 +750,14 @@ theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameSt
 /-! ## Moves -/
 
 /-- The conditions under which the kernel of `clamp k` is a bisimulation for moves: `0 < k`;
-every Pokémon card has HP at most `k`; every card is tame (no damage reduction, no `drain`) and
-its test constants are below `k`; and no damage reduction is in effect. -/
+`HpLe k` (`hpBound` of the cards, which bounds every derived HP, and every Resistance at most `k`);
+every card is tame (no stored damage reduction, no `drain`) and its test constants are below `k`;
+no damage reduction is stored; and `ReduceLe k` (every Resistance plus the static reduction bound
+`sReduceBound` of the cards at most `k`; milestone M6). Static damage reductions are allowed: the
+one in force is a function of the cards in play, bounded by `sReduceBound`, not an amount that
+play can raise. -/
 def GameState.Fit (k : Nat) (g : GameState) : Prop :=
-  0 < k ∧ g.HpLe k ∧ (∀ x ∈ g.allCards, x.tame = true ∧ x.tmax < k) ∧ g.NoReduce ∧ g.StaticTame
+  0 < k ∧ g.HpLe k ∧ (∀ x ∈ g.allCards, x.tame = true ∧ x.tmax < k) ∧ g.NoReduce ∧ g.ReduceLe k
 
 theorem attacksTame_mem {atk : Attack} : ∀ {as : List Attack}, attacksTame as = true →
     atk ∈ as → atk.effect.tame = true
@@ -950,7 +971,8 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
   | endTurn => exact ⟨hn.2.shift, hn.1.shift⟩
   | _ => exact hn
 
-/-- Play preserves `Fit k`: the cards are permuted, and no damage reduction comes into effect. -/
+/-- Play preserves `Fit k`: the cards are permuted, and no stored damage reduction comes into
+effect. -/
 theorem Move.fit {k : Nat} {g g' : GameState} (h : Move g g') (hF : g.Fit k) : g'.Fit k :=
   ⟨hF.1, hF.2.1.of_perm h.perm, fun x hx => hF.2.2.1 x (h.perm.mem_iff.1 hx),
     h.noReduce (fun x hx => (hF.2.2.1 x hx).1) hF.2.2.2.1, hF.2.2.2.2.of_perm h.perm⟩

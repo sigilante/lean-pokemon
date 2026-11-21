@@ -25,7 +25,8 @@ strength, Special Condition, marker or store, so both clamps keep it (`GameState
 
 Bounds: every HP amount is a printed constant or a constant times a count of attached Energy, so
 the HP of a Pokémon in play is at most `hpBound` of the cards in the game
-(`GameState.hpOf_le_hpBound`), a function of the multiset of cards that play permutes.
+(`GameState.hpOf_le_hpBound`), a function of the multiset of cards that play permutes. Likewise the
+static damage reduction in force is at most `sReduceBound` of the cards (`GameState.sReduce_le`).
 
 No statics: when no card in the game has a static effect (`GameState.NoStatics`), every derived
 quantity is the printed one (`GameState.hpOf_noStatics` and the like).
@@ -241,10 +242,6 @@ def GameState.dealt (n : Nat) (g : GameState) : Nat :=
 /-- Every Pokémon in play has derived HP at most `K`. -/
 def GameState.HpBelow (K : Nat) (g : GameState) : Prop :=
   ∀ w sp p, g.In w sp p → g.hpOf w sp p ≤ K
-
-/-- No card of the game has a static damage reduction. -/
-def GameState.StaticTame (g : GameState) : Prop :=
-  ∀ c ∈ g.allCards, ∀ s ∈ c.statics, s.reduces = false
 
 /-! ## What derived quantities read -/
 
@@ -555,22 +552,6 @@ theorem GameState.mem_inForce {g : GameState} {w : Whose} {sp : Spot} {p : InPla
         exact ⟨c, by simp only [GameState.allCards, hst, stadiumCardList, List.mem_append,
           List.mem_singleton, or_true], h⟩
 
-/-- **No static reduction in the cards, none in force** (milestone M6). -/
-theorem GameState.sReduce_of_staticTame {g : GameState} (h : g.StaticTame) : g.sReduce = 0 := by
-  unfold GameState.sReduce
-  split
-  · next a d ha hd =>
-      refine sumOf_eq_zero fun s hs => ?_
-      obtain ⟨c, hc, hsc⟩ := g.mem_inForce (w := .opp) (sp := .active) hd hs
-      have := h c hc s hsc
-      unfold Static.reduceFrom
-      unfold Static.reduces at this
-      split
-      · next n fr he => rw [he] at this; cases this
-      · rfl
-  · rfl
-
-
 /-- **With no static effects, HP is the printed HP.** -/
 theorem GameState.hpOf_noStatics {g : GameState} (hn : g.NoStatics) {w : Whose} {sp : Spot}
     {p : InPlay} (hp : g.In w sp p) : g.hpOf w sp p = p.top.hp := by
@@ -624,8 +605,11 @@ def Static.hpUnit (s : Static) : Nat :=
   | .hpPlus (.perEnergy _ k) => k
   | _ => 0
 
+/-- The units `u` of a card's static effects. -/
+def Card.gain (u : Static → Nat) (c : Card) : Nat := sumOf u c.statics
+
 /-- The HP units of a card's static effects. -/
-def Card.hpGain (c : Card) : Nat := sumOf Static.hpUnit c.statics
+def Card.hpGain (c : Card) : Nat := c.gain Static.hpUnit
 
 /-- A sum of a weight over a list of cards. -/
 def csum (f : Card → Nat) (C : List Card) : Nat := (C.map f).sum
@@ -688,40 +672,40 @@ theorem csum_one (C : List Card) : csum (fun _ => 1) C = C.length := by
   | nil => rfl
   | cons c l ih => simp only [csum_cons, ih, List.length_cons]; omega
 
-theorem Card.grantStatics_le (p : PokemonCard) (c : Card) :
-    sumOf Static.hpUnit (c.grantStatics p) ≤ c.hpGain := by
+theorem Card.grantStatics_le (u : Static → Nat) (p : PokemonCard) (c : Card) :
+    sumOf u (c.grantStatics p) ≤ c.gain u := by
   cases c with
   | tool n gr =>
-      simp only [Card.grantStatics, Card.hpGain, Card.statics]
+      simp only [Card.grantStatics, Card.gain, Card.statics]
       split
       · exact Nat.le_refl _
       · exact Nat.zero_le _
   | _ => exact Nat.zero_le _
 
-/-- The HP units of the static effects a Pokémon in play is the source of are at most those of its
+/-- The units `u` of the static effects a Pokémon in play is the source of are at most those of its
 cards. -/
-theorem InPlay.statics_le (p : InPlay) :
-    sumOf Static.hpUnit p.sv.statics ≤ csum Card.hpGain p.cardList := by
-  have h1 : sumOf Static.hpUnit (p.top.abilities.flatMap Ability.statics) =
-      (Card.pokemon p.top).hpGain := rfl
-  have h2 : sumOf Static.hpUnit (p.tools.flatMap (Card.grantStatics p.top)) ≤
-      csum Card.hpGain p.tools :=
-    sumOf_flatMap_le _ _ _ (Card.grantStatics_le p.top) p.tools
+theorem InPlay.statics_le (u : Static → Nat) (p : InPlay) :
+    sumOf u p.sv.statics ≤ csum (Card.gain u) p.cardList := by
+  have h1 : sumOf u (p.top.abilities.flatMap Ability.statics) =
+      (Card.pokemon p.top).gain u := rfl
+  have h2 : sumOf u (p.tools.flatMap (Card.grantStatics p.top)) ≤
+      csum (Card.gain u) p.tools :=
+    sumOf_flatMap_le _ _ _ (Card.grantStatics_le u p.top) p.tools
   simp only [InPlay.sv, SView.statics, sumOf_append, InPlay.cardList, csum_cons, csum_append]
   omega
 
-/-- The HP units of the sources on one side are at most those of the side's cards in play. -/
-theorem fieldOf_le (a : Option InPlay) (b : List InPlay) :
-    ((fieldOf a b).map fun e => sumOf Static.hpUnit e.2.statics).sum ≤
-      csum Card.hpGain (optCardList a) + csum Card.hpGain (benchCardList b) := by
+/-- The units `u` of the sources on one side are at most those of the side's cards in play. -/
+theorem fieldOf_le (u : Static → Nat) (a : Option InPlay) (b : List InPlay) :
+    ((fieldOf a b).map fun e => sumOf u e.2.statics).sum ≤
+      csum (Card.gain u) (optCardList a) + csum (Card.gain u) (benchCardList b) := by
   have hb : ∀ b : List InPlay,
-      ((b.map fun p => (Spot.bench, p.sv)).map fun e => sumOf Static.hpUnit e.2.statics).sum ≤
-        csum Card.hpGain (benchCardList b) := by
+      ((b.map fun p => (Spot.bench, p.sv)).map fun e => sumOf u e.2.statics).sum ≤
+        csum (Card.gain u) (benchCardList b) := by
     intro b
     induction b with
     | nil => exact Nat.le_refl _
     | cons p ps ih =>
-        have := p.statics_le
+        have := p.statics_le u
         simp only [List.map_cons, List.sum_cons, benchCardList, csum_append]
         omega
   have := hb b
@@ -731,7 +715,7 @@ theorem fieldOf_le (a : Option InPlay) (b : List InPlay) :
         Nat.zero_add] at this ⊢
       exact this
   | some p =>
-      have hp := p.statics_le
+      have hp := p.statics_le u
       simp only [fieldOf, List.singleton_append, List.map_cons, List.sum_cons, optCardList]
       omega
 
@@ -765,32 +749,32 @@ theorem GameState.csum_allCards (f : Card → Nat) (g : GameState) :
       csum f (stadiumCardList g.stadium) := by
   simp only [GameState.allCards, csum_append]
 
-theorem stadiumStatics_le (st : Option (Bool × Card)) :
-    sumOf Static.hpUnit (stadiumStatics st) ≤ csum Card.hpGain (stadiumCardList st) := by
+theorem stadiumStatics_le (u : Static → Nat) (st : Option (Bool × Card)) :
+    sumOf u (stadiumStatics st) ≤ csum (Card.gain u) (stadiumCardList st) := by
   cases st with
   | none => exact Nat.le_refl _
   | some oc =>
       obtain ⟨o, c⟩ := oc
-      simp only [stadiumStatics, stadiumCardList, csum_cons, Card.hpGain]
+      simp only [stadiumStatics, stadiumCardList, csum_cons, Card.gain]
       omega
 
-/-- The HP units of the effects in force on a Pokémon are at most those of its own sources and of
+/-- The units `u` of the effects in force on a Pokémon are at most those of its own sources and of
 everything in play. -/
-theorem staticsInForce_le (mine theirs : List (Spot × SView)) (st : List Static) (o : Bool) (v : SView)
-    (sp : Spot) :
-    sumOf Static.hpUnit (staticsInForce mine theirs st o v sp) ≤ sumOf Static.hpUnit v.statics +
-      (mine.map fun e => sumOf Static.hpUnit e.2.statics).sum +
-      (theirs.map fun e => sumOf Static.hpUnit e.2.statics).sum + sumOf Static.hpUnit st := by
+theorem staticsInForce_le (u : Static → Nat) (mine theirs : List (Spot × SView)) (st : List Static)
+    (o : Bool) (v : SView) (sp : Spot) :
+    sumOf u (staticsInForce mine theirs st o v sp) ≤ sumOf u v.statics +
+      (mine.map fun e => sumOf u e.2.statics).sum +
+      (theirs.map fun e => sumOf u e.2.statics).sum + sumOf u st := by
   simp only [staticsInForce, sumOf_append]
-  have h1 := sumOf_filter_le Static.hpUnit (fun s => s.sel.isSelf && Spot.ok s.src sp && s.hits v sp)
+  have h1 := sumOf_filter_le u (fun s => s.sel.isSelf && Spot.ok s.src sp && s.hits v sp)
     v.statics
-  have h2 := sumOf_flatMap_le Static.hpUnit (fun e => e.2.statics.filter fun s =>
-    s.sel.fromOwn && Spot.ok s.src e.1 && s.hits v sp) (fun e => sumOf Static.hpUnit e.2.statics)
+  have h2 := sumOf_flatMap_le u (fun e => e.2.statics.filter fun s =>
+    s.sel.fromOwn && Spot.ok s.src e.1 && s.hits v sp) (fun e => sumOf u e.2.statics)
     (fun e => sumOf_filter_le _ _ _) mine
-  have h3 := sumOf_flatMap_le Static.hpUnit (fun e => e.2.statics.filter fun s =>
-    s.sel.fromOpp && Spot.ok s.src e.1 && s.hits v sp) (fun e => sumOf Static.hpUnit e.2.statics)
+  have h3 := sumOf_flatMap_le u (fun e => e.2.statics.filter fun s =>
+    s.sel.fromOpp && Spot.ok s.src e.1 && s.hits v sp) (fun e => sumOf u e.2.statics)
     (fun e => sumOf_filter_le _ _ _) theirs
-  have h4 := sumOf_filter_le Static.hpUnit (fun s => s.sel.fromStadium o && s.hits v sp) st
+  have h4 := sumOf_filter_le u (fun s => s.sel.fromStadium o && s.hits v sp) st
   omega
 
 /-- One static effect adds at most its unit times one more than the Energy attached. -/
@@ -806,6 +790,29 @@ theorem Static.hpPlusAt_le (v : SView) (s : Static) :
           rw [Nat.mul_comm k]
           exact Nat.mul_le_mul_right k (Nat.le_succ_of_le List.countP_le_length)
   | _ => exact Nat.zero_le _
+
+/-- The units `u` of the static effects in force on a Pokémon in play are at most twice those of the
+cards of the game: every source is a card of the game, and one source reaches a Pokémon at most
+twice (as `self` and as `own`). -/
+theorem GameState.inForce_le (u : Static → Nat) {g : GameState} {w : Whose} {sp : Spot}
+    {p : InPlay} (hp : g.In w sp p) :
+    sumOf u (g.inForce w sp p.sv) ≤ 2 * csum (Card.gain u) g.allCards := by
+  have hside : (g.side w).active = some p ∨ p ∈ (g.side w).bench := by
+    cases sp
+    · exact .inl hp
+    · exact .inr hp
+  have i1 := staticsInForce_le u (g.side w).field (g.side w.flip).field (stadiumStatics g.stadium)
+    (g.stOwn w) p.sv sp
+  have i2 := p.statics_le u
+  have i3 := csum_cardList_le_side (Card.gain u) hside
+  have i4 := fieldOf_le u (g.side w).active (g.side w).bench
+  have i5 := fieldOf_le u (g.side w.flip).active (g.side w.flip).bench
+  have i6 := stadiumStatics_le u g.stadium
+  have i7 := PlayerState.csum_inPlay_le (Card.gain u) g.cur
+  have i8 := PlayerState.csum_inPlay_le (Card.gain u) g.opp
+  have i9 := GameState.csum_allCards (Card.gain u) g
+  simp only [GameState.inForce, PlayerState.field] at i1 ⊢
+  cases w <;> simp only [GameState.side, Whose.flip] at i1 i3 i4 i5 ⊢ <;> omega
 
 /-- **Derived HP is bounded by the cards of the game** (milestone M6): every Pokémon in play has HP
 at most `hpBound g.allCards`. -/
@@ -827,19 +834,8 @@ theorem GameState.hpOf_le_hpBound {g : GameState} {w : Whose} {sp : Spot} {p : I
     rw [csum_one] at e3
     cases w <;> simp only [GameState.side] at e1 e2 <;> omega
   -- the units of the effects in force
-  have hunits : sumOf Static.hpUnit (g.inForce w sp p.sv) ≤ 2 * csum Card.hpGain g.allCards := by
-    have i1 := staticsInForce_le (g.side w).field (g.side w.flip).field (stadiumStatics g.stadium)
-      (g.stOwn w) p.sv sp
-    have i2 := p.statics_le
-    have i3 := csum_cardList_le_side Card.hpGain hside
-    have i4 := fieldOf_le (g.side w).active (g.side w).bench
-    have i5 := fieldOf_le (g.side w.flip).active (g.side w.flip).bench
-    have i6 := stadiumStatics_le g.stadium
-    have i7 := PlayerState.csum_inPlay_le Card.hpGain g.cur
-    have i8 := PlayerState.csum_inPlay_le Card.hpGain g.opp
-    have i9 := GameState.csum_allCards Card.hpGain g
-    simp only [GameState.inForce, PlayerState.field] at i1 ⊢
-    cases w <;> simp only [GameState.side, Whose.flip] at i1 i3 i4 i5 ⊢ <;> omega
+  have hunits : sumOf Static.hpUnit (g.inForce w sp p.sv) ≤ 2 * csum Card.hpGain g.allCards :=
+    GameState.inForce_le Static.hpUnit hp
   have hplus : sumOf (Static.hpPlusAt p.sv) (g.inForce w sp p.sv) ≤
       (g.allCards.length + 1) * (2 * csum Card.hpGain g.allCards) := by
     have := sumOf_le_mul (Static.hpPlusAt p.sv) Static.hpUnit (p.energy.length + 1)
@@ -889,9 +885,59 @@ theorem hpBound_le_of {C : List Card} {k : Nat} (hs : ∀ c ∈ C, c.statics = [
       | nil => rfl
       | cons c cs ih =>
           rw [csum_cons, ih fun x hx => hD x (.tail _ hx)]
-          simp only [Card.hpGain, hD c (.head _), sumOf_nil]
+          simp only [Card.hpGain, Card.gain, hD c (.head _), sumOf_nil]
     exact this C hs
   simp only [hpBound, h0, Nat.mul_zero, Nat.add_zero]
   exact maxHp_le hh
+
+/-! ## The bound on static damage reduction -/
+
+/-- The reduction a static effect can give, against any attacker. -/
+def Static.reduceUnit (s : Static) : Nat :=
+  match s.eff with
+  | .reduce n _ => n
+  | _ => 0
+
+theorem Static.reduceFrom_le (a : PokemonCard) (s : Static) : s.reduceFrom a ≤ s.reduceUnit := by
+  unfold Static.reduceFrom Static.reduceUnit
+  split
+  · split
+    · exact Nat.le_refl _
+    · exact Nat.zero_le _
+  · exact Nat.zero_le _
+
+/-- **The static reduction bound of a list of cards**: twice the sum of the `reduce` constants of
+the cards' static effects. The static damage reduction in force is at most this
+(`GameState.sReduce_le`): every source is a card of the game, and reaches the defender at most
+twice. It enters `Enum.bound`, so that a static reduction cannot break the capped clamp
+(`dealtBy_cap_reduce`). -/
+def sReduceBound (C : List Card) : Nat := 2 * csum (Card.gain Static.reduceUnit) C
+
+/-- **The static damage reduction is bounded by the cards of the game.** -/
+theorem GameState.sReduce_le (g : GameState) : g.sReduce ≤ sReduceBound g.allCards := by
+  unfold GameState.sReduce sReduceBound
+  split
+  · next a d ha hd =>
+      have h1 := sumOf_le_mul (Static.reduceFrom a.top) Static.reduceUnit 1
+        (fun s => by rw [Nat.one_mul]; exact Static.reduceFrom_le a.top s)
+        (g.inForce .opp .active d.sv)
+      have h2 := GameState.inForce_le Static.reduceUnit (g := g) (w := .opp) (sp := .active) hd
+      omega
+  · exact Nat.zero_le _
+
+theorem sReduceBound_perm {C D : List Card} (h : C.Perm D) : sReduceBound C = sReduceBound D := by
+  simp only [sReduceBound, csum_perm _ h]
+
+/-- A card list with no static effect has no static reduction bound. -/
+theorem sReduceBound_noStatics {C : List Card} (hs : ∀ c ∈ C, c.statics = []) :
+    sReduceBound C = 0 := by
+  have : ∀ D : List Card, (∀ c ∈ D, c.statics = []) → csum (Card.gain Static.reduceUnit) D = 0 := by
+    intro D hD
+    induction D with
+    | nil => rfl
+    | cons c cs ih =>
+        rw [csum_cons, ih fun x hx => hD x (.tail _ hx)]
+        simp only [Card.gain, hD c (.head _), sumOf_nil]
+  simp only [sReduceBound, this C hs]
 
 end Pokemon

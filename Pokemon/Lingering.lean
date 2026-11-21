@@ -21,10 +21,10 @@ turn is in effect in that turn, one for the turn after is in effect two turns on
 the rest of the game stays. The between-turns phase and `startTurn` belong to the new turn.
 
 What is proved about finiteness.
-* For decks whose cards are *tame* (no damage reduction, no `drain`) and a start with no damage
-  reduction in effect, the damage bonus can be capped: the clamp `GameState.clamp k`, which caps
-  every bonus at `2 * k` with `k = bound` (more than every printed HP, Resistance and test
-  constant in the cards), is a bisimulation (`Move.clamp_sim`, `Reach.clamp_sim`, under `GameState.Fit k`; `Fit` holds
+* For decks whose cards are *tame* (no stored damage reduction, no `drain`) and a start with no
+  damage reduction stored, the damage bonus can be capped: the clamp `GameState.clamp k`, which caps
+  every bonus at `2 * k` with `k = bound` (more than every derived HP, every Resistance plus the
+  static damage reduction bound, and every test constant in the cards), is a bisimulation (`Move.clamp_sim`, `Reach.clamp_sim`, under `GameState.Fit k`; `Fit` holds
   at `bound` by `GameState.fit_bound`), and the clamps of the reachable states lie in a finite
   list (`Reach.finite` states both; the list half alone, `Reach.clamp_mem`, holds for every deck
   but says nothing about play without `Fit`). The reason: a bonus is read only by the damage

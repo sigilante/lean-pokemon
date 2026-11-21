@@ -15,8 +15,8 @@ restated the clamps with a bound on derived HP. For a game none of whose cards h
 * `hpBound_noStatics`, `Enum.bound_noStatics`: the bound is the one before M6 (largest printed
   HP, plus Resistance and test constants);
 * `GameState.NoStatics.hpLe_iff`: `HpLe k` is the condition before M6 (every printed HP and
-  Resistance at most `k`), and `GameState.NoStatics.staticTame`: the new clause of `Fit` holds;
-* `GameState.fit_bound_noStatics`: `GameState.fit_bound` with the hypotheses it had before M6.
+  Resistance at most `k`), and `GameState.NoStatics.reduceLe`: the clause `ReduceLe k` that M6 added
+  to `Fit` follows from `HpLe k`. (`GameState.fit_bound` has the hypotheses it had before M6.)
 -/
 
 namespace Pokemon
@@ -24,8 +24,10 @@ namespace Pokemon
 theorem Reach.noStatics {g₀ g : GameState} (h : Reach g₀ g) (h₀ : g₀.NoStatics) : g.NoStatics :=
   h₀.of_perm h.perm
 
-theorem GameState.NoStatics.staticTame {g : GameState} (h : g.NoStatics) : g.StaticTame :=
-  fun c hc s hs => by rw [h c hc] at hs; nomatch hs
+/-- With no static effects, `ReduceLe k` is the Resistance half of `HpLe k`. -/
+theorem GameState.NoStatics.reduceLe {g : GameState} (h : g.NoStatics) {k : Nat} (hk : g.HpLe k) :
+    g.ReduceLe k :=
+  fun p hp => by rw [sReduceBound_noStatics h, Nat.add_zero]; exact hk.2 p hp
 
 theorem GameState.NoStatics.plain {g : GameState} (h : g.NoStatics) : g.Plain := by
   refine ⟨fun u e he => ?_, ?_⟩
@@ -86,7 +88,7 @@ theorem hpBound_noStatics {C : List Card} (h : ∀ c ∈ C, c.statics = []) : hp
 /-- With no static effects, `Enum.bound` is its definition before milestone M6. -/
 theorem Enum.bound_noStatics {C : List Card} (h : ∀ c ∈ C, c.statics = []) :
     Enum.bound C = maxHp C + maxResist C + cardsTmax C + 1 := by
-  simp only [Enum.bound, hpBound_noStatics h]
+  simp only [Enum.bound, hpBound_noStatics h, sReduceBound_noStatics h, Nat.add_zero]
 
 /-- With no static effects, `HpLe k` is its definition before milestone M6. -/
 theorem GameState.NoStatics.hpLe_iff {g : GameState} (h : g.NoStatics) {k : Nat} :
@@ -95,11 +97,5 @@ theorem GameState.NoStatics.hpLe_iff {g : GameState} (h : g.NoStatics) {k : Nat}
   constructor
   · exact fun hh p hp => ⟨Nat.le_trans (hp_le_maxHp hp) hh.1, hh.2 p hp⟩
   · exact fun hh => ⟨maxHp_le fun p hp => (hh p hp).1, fun p hp => (hh p hp).2⟩
-
-/-- `GameState.fit_bound` with the hypotheses it had before milestone M6, for a deck without
-static effects. -/
-theorem GameState.fit_bound_noStatics {g₀ : GameState} (ht : ∀ x ∈ g₀.allCards, x.tame = true)
-    (hn : g₀.NoReduce) (hs : g₀.NoStatics) : g₀.Fit (Enum.bound g₀.allCards) :=
-  GameState.fit_bound ht hn hs.staticTame
 
 end Pokemon
