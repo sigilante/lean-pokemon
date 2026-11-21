@@ -20,3 +20,30 @@ jobs:
       - name: Axiom gate
         shell: bash
         run: ./scripts/audit.sh build.log
+  # The generated card library (PokemonCards, not a default target), built after the main build so
+  # that a model change that breaks the imported terms or their Lean-checked properties fails CI.
+  # This job rebuilds the model (jobs share no build output) and then the library, and gates on the
+  # library's own audit line.
+  cards:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install elan
+        shell: bash
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Build the model
+        shell: bash
+        run: |
+          set -o pipefail
+          lake build 2>&1 | tee build.log
+      - name: Build the card library
+        shell: bash
+        run: |
+          set -o pipefail
+          lake build PokemonCards 2>&1 | tee cards.log
+      - name: Axiom gate (card library)
+        shell: bash
+        run: ./scripts/audit.sh cards.log PokemonCards/Audit.lean
