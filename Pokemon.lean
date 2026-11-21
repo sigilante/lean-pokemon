@@ -31,4 +31,6 @@ import Pokemon.NoStadiums
 import Pokemon.Stadiums
 import Pokemon.Tools
 import Pokemon.LoopFreeNeeded
+import Pokemon.StaticWitness
+import Pokemon.NoStatics
 import Pokemon.Audit
