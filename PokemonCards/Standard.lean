@@ -1,7 +1,7 @@
 /-
 The imported Standard cards: the list, the cards not imported, and the set-level checks.
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.3.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.3.1
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -1155,6 +1155,16 @@ theorem pool_size : all.length + notImported.length = 2161 := by decide +kernel
 theorem all_ok : all.all Card.importOk = true := by
   simp only [all, List.all_append, Part01.cards_ok, Part02.cards_ok, Part03.cards_ok, Part04.cards_ok, Part05.cards_ok, Part06.cards_ok, Part07.cards_ok, Part08.cards_ok, Bool.and_self]
 
+/-- **No imported card is inert.** No imported Stadium or Tool is a card the model plays with no
+effect (`Card.inert`): every imported Stadium has an effect the model expresses, every imported Tool
+gives an attack or an Ability. (Static and triggered Stadium and Tool text, which the model would
+play as inert, is refused by the importer.) -/
+theorem notInert : ∀ c ∈ all, c.inert = false := by
+  have h : all.all (fun c => !c.inert) = true := by
+    simp only [all, List.all_append, Part01.cards_notInert, Part02.cards_notInert, Part03.cards_notInert, Part04.cards_notInert, Part05.cards_notInert, Part06.cards_notInert, Part07.cards_notInert, Part08.cards_notInert, Bool.and_self]
+  intro c hc
+  simpa using List.all_eq_true.1 h c hc
+
 /-- No card of part 1 is the same term as a card of part 2. -/
 theorem cross_1_2 : crossOk Part01.cards Part02.cards = true := by decide +kernel
 
@@ -1253,28 +1263,33 @@ theorem writers : (all.filter Card.writesAmt).map Card.label = ["Seedot", "Grotl
 /-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/
 theorem lingerers : (all.filter Card.lingers).map Card.label = ["Seedot", "Breloom", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Azumarill", "Golett", "Tranquill", "Torkoal", "Crawdaunt", "Finizen", "Luxio", "Kilowattrel", "Nosepass", "Whirlipede", "Sneasel", "Golbat", "Varoom", "Lileep", "Turtonator", "Electivire", "Drifloon", "Tornadus", "Xerneas", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Pyroar", "Heatran", "Shelmet", "Blaziken ex", "Lombre", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Escavalier", "Hop's Corviknight", "Shelgon", "Oinkologne", "Clamperl", "Floatzel", "Skarmory", "Steven's Metang", "Virizion", "Frillish", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Genesect ex", "Fraxure", "Bulbasaur", "Exeggutor", "Stonjourner", "Yveltal", "Gliscor", "Bronzor", "Erika's Weepinbell", "N's Vanillish", "Stunfisk ex", "Carkol", "Hoopa", "Registeel ex", "Larry's Braviary", "Spinarak", "Ariados", "Aegislash", "Flaaffy", "Donphan", "Metang", "Rampardos ex", "Toxtricity", "Cosmoem", "Mega Golisopod ex", "Onix", "Nidoqueen", "Jangmo-o", "Fletchinder"] := by decide +kernel
 
-/-- The imported Trainers that are not Supporters and write a bonus or reduction (`Card.wAmt`), the
-cards clause 3 (a) of `Faithful` forbids Trainers to recycle, by name. -/
+/-- The imported Items that write a bonus or reduction (`Card.wAmt`), the cards clause 3 (a) of
+`Faithful` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/
 theorem nonSupporterWriters : (all.filter fun c => c.wAmt != 0).map Card.label = [] := by decide +kernel
 
-/-- The imported Trainers that write a rest-of-game bonus or reduction (`Card.alAmt`), by name. -/
+/-- The imported Items and Supporters that write a rest-of-game bonus or reduction (`Card.alAmt`), by
+name. -/
 theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = [] := by decide +kernel
 
-/-- The imported Pokémon whose Ability writes a lingering damage bonus or reduction, by name. -/
+/-- The imported cards with (or, a Tool, giving) an Ability that writes a lingering damage bonus or
+reduction, by name. -/
 theorem abilityWriters : (all.filter Card.abilityWrites).map Card.label = [] := by decide +kernel
 
-/-- The imported Pokémon whose Ability writes any lingering modifier, by name. -/
+/-- The imported cards with (or giving) an Ability that writes any lingering modifier, by name. -/
 theorem abilityLingerers : (all.filter Card.abilityLingers).map Card.label = [] := by decide +kernel
 
-/-- The imported Pokémon with an "as often as you like" Ability (`AbilityUse.unlimited`), by name. -/
+/-- The imported cards with (or giving) an "as often as you like" Ability (`AbilityUse.unlimited`), by
+name. -/
 theorem unlimitedAbilities : (all.filter Card.hasUnlimited).map Card.label = ["Emboar", "Mega Venusaur ex", "Azumarill ex", "Dewgong"] := by decide +kernel
 
-/-- The imported Pokémon with an Ability that can return a card from a discard pile, by name. -/
+/-- The imported cards with (or giving) an Ability that can return a card from a discard pile, by
+name. -/
 theorem abilityRecyclers : (all.filter Card.abilityRecycles).map Card.label = ["Arven's Greedent"] := by decide +kernel
 
 /-- The imported cards whose effects a player can resolve again and again in one turn and that can
-return a card from a discard pile (`Card.freeRec`: Trainers and "as often as you like" Abilities), by
-name: the recyclers clause 3 (a) of `Faithful` constrains. -/
+return a card from a discard pile (`Card.freeRec`: Items, Supporters and "as often as you like"
+Abilities; not Stadiums, whose uses are bounded per turn), by name: the recyclers clause 3 (a) of
+`Faithful` constrains. -/
 theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label = ["Night Stretcher", "Miracle Headset", "Max Rod", "Energy Recycler", "Sacred Ash", "Energy Retrieval", "Tarragon"] := by decide +kernel
 
 /-- Clause 3 of `Faithful` over the whole imported pool, decided. -/
@@ -1290,8 +1305,12 @@ theorem recycleSafe (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.R
 theorem abilitySafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.AbilitySafe :=
   fun x hx => abilitySafe_of all_ok x (hg x hx)
 
-/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly`,
-`RecycleSafe` and `AbilitySafe`), so `Faithful.xfinite` applies to it. -/
+/-- Clause 5 (`StadiumSafe`) for every game whose cards are all imported cards. -/
+theorem stadiumSafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.StadiumSafe :=
+  fun x hx => stadiumSafe_of all_ok x (hg x hx)
+
+/-- **Every game whose cards are all imported cards is `Faithful`** (all five clauses: `LoopFree`,
+`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `Faithful.xfinite` applies to it. -/
 theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=
   faithful_of all_ok recSafe g hg
 
@@ -1303,19 +1322,20 @@ theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :
         (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) :=
   Faithful.xfinite (faithful g₀ hg)
 
-/-- Every imported attack is well formed (`Attack.wf`, required by `Move.attack`). -/
-theorem attacks_wf : ∀ c ∈ all, ∀ p, c = .pokemon p → ∀ a ∈ p.attacks, a.wf = true :=
+/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by
+`Move.attack`). -/
+theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=
   attacks_wf_of all_ok
 
-/-- Every imported Trainer effect is `hitFree` and `benchHitFree` (required by `Move.item` and
-`Move.supporter`). -/
+/-- Every imported Trainer effect is `hitFree` and `benchHitFree` (required by `Move.item`,
+`Move.supporter` and, for a Stadium's effect, `Move.stadiumUse`). -/
 theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e, c = .trainer n k e →
     e.hitFree = true ∧ e.benchHitFree = true :=
   trainers_of all_ok
 
-/-- Every script of every imported Ability has no attack damage step and no attack damage to the
-Bench (premises of `Move.ability` and `Move.onPlay`). -/
-theorem abilities_hitFree : ∀ p, Card.pokemon p ∈ all → ∀ ab ∈ p.abilities, ∀ e ∈ ab.scripts,
+/-- Every script of every Ability an imported card has or (a Tool) gives has no attack damage step
+and no attack damage to the Bench (premises of `Move.ability` and `Move.onPlay`). -/
+theorem abilities_hitFree : ∀ c ∈ all, ∀ ab ∈ c.abilities, ∀ e ∈ ab.scripts,
     e.hitFree = true ∧ e.benchHitFree = true :=
   abilities_of all_ok
 
@@ -1326,9 +1346,13 @@ theorem abilitySafe : ∀ c ∈ all, c.abilitySafe = true := abilitySafe_of all_
 /-- Every imported card satisfies clause 1 of `Faithful` (`Card.loopFree`, Ability scripts included). -/
 theorem loopFree : ∀ c ∈ all, c.loopFree = true := loopFree_of all_ok
 
-/-- `GXOnly` over the imported pool: no imported attack that is not a GX attack writes a
-rest-of-game bonus or reduction (no imported attack is a GX attack). -/
-theorem gxOnly : ∀ p, Card.pokemon p ∈ all → ∀ atk ∈ p.attacks, atk.gx = false →
+/-- Every imported card satisfies clause 5 of `Faithful` (`Card.stadiumSafe`): no imported Stadium's
+effect writes a rest-of-game bonus or reduction. -/
+theorem stadiumSafe : ∀ c ∈ all, c.stadiumSafe = true := stadiumSafe_of all_ok
+
+/-- `GXOnly` over the imported pool: no attack an imported card has or gives that is not a GX attack
+writes a rest-of-game bonus or reduction (no imported attack is a GX attack). -/
+theorem gxOnly : ∀ c ∈ all, ∀ atk ∈ c.attacks, atk.gx = false →
     atk.effect.amtAt .always = 0 :=
   gxOnly_of all_ok
 

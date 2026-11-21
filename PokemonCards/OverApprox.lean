@@ -18,15 +18,17 @@ to a wider set of Pokémon), and these terms are not translations of the printed
 pool (`Standard.all`) does not contain them.
 
 `recSafe_withOverItems` says clause 3 of `Faithful` (`RecycleSafe`, through `recSafeB`) still holds
-for the imported pool with the two terms added. Clause 3 asks that no Trainer and no "as often as you
-like" Ability (`Card.freeRec`) recycle a non-Supporter writer, and that nothing, attacks and
-Abilities included (`Card.allRec`), recycle a rest-of-game writer; these two terms are Items writing
-for this turn or the next. Since the importer translates Abilities (version 0.3.0) the pool has
-Ability recyclers and "as often as you like" Abilities, so the check covers them: no recycling
-filter of a Trainer or of an "as often as you like" Ability of the imported pool admits either Item
-(`Standard.freeRecyclers` lists the cards those filters come from). `faithful_withOverItems` adds the
-per-card checks and gives all four clauses for every game whose cards come from the pool with the
-two terms added. It is evidence that a recycling loop through these two Items needs a recycler
+for the imported pool with the two terms added. Clause 3 asks that no Item or Supporter and no "as
+often as you like" Ability (`Card.freeRec`) recycle an Item that writes a bonus or reduction
+(`Card.wAmt`), and that nothing, attacks, Abilities and Stadium effects included (`Card.allRec`),
+recycle a rest-of-game writer; these two terms are Items writing for this turn or the next. Since the
+importer translates Abilities (version 0.3.0) the pool has Ability recyclers and "as often as you
+like" Abilities, so the check covers them: no recycling filter of an Item, a Supporter or an "as often
+as you like" Ability of the imported pool admits either Item (`Standard.freeRecyclers` lists the cards
+those filters come from). Since milestone M5 a Stadium's effect is not a free recycler (its uses are
+at most two in a turn, `Card.stQ`), so clause 3 (a) does not ask it to leave the two Items alone.
+`faithful_withOverItems` adds the per-card checks and gives all five clauses for every game whose
+cards come from the pool with the two terms added. It is evidence that a recycling loop through these two Items needs a recycler
 outside the imported pool: whether a filter admits a Trainer card depends only on the card's name
 and kind (`Filter.eval`), which the over-approximated terms share with the printed cards. It is NOT
 evidence that today's Standard satisfies `RecycleSafe` (refused recyclers and Abilities, Tools and
@@ -59,7 +61,7 @@ theorem recSafe_withOverItems :
 theorem overItems_ok : [ironDefenderOver, premiumPowerProOver].all Card.importOk = true := by
   decide +kernel
 
-/-- **Probe, over-approximated, all four clauses.** Every game whose cards come from the imported
+/-- **Probe, over-approximated, all five clauses.** Every game whose cards come from the imported
 pool and the two over-approximated Items is `Faithful`, so `Faithful.xfinite` applies to it. -/
 theorem faithful_withOverItems (g : GameState)
     (hg : ∀ x ∈ g.allCards, x ∈ Standard.all ++ [ironDefenderOver, premiumPowerProOver]) :

@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 5 of 8 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.3.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.3.1
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -1976,6 +1976,10 @@ def cards : List Card := [
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
+
+/-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a
+Tool that gives nothing). -/
+theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel
 
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
 theorem cards_nodup : nodupFp cards = true := by decide +kernel
