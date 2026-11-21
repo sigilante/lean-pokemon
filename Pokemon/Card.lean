@@ -843,7 +843,13 @@ inductive SAmt where
 * `reduce n fr`: the affected Pokémon takes `n` less damage from attacks of Pokémon whose top card
   passes `fr`; subtracted at step 5, with the defender's stored reduction;
 * `retreatPlus n`, `retreatMinus n`: its Retreat Cost is `n` more or `n` less, stopping at 0
-  (`GameState.retreatOf`; Air Balloon "−2", Gravity Gemstone "+1"). -/
+  (`GameState.retreatOf`; Air Balloon "−2", Gravity Gemstone "+1");
+* `prevent fr` (milestone MV3): "Prevent all damage done to this Pokémon by attacks from your
+  opponent's Pokémon ex" (Sylveon sv8pt5-40: `fr = ex`); damage to the affected Pokémon in the
+  Active Spot from attacks of Pokémon whose top card passes `fr` is 0 (step 5 of the damage
+  calculation, with the defender's other effects; `GameState.sPrevent`). A flag, not an amount: it
+  is read, never stored, and an attack whose damage "isn't affected by any effects on your
+  opponent's Active Pokémon" (`Ign.fx`) is not prevented. -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -851,6 +857,7 @@ inductive SEff where
   | reduce (n : Nat) (fr : Filter)
   | retreatPlus (n : Nat)
   | retreatMinus (n : Nat)
+  | prevent (fr : Filter)
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative

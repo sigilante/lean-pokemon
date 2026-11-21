@@ -66,26 +66,37 @@ theorem GameState.dealt_le_dealtI (g : GameState) (n : Nat) {ig : Ign} (hw : ig.
   have hr : cond ig.resist 0 g.resist ≤ g.resist := by cases ig.resist <;> simp
   unfold GameState.dealtI GameState.dealt
   rw [hw]
-  refine Nat.le_trans (dealtBy_resist_anti hr _ _) ?_
-  cases ig.fx
-  · exact Nat.le_refl _
-  · exact dealtBy_le_empty _ _ _ _ _ _
+  cases hf : ig.fx
+  · simp only [Bool.cond_false]
+    split
+    · exact Nat.le_refl _
+    · exact dealtBy_resist_anti hr _ _
+  · simp only [Bool.cond_true, Bool.false_eq_true, ↓reduceIte]
+    split
+    · exact Nat.zero_le _
+    · exact Nat.le_trans (dealtBy_le_empty _ _ _ _ _ _) (dealtBy_resist_anti hr _ _)
 
 /-- **Switching off Weakness alone never raises the damage.** -/
 theorem GameState.dealtI_le_dealt_weak (g : GameState) (n : Nat) :
     g.dealtI { weak := true } n ≤ g.dealt n := by
-  unfold GameState.dealtI GameState.dealt
-  cases g.weak
+  show (if g.sPrevent then 0 else dealtBy n false g.resist
+      (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce))) ≤
+    (if g.sPrevent then 0 else dealtBy n g.weak g.resist
+      (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce)))
+  split
   · exact Nat.le_refl _
-  · exact Calc.dealtBy_le_weak _ _ _ _
+  · cases g.weak
+    · exact Nat.le_refl _
+    · exact Calc.dealtBy_le_weak _ _ _ _
 
 /-- With step 5 off, the damage is at most the unreduced value: the attacker's bonus applied,
-Weakness as the flag says, no Resistance and nothing on the defender. -/
+Weakness as the flag says, no Resistance and nothing on the defender (no prevention either). -/
 theorem GameState.dealtI_le_open (g : GameState) (n : Nat) {ig : Ign} (hf : ig.fx = true) :
     g.dealtI ig n ≤ dealtBy n (cond ig.weak false g.weak) 0
       (g.cur.mods.add .always (.bonus g.sBonus)) Store.empty := by
   unfold GameState.dealtI
   rw [hf]
+  simp only [Bool.cond_true, Bool.false_eq_true, ↓reduceIte]
   exact dealtBy_resist_anti (Nat.zero_le _) _ _
 
 namespace Ignore

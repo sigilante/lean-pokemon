@@ -306,7 +306,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   and Resistance)", "… less damage … (after applying Weakness and Resistance)", survey S9);
   modifiers that name the other step are not expressible. An attack whose damage "isn't affected
   by any effects on your opponent's Active Pokémon" (milestone MV3, `Ign.fx`) reads the defender's
-  store as empty and its static reduction as 0: no reduction and no prevention apply to it. Absent: threshold
+  store as empty and its static reduction as 0: no reduction and no prevention apply to it. Static
+  damage prevention by a filter on the attacker (milestone MV3, `SEff.prevent`, "Prevent all damage
+  done to this Pokémon by attacks from your opponent's Pokémon ex") is read at step 5 with the
+  defender's other effects (`GameState.sPrevent`); it is never stored, and prevented damage fires
+  no `damaged` trigger (`Prevent.prevented_quiet`). Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, effects that change Weakness,
   Resistance or type (other than the Coloring counter), "attack twice" and "take another turn",
@@ -552,8 +556,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   triggered or conditional); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort; Tools 2:
   Air Balloon, Gravity Gemstone; Rescue Board reads the remaining HP and is not expressible). These
   counts are a regular-expression classification of the card data by kind (milestone M6), not a
-  card-by-card check of every condition. Absent kinds, for a later milestone: damage prevention
-  (Battle Cage, Neutralization Zone); attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
+  card-by-card check of every condition. Since milestone MV3 damage prevention by a filter on the
+  attacker is expressed (`SEff.prevent`: Neutralization Zone, without its "can't be put into your
+  hand or deck" rider; on Abilities Sylveon sv8pt5-40, Crustle sv10-12, Farigiraf ex sv5-108,
+  Cornerstone Mask Ogerpon ex ×2; survey S15 §3), for the Active Pokémon only (Bench damage takes no
+  modifier). Absent kinds, for a later milestone: other damage prevention (Battle Cage's counters on
+  the Bench; prevention on the Bench, 7 cards; thresholds, Drednaw sv7-44), prevention of effects (8)
+  and Special Condition immunity (Hoothoot, Festival Grounds ×2); attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
   Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no
   Abilities": Stadiums 2, Legendary Pyroduct, Team Rocket's Watchtower); Tool locks (Stadiums 2:
   Jamming Tower ×2); Special Condition rules (Stadiums 3: Dizzying Valley, Festival Grounds ×2;
@@ -606,7 +615,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage bonus and reduction, Retreat Cost; a regular-expression count of today's Standard by kind:
   about 5 HP, 13 bonus, 17 reduction and 11 Retreat Cost Abilities, of which those with conditions
   beyond a top-card filter, a place or an Energy count are not expressible); it is never used.
-  Absent: other static (passive) Abilities (immunities, locks, cost changes and the like, about 57
+  Since milestone MV3 a static Ability may also prevent damage from attackers passing a filter
+  (`SEff.prevent`, above). Absent: other static (passive) Abilities (other immunities, locks, cost changes and the like, about 57
   in today's Standard by the same count), triggered Abilities other than on-play ones and the two
   shapes of milestone M8b (survey S12: Checkup 5, moving between spots 8, attaching Energy 2, the
   opponent's plays 6, end of turn 1, replacement effects 14, Knock Outs of other Pokémon or with

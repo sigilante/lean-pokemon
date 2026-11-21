@@ -447,19 +447,22 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
         rw [h] at ha₂
         obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
         refine ⟨_, .damage (ig := ig) hv₂ rfl, ?_⟩
+        have hcap : min (GameState.dealtI ig n { g with
+                cur := { g.cur with active := c₂, bench := e₁, mods := m₁ },
+                opp := { g.opp with active := some q, bench := e₂, mods := m₂ } }) k =
+            min (g.dealtI ig n) k := by
+          simp only [GameState.dealtI, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce, hsf.sPrevent]
+          rcases Bool.eq_false_or_eq_true (cond ig.fx false g.sPrevent) with hc | hc <;>
+            simp only [hc, ↓reduceIte, Bool.false_eq_true]
+          exact dealtBy_cap_ign hk0 (Store.cap_add hm₁ _ _) hm₂ hn.2 n _ ig.fx hr
         have hq' : InPlay.Agree k (.upto k)
-            { q with damage := q.damage + (dealtBy n (cond ig.weak false g.weak)
-                (cond ig.resist 0 g.resist) (m₁.add .always (.bonus g.sBonus))
-                ((cond ig.fx Store.empty m₂).add .always (.reduce (cond ig.fx 0 g.sReduce)))) }
-            { p with damage := p.damage + (dealtBy n (cond ig.weak false g.weak)
-                (cond ig.resist 0 g.resist) (g.cur.mods.add .always (.bonus g.sBonus))
-                ((cond ig.fx Store.empty g.opp.mods).add .always
-                  (.reduce (cond ig.fx 0 g.sReduce)))) } :=
+            { q with damage := q.damage + GameState.dealtI ig n { g with
+                cur := { g.cur with active := c₂, bench := e₁, mods := m₁ },
+                opp := { g.opp with active := some q, bench := e₂, mods := m₂ } } }
+            { p with damage := p.damage + g.dealtI ig n } :=
           ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
-            hq.marks, hq.used, hq.dmg_add_upto (dealtBy_cap_ign hk0 (Store.cap_add hm₁ _ _) hm₂
-              hn.2 n _ ig.fx hr), hq.poisonUp, hq.movedUp⟩
-        simp only [GameState.rclamp, GameState.clampAt, GameState.dealtI, hwr.1, hwr.2, hsf.sBonus,
-          hsf.sReduce, Option.map_some, hc₂, hm₁, hm₂,
+            hq.marks, hq.used, hq.dmg_add_upto hcap, hq.poisonUp, hq.movedUp⟩
+        simp only [GameState.rclamp, GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
           InPlay.clamp_of_agree hq', he₁, he₂]
       · obtain ⟨n₂, hv₂⟩ := hv.transfer fun w p' hp' => by
           obtain ⟨q', hq', -⟩ := GameState.activeOf_rclamp hc w p' hp'

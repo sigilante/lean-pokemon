@@ -210,6 +210,21 @@ def GameState.sReduce (g : GameState) : Nat :=
   | some a, some d => sumOf (Static.reduceFrom a.top) (g.inForce .opp .active d.sv)
   | _, _ => 0
 
+/-- Does a static effect on a defender prevent the damage of an attacker whose top card is `a`?
+(milestone MV3, `SEff.prevent`) -/
+def Static.preventsFrom (a : PokemonCard) (s : Static) : Bool :=
+  match s.eff with
+  | .prevent fr => fr.eval (.pokemon a)
+  | _ => false
+
+/-- **Static damage prevention** (milestone MV3): some `prevent` effect in force on the opponent's
+Active Pokémon passes the player's Active Pokémon's top card; false if either Active Spot is empty.
+It is step 5 of the damage calculation, with the defender's other effects (`GameState.dealt`). -/
+def GameState.sPrevent (g : GameState) : Bool :=
+  match g.cur.active, g.opp.active with
+  | some a, some d => (g.inForce .opp .active d.sv).any (Static.preventsFrom a.top)
+  | _, _ => false
+
 /-- **The Retreat Cost** (milestone M6) of the player's Active Pokémon `a`: printed, plus every
 `retreatPlus` in force, less every `retreatMinus` in force (stopping at 0). It reads no HP, so the
 circular case of survey S7 (an HP bonus keyed to the Retreat Cost with a Retreat Cost keyed to the
@@ -230,17 +245,21 @@ with its stored bonus at step 2, the defender's static reduction (`sReduce`) sub
 stored reduction at step 5 (as rest-of-game amounts of a copy of the stores, so `dealtBy` is
 unchanged). Weakness and Resistance apply to the Active Pokémon only ("Don't apply Weakness and
 Resistance for Benched Pokémon!", p. 14); attack damage to Benched Pokémon (`InPlay.hitBench`,
-milestone M3) skips the calculation. -/
+milestone M3) skips the calculation. Since milestone MV3 a static prevention in force on the defender
+against the attacker (`GameState.sPrevent`, `SEff.prevent`) makes it 0, as stored prevention does. -/
 def GameState.dealt (n : Nat) (g : GameState) : Nat :=
+  if g.sPrevent then 0 else
   dealtBy n g.weak g.resist (g.cur.mods.add .always (.bonus g.sBonus))
     (g.opp.mods.add .always (.reduce g.sReduce))
 
 /-- **The damage calculation with steps switched off** (milestone MV3, `Ign`): as `GameState.dealt`,
 with no Weakness if `ig.weak` (step 3), no Resistance if `ig.resist` (step 4), and, if `ig.fx`, none
 of the effects on the Defending Pokémon (step 5): its stored modifiers are read as the empty store
-and its static reduction as 0. The attacker's bonuses (step 2) are always applied. `dealtI {}` is
+and its static reduction as 0, and no static prevention applies. The attacker's bonuses (step 2)
+are always applied. `dealtI {}` is
 `dealt` by definition (`GameState.dealtI_none`). -/
 def GameState.dealtI (ig : Ign) (n : Nat) (g : GameState) : Nat :=
+  if cond ig.fx false g.sPrevent then 0 else
   dealtBy n (cond ig.weak false g.weak) (cond ig.resist 0 g.resist)
     (g.cur.mods.add .always (.bonus g.sBonus))
     ((cond ig.fx Store.empty g.opp.mods).add .always (.reduce (cond ig.fx 0 g.sReduce)))
@@ -325,6 +344,18 @@ theorem GameState.SameField.sBonus {g₁ g₂ : GameState} (h : GameState.SameFi
       reduceCtorEq, Option.some.injEq] at hc ho ⊢
   next a₁ a₂ d₁ d₂ =>
     rw [h.inForce, hc, show d₂.top = d₁.top from congrArg SView.top ho]
+
+theorem GameState.SameField.sPrevent {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
+    g₂.sPrevent = g₁.sPrevent := by
+  have hc := fieldOf_active h.cur
+  have ho := fieldOf_active h.opp
+  unfold GameState.sPrevent
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;> cases h3 : g₁.opp.active <;>
+    cases h4 : g₂.opp.active <;>
+    simp only [h1, h2, h3, h4, Option.map_none, Option.map_some,
+      reduceCtorEq, Option.some.injEq] at hc ho ⊢
+  next a₁ a₂ d₁ d₂ =>
+    rw [h.inForce, ho, show a₂.top = a₁.top from congrArg SView.top hc]
 
 theorem GameState.SameField.sReduce {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
     g₂.sReduce = g₁.sReduce := by
@@ -587,6 +618,15 @@ theorem GameState.sBonus_noStatics {g : GameState} (hn : g.NoStatics) : g.sBonus
 /-- With no static effects, there is no static damage reduction. -/
 theorem GameState.sReduce_noStatics {g : GameState} (hn : g.NoStatics) : g.sReduce = 0 := by
   unfold GameState.sReduce
+  split
+  · next a d ha hd =>
+      rw [g.inForce_noStatics (w := .opp) (sp := .active) hn hd]
+      rfl
+  · rfl
+
+/-- With no static effects, there is no static damage prevention. -/
+theorem GameState.sPrevent_noStatics {g : GameState} (hn : g.NoStatics) : g.sPrevent = false := by
+  unfold GameState.sPrevent
   split
   · next a d ha hd =>
       rw [g.inForce_noStatics (w := .opp) (sp := .active) hn hd]

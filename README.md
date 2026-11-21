@@ -205,7 +205,16 @@ and no new state (`Pokemon/IfDo.lean`): `Effect.mayDo`, `Effect.ifDone` and `Eff
 with an exactness lemma (`Run.mayDo_iff`, `Run.ifDone_iff`, `Run.forUpTo_iff`; for "any amount",
 `Run.forUpTo_complete` with `discardActive_le`); witnesses: Klefki's "Discard a card from your hand.
 If you do, draw 2 cards" as a legal attack that draws, and from an empty hand one that, on every
-resolution, changes nothing.
+resolution, changes nothing. Stage 3 added static damage prevention by a filter on the attacker
+(`SEff.prevent`: "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex"),
+read at step 5 with the defender's other effects and never stored (`GameState.sPrevent`); an attack
+whose damage ignores effects on the defender is not prevented, and prevented damage fires no
+`damaged` trigger (`Pokemon/Prevent.lean`: `prevented_quiet` on every resolution, `pierce_fires`
+for the same defender against `Ign.fx`). Lingering prevention stays per player (`Mod.prevent`).
+Changed definitions: `Effect.damage` (a second field, defaulted), `Run.damage`, `HitAt.damage`,
+`SEff` (a constructor), `GameState.dealt` (0 under static prevention); new `GameState.dealtI`,
+`GameState.sPrevent`. Every theorem statement is unchanged in text; `GameState.dealt_zero` is now
+proved by cases instead of `rfl`.
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the
@@ -242,7 +251,8 @@ statements are now false, `StaticWitness.promotion_rescues_false`,
 `StaticWitness.double_knockOut_lost_false`); for decks without static effects every derived
 quantity is the printed one (`Pokemon/NoStatics.lean`). Not expressible: circular HP (Ditto copying
 HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and its order against
-"+", stacking rules, Bench size, locks and prevention, cost changes and every triggered effect
+"+", stacking rules, Bench size, locks and prevention (static prevention by a filter on the attacker
+came with milestone MV3), cost changes and every triggered effect
 (Known gaps). For that model it proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects

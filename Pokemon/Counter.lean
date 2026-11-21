@@ -604,13 +604,14 @@ theorem dealt_shape {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.N
     g.dealt (n + 1) = (n + 1 + kc.bonus) - ko.reduce := by
   have hb0 : g.sBonus = 0 := g.sBonus_noStatics hns
   have hr0 : g.sReduce = 0 := g.sReduce_noStatics hns
+  have hp0 : g.sPrevent = false := g.sPrevent_noStatics hns
   obtain ⟨p, hp, -⟩ := hs.cur.active
   obtain ⟨p', hp', h1', -⟩ := hs.opp.active
   have hwk : g.weak = false := by
     simp [GameState.weak, hp, hp', PokemonCard.weakTo, h1', hw]
   have hrs : g.resist = 0 := by
     simp [GameState.resist, hp, hp', PokemonCard.resistTo, h1', hr]
-  simp [GameState.dealt, hb0, hr0, dealtBy, hwk, hrs, hs.cur.mods, hs.opp.mods, storeOf,
+  simp [GameState.dealt, hb0, hr0, hp0, dealtBy, hwk, hrs, hs.cur.mods, hs.opp.mods, storeOf,
     Store.live, Mods.merge, Mods.empty]
 
 /-- Base damage 0 does no damage (the rulebook's "Stop if the base damage is 0"). -/
