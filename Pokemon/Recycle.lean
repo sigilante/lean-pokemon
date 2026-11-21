@@ -133,7 +133,8 @@ def red (g : GameState) : Nat := g.cur.mods.next.reduce
 theorem red_xclamp (g : GameState) : red (g.xclamp K) = red g := rfl
 
 /-- **Recycling breaks the store bound** (milestone MV). There is a well-formed start satisfying
-clauses 1 and 2 of `Faithful` (`LoopFree`, `GXOnly`: the whole of `Faithful` before milestone MV)
+clauses 1, 2, 4 and 5 of `Faithful` (`LoopFree`, `GXOnly`: the whole of `Faithful` before milestone
+MV; `AbilitySafe`, `StadiumSafe`, added later and satisfied: the deck has no Ability and no Stadium)
 and violating clause 3 (`RecycleSafe`), whose reachable states have unbounded stores, and whose
 reachable states' `xclamp`s lie in no finite list. The recycling shape is two Items each returning
 the other and the writer `ironDefender` from the discard pile within one turn (see the module
@@ -141,9 +142,10 @@ docstring). So clause 3, or some other condition on recycling, is needed for
 `Faithful.reach_boundedStores` and the finiteness half of `Faithful.xfinite`. -/
 theorem recycling_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ ¬ g₀.RecycleSafe ∧
-      (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
+      g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
       ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
-  refine ⟨st 0, st_wellFormed, st_loopFree, st_gxOnly, st_not_recycleSafe, fun B => ?_, ?_⟩
+  refine ⟨st 0, st_wellFormed, st_loopFree, st_gxOnly, st_not_recycleSafe, by decide, by decide,
+    fun B => ?_, ?_⟩
   · refine ⟨st (6 * (B + 1)), reach_st _, fun hb => ?_⟩
     have := hb.1.2.1.2
     simp only [st, gs, pl, store] at this
