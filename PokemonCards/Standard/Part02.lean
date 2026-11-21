@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 8 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.5.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.6.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,42 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Emolga (sv6-69). Records: sv6-69. Caveats: benchMods. -/
+def sv6_69 : Card := .pokemon
+  { name := "Emolga", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .lightning, retreat := 0, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Sky Wave", cost := [.colorless], damage := 1,
+        effect := .seq (.spreadDamage .own 1) (.spreadDamage .opp 1),
+        gx := false }] }
+
+/-- Helioptile (sv6-70). Records: sv6-70. -/
+def sv6_70 : Card := .pokemon
+  { name := "Helioptile", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Collect", cost := [.colorless], damage := 0,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false },
+      { name := "Static Shock", cost := [.lightning], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Heliolisk (sv6-71). Records: sv6-71, sv6-177. Caveats: recoil. -/
+def sv6_71 : Card := .pokemon
+  { name := "Heliolisk", stage := .stage1, evolvesFrom := some "Helioptile",
+    hp := 10, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Wild Charge", cost := [.lightning], damage := 7,
+        effect := .selfDamage 2,
+        gx := false }] }
 
 /-- Morpeko (sv6-72). Records: sv6-72. -/
 def sv6_72 : Card := .pokemon
@@ -446,6 +482,15 @@ def sv6_147 : Card := .trainer "Cook" .supporter
 /-- Hyper Aroma (sv6-152). Records: sv6-152. Caveats: aceSpec, upTo0. -/
 def sv6_152 : Card := .trainer "Hyper Aroma" .item
     (.seq (.move .own .deck .hand (.stage .stage1) (.upTo 3)) .shuffle)
+
+/-- Lucky Helmet (sv6-158). Records: sv6-158. Caveats: trigDamaged. -/
+def sv6_158 : Card := .tool "Lucky Helmet"
+  { holder := .pokemon,
+    attacks := [],
+    abilities := [
+      { name := "Lucky Helmet", use := .triggered .damaged false,
+        spot := some .active, cond := none,
+        effect := .fx (.move .own (.top 2) .hand .any .all) }] }
 
 /-- Rowlet (sv6pt5-3). Records: sv6pt5-3. -/
 def sv6pt5_3 : Card := .pokemon
@@ -1722,6 +1767,15 @@ def sv7_127 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Deluxe Bomb (sv7-134). Records: sv7-134. Caveats: aceSpec, trigAttacker, trigDamaged. -/
+def sv7_134 : Card := .tool "Deluxe Bomb"
+  { holder := .pokemon,
+    attacks := [],
+    abilities := [
+      { name := "Deluxe Bomb", use := .triggered .damaged false,
+        spot := some .active, cond := none,
+        effect := .fx (.seq (.counters 12) (.discardTools .own .active)) }] }
+
 /-- Gravity Gemstone (sv7-137). Records: sv7-137. -/
 def sv7_137 : Card := .tool "Gravity Gemstone"
   { holder := .pokemon,
@@ -1777,72 +1831,11 @@ def sv8_8 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Shiinotic (sv8-9). Records: sv8-9, sv8-194. -/
-def sv8_9 : Card := .pokemon
-  { name := "Shiinotic", stage := .stage1, evolvesFrom := some "Morelull",
-    hp := 11, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Calming Light", use := .once,
-        spot := some .active, cond := none,
-        effect := .fx (.inflict .asleep) }],
-    attacks := [
-      { name := "Spiral Rush", cost := [.grass, .colorless], damage := 0,
-        effect := .damage (.add (.const 6) (.many (.const 3))),
-        gx := false }] }
-
-/-- Dhelmise (sv8-10). Records: sv8-10. -/
-def sv8_10 : Card := .pokemon
-  { name := "Dhelmise", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .grass, retreat := 3, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rescue Kedge", cost := [.colorless], damage := 0,
-        effect := .move .own .discard .hand .pokemon (.upTo 2),
-        gx := false },
-      { name := "Annihilating Anchor", cost := [.grass, .colorless, .colorless], damage := 0,
-        effect := .seq (.discardTools .opp .active) (.damage (.const 8)),
-        gx := false }] }
-
-/-- Capsakid (sv8-12). Records: sv8-12. -/
-def sv8_12 : Card := .pokemon
-  { name := "Capsakid", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Headbutt Bounce", cost := [.colorless, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Rellor (sv8-13). Records: sv8-13, sv10-24. -/
-def sv8_13 : Card := .pokemon
-  { name := "Rellor", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Collect", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Rollout", cost := [.grass], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Vulpix (sv8-16). Records: sv8-16. Caveats: recoil. -/
-def sv8_16 : Card := .pokemon
-  { name := "Vulpix", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Take Down", cost := [.fire], damage := 3,
-        effect := .selfDamage 1,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_69,
+  sv6_70,
+  sv6_71,
   sv6_72,
   sv6_73,
   sv6_74,
@@ -1878,6 +1871,7 @@ def cards : List Card := [
   sv6_143,
   sv6_147,
   sv6_152,
+  sv6_158,
   sv6pt5_3,
   sv6pt5_6,
   sv6pt5_7,
@@ -1983,16 +1977,12 @@ def cards : List Card := [
   sv7_125,
   sv7_126,
   sv7_127,
+  sv7_134,
   sv7_137,
   sv8_2,
   sv8_5,
   sv8_6,
-  sv8_8,
-  sv8_9,
-  sv8_10,
-  sv8_12,
-  sv8_13,
-  sv8_16]
+  sv8_8]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2026,6 +2016,22 @@ theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ 10)) = true := b
 /-- The static damage reduction units of every card in this part (`Card.reduceGain`) are at most 5
 counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Lucky Helmet", "Deluxe Bomb"] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
+theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
+theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part whose triggered Abilities can return a card from a discard pile (milestone M8b), by name. -/
+theorem cards_trigRecycles : (cards.filter Card.trigRecycles).map Card.label = [] := by decide +kernel
+
+/-- Every triggered Ability of this part has no printed condition and an effect of the trigger
+fragment (`Card.trigsOk`). -/
+theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/

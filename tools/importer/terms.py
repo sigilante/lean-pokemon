@@ -283,6 +283,29 @@ def ability_scripts(ab):
             abeff_compile(None, ab['effect'])]
 
 
+TRIG_EVENTS = {'damaged': ACTIVE, 'koByAttack': None}   # `TrigEvent.place`
+
+
+def trig_ok(e):
+    """`Effect.trigOk` (milestone M8b): the trigger fragment."""
+    h = e[0]
+    if h in ('skip', 'draw', 'counters', 'inflict', 'shuffle', 'drawTo', 'attach', 'putBench', 'moveEnergy',
+             'discardTools'):
+        return True
+    if h == 'move':
+        return e[5][0] != 'exactly'
+    if h == 'discardEnergy':
+        return e[4][0] != 'exactly'
+    if h in ('seq', 'choice'):
+        return trig_ok(e[1]) and trig_ok(e[2])
+    return False
+
+
+def trig_script(ab):
+    """`Ability.script ab ev.place` for a triggered Ability."""
+    return abeff_compile(TRIG_EVENTS[ab['use'][1][0]], ab['effect'])
+
+
 def amt(e):
     return sum(amt_at(s, e) for s in ('now', 'next', 'after', 'always'))
 

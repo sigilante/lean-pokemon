@@ -42,6 +42,14 @@ imported pool has cards with `drain` attacks and with stored damage reductions. 
 of the bound (`reduceLe_bound`), so static reductions do not stand in the way; tameness does.
 For imported decks the theorem that applies is `Faithful.xfinite`, through `faithful_of`.
 
+Triggered Abilities (milestone M8b, importer 0.6.0): `Card.trigsOn`, `Card.hasTrig` list a card's
+triggers by event (`AbilityUse.event`); `Card.trigsOk` checks that each has no printed condition and an
+effect of the trigger fragment at its event's place, so that `Ability.trigOn` is the test of its place
+alone (`trigOn_of_trigsOk`); `Card.trigLingers` and `Card.trigRecycles` find triggers that write a
+lingering modifier or return a card from a discard pile. The five clauses of `Faithful` need no new
+check: a trigger is an Ability, so its scripts are among those `Card.loopFree`, `Card.abilitySafe` and
+`Card.allRec` (clause 3 (b)) already read.
+
 These are facts about the Lean terms; whether a term says what its printed card says is the
 importer's claim, checked by eye in survey S11, not by Lean.
 -/
@@ -111,6 +119,34 @@ def Card.hasUnlimited (c : Card) : Bool := c.abilities.any fun ab => ab.use == .
 (`Effect.recFilters` of one of its scripts). -/
 def Card.abilityRecycles (c : Card) : Bool :=
   c.abilities.any fun ab => ab.scripts.any fun e => !e.recFilters.isEmpty
+
+/-! ### Triggered Abilities (milestone M8b) -/
+
+/-- The triggered Abilities on the event `ev` that the card has or (a Tool) gives (`AbilityUse.event`). -/
+def Card.trigsOn (ev : TrigEvent) (c : Card) : List Ability :=
+  c.abilities.filter fun ab => ab.use.event == some ev
+
+/-- The card has or gives a triggered Ability on `ev`. -/
+def Card.hasTrig (ev : TrigEvent) (c : Card) : Bool := !(c.trigsOn ev).isEmpty
+
+/-- Every triggered Ability the card has or gives has no printed condition (`cond = none`) and resolves an
+effect of the trigger fragment at its event's place (`Effect.trigOk` of `Ability.script ab ev.place`): the two
+conditions under which `Ability.trigOn` holds wherever the Ability's place allows. -/
+def Card.trigsOk (c : Card) : Bool :=
+  c.abilities.all fun ab =>
+    match ab.use.event with
+    | some ev => ab.cond.isNone && (ab.script ev.place).trigOk
+    | none => true
+
+/-- A triggered Ability the card has or gives writes a lingering modifier (bonus, reduction, prevention or
+lock; `Effect.lingers`) in one of its scripts. -/
+def Card.trigLingers (c : Card) : Bool :=
+  c.abilities.any fun ab => ab.use.event.isSome && ab.scripts.any Effect.lingers
+
+/-- A triggered Ability the card has or gives can return a card from a discard pile (`Effect.recFilters` of
+one of its scripts; these filters are among `Card.allRec`, which clause 3 (b) of `Faithful` constrains). -/
+def Card.trigRecycles (c : Card) : Bool :=
+  c.abilities.any fun ab => ab.use.event.isSome && ab.scripts.any fun e => !e.recFilters.isEmpty
 
 /-! ### Static effects (milestone M6) -/
 
@@ -379,6 +415,18 @@ theorem reduceLe_bound (g : GameState) : g.ReduceLe (Enum.bound g.allCards) := f
   have := resist_le_maxResist hp
   simp only [Enum.bound]
   omega
+
+/-- **A checked trigger fires wherever its place allows.** For a triggered Ability of a card that passes
+`Card.trigsOk`, `Ability.trigOn` (the model's test of whether it fires on `ev` for its Pokémon at `sp`) is
+the test of its place alone: no printed condition and no effect outside the fragment silences it. -/
+theorem trigOn_of_trigsOk {c : Card} (h : c.trigsOk = true) {ab : Ability} (hab : ab ∈ c.abilities)
+    {ev : TrigEvent} (he : ab.use.event = some ev) (sp : Spot) :
+    ab.trigOn ev sp = ab.spotOk sp ∧ (ab.script ev.place).trigOk = true := by
+  have h1 := List.all_eq_true.1 h ab hab
+  rw [he] at h1
+  simp only [Bool.and_eq_true] at h1
+  refine ⟨?_, h1.2⟩
+  simp only [Ability.trigOn, he, beq_self_eq_true, Bool.true_and, h1.1, h1.2, Bool.and_true]
 
 /-- **Faithful decks from a checked pool.** If every card of `C` passes `Card.importOk` and
 `recSafeB C` holds, every game whose cards all come from `C` is `Faithful`: `LoopFree`, `GXOnly`,
