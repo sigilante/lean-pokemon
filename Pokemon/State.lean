@@ -58,6 +58,20 @@ def stadiumCards : Option Card → Nat
   | none => 0
   | some _ => 1
 
+/-- The physical cards of an optional Pokémon in play. -/
+def optCardList : Option InPlay → List Card
+  | none => []
+  | some p => p.cardList
+
+/-- The physical cards of a Bench, Pokémon by Pokémon. -/
+def benchCardList : List InPlay → List Card
+  | [] => []
+  | p :: ps => p.cardList ++ benchCardList ps
+
+def stadiumCardList : Option Card → List Card
+  | none => []
+  | some c => [c]
+
 structure PlayerState where
   /-- head of the list is the top of the deck -/
   deck : List Card
@@ -83,6 +97,13 @@ def cards (s : PlayerState) : Nat :=
   s.deck.length + s.hand.length + s.discard.length + s.prizes.length + s.lost.length
     + optCards s.active + benchCards s.bench + stadiumCards s.stadium
 
+/-- Every physical card this player owns, over all zones: deck, hand, discard pile, Prizes,
+Lost Zone, the Active Pokémon and each Benched Pokémon (top card, the cards under it,
+attached Energy and Tools), and the Stadium. -/
+def allCards (s : PlayerState) : List Card :=
+  s.deck ++ s.hand ++ s.discard ++ s.prizes ++ s.lost
+    ++ optCardList s.active ++ benchCardList s.bench ++ stadiumCardList s.stadium
+
 def unfresh (s : PlayerState) : PlayerState :=
   { s with active := s.active.map InPlay.unfresh, bench := s.bench.map InPlay.unfresh }
 
@@ -102,6 +123,9 @@ structure GameState where
   winner : Option Bool
 
 def GameState.cards (g : GameState) : Nat := g.cur.cards + g.opp.cards
+
+/-- Every physical card in the game, in both players' zones. -/
+def GameState.allCards (g : GameState) : List Card := g.cur.allCards ++ g.opp.allCards
 
 def benchLimit : Nat := 5
 

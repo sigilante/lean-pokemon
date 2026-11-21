@@ -14,9 +14,11 @@ namespace Pokemon
 inductive EType where
   | grass | fire | water | lightning | psychic | fighting
   | darkness | metal | fairy | dragon | colorless
+  deriving DecidableEq
 
 inductive Stage where
   | basic | stage1 | stage2
+  deriving DecidableEq
 
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
 `iter` covers "flip until tails" and "as often as you like". -/
@@ -38,6 +40,7 @@ inductive Effect where
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
+  deriving DecidableEq
 
 structure Attack where
   name : String
@@ -45,6 +48,7 @@ structure Attack where
   /-- base damage, in counters -/
   damage : Nat
   effect : Effect
+  deriving DecidableEq
 
 structure PokemonCard where
   name : String
@@ -56,13 +60,16 @@ structure PokemonCard where
   attacks : List Attack
   /-- retreat cost, in Energy cards -/
   retreat : Nat
+  deriving DecidableEq
 
 inductive TrainerKind where
   | item | supporter | stadium | tool
+  deriving DecidableEq
 
 inductive Card where
   | pokemon (p : PokemonCard)
   | energy (t : EType)
   | trainer (name : String) (kind : TrainerKind) (effect : Effect)
+  deriving DecidableEq
 
 end Pokemon
