@@ -177,6 +177,10 @@ def run(data, out, survey=None):
     assert len({id(recs) for recs, _ in results}) == len(results)
     parts = [imported[i:i + PART_SIZE] for i in range(0, len(imported), PART_SIZE)]
     part_names = []
+    # the largest printed HP and the largest HP units of one card's static effects, over the imported
+    # pool (the constants of the HP bound, `hpOf_le`)
+    hp_max = max(printed_hp(r['term']) for _, r in imported)
+    gain_max = max(hp_gain(r['term']) for _, r in imported)
     for k, chunk in enumerate(parts, 1):
         pn = 'Part%02d' % k
         part_names.append(pn)
@@ -194,6 +198,17 @@ def run(data, out, survey=None):
         src.append('theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel\n')
         src.append('/-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/')
         src.append('theorem cards_nodup : nodupFp cards = true := by decide +kernel\n')
+        for k, what, pred, _ in STATIC_KINDS:
+            src.append('/-- The cards of this part with a static %s effect (milestone M6), by name. -/' % what)
+            src.append('theorem cards_static%s : (cards.filter (Card.hasStatic %s)).map Card.label = %s := by decide +kernel\n'
+                       % (k, pred, T.lean([recs[0]['name'] for recs, r in chunk if k in static_kinds(r['term'])])))
+        src.append('/-- Every printed HP in this part is at most %d counters (the largest over the imported pool). -/' % hp_max)
+        src.append('theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ %d)) = true := by decide +kernel\n'
+                   % hp_max)
+        src.append('/-- The HP units of every card\'s static effects in this part (`Card.hpGain`) are at most %d counters\n'
+                   '(the largest over the imported pool). -/' % gain_max)
+        src.append('theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ %d)) = true := by decide +kernel\n'
+                   % gain_max)
         src.append('end PokemonCards.Standard.' + pn + '\n')
         files['PokemonCards/Standard/' + pn + '.lean'] = '\n'.join(src)
 
@@ -330,6 +345,7 @@ def run(data, out, survey=None):
                 '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧\n'
                 '          g₂\'.xclamp (Enum.bound g₀.allCards) = g₁\'.xclamp (Enum.bound g₀.allCards)) :=\n'
                 '  Faithful.xfinite (faithful g₀ hg)\n']
+    src += static_theorems(imported, part_names, hp_max, gain_max)
     src += ['/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by\n'
             '`Move.attack`). -/',
             'theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=\n'

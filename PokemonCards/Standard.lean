@@ -1286,6 +1286,66 @@ theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :
           g₂'.xclamp (Enum.bound g₀.allCards) = g₁'.xclamp (Enum.bound g₀.allCards)) :=
   Faithful.xfinite (faithful g₀ hg)
 
+/-- The imported cards with a static HP effect (milestone M6), by name (5). Checked part by part. -/
+theorem staticHp : (all.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape", "Okidogi", "Gravity Mountain", "Lively Stadium", "Conkeldurr"] := by
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticHp, Part02.cards_staticHp, Part03.cards_staticHp, Part04.cards_staticHp, Part05.cards_staticHp, Part06.cards_staticHp, Part07.cards_staticHp, Part08.cards_staticHp, List.cons_append, List.nil_append,
+    List.append_nil]
+
+/-- The imported cards with a static damage bonus effect (milestone M6), by name (9). Checked part by part. -/
+theorem staticBonus : (all.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Maximum Belt", "Okidogi", "Carracosta", "Victini", "Lilligant", "Brave Bangle", "Serperior ex", "Garganacl", "Light Ball"] := by
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticBonus, Part02.cards_staticBonus, Part03.cards_staticBonus, Part04.cards_staticBonus, Part05.cards_staticBonus, Part06.cards_staticBonus, Part07.cards_staticBonus, Part08.cards_staticBonus, List.cons_append, List.nil_append,
+    List.append_nil]
+
+/-- The imported cards with a static damage reduction effect (milestone M6), by name (12). Checked part by part. -/
+theorem staticReduce : (all.filter (Card.hasStatic Static.reduces)).map Card.label = ["Turtwig", "Full Metal Lab", "Tangrowth", "Dubwool", "Cetitan", "Bronzong", "Furfrou", "Mudsdale", "Klinklang", "Dewgong", "Thick Scale", "Kakuna"] := by
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticReduce, Part02.cards_staticReduce, Part03.cards_staticReduce, Part04.cards_staticReduce, Part05.cards_staticReduce, Part06.cards_staticReduce, Part07.cards_staticReduce, Part08.cards_staticReduce, List.cons_append, List.nil_append,
+    List.append_nil]
+
+/-- The imported cards with a static Retreat Cost effect (milestone M6), by name (5). Checked part by part. -/
+theorem staticRetreat : (all.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Paradise Resort", "Gravity Gemstone", "Toedscruel", "Air Balloon", "Zoroark"] := by
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticRetreat, Part02.cards_staticRetreat, Part03.cards_staticRetreat, Part04.cards_staticRetreat, Part05.cards_staticRetreat, Part06.cards_staticRetreat, Part07.cards_staticRetreat, Part08.cards_staticRetreat, List.cons_append, List.nil_append,
+    List.append_nil]
+
+/-- Every printed HP of an imported Pokémon is at most 38 counters. -/
+theorem printedHp_le : ∀ c ∈ all, c.printedHp ≤ 38 := by
+  have h : all.all (fun c => decide (c.printedHp ≤ 38)) = true := by
+    simp only [all, List.all_append, Part01.cards_printedHp, Part02.cards_printedHp, Part03.cards_printedHp, Part04.cards_printedHp, Part05.cards_printedHp, Part06.cards_printedHp, Part07.cards_printedHp, Part08.cards_printedHp, Bool.and_self]
+  intro c hc
+  exact of_decide_eq_true (List.all_eq_true.1 h c hc)
+
+/-- The HP units of the static effects of every imported card (`Card.hpGain`: a constant "+N HP", or
+the N of "+N HP for each Energy") are at most 10 counters. -/
+theorem hpGain_le : ∀ c ∈ all, c.hpGain ≤ 10 := by
+  have h : all.all (fun c => decide (c.hpGain ≤ 10)) = true := by
+    simp only [all, List.all_append, Part01.cards_hpGain, Part02.cards_hpGain, Part03.cards_hpGain, Part04.cards_hpGain, Part05.cards_hpGain, Part06.cards_hpGain, Part07.cards_hpGain, Part08.cards_hpGain, Bool.and_self]
+  intro c hc
+  exact of_decide_eq_true (List.all_eq_true.1 h c hc)
+
+/-- **A bound on derived HP** (milestone M6). In every game whose cards are all imported cards and
+number at most `N`, every Pokémon in play has derived HP (`GameState.hpOf`, in counters: printed HP
+changed by the static effects in force) at most 38 + 2 (N + 1) (N 10). It is the model's `hpBound`
+(`GameState.hpOf_le_hpBound`) bounded with the two constants above; a bound, far from the largest HP
+reachable, about the model's terms and not about printed cards. The model has no deck size, hence
+the hypothesis on `N`. -/
+theorem hpOf_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : Nat} (hn : g.allCards.length ≤ N)
+    {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) :
+    g.hpOf w sp p ≤ 38 + 2 * (N + 1) * (N * 10) :=
+  hpOf_le_of printedHp_le hpGain_le hg hn hp
+
+/-- The bound for two 60-card decks (120 cards): derived HP at most 290438 counters (2904380 HP). -/
+theorem hpOf_le_120 (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) (hn : g.allCards.length ≤ 120)
+    {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) : g.hpOf w sp p ≤ 290438 :=
+  hpOf_le g hg hn hp
+
+/-- **Decks without a static reduction are `StaticTame`** (the static part of `GameState.Fit`, a premise
+of the tame-deck theorem `Reach.finite`): every game whose cards are imported cards other than those of
+`staticReduce`. `Fit` asks more (every card `Card.tame`, no reduction stored at the start), which this
+does not establish; every game of imported cards is `Faithful` (`faithful`), so `Faithful.xfinite`
+applies to all of them. -/
+theorem staticTame (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all ∧ x.hasStatic Static.reduces = false) :
+    g.StaticTame :=
+  staticTame_of fun x hx => (hg x hx).2
+
 /-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by
 `Move.attack`). -/
 theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=

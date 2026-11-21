@@ -30,7 +30,9 @@ statements the model's theorems use. Every check is stated with the model's own 
 
 Since milestone M6 a card may carry static effects (`Card.statics`: a static Ability's, a Tool's
 static text, a Stadium's static text). `Faithful` has no clause about them and `Faithful.xfinite`
-holds with the clamp at `Enum.bound`, which bounds every derived HP.
+holds with the clamp at `Enum.bound`, which bounds every derived HP; `Card.hasStatic` lists the cards
+by kind, `hpOf_le_of` bounds derived HP over a pool, and `staticTame_of` gives `StaticTame` (the
+static part of `GameState.Fit`) for games without a static damage reduction.
 
 These are facts about the Lean terms; whether a term says what its printed card says is the
 importer's claim, checked by eye in survey S11, not by Lean.
@@ -101,6 +103,36 @@ def Card.hasUnlimited (c : Card) : Bool := c.abilities.any fun ab => ab.use == .
 (`Effect.recFilters` of one of its scripts). -/
 def Card.abilityRecycles (c : Card) : Bool :=
   c.abilities.any fun ab => ab.scripts.any fun e => !e.recFilters.isEmpty
+
+/-! ### Static effects (milestone M6) -/
+
+/-- A static HP change ("+N HP", "−N HP", "+N HP for each Energy"). -/
+def Static.isHp (s : Static) : Bool :=
+  match s.eff with
+  | .hpPlus _ => true
+  | .hpMinus _ => true
+  | _ => false
+
+/-- A static damage bonus. -/
+def Static.isBonus (s : Static) : Bool :=
+  match s.eff with
+  | .bonus _ _ => true
+  | _ => false
+
+/-- A static Retreat Cost change. -/
+def Static.isRetreat (s : Static) : Bool :=
+  match s.eff with
+  | .retreatPlus _ => true
+  | .retreatMinus _ => true
+  | _ => false
+
+/-- The card has a static effect of the kind `k` (`Card.statics`, the model's). -/
+def Card.hasStatic (k : Static → Bool) (c : Card) : Bool := c.statics.any k
+
+/-- The printed HP of a Pokémon card, 0 for other cards. -/
+def Card.printedHp : Card → Nat
+  | .pokemon p => p.hp
+  | _ => 0
 
 /-- The printed name (Basic Energy cards are labelled by kind only). -/
 def Card.label : Card → String
@@ -274,6 +306,46 @@ theorem nodup_of_nodupFp {l : List Card} (h : nodupFp l = true) : l.Nodup := by
     have := List.all_eq_true.1 (List.all_eq_true.1 h.1 a (List.mem_singleton_self a)) a hm
     rw [decide_eq_true rfl, decide_eq_true rfl] at this
     exact absurd this (by decide)
+
+/-! ### Static effects over a pool (milestone M6) -/
+
+theorem csum_le_mul {f : Card → Nat} {G : Nat} :
+    ∀ {C : List Card}, (∀ c ∈ C, f c ≤ G) → csum f C ≤ C.length * G
+  | [], _ => Nat.zero_le _
+  | c :: cs, h => by
+      have ih := csum_le_mul (C := cs) fun x hx => h x (.tail _ hx)
+      have hc := h c (.head _)
+      rw [csum_cons, List.length_cons, Nat.succ_mul]
+      omega
+
+/-- **Derived HP over a pool.** If every card of `C` has printed HP at most `M` and static HP units
+(`Card.hpGain`) at most `G`, then in every game of at most `N` cards all from `C`, every Pokémon in play
+has derived HP at most `M + 2 (N + 1) (N G)`: the model's `hpBound` (`GameState.hpOf_le_hpBound`), bounded
+with `M`, `G` and `N`. -/
+theorem hpOf_le_of {C : List Card} {M G N : Nat} (hm : ∀ c ∈ C, c.printedHp ≤ M)
+    (hgn : ∀ c ∈ C, c.hpGain ≤ G) {g : GameState} (hg : ∀ x ∈ g.allCards, x ∈ C)
+    (hn : g.allCards.length ≤ N) {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) :
+    g.hpOf w sp p ≤ M + 2 * (N + 1) * (N * G) := by
+  have h1 := g.hpOf_le_hpBound hp
+  have h2 : maxHp g.allCards ≤ M :=
+    maxHp_le fun q hq => by simpa only [Card.printedHp] using hm _ (hg _ hq)
+  have h3 : csum Card.hpGain g.allCards ≤ g.allCards.length * G :=
+    csum_le_mul fun c hc => hgn c (hg c hc)
+  have h4 : 2 * (g.allCards.length + 1) * csum Card.hpGain g.allCards ≤ 2 * (N + 1) * (N * G) :=
+    Nat.mul_le_mul (Nat.mul_le_mul_left 2 (Nat.succ_le_succ hn))
+      (Nat.le_trans h3 (Nat.mul_le_mul_right G hn))
+  unfold hpBound at h1
+  omega
+
+/-- A game none of whose cards has a static damage reduction is `StaticTame`. -/
+theorem staticTame_of {g : GameState} (h : ∀ x ∈ g.allCards, x.hasStatic Static.reduces = false) :
+    g.StaticTame := by
+  intro c hc s hs
+  have := h c hc
+  simp only [Card.hasStatic, List.any_eq_false] at this
+  cases hr : s.reduces with
+  | false => rfl
+  | true => exact absurd hr (this s hs)
 
 /-- **Faithful decks from a checked pool.** If every card of `C` passes `Card.importOk` and
 `recSafeB C` holds, every game whose cards all come from `C` is `Faithful`: `LoopFree`, `GXOnly`,

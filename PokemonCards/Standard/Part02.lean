@@ -2004,4 +2004,23 @@ theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kern
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
 theorem cards_nodup : nodupFp cards = true := by decide +kernel
 
+/-- The cards of this part with a static HP effect (milestone M6), by name. -/
+theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.label = ["Okidogi"] := by decide +kernel
+
+/-- The cards of this part with a static damage bonus effect (milestone M6), by name. -/
+theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Okidogi", "Carracosta"] := by decide +kernel
+
+/-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.reduces)).map Card.label = ["Dubwool"] := by decide +kernel
+
+/-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
+theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Gravity Gemstone"] := by decide +kernel
+
+/-- Every printed HP in this part is at most 38 counters (the largest over the imported pool). -/
+theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ 38)) = true := by decide +kernel
+
+/-- The HP units of every card's static effects in this part (`Card.hpGain`) are at most 10 counters
+(the largest over the imported pool). -/
+theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ 10)) = true := by decide +kernel
+
 end PokemonCards.Standard.Part02
