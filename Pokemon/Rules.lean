@@ -733,8 +733,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the rulebook allows 0 only in attacks ("For effects of attacks … between 0 and the maximum. For
   other effects (such as the effects of Trainer cards and Abilities), you can choose any number
   between 1 and the maximum", and at least 1 for an effect that searches the deck or discard pile
-  "for any card you want and doesn't specify what kind", 2026 p. 21): exact in attacks, a superset
-  elsewhere (a Trainer or Ability may take nothing where print must take at least one card, if
+  "for any card you want and doesn't specify what kind", 2026 p. 21): exact in attacks other than such a search, a superset
+  elsewhere and for an attack that searches for any card (a Trainer or Ability may take nothing where print must take at least one card, if
   one can be taken); "any amount" / "any number" allows 0 (p. 21), as the model does; `attach`,
   `putBench` and `moveEnergy` may always do nothing, a superset of "if you can"; a cost ("discard 2 cards from your hand. If you do, …") is `exactly 2`, which has
   no resolution when it cannot be paid, so a Trainer whose cost cannot be paid cannot be played,

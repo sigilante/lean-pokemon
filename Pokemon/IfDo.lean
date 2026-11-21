@@ -259,7 +259,11 @@ is the printed text depends on A.
   `benchDamage`, `benchHeal` and `switch` on an empty Bench (`discardNone`, `toolsNone`, the
   `…None` rules), `spreadCounters`, `spreadDamage` and `benchSome` with no Pokémon hit,
   `poisonUp` on a Pokémon that is not Poisoned (`poisonUpSkip`), `shuffle` (the same order),
-  `unmark` (no marker), and the amount primitives at 0. `Run.mayDo_exact` gives the exact reading
+  `unmark` (no marker), `cure` (no Special Condition), `heal`, `healAll` and `benchHeal` (no
+  damage), `handToBottom` (empty hand), `discardStadium` (no Stadium), `discardTools` (no Tool),
+  `mark`, `color` and `inflict` (already set), `benchDamage` on a Tera Pokémon, and the amount
+  primitives at 0. The list is a guide, not a theorem: what `mayDo` needs is the hypothesis of
+  `Run.mayDo_exact`, that every resolution of A changes the state. `Run.mayDo_exact` gives the exact reading
   when A always changes the state; the costs below do (`Run.discardHand_ne`,
   `Run.discardActive_ne`).
 * `ifDone t A B` is exact when `t` holds exactly when A has a resolution (`Run.ifDone_exact`). A

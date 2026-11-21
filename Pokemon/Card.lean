@@ -298,7 +298,7 @@ after it in `seq` runs only if the cost was paid), or all of them ("discard all 
 Pokémon"; drawing and milling are `all` from the top `n` cards). The rulebook (2026 p. 21) reads
 "up to X" as 0..X in attacks and 1..X in other effects (Trainer cards, Abilities), and at least 1
 for a search of the deck or discard pile "for any card you want"; `upTo` allows 0 in every effect,
-a superset outside attacks (Known gaps). "Any amount" allows 0 (p. 21), as `upTo` does. -/
+a superset outside attacks and for any search for any card (Known gaps). "Any amount" allows 0 (p. 21), as `upTo` does. -/
 inductive Qty where
   | upTo (n : Nat)
   | exactly (n : Nat)
