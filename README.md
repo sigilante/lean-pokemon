@@ -199,7 +199,13 @@ calculation with step 3, 4 or 5 switched off (2026 rulebook p. 19; step 2, the a
 bonuses, is kept); `damage a` is `damage a {}`, the full calculation (`GameState.dealtI_none`). Five
 printed variants, 39 refused Standard cards. Both clamps keep it with no new hypothesis
 (`dealtBy_cap_ign`); witnesses in `Pokemon/Ignore.lean` (one defender, Resistance and a reduction:
-1 damage counter from the plain attack, 6 from the one that ignores them).
+1 damage counter from the plain attack, 6 from the one that ignores them). Stage 2 added "if you do"
+and "for each … in this way" as derived forms that read the branch a resolution took, with no log
+and no new state (`Pokemon/IfDo.lean`): `Effect.mayDo`, `Effect.ifDone` and `Effect.forUpTo`, each
+with an exactness lemma (`Run.mayDo_iff`, `Run.ifDone_iff`, `Run.forUpTo_iff`; for "any amount",
+`Run.forUpTo_complete` with `discardActive_le`); witnesses: Klefki's "Discard a card from your hand.
+If you do, draw 2 cards" as a legal attack that draws, and from an empty hand one that, on every
+resolution, changes nothing.
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

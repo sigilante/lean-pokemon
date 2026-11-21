@@ -686,7 +686,19 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   PP26), a superset; `attach`, `putBench` and `moveEnergy` may always do nothing, a superset of
   "if you can"; a cost ("discard 2 cards from your hand. If you do, …") is `exactly 2`, which has
   no resolution when it cannot be paid, so a Trainer whose cost cannot be paid cannot be played,
-  and an attack writes the optional reading with `choice`; one card is attached or benched per
+  and an attack writes the optional reading with `choice`; since milestone MV3 the "if you do" and
+  "for each … in this way" shapes of survey S15 §2 are derived forms with no new state
+  (`Pokemon/IfDo.lean`): `Effect.mayDo` ("You may A. If you do, B"), `Effect.ifDone` ("A. If you do,
+  B", and "If you can't, this attack does nothing", with a test that A can be done; exact when A has
+  a resolution exactly when the test holds) and `Effect.forUpTo` ("discard up to N …, K damage for
+  each card discarded in this way": the number discarded is the branch; for "any amount" exact once
+  the bound covers the cards that can be taken, `Run.forUpTo_complete`). Absent from that family:
+  "If you attached Energy / put any Pokémon onto your Bench in this way" (7 refused cards: `attach`
+  and `putBench` may always do nothing, so the consequence could follow an action that did not
+  happen), "If you healed any damage in this way … that Pokémon" (3), consequences on "that
+  Pokémon" or "the new Benched Pokémon", "for each different type revealed" (1), and a test of the
+  Stadium slot ("Discard a Stadium in play. If you can't, this attack does nothing", Eternatus
+  sv8-141); one card is attached or benched per
   primitive ("up to 2" is two of them; "to each of your Benched Pokémon" is written as one per
   Pokémon); the player chooses wherever the printed card lets the opponent choose; hidden
   information is not modelled (the state is public, so "reveal" and "look at" are no-ops, and a
