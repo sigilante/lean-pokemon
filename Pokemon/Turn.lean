@@ -15,7 +15,7 @@ stated as theorems.
 * `GameState.FlagsOk`: the turn flags are consistent (on the first turn of the game the player
   to move went first, neither player has had a turn, and nobody has attacked; between turns
   nobody has attacked). `Move.flagsOk`, `Reach.flagsOk`: play preserves it. Under it the
-  first-turn bans are theorems (`GameState.FlagsOk.firstTurn_starting`,
+  bans on the first turn of the game are theorems (`GameState.FlagsOk.firstTurn_starting`,
   `Move.firstTurn_no_attack`, `Move.firstTurn_no_supporter`,
   `GameState.FlagsOk.firstTurn_no_evolve`).
 * `dealtBy_zero`, `GameState.dealt_zero`: an attack with base damage 0 does no damage, whatever
@@ -244,10 +244,12 @@ theorem GameState.FlagsOk.firstTurn_starting {g : GameState} (hc : g.FlagsOk)
     (hf : g.firstTurn = true) : g.curIsFirst = true :=
   (hc.1 hf).1
 
-/-- **No evolution on either player's first turn of the game**: with consistent flags, on the
-first turn of the game neither player has had a turn, so `Move.evolve`, which needs
-`g.cur.hadTurn = true`, is not legal; and on the second player's first turn its `hadTurn` is
-still false (`Move.endTurn` sets it only for the player whose turn ends). -/
+/-- **No evolution on the first turn of the game**: with consistent flags, on the first turn
+of the game neither player has had a turn, so `Move.evolve`, which needs
+`g.cur.hadTurn = true`, is not legal. This theorem covers the game's first turn only. The ban
+on the second player's own first turn is the `hadTurn` premise of `Move.evolve` itself
+(`Move.endTurn` sets `hadTurn` only for the player whose turn ends); `FlagsOk` constrains
+`hadTurn` only while `firstTurn` holds, so that ban is not a theorem under `FlagsOk`. -/
 theorem GameState.FlagsOk.firstTurn_no_evolve {g : GameState} (hc : g.FlagsOk)
     (hf : g.firstTurn = true) : g.cur.hadTurn = false ∧ g.opp.hadTurn = false :=
   ⟨(hc.1 hf).2.1, (hc.1 hf).2.2.1⟩

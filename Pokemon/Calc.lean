@@ -64,9 +64,12 @@ plus 10 more for each damage counter on the Defending Pokémon", written
 amount is `2 + 3` and the attack does `(2 + 3) - 3 = 2`. -/
 theorem dealtBy_jynx : dealtBy (2 + 1 * 3) false 0 Store.empty (reduceStore 3) = 2 := rfl
 
-/-- **Capping the stores at the damage cap fails with Resistance.** For every `k ≥ 2`, a bonus
-of `k` and one of `k + 1` are equal when capped at `k`, but from base damage 1 against
-Resistance 3 they do `k - 2` and `k - 1` damage, which differ below `k`. -/
+/-- **Capping the stores at the damage cap fails with Resistance** (a fact about the damage
+function, given as motivation for the `2k` store cap; it is not a game-level witness that a
+`k`-capped clamp fails in play, and at `k = 2` its Resistance of 3 exceeds what `Fit 2`
+allows). For every `k ≥ 2`, a bonus of `k` and one of `k + 1` are equal when capped at `k`,
+but from base damage 1 against Resistance 3 they do `k - 2` and `k - 1` damage, which differ
+below `k`. -/
 theorem cap_at_k_fails (k : Nat) (hk : 2 ≤ k) :
     (bonusStore k).cap k = (bonusStore (k + 1)).cap k ∧
       min (dealtBy 1 false 3 (bonusStore k) Store.empty) k ≠
