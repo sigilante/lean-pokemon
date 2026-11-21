@@ -574,6 +574,58 @@ inductive UseAt : GameState → InPlay → Spot → GameState → Prop where
   | bench {g : GameState} {x : InPlay} {b₁ b₂ : List InPlay} (hb : g.cur.bench = b₁ ++ x :: b₂) :
       UseAt g x .bench { g with cur := { g.cur with bench := b₁ ++ x.markUsed :: b₂ } }
 
+/-- `PlayFromHand g x w g'` (milestone M8a): the player plays a Pokémon card from the hand, onto
+the Bench as a Basic Pokémon (`w = .bench`) or to evolve the Active Pokémon or a Benched one
+(`w = .evolve`), with exactly the premises and result of `Move.playBasic`, `Move.evolve` and
+`Move.evolveBench` (`PlayFromHand.move`); `x` is the Pokémon in play that the card now tops. The
+on-play trigger of an Ability (`Move.onPlay`) follows such a play. -/
+inductive PlayFromHand : GameState → InPlay → PlayWay → GameState → Prop where
+  | basic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂)
+      (hs : p.stage = .basic) (hhp : 0 < p.hp)
+      (hb : g.cur.bench.length < benchLimit) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      PlayFromHand g (InPlay.ofBasic p) .bench { g with cur := { g.cur with
+        hand := l₁ ++ l₂, bench := g.cur.bench ++ [InPlay.ofBasic p] } }
+  | evolve {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {a : InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (ha : g.cur.active = some a)
+      (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false)
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      PlayFromHand g { a with
+          top := p, under := Card.pokemon a.top :: a.under,
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } .evolve
+        { g with cur := { g.cur with
+          hand := l₁ ++ l₂,
+          active := some { a with
+            top := p, under := Card.pokemon a.top :: a.under,
+            rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+            used := false } } }
+  | evolveBench {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (he : p.evolvesFrom = some q.top.name) (hfr : q.fresh = false)
+      (hf : g.cur.hadTurn = true) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
+      PlayFromHand g { q with
+          top := p, under := Card.pokemon q.top :: q.under,
+          rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+          used := false } .evolve
+        { g with cur := { g.cur with
+          hand := l₁ ++ l₂,
+          bench := b₁ ++ { q with
+            top := p, under := Card.pokemon q.top :: q.under,
+            rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
+            used := false } :: b₂ } }
+
+/-- Does an on-play trigger printed as `w` fire on a play of kind `how`? -/
+def PlayWay.fires : PlayWay → PlayWay → Bool
+  | .either, _ => true
+  | .bench, .bench => true
+  | .evolve, .evolve => true
+  | _, _ => false
+
 /-- The printed condition of an Ability holds (milestone M8a): none, or its test holds on the
 Active Pokémon the test reads (a count test reads the state). -/
 def Ability.CondOk (ab : Ability) (g : GameState) : Prop :=
@@ -691,6 +743,21 @@ inductive Move : GameState → GameState → Prop where
       (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use.activated = true)
       (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+      (hr : TRun ab.effect g₁ g') (hnd : ab.effect.hitFree = true)
+      (hbh : ab.effect.benchHitFree = true) :
+      Move g g'
+  /-- play a Pokémon from the hand (onto the Bench, or to evolve) and resolve an on-play Ability
+  of the card played (milestone M8a: "When you play this Pokémon from your hand onto your Bench
+  during your turn, you may …", "When you play this Pokémon from your hand to evolve 1 of your
+  Pokémon during your turn, you may …"). The play has the premises of `Move.playBasic`,
+  `Move.evolve` or `Move.evolveBench` (`PlayFromHand`); playing without using the Ability ("you
+  may") is that move itself. The effect resolves as a Trainer card's does (`TRun`), from the state
+  after the play, which must have no pending Knock Out (a Pokémon evolved into a card whose HP its
+  damage reaches is Knocked Out first, and the model then offers no trigger); the printed
+  condition is read there. The Ability's `spot` is not read. -/
+  | onPlay {g g₁ g' : GameState} {x : InPlay} {how w : PlayWay} {ab : Ability}
+      (hp : PlayFromHand g x how g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use = .onPlay w)
+      (hw : w.fires how = true) (hst : Settled g₁) (hc : ab.CondOk g₁)
       (hr : TRun ab.effect g₁ g') (hnd : ab.effect.hitFree = true)
       (hbh : ab.effect.benchHitFree = true) :
       Move g g'
@@ -823,5 +890,34 @@ theorem KOMove.move {g g' : GameState} (h : KOMove g g') : Move g g' := by
   | noPokemonOwn ha hb => exact .noPokemonOwn ha hb
   | knockOutBench hb hk hp => exact .knockOutBench hb hk hp
   | knockOutBenchOwn hb hk hp => exact .knockOutBenchOwn hb hk hp
+
+/-- A play from the hand is the plain move (`Move.playBasic`, `Move.evolve`,
+`Move.evolveBench`). -/
+theorem PlayFromHand.move {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : Move g g₁ := by
+  cases h with
+  | basic hh hs hhp hb hbt hst hat => exact .playBasic hh hs hhp hb hbt hst hat
+  | evolve hh ha he hfr hf hbt hst hat => exact .evolve hh ha he hfr hf hbt hst hat
+  | evolveBench hh hb he hfr hf hbt hst hat => exact .evolveBench hh hb he hfr hf hbt hst hat
+
+theorem PlayFromHand.attacked {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g.attacked = false := by
+  cases h <;> assumption
+
+theorem PlayFromHand.between {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g.between = false := by
+  cases h <;> assumption
+
+theorem PlayFromHand.settled {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : Settled g := by
+  cases h <;> assumption
+
+/-- The card played is in the hand. -/
+theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : ∃ l₁ l₂, g.cur.hand = l₁ ++ Card.pokemon x.top :: l₂ := by
+  cases h with
+  | basic hh => exact ⟨_, _, hh⟩
+  | evolve hh => exact ⟨_, _, hh⟩
+  | evolveBench hh => exact ⟨_, _, hh⟩
 
 end Pokemon

@@ -235,6 +235,9 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
           subst ha
           simp [InPlay.ofBasic, hitter, mon] at hm
       | bench hb => simp [red, st, side] at hb
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      simp [red, st, side] at hh
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
@@ -385,6 +388,9 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
           subst ha
           simp [InPlay.ofBasic, drainer, mon] at hm
       | bench hb => simp [dr, st, side] at hb
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      simp [dr, st, side] at hh
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha

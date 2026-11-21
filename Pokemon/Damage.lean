@@ -105,6 +105,7 @@ theorem Move.damageBounded_of_startTurn {g g' : GameState} (h : Move g g')
     (hb : g.between = true) (hb' : g'.between = false) : DamageBounded g' := by
   cases h with
   | startTurn hbt ha hb hk hd => exact hk
+  | onPlay hp => exact absurd (hb.symm.trans hp.between) (by decide)
   | _ =>
       first
       | exact absurd (hb.symm.trans hb') (by decide)

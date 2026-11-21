@@ -230,6 +230,14 @@ theorem UseAt.perm {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x 
   | active ha => perm_count [ha, InPlay.markUsed]
   | bench hb => perm_count [hb, InPlay.markUsed]
 
+/-- A play from the hand permutes the cards in the game (milestone M8a). -/
+theorem PlayFromHand.perm {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.allCards.Perm g.allCards := by
+  cases h with
+  | basic hh => perm_count [hh]
+  | evolve hh ha => perm_count [hh, ha]
+  | evolveBench hh hb => perm_count [hh, hb]
+
 /-- A legal move permutes the cards in the game. -/
 theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCards := by
   cases h with
@@ -246,6 +254,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
       refine hr.perm.trans ?_
       perm_count [hh]
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.perm.trans hu.perm
+  | onPlay hp _ _ _ _ _ hr => exact hr.perm.trans hp.perm
   | attack ha hm hc hs hn hf hbt hst hr => exact hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | @knockOut p _ _ ha hk hp =>
@@ -348,6 +357,12 @@ theorem UseAt.top_mem {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g
   cases h with
   | active ha => exact GameState.top_mem_cur_active ha
   | bench hb => exact GameState.top_mem_cur_bench (by rw [hb]; exact List.mem_append_right _ (.head _))
+
+/-- The card played from the hand is in the game (milestone M8a). -/
+theorem PlayFromHand.top_mem {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : Card.pokemon x.top ∈ g.allCards := by
+  obtain ⟨l₁, l₂, hh⟩ := h.hand
+  simp [GameState.allCards, PlayerState.allCards, hh]
 
 theorem GameState.top_mem_opp_bench {g : GameState} {a : InPlay}
     (ha : a ∈ g.opp.bench) : Card.pokemon a.top ∈ g.allCards := by

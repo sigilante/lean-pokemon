@@ -1029,6 +1029,26 @@ theorem UseAt.supporterPlayed {g g₁ : GameState} {x : InPlay} {sp : Spot} (h :
     g₁.cur.supporterPlayed = g.cur.supporterPlayed := by
   cases h <;> rfl
 
+theorem PlayFromHand.slotAmt {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) (s : Slot) : g₁.slotAmt s = g.slotAmt s := by
+  cases h <;> rfl
+
+theorem PlayFromHand.discW {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) (wt : Card → Nat) : g₁.discW wt = g.discW wt := by
+  cases h <;> rfl
+
+theorem PlayFromHand.discAmt {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.discAmt = g.discAmt := by
+  cases h <;> rfl
+
+theorem PlayFromHand.flags {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : Flags g g₁ := by
+  cases h <;> exact ⟨rfl, rfl, rfl⟩
+
+theorem PlayFromHand.supporterPlayed {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.cur.supporterPlayed = g.cur.supporterPlayed := by
+  cases h <;> rfl
+
 /-! ## Counting Ability uses within a turn (milestone M8a)
 
 A "once during your turn" Ability can be used once per turn by each Pokémon in play that has it,
@@ -1323,6 +1343,35 @@ theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') : g'.abP
   | iterNil => exact Nat.le_refl _
   | iterCons _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
 
+/-- **A play from the hand lowers the potential by at least one**: a Basic Pokémon fills a place
+(two units) and is unused (one unit); an evolution spends the Pokémon's evolution for the turn
+(two units) and resets its use of an Ability (at most one unit). -/
+theorem PlayFromHand.abPot {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.abPot + 1 ≤ g.abPot := by
+  cases h with
+  | @basic l₁ l₂ p hh hs hhp hb =>
+      have := optN_le g.cur.active
+      simp only [benchLimit] at hb
+      have e : (InPlay.ofBasic p).abW = 1 := rfl
+      simp only [GameState.abPot, PlayerState.abPot, abWs_append, abWs, e, List.length_append,
+        List.length_cons, List.length_nil, benchLimit]
+      omega
+  | @evolve l₁ l₂ p a hh ha he hfr =>
+      have : a.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
+      have e : InPlay.abW { a with
+          top := p, under := Card.pokemon a.top :: a.under, rot := .none,
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+        rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
+  | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr =>
+      have : q.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
+      have e : InPlay.abW { q with
+          top := p, under := Card.pokemon q.top :: q.under, rot := .none,
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+        rfl
+      simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs, e,
+        List.length_append, List.length_cons]; omega
+
 /-- **Using an Ability never raises the potential, and lowers it by one** when the Pokémon had
 not used an Ability this turn. -/
 theorem UseAt.abPot {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁) :
@@ -1488,6 +1537,15 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         e.amtAt (hr.slot_le hlf) e.amtAt_le_amt (Nat.le_trans ?_ hk.disc)
       · simp only [GameState.discAmt, cardsAmt]; omega
       · simp only [GameState.discAmt, cardsAmt, Card.amt]; omega
+  | @onPlay g₁ g'' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
+      have hxC := hp.top_mem
+      have hlf := Card.loopFree_ability (hL _ hxC) hm
+      have hk' := hr.keeps (abilitiesRec_nil (hN _ hxC) hm)
+      have h0 := hQ _ hxC ab hm
+      have hsl := hr.slot_le hlf
+      refine hi.keeps ⟨by rw [← hp.discAmt]; exact hk'.disc, hk'.attacked.trans hp.flags.attacked,
+        hk'.gxCur.trans hp.flags.gxCur, hk'.gxOpp.trans hp.flags.gxOpp⟩ fun s => ?_
+      have h1 := hsl s; have h2 := ab.effect.amtAt_le_amt s; rw [hp.slotAmt] at h1; omega
   | @ability g₁ g'' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
       have hxC := hu.top_mem
       have hlf := Card.loopFree_ability (hL _ hxC) hm
@@ -1660,6 +1718,9 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
   | ability hu _ _ _ _ _ _ _ _ hr =>
       have := hu.abPot
       exact Nat.le_trans hr.abPot_le (by omega)
+  | onPlay hp _ _ _ _ _ hr =>
+      have := hp.abPot
+      exact Nat.le_trans hr.abPot_le (by omega)
   | attack _ _ _ _ _ _ _ _ hr => exact hr.abPot_le
   | @attackConfused a atk ha =>
       have e : ({ a with damage := a.damage + 3 } : InPlay).abW = a.abW := rfl
@@ -1749,6 +1810,66 @@ theorem TInv.endTurn {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState}
 theorem Card.wAmt_le_P {g : GameState} {P : Nat} (hP : cardsAmt g.allCards ≤ P) :
     g.discW Card.wAmt ≤ P :=
   Nat.le_trans (GameState.discW_le Card.wAmt_le g) hP
+
+/-- **One bounded use** (milestone M8a): a step `g → g₁` that spends at least one unit of the
+potential and changes no store, discard pile or flag, followed by the resolution of a loop-free
+effect `e` that writes no rest-of-game amount, recycles no rest-of-game writer, and has
+`e.amt + (P if it recycles)` at most `Q`, keeps the per-turn invariant, with `e.amt` added to
+this turn's writes. This is the case of a "once during your turn" Ability used by a Pokémon that
+had not used one, and of an on-play Ability. -/
+theorem TInv.bounded_use {S A P Q K X₀ X₁ X₂ D E : Nat} {g g₁ g' : GameState} {e : Effect}
+    (hi : TInv S A P Q K g X₀ X₁ X₂ D E) (hat : g.attacked = false)
+    (hpot : g₁.abPot + 1 ≤ g.abPot) (hsl : ∀ s, g₁.slotAmt s = g.slotAmt s)
+    (hW₁ : g₁.discW Card.wAmt = g.discW Card.wAmt)
+    (hAl₁ : g₁.discW Card.alAmt = g.discW Card.alAmt)
+    (hfl : Flags g g₁) (hsp : g₁.cur.supporterPlayed = g.cur.supporterPlayed)
+    (hp₁ : g₁.allCards.Perm g.allCards)
+    (hr : TRun e g₁ g') (hlf : e.loopFree = true) (hal : e.amtAt .always = 0)
+    (hq : e.amt + (if e.recFilters = [] then 0 else P) ≤ Q)
+    (hrec : ∀ f ∈ e.recFilters, ∀ y ∈ g.allCards, f.eval y = true → y.alAmt = 0)
+    (hP : cardsAmt g.allCards ≤ P) :
+    TInv S A P Q K g' (X₀ + e.amt) X₁ X₂ D E := by
+  have hP' : cardsAmt g'.allCards ≤ P := by rw [cardsAmt_perm (hr.perm.trans hp₁)]; exact hP
+  have hWle : g'.discW Card.wAmt ≤ P := Card.wAmt_le_P hP'
+  have hsP := supT_le P g'
+  have hEK := Nat.mul_le_mul_left Q hi.e
+  have hAl₀ := hr.disc_mono Card.alAmt_tw (C := g.allCards) hrec fun y hy => hp₁.mem_iff.1 hy
+  have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt := by rw [← hAl₁]; exact hAl₀
+  have hsl' := hr.slot_le hlf
+  have hp2 := hr.abPot_le
+  have hfk := hr.flags_keep
+  have hst' := hr.sameTurn
+  have hsup : supT P g' = supT P g := by
+    simp only [supT, show g'.cur.supporterPlayed = g.cur.supporterPlayed from
+      hst'.2.2.2.2.2.2.trans hsp]
+  have hat' : atkT A g' = atkT A g := atkT_congr (hfk.attacked.trans hfl.attacked)
+  have hgx : gxT A g' = gxT A g :=
+    gxT_congr (hfk.gxCur.trans hfl.gxCur) (hfk.gxOpp.trans hfl.gxOpp)
+  have hturn := hi.turn hat
+  have hpg := hi.pot hat
+  have hs' : ∀ s, g'.slotAmt s ≤ g.slotAmt s + e.amtAt s := fun s => by
+    rw [← hsl s]; exact hsl' s
+  have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now; have h4 := hs' .always
+  have w1 := e.amtAt_le_amt .after; have w2 := e.amtAt_le_amt .next
+  have w3 := e.amtAt_le_amt .now
+  have := hi.after; have := hi.next; have := hi.now; have := hi.always
+  rw [hal] at h4
+  have hp : g'.abPot + 1 ≤ g.abPot := by omega
+  have hQp : Q * g'.abPot + Q ≤ Q * g.abPot := by
+    have := Nat.mul_le_mul_left Q hp
+    rw [Nat.mul_add, Nat.mul_one] at this; exact this
+  have hW : g.discW Card.wAmt + e.amt ≤ g'.discW Card.wAmt + Q := by
+    by_cases hrf : e.recFilters = []
+    · simp only [hrf, ite_true] at hq
+      have hW₀ := hr.disc_mono Card.wAmt_tw (C := g.allCards) (Effect.recOk_nil hrf)
+        fun y hy => hp₁.mem_iff.1 hy
+      rw [hW₁] at hW₀
+      omega
+    · simp only [hrf, ite_false] at hq
+      have := Card.wAmt_le_P (g := g) hP
+      omega
+  exact ⟨by omega, hi.x1, hi.x2, hi.e, fun _ => by omega, fun _ => by omega, by omega, by omega,
+    by omega, by omega⟩
 
 /-- **Every move preserves the per-turn invariant**, for cards satisfying the four clauses
 whose attacks write at most `A`, whose Trainer amounts add up to at most `P`, whose Abilities
@@ -1917,6 +2038,14 @@ theorem TInv.move {S A P Q K X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm : 
               omega
           exact ⟨X₀ + ab.effect.amt, X₁, X₂, D, E, by omega, hi.x1, hi.x2, hi.e,
             fun _ => by omega, fun _ => by omega, by omega, by omega, by omega, by omega⟩
+  | @onPlay g₁ g' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
+      have hxC := hp.top_mem
+      have hsafe := hAb.get hxC hm
+      exact ⟨_, _, _, _, _, hi.bounded_use hp.attacked hp.abPot hp.slotAmt (hp.discW _)
+        (hp.discW _) hp.flags hp.supporterPlayed hp.perm hr (Card.loopFree_ability (hL _ hxC) hm)
+        hsafe.2 (hQ _ hxC ab hm)
+        (fun f hf y hy hfy => hR.2 _ hxC f (List.mem_append_right _ (abilitiesRec_mem hm hf)) y hy
+          hfy) hP⟩
   | @attack g'' a atk ha hm hc hs hn hf hbt hst hr hl hgx =>
       show ∃ Y₀ Y₁ Y₂ E' F, TInv S A P Q K (atkRes atk g'') Y₀ Y₁ Y₂ E' F
       have hmem := GameState.top_mem_cur_active ha

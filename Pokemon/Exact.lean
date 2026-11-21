@@ -793,6 +793,42 @@ theorem GameState.XFit.ability {k : Nat} {g g₁ : GameState} (hF : g.XFit k) {x
     ab.tmax < k :=
   Nat.lt_of_le_of_lt (Card.ability_tmax hm) (hF.2 _ hu.top_mem)
 
+/-- **A play from the hand commutes with `xclamp`** (milestone M8a). -/
+theorem PlayFromHand.xclamp_sim {g₁ g₁' g₂ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g₁ x w g₁') (hc : g₁.xclamp = g₂.xclamp) :
+    ∃ x' g₂', PlayFromHand g₂ x' w g₂' ∧ x'.top = x.top ∧ g₁'.xclamp = g₂'.xclamp := by
+  have hs₂ := GameState.settled_of_xclamp hc
+  obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+  cases h with
+  | basic hh hs hhp hb hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      exact ⟨_, _, .basic hh hs hhp (by rw [length_of_map he₁]; exact hb) hbt hs' hat, rfl, by
+        simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂, List.map_append]⟩
+  | @evolve l₁ l₂ p a hh ha he hfr hf hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      rw [ha] at hc₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+      have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
+      refine ⟨_, _, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt hs' hat,
+        rfl, ?_⟩
+      rw [e]
+      simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₁, he₂]
+  | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr hf hbt hst hat =>
+      have hs' := hs₂ hst
+      subst hg
+      have hlt : q.damage < q.top.hp :=
+        hst.1 q (Or.inr (Or.inl (by rw [hb]; exact List.mem_append_right _ (.head _))))
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
+      have hr := InPlay.agree_of_clamp h2
+      have e := hr.eq_upd (hr.damage_eq_of_lt hlt)
+      refine ⟨_, _, .evolveBench hh rfl (by rw [hr.top]; exact he) (hr.fresh.trans hfr) hf hbt hs'
+        hat, rfl, ?_⟩
+      rw [e]
+      simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
+        List.map_cons, h1, h3]
+
 /-- An Ability's condition holds in a state with the same `xclamp`, with no Knock Out pending
 (milestone M8a). -/
 theorem Ability.CondOk.of_xclamp {k : Nat} {ab : Ability} {g₁ g₂ : GameState} (h : ab.CondOk g₁)
@@ -908,6 +944,14 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         (.inl hst)
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
         (by subst hg; exact hl) (by subst hg; exact hat) hnd hbh, hc'⟩
+  | @onPlay g₁m g' x how w ab hp hm hk hw hst₁ hcd hr hnd hbh =>
+      have hb := Nat.lt_of_le_of_lt (Card.ability_tmax hm) (hF.2 _ hp.top_mem)
+      obtain ⟨x', g₂m, hp', hxt, hcm⟩ := hp.xclamp_sim hc
+      have hst₂ := GameState.settled_of_xclamp hcm hst₁
+      have hcd' := hcd.of_xclamp hcm hst₁.1 hb
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt ab.effect_tmax_le hb)
+        (hF.1.of_perm hp.perm) hcm (.inl hst₁)
+      exact ⟨g₂', .onPlay hp' (hxt ▸ hm) hk hw hst₂ hcd' hr' hnd hbh, hc'⟩
   | @ability g₁m g' x sp ab hu hm hk hsp hn hcd hbt hst hat hr hnd hbh =>
       have hs' := hs₂ hst
       have hb := hF.ability hu hm

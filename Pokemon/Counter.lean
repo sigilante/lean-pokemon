@@ -1122,6 +1122,9 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | retreat ha hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim
+  | onPlay hp =>
+      obtain ⟨_, _, hh⟩ := hp.hand
+      exact (not_mem_hand hC hh rfl).elim
   | @ability _ _ x _ ab hu hm' =>
       cases hu with
       | active ha => rw [hp] at ha; cases ha; rw [h1, hab] at hm'; cases hm'

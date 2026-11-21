@@ -376,6 +376,19 @@ theorem UseAt.wellFormed {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseA
       exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 x (hb ▸ List.mem_append_right _
         (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
 
+/-- A play from the hand keeps well-formedness (milestone M8a). -/
+theorem PlayFromHand.wellFormed {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) (hw : WellFormed g) : WellFormed g₁ := by
+  cases h with
+  | basic hh hs hhp hb =>
+      refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩
+      rcases List.mem_append.1 hp with hp | hp
+      · exact hw.2.1 p hp
+      · rw [List.mem_singleton] at hp; subst hp
+        exact ⟨rfl, rfl, rfl, rfl⟩
+  | evolve => exact hw
+  | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2⟩
+
 /-- Legal play preserves well-formedness. -/
 theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
     WellFormed g' := by
@@ -404,6 +417,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
   | item hh hbt hst hr => exact hr.wellFormed hw
   | supporter hh hs hbt hst hr => exact hr.wellFormed hw
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.wellFormed (hu.wellFormed hw)
+  | onPlay hp _ _ _ _ _ hr => exact hr.wellFormed (hp.wellFormed hw)
   | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | @knockOut p c ps ha hk hp =>
