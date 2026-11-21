@@ -440,7 +440,7 @@ theorem Mods.cap_merge {k : Nat} {a₁ a₂ b₁ b₂ : Mods} (ha : a₁.cap k =
   obtain ⟨a1, a2, a3, a4, a5, a6⟩ := ha
   obtain ⟨b1, b2, b3, b4, b5, b6⟩ := hb
   simp only [Mods.merge, a3, a4, a5, a6, b3, b4, b5, b6, and_true]
-  exact ⟨by omega, by omega⟩
+  exact ⟨by clear a2 b2; omega, by clear a1 b1; omega⟩
 
 theorem Mods.cap_addMod {k : Nat} {a b : Mods} (h : a.cap k = b.cap k) (m : Mod) :
     (a.addMod m).cap k = (b.addMod m).cap k := by
@@ -503,7 +503,9 @@ theorem Store.NoReduce.of_cap {k : Nat} (hk : 0 < k) {a b : Store} (h : a.cap k 
   obtain ⟨h1, h2, h3, h4⟩ := h
   rw [Mods.cap_iff] at h1 h2 h3 h4
   obtain ⟨b1, b2, b3, b4⟩ := hb
-  refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
+  -- One reduction at a time: `omega` given all four stores' facts at once splits on every `min`.
+  have key : ∀ {x y : Nat}, min x k = min y k → y = 0 → x = 0 := fun hm hy => by omega
+  exact ⟨key h1.2.1 b1, key h2.2.1 b2, key h3.2.1 b3, key h4.2.1 b4⟩
 
 /-- With no damage reduction, the damage done is the base damage plus the bonus, doubled under
 Weakness, less Resistance; or nothing (base damage 0, or prevention). -/
@@ -528,6 +530,8 @@ theorem dealtBy_cap {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
   have hb := hc'.1
   rw [ho'.2.2.1]
+  -- Only the bonus fact is needed below; the other `min` facts would make `omega` split on each.
+  clear hc' ho'
   by_cases h0 : n = 0
   · simp only [h0, ↓reduceIte]
   · simp only [h0, ↓reduceIte]
@@ -566,6 +570,8 @@ theorem dealtBy_cap_reduce {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
   have hb := hc'.1
   rw [ho'.2.2.1]
+  -- Only the bonus fact is needed below; the other `min` facts would make `omega` split on each.
+  clear hc' ho'
   by_cases h0 : n = 0
   · simp only [h0, ↓reduceIte]
   · simp only [h0, ↓reduceIte]
