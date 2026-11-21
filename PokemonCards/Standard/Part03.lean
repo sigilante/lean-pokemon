@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 3 of 8 (150 cards).
+Imported Standard cards, part 3 of 9 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.7.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.8.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,84 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part03
 open Pokemon
+
+/-- Morgrem (sv7-95). Records: sv7-95. -/
+def sv7_95 : Card := .pokemon
+  { name := "Morgrem", stage := .stage1, evolvesFrom := some "Impidimp",
+    hp := 9, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 4,
+        effect := .skip,
+        gx := false },
+      { name := "Darkness Fang", cost := [.darkness, .colorless, .colorless], damage := 7,
+        effect := .skip,
+        gx := false }] }
+
+/-- Bombirdier (sv7-97). Records: sv7-97. Caveats: recoil. -/
+def sv7_97 : Card := .pokemon
+  { name := "Bombirdier", stage := .basic, evolvesFrom := none,
+    hp := 10, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Reckless Charge", cost := [.darkness, .colorless], damage := 7,
+        effect := .selfDamage 2,
+        gx := false }] }
+
+/-- Jirachi (sv7-98). Records: sv7-98. Caveats: mayFail. -/
+def sv7_98 : Card := .pokemon
+  { name := "Jirachi", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .metal, retreat := 1, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Swelling Wish", cost := [.colorless], damage := 0,
+        effect := .attach .own .discard .energy .bench .any,
+        gx := false },
+      { name := "Slap", cost := [.metal, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Klink (sv7-99). Records: sv7-99. -/
+def sv7_99 : Card := .pokemon
+  { name := "Klink", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .metal, retreat := 2, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Allure", cost := [.colorless], damage := 0,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false },
+      { name := "Beam", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Klang (sv7-100). Records: sv7-100. Caveats: recoil. -/
+def sv7_100 : Card := .pokemon
+  { name := "Klang", stage := .stage1, evolvesFrom := some "Klink",
+    hp := 9, type := .metal, retreat := 3, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Iron Tackle", cost := [.colorless, .colorless], damage := 6,
+        effect := .selfDamage 2,
+        gx := false }] }
+
+/-- Meltan (sv7-102). Records: sv7-102. -/
+def sv7_102 : Card := .pokemon
+  { name := "Meltan", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .metal, retreat := 1, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stampede", cost := [.metal], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Beam", cost := [.metal, .colorless, .colorless], damage := 4,
+        effect := .skip,
+        gx := false }] }
 
 /-- Meltan (sv7-103). Records: sv7-103. -/
 def sv7_103 : Card := .pokemon
@@ -956,6 +1034,20 @@ def sv8_102 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Donphan (sv8-103). Records: sv8-103. Caveats: ignFxStadium, perPokemon. -/
+def sv8_103 : Card := .pokemon
+  { name := "Donphan", stage := .stage1, evolvesFrom := some "Phanpy",
+    hp := 15, type := .fighting, retreat := 4, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Knock Flat", cost := [.fighting], damage := 0,
+        effect := .damage (.const 4) { fx := true },
+        gx := false },
+      { name := "Guarded Rolling", cost := [.fighting, .colorless, .colorless], damage := 12,
+        effect := .seq (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)) (.linger .own .next (.reduce 10)),
+        gx := false }] }
+
 /-- Trapinch (sv8-104). Records: sv8-104. -/
 def sv8_104 : Card := .pokemon
   { name := "Trapinch", stage := .basic, evolvesFrom := none,
@@ -998,6 +1090,20 @@ def sv8_109 : Card := .pokemon
         effect := .ite (.countGe (.bench .own (.ptype .metal)) 1) (.damage (.const 14)) (.damage (.const 6)),
         gx := false }] }
 
+/-- Landorus (sv8-110). Records: sv8-110. Caveats: mayFail. -/
+def sv8_110 : Card := .pokemon
+  { name := "Landorus", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .fighting, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Fist of Focus", cost := [.fighting], damage := 3,
+        effect := .attach .own .discard .energy .active .any,
+        gx := false },
+      { name := "Buster Swing", cost := [.fighting, .colorless, .colorless, .colorless], damage := 0,
+        effect := .damage (.const 13) { resist := true },
+        gx := false }] }
+
 /-- Passimian (sv8-111). Records: sv8-111. -/
 def sv8_111 : Card := .pokemon
   { name := "Passimian", stage := .basic, evolvesFrom := none,
@@ -1018,6 +1124,17 @@ def sv8_112 : Card := .pokemon
     attacks := [
       { name := "Slight Intrusion", cost := [.fighting], damage := 3,
         effect := .selfDamage 1,
+        gx := false }] }
+
+/-- Glimmet (sv8-114). Records: sv8-114. -/
+def sv8_114 : Card := .pokemon
+  { name := "Glimmet", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Rock Hurl", cost := [.fighting], damage := 0,
+        effect := .damage (.const 1) { resist := true },
         gx := false }] }
 
 /-- Deino (sv8-117). Records: sv8-117. -/
@@ -1084,6 +1201,17 @@ def sv8_122 : Card := .pokemon
         effect := .choice (.damage (.const 3)) .skip,
         gx := false }] }
 
+/-- Alolan Dugtrio (sv8-123). Records: sv8-123, sv8-208. -/
+def sv8_123 : Card := .pokemon
+  { name := "Alolan Dugtrio", stage := .stage1, evolvesFrom := some "Alolan Diglett",
+    hp := 11, type := .metal, retreat := 2, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Trio-Cheehoo", cost := [], damage := 0,
+        effect := .ite (.countGe (.pile .own .hand .any) 3) (.ite (.countGe (.pile .own .hand .any) 4) .skip (.damage (.const 12))) .skip,
+        gx := false }] }
+
 /-- Skarmory (sv8-124). Records: sv8-124, sv8-209. Caveats: perPokemon. -/
 def sv8_124 : Card := .pokemon
   { name := "Skarmory", stage := .basic, evolvesFrom := none,
@@ -1129,6 +1257,20 @@ def sv8_127 : Card := .pokemon
         gx := false },
       { name := "Double Impact", cost := [.metal, .colorless, .colorless], damage := 0,
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 10)) (.damage (.const 20))),
+        gx := false }] }
+
+/-- Klefki (sv8-128). Records: sv8-128. -/
+def sv8_128 : Card := .pokemon
+  { name := "Klefki", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .metal, retreat := 1, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stick 'n' Draw", cost := [.colorless], damage := 0,
+        effect := .ifDone (.countGe (.pile .own .hand .any) 1) (.move .own .hand .discard .any (.exactly 1)) (.move .own (.top 2) .hand .any .all),
+        gx := false },
+      { name := "Hook", cost := [.colorless], damage := 2,
+        effect := .skip,
         gx := false }] }
 
 /-- Duraludon (sv8-129). Records: sv8-129. -/
@@ -1368,6 +1510,10 @@ def sv8_180 : Card := .trainer "Lively Stadium" .stadium
 def sv8_183 : Card := .trainer "Miracle Headset" .item
     (.move .own .discard .hand (.kind .supporter) (.upTo 2))
 
+/-- Surfer (sv8-187). Records: sv8-187, sv8-235, me2pt5-200, me2pt5-293. Caveats: noopPlay. -/
+def sv8_187 : Card := .trainer "Surfer" .supporter
+    (.ifDone (.countGe (.bench .own .pokemon) 1) (.switch .own) (.drawTo .own 5))
+
 /-- Tera Orb (sv8-189). Records: sv8-189. -/
 def sv8_189 : Card := .trainer "Tera Orb" .item
     (.seq (.move .own .deck .hand (.and .pokemon .tera) (.upTo 1)) .shuffle)
@@ -1509,6 +1655,20 @@ def sv8pt5_39 : Card := .pokemon
     attacks := [
       { name := "Perfume Press", cost := [.psychic, .colorless], damage := 6,
         effect := .inflict .confused,
+        gx := false }] }
+
+/-- Sylveon (sv8pt5-40). Records: sv8pt5-40. Caveats: staticPreventBench. -/
+def sv8pt5_40 : Card := .pokemon
+  { name := "Sylveon", stage := .stage1, evolvesFrom := some "Eevee",
+    hp := 12, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Safeguard", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .prevent .ex }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Magical Shot", cost := [.psychic, .colorless, .colorless], damage := 10,
+        effect := .skip,
         gx := false }] }
 
 /-- Larvitar (sv8pt5-47). Records: sv8pt5-47. -/
@@ -1675,129 +1835,14 @@ def sv8pt5_76 : Card := .pokemon
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 12)) (.choice (.damage (.const 24)) (.damage (.const 36)))),
         gx := false }] }
 
-/-- Buneary (sv8pt5-83). Records: sv8pt5-83. -/
-def sv8pt5_83 : Card := .pokemon
-  { name := "Buneary", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Smash Kick", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Lopunny (sv8pt5-84). Records: sv8pt5-84. -/
-def sv8pt5_84 : Card := .pokemon
-  { name := "Lopunny", stage := .stage1, evolvesFrom := some "Buneary",
-    hp := 9, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rear Kick", cost := [.colorless, .colorless], damage := 9,
-        effect := .skip,
-        gx := false }] }
-
-/-- Regigigas (sv8pt5-86). Records: sv8pt5-86. -/
-def sv8pt5_86 : Card := .pokemon
-  { name := "Regigigas", stage := .basic, evolvesFrom := none,
-    hp := 16, type := .colorless, retreat := 4, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Jewel Breaker", cost := [.colorless, .colorless, .colorless, .colorless], damage := 0,
-        effect := .ite (.top .opp .tera) (.damage (.const 33)) (.damage (.const 10)),
-        gx := false }] }
-
-/-- Furfrou (sv8pt5-88). Records: sv8pt5-88. Caveats: staticBench. -/
-def sv8pt5_88 : Card := .pokemon
-  { name := "Furfrou", stage := .basic, evolvesFrom := none,
-    hp := 10, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Fur Coat", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 2 .any }],
-        spot := none, cond := none,
-        effect := .fx .skip }],
-    attacks := [
-      { name := "Bite", cost := [.colorless, .colorless, .colorless], damage := 8,
-        effect := .skip,
-        gx := false }] }
-
-/-- Hawlucha (sv8pt5-89). Records: sv8pt5-89. -/
-def sv8pt5_89 : Card := .pokemon
-  { name := "Hawlucha", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .colorless, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rising Tackle", cost := [.colorless], damage := 0,
-        effect := .ite (.top .opp .ex) (.damage (.const 6)) (.damage (.const 1)),
-        gx := false }] }
-
-/-- Noibat (sv8pt5-90). Records: sv8pt5-90. -/
-def sv8pt5_90 : Card := .pokemon
-  { name := "Noibat", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .colorless, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flap", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Noivern ex (sv8pt5-91). Records: sv8pt5-91. Caveats: recoil. -/
-def sv8pt5_91 : Card := .pokemon
-  { name := "Noivern ex", stage := .stage1, evolvesFrom := some "Noibat",
-    hp := 27, type := .colorless, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Strafe", cost := [.colorless], damage := 5,
-        effect := .choice (.switch .own) .skip,
-        gx := false },
-      { name := "Sonic Blast", cost := [.colorless, .colorless, .colorless], damage := 22,
-        effect := .selfDamage 3,
-        gx := false }] }
-
-/-- Friends in Paldea (sv8pt5-109). Records: sv8pt5-109, sv8pt5-137. -/
-def sv8pt5_109 : Card := .trainer "Friends in Paldea" .supporter
-    (.move .own (.top 3) .hand .any .all)
-
-/-- Max Rod (sv8pt5-116). Records: sv8pt5-116. Caveats: aceSpec, upTo0. -/
-def sv8pt5_116 : Card := .trainer "Max Rod" .item
-    (.move .own .discard .hand (.or .pokemon .energy) (.upTo 5))
-
-/-- Roto-Stick (sv8pt5-127). Records: sv8pt5-127. -/
-def sv8pt5_127 : Card := .trainer "Roto-Stick" .item
-    (.seq (.move .own (.top 4) .hand (.kind .supporter) (.upTo 4)) .shuffle)
-
-/-- Treasure Tracker (sv8pt5-131). Records: sv8pt5-131. Caveats: aceSpec, upTo0. -/
-def sv8pt5_131 : Card := .trainer "Treasure Tracker" .item
-    (.seq (.move .own .deck .hand .tool (.upTo 5)) .shuffle)
-
-/-- Caterpie (sv9-1). Records: sv9-1. -/
-def sv9_1 : Card := .pokemon
-  { name := "Caterpie", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bug Bite", cost := [.grass], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Paras (sv9-4). Records: sv9-4. -/
-def sv9_4 : Card := .pokemon
-  { name := "Paras", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Leech Life", cost := [.grass], damage := 0,
-        effect := .drain (.const 1),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_95,
+  sv7_97,
+  sv7_98,
+  sv7_99,
+  sv7_100,
+  sv7_102,
   sv7_103,
   sv7_105,
   sv7_106,
@@ -1874,20 +1919,25 @@ def cards : List Card := [
   sv8_98,
   sv8_99,
   sv8_102,
+  sv8_103,
   sv8_104,
   sv8_108,
   sv8_109,
+  sv8_110,
   sv8_111,
   sv8_112,
+  sv8_114,
   sv8_117,
   sv8_118,
   sv8_119,
   sv8_120,
   sv8_122,
+  sv8_123,
   sv8_124,
   sv8_125,
   sv8_126,
   sv8_127,
+  sv8_128,
   sv8_129,
   sv8_132,
   sv8_134,
@@ -1910,6 +1960,7 @@ def cards : List Card := [
   sv8_178,
   sv8_180,
   sv8_183,
+  sv8_187,
   sv8_189,
   sv8pt5_1,
   sv8pt5_2,
@@ -1922,6 +1973,7 @@ def cards : List Card := [
   sv8pt5_28,
   sv8pt5_38,
   sv8pt5_39,
+  sv8pt5_40,
   sv8pt5_47,
   sv8pt5_48,
   sv8pt5_50,
@@ -1934,20 +1986,7 @@ def cards : List Card := [
   sv8pt5_66,
   sv8pt5_67,
   sv8pt5_68,
-  sv8pt5_76,
-  sv8pt5_83,
-  sv8pt5_84,
-  sv8pt5_86,
-  sv8pt5_88,
-  sv8pt5_89,
-  sv8pt5_90,
-  sv8pt5_91,
-  sv8pt5_109,
-  sv8pt5_116,
-  sv8pt5_127,
-  sv8pt5_131,
-  sv9_1,
-  sv9_4]
+  sv8pt5_76]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1966,7 +2005,7 @@ theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.la
 theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Victini"] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
-theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Dubwool", "Cetitan", "Bronzong", "Furfrou"] := by decide +kernel
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Dubwool", "Cetitan", "Bronzong"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
 theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Gravity Gemstone"] := by decide +kernel
@@ -2000,6 +2039,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Tornadus", "Volcarona", "Skarmory", "Jasmine's Gaze", "Paras"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Tornadus", "Volcarona", "Donphan", "Skarmory", "Jasmine's Gaze"] := by decide +kernel
 
 end PokemonCards.Standard.Part03

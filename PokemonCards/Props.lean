@@ -1,4 +1,5 @@
 import Pokemon.Faithful
+import Pokemon.IfDo
 
 /-!
 # Checks on imported cards
