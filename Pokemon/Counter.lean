@@ -58,7 +58,9 @@ each deck-and-hand; one Prize card each.
   invariant `Inv` (an abstract state `Abs` that is `Good` and whose configuration `M` reaches)
   leads to such a state. Attacks run the machine or do nothing; attaching Energy, drawing and
   ending the turn change nothing abstract; decking out ends the game; and no other move is legal
-  (hands hold only Energy, Benches are empty, nothing is Confused or at its HP). A player who
+  (hands hold only Energy, Benches are empty, nothing is Confused or at its HP, and, since
+  milestone M8a, the Clock and the Tape have no Abilities, so `Move.ability` has no Pokémon to use
+  one and `Move.onPlay` no card to play). A player who
   declines to attack, or who attaches the Energy card, decks out at their next draw, and the
   game ends with a winner and no halt mark; the invariant covers `deckOut`, so this does not
   affect the converse.

@@ -23,6 +23,11 @@ Since milestone MV effects also move cards between a player's zones (`Run.zone`,
 semantics `ZStep` on one player's state): search, draw, mill, discard from the hand, recycling
 from the discard pile, attaching Energy from a zone, putting a Basic Pokémon onto the Bench, and
 discarding or moving attached Energy; and amounts and tests read counts (`Count.val`).
+
+Since milestone M8a an effect also moves a damage counter between the player's own Pokémon in play
+(`Run.moveCounter`, with the relation `CMove`); it reads and writes only the player's own damage,
+which both clamps keep exact inside an effect (`CMove.sim`). Abilities' effects are compiled to this
+language (`AbEff.compile`), so `Run` has no other new case.
 -/
 
 namespace Pokemon

@@ -12,25 +12,30 @@ further hypothesis.
 
 **The deck condition** (`GameState.Faithful`, on the cards of the start state; play only
 permutes cards, so it holds all game):
-* `LoopFree` (clause 1): no effect, of an attack or of a Trainer card, contains a damage bonus
-  or damage reduction (`linger … (bonus n)`, `linger … (reduce n)`) under `iter`. Locks and
-  prevention may appear anywhere; they are flags.
+* `LoopFree` (clause 1): no effect, of an attack, a Trainer card or (milestone M8a) an Ability,
+  contains a damage bonus or damage reduction (`linger … (bonus n)`, `linger … (reduce n)`) under
+  `iter`. Locks and prevention may appear anywhere; they are flags.
 * `GXOnly` (clause 2): every attack whose effect can write a rest-of-game damage bonus or
   reduction (`Slot.always`) is a GX attack (`Attack.gx`).
-* `RecycleSafe` (clause 3, milestone MV): (a) no Trainer card's effect (in the model, the only
-  effects that are not attacks) can return from a discard pile to a hand or deck a card of the game
-  that is not a Supporter and writes a damage bonus or reduction; (b) no effect at all, attacks
-  included, can return a Trainer card that writes a rest-of-game bonus or reduction. "Can return":
+* `RecycleSafe` (clause 3, milestone MV): (a) no Trainer card's effect and (milestone M8a) no
+  "as often as you like" Ability (`Card.freeRec`) can return from a discard pile to a hand or deck
+  a card of the game that is not a Supporter and writes a damage bonus or reduction; (b) no effect
+  at all, attacks and Abilities included, can return a Trainer card that writes a rest-of-game
+  bonus or reduction. "Can return":
   the filter of one of its zone moves out of a discard pile admits the card. Attacks may recycle
   every other card (an attack ends the turn), and Energy and Pokémon cards may be recycled by any
   effect (they write nothing when played). Decidable. A deck with no recycling satisfies it
   (`GameState.NoRecycle.recycleSafe`), so for such decks `Faithful` means what it meant before
   milestone MV. Survey S10 §5 proposes property P ("no in-turn effect may return a non-Supporter
   modifier writer from the discard pile or from play to hand or deck; no Stadium of either deck
-  either"); in the model's vocabulary (no Abilities, no Stadium play, no return from play)
-  clause 3 (a) is P, quantified over the cards of both decks together, and clause 3 (b), which P
-  lacks, is vacuous for every deck with no rest-of-game Trainer writer (all of today's Standard,
-  survey S9 N3).
+  either"); in the model's vocabulary (no Stadium play, no return from play) clause 3 (a) is P
+  for Trainer effects, quantified over the cards of both decks together, extended to
+  "as often as you like" Abilities but not to once-per-turn or on-play ones, which P covers and
+  clause 4 bounds instead; clause 3 (b), which P lacks, is vacuous for every deck with no
+  rest-of-game Trainer writer (all of today's Standard, survey S9 N3).
+* `AbilitySafe` (clause 4, milestone M8a): no "as often as you like" Ability writes a damage bonus
+  or reduction, and no Ability writes a rest-of-game one. Decidable; every deck without Abilities
+  satisfies it.
 
 **Why it bounds the stores** (milestone MV: a per-turn count). Each resolution of a loop-free
 effect `e` adds at most `e.amtAt s` to the amounts in slot `s` (`Run.slot_le`, `TRun.slot_le`).
@@ -43,6 +48,15 @@ The writers are:
   three turn boundaries (`Store.shift`), so at most three turns' Trainer writes are live. The
   rest-of-game slot holds only amounts of writers in the discard piles, which no effect recycles
   (clause 3 (b)), and of GX attacks.
+* Abilities (milestone M8a). An "as often as you like" Ability writes nothing (clause 4) and
+  recycles no writer (clause 3 (a)), so it is a step that keeps the count. Each use of a "once
+  during your turn" Ability by a Pokémon that has not used one, and each on-play trigger, spends at
+  least one unit of a potential of the player to move (`GameState.abPot`: their Pokémon in play
+  not yet used, still able to evolve, the free places in play, and the opponent's Prize cards),
+  which no move of the turn raises and which is at most `potBound` of the number of cards; each
+  such use writes and recycles at most `Q` (`Ability.q`, `cardsAbQ`). The bound rests on there
+  being no effect that returns a Pokémon in play to the hand or deck: a Pokémon leaves play only
+  by a Knock Out, which costs a Prize card.
 * Attacks. At most one attack per turn (`GameState.attacked`, reset only by `endTurn`), each
   writing at most `A = cardsAtkAmt` (the largest attack amount among the cards); three attacks'
   carried amounts at once; rest-of-game amounts only from GX attacks (clause 2), once per player per
@@ -54,17 +68,19 @@ that recycle nothing (`reach_boundedStores_noRecycle`). With recycling the per-g
 `Recycle.recycling_breaks_bound` gives a deck satisfying clauses 1 and 2, violating clause 3, with
 unbounded stores and infinitely many `xclamp` classes.
 
-The per-turn invariant (`Faithful.TInv`) has as witnesses the Trainer amounts written this turn,
-last turn and the turn before, and the writer weight of the discard piles at the start of the turn.
-`Faithful.reach_boundedStores` concludes `BoundedStores (storeBound g₀)` for every reachable state,
-with `storeBound g₀ = storeTotal g₀ + 6 · cardsAmt C + 3 · cardsAtkAmt C` (`C` the cards of `g₀`).
+The per-turn invariant (`Faithful.TInv`) has as witnesses the Trainer and Ability amounts written
+this turn, last turn and the turn before, the writer weight of the discard piles at the start of the
+turn, and (milestone M8a) the potential at the start of the turn. `Faithful.reach_boundedStores`
+concludes `BoundedStores (storeBound g₀)` for every reachable state, with `storeBound g₀ =
+storeTotal g₀ + 6 · cardsAmt C + 3 · (Q · potBound |C|) + 3 · cardsAtkAmt C` (`C` the cards of
+`g₀`, `Q = cardsAbQ (cardsAmt C) C`, which is 0 for a deck without Abilities).
 
 **Results.**
 * `Faithful.reach_boundedStores`: for a start satisfying `Faithful`, every reachable state has
   stores bounded by `storeBound g₀`.
 * `Faithful.reach_boundedStores_noRecycle`: for a start satisfying clauses 1 and 2 whose cards
-  recycle nothing, the bound of master, `storeBoundNR g₀ = storeTotal g₀ + cardsAmt C + 3 ·
-  cardsAtkAmt C`.
+  recycle nothing and (milestone M8a) whose Abilities write nothing (`AbilityQuiet`), the bound of
+  master, `storeBoundNR g₀ = storeTotal g₀ + cardsAmt C + 3 · cardsAtkAmt C`.
 * `Faithful.xfinite`: from any `Faithful` start (well-formed or not), the `xclamp`s of all reachable states
   lie in one finite list, and the kernel of `xclamp` is a two-way bisimulation along reachable
   states. No tameness: damage reduction (Iron Defender), `drain`, carried bonuses and
@@ -73,6 +89,10 @@ with `storeBound g₀ = storeTotal g₀ + 6 · cardsAmt C + 3 · cardsAtkAmt C` 
   and 3 and, when the machine's first instruction is not `halt`, violate clause 2
   (`Faithful.counter_loopFree`, `Faithful.counter_recycleSafe`, `Faithful.counter_not_gxOnly`).
 * `Pokemon/Recycle.lean`: clause 3 cannot be dropped (`Recycle.recycling_breaks_bound`).
+* `Pokemon/Abilities.lean` (milestone M8a): clause 4 cannot be dropped, nor clause 3 (a) for
+  Abilities (`Abilities.unlimited_writer_breaks_bound`, `Abilities.unlimited_recycler_breaks_bound`);
+  a once-per-turn recycler of a writer is faithful (`Abilities.once_recycler_faithful`), and so is
+  a deck with Feraligatr's once-per-turn bonus (`Abilities.feraligatr_faithful`).
 
 **Which theorem applies.** `Reach.finite` (`Pokemon/Finite.lean`) needs tame cards (no damage
 reduction, no `drain`) and no reduction in effect at the start; it allows bonus writes under
@@ -91,11 +111,12 @@ read or written. Every theorem that mentions attacks was re-proved; `Counter.uni
 unchanged in statement (its attacks have `gx = false`).
 
 **What the condition does not cover.** Printed behaviours outside it, or outside the model:
-* Abilities (none in the model): an "as often as you like" Ability that writes a modifier, or an
-  Ability that recycles a writer, would need clause 3 extended to Abilities; Stadium effects (no
-  Stadium is played in the model; survey S10 names Levincia, usable by both players);
-* returning a card from play to the hand or deck (Scoop Up Cyclone) and devolution are not in the
-  model;
+* static and triggered Abilities other than on-play ones (milestone M8b), and Stadium effects
+  (no Stadium is played in the model; survey S10 names Levincia, usable by both players);
+* returning a card from play to the hand or deck (Scoop Up Cyclone, and the Abilities of Abra,
+  Dudunsparce and Misty's Psyduck) and devolution are not in the model; with them a Pokémon card
+  could re-enter play within a turn, and the potential that bounds Ability uses would need
+  another argument;
 * the model lets a played Item or Supporter recycle itself (it is in the discard pile while its
   effect resolves; the rulebook discards it afterwards); clause 3 (a) covers that case, since it
   constrains every return from the discard pile;
@@ -105,17 +126,18 @@ unchanged in statement (its attacks have `gx = false`).
   modifier together) is excluded inside one effect by clause 1 and across effects by the per-turn
   count: within a turn each non-Supporter writer is played at most once and one Supporter at most;
   survey S10 §0 found no printed card that writes modifiers of two durations together;
-* rest-of-game modifiers from VSTAR Powers, Abilities or Stadiums are not modelled (`vstarUsed`
-  is unused);
+* rest-of-game modifiers from VSTAR Powers or Stadiums are not modelled (`vstarUsed` is unused);
+  from Abilities they are outside clause 4;
 * copy attacks are not modelled; the once-per-game rule and clause 2 are stated for the attacks
   printed on the attacker;
-* static modifiers, and modifiers from Pokémon Tools, Abilities or Special Energy, are not
+* static modifiers, and modifiers from Pokémon Tools, static Abilities or Special Energy, are not
   modelled: every modifier here is written by an effect when it resolves;
 * reductions restricted by type are not modelled: printed Iron Defender protects Metal Pokémon
   only, whereas the model's reduction protects all of a player's Pokémon;
 * effects that lock GX attacks are not modelled.
 
-The store bound rests on: at most one attack per turn, no extra turns, and clause 3 for recycling.
+The store bound rests on: at most one attack per turn, no extra turns, clause 3 for recycling,
+clause 4 for "as often as you like" Abilities, and the absence of returns from play.
 -/
 
 namespace Pokemon
@@ -1554,8 +1576,8 @@ theorem atkRes_gxT_true {A : Nat} {atk : Attack} {g g'' : GameState} (hgv : atk.
   omega
 
 /-- **Every move preserves the invariant**, for cards satisfying clauses 1 and 2 that recycle
-nothing (`NoRecycle`) and whose attacks
-write at most `A`. -/
+nothing (`NoRecycle`), whose Abilities write nothing (`AbilityQuiet`, milestone M8a) and whose
+attacks write at most `A`. -/
 theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g)
     (hL : g.LoopFree) (hG : g.GXOnly) (hN : g.NoRecycle) (hQ : g.AbilityQuiet)
     (hA : ∀ x ∈ g.allCards, x.atkAmt ≤ A) : Inv S A g' := by
@@ -1685,9 +1707,11 @@ theorem modsLe_of {B : Nat} {m : Mods} (h : m.amt ≤ B) : Enum.ModsLe B m := by
 
 /-- **Without recycling, the bound of master.** From a start state `g₀` satisfying clauses 1 and
 2 whose cards recycle nothing (`NoRecycle`: no effect moves a card out of a discard pile to a hand
-or deck; every deck before milestone MV), every reachable state has every slot's bonus and
-reduction at most `storeBoundNR g₀`: each Trainer card is then played at most once per game. This
-is the statement `reach_boundedStores` had before milestone MV, with its bound. -/
+or deck; every deck before milestone MV) and whose Abilities write nothing (`AbilityQuiet`, added
+by milestone M8a: an Ability writes every turn, so its amounts are not counted once per game),
+every reachable state has every slot's bonus and reduction at most `storeBoundNR g₀`: each Trainer
+card is then played at most once per game. This is the statement `reach_boundedStores` had before
+milestone MV, with its bound; for decks without Abilities the added hypothesis holds. -/
 theorem reach_boundedStores_noRecycle {g₀ g : GameState} (hL : g₀.LoopFree) (hG : g₀.GXOnly)
     (hN : g₀.NoRecycle) (hQ : g₀.AbilityQuiet) (h : Reach g₀ g) :
     g.BoundedStores (storeBoundNR g₀) := by
@@ -1711,13 +1735,17 @@ theorem reach_boundedStores_noRecycle {g₀ g : GameState} (hL : g₀.LoopFree) 
 
 With recycling a Trainer card can be played more than once per game, so the amounts in the
 discard piles no longer bound what Trainers have written. They still bound what Trainers write in
-one turn, under clause 3: before the turn's attack no effect returns a non-Supporter writer from a
-discard pile, so each such card is played at most once in the turn, and at most one Supporter is.
-The invariant tracks, as witnesses, the amount `X₀` Trainers wrote this turn, `X₁` last turn and
-`X₂` the turn before (each at most `2 P`, `P` the Trainer amounts of all cards), and the weight
-`D` of the non-Supporter writers in the discard piles when the turn began; carried amounts expire
-within three turn boundaries, as for attacks. The rest-of-game slot is bounded as before, by the
-rest-of-game Trainer amounts in the discard piles, which no effect recycles (clause 3 (b)). -/
+one turn, under clause 3: before the turn's attack no Trainer effect and no "as often as you like"
+Ability returns a non-Supporter writer from a discard pile, so each such card is played at most
+once in the turn, except after a once-per-turn or on-play Ability has returned it, and at most one
+Supporter is. The invariant tracks, as witnesses, the amount `X₀` Trainers and Abilities wrote this
+turn, `X₁` last turn and `X₂` the turn before (each at most `2 P + Q · K`, `P` the Trainer amounts
+of all cards, `Q` what one bounded Ability use can write and recycle, `K` a bound on the
+potential), the weight `D` of the non-Supporter writers in the discard piles when the turn began,
+and the potential `E` when the turn began (milestone M8a); carried amounts expire within three turn
+boundaries, as for attacks. The rest-of-game slot is bounded as before, by the rest-of-game
+Trainer amounts in the discard piles, which no effect recycles (clause 3 (b)); no Ability writes
+it (clause 4). -/
 
 /-- `P` once the player to move has played a Supporter this turn, else 0. -/
 def supT (P : Nat) (g : GameState) : Nat := if g.cur.supporterPlayed then P else 0
@@ -2238,7 +2266,9 @@ theorem reach_boundedStores {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach
 /-- **Finiteness for faithful decks.** Let `g₀` be any start state (well-formed or not) whose
 cards satisfy `Faithful` (no damage bonus or reduction under `iter`; rest-of-game bonuses and
 reductions only from GX attacks, which the rules make once per player per game; since milestone MV,
-clause 3: no Trainer effect recycles a non-Supporter writer, and no effect a rest-of-game writer).
+clause 3: no Trainer effect recycles a non-Supporter writer, and no effect a rest-of-game writer;
+since milestone M8a, clause 3 (a) for "as often as you like" Abilities too, and clause 4: no such
+Ability writes a bonus or reduction, no Ability a rest-of-game one).
 Then
 
 * the `xclamp`s of all states reachable from `g₀` lie in one finite list `L`; and
