@@ -1036,6 +1036,7 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | unmark w m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | benchCounters w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | benchSome w _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | switch w ha hb => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | benchDamage w n h => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
@@ -1092,7 +1093,7 @@ theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
     (ha : s.active = some a) (hc : k.marks.char = false) (o f sp c : Bool) :
     Fits k { s with
       active := some (a.checkup o f sp c), bench := [], energyAttached := false,
-      supporterPlayed := false, retreated := false, mods := s.mods.shift } := by
+      supporterPlayed := false, retreated := false, mods := s.mods.shift, ko := s.ko.shift } := by
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
   rw [ha] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm h2 h3 h4 (by rw [h6]; exact hc) o f sp c
@@ -1103,7 +1104,7 @@ theorem Fits.toOpp {k : Pk} {s : PlayerState} {b : InPlay} (h : Fits k s)
     (hb : s.active = some b) (hc : k.marks.char = false) (o f sp c : Bool) :
     Fits k { s.unfresh with
       active := some (b.unfresh.checkup o f sp c), bench := [], mods := s.mods.shift,
-      hadTurn := true } := by
+      hadTurn := true, ko := s.ko.shift } := by
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
   rw [hb] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm (p := b.unfresh) h2 h3 h4 (by rw [← hc, ← h6]; rfl)
@@ -1271,7 +1272,7 @@ theorem reach_trans {g₁ g₂ g₃ : GameState} (h₁ : Reach g₁ g₂) (h₂ 
 
 /-- A Basic Pokémon just set up as Active: no damage, no Energy, no markers. -/
 def onPlay (top : PokemonCard) : InPlay :=
-  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty, false⟩
+  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty, false, false⟩
 
 /-- **The start state for machine `M` with inputs `a`, `b`.** The first player (to move, in
 the main phase of a turn after the draw) has the Clock Active, one Energy in hand, an empty
@@ -1281,9 +1282,9 @@ hand and one Prize card. Neither has a Bench. The inputs are rest-of-game damage
 first turn, both players have had a turn (`hadTurn`), and the Stadium slot is empty. -/
 def start (M : Machine) (a b : Nat) : GameState where
   cur := ⟨[], [.energy .grass], [], [.energy .grass], [], some (onPlay (clock M)), [],
-    false, false, false, false, false, storeOf 0 b, true⟩
+    false, false, false, false, false, storeOf 0 b, true, KOHist.empty⟩
   opp := ⟨[.energy .grass], [], [], [.energy .grass], [], some (onPlay (tape M)), [],
-    false, false, false, false, false, storeOf 0 a, true⟩
+    false, false, false, false, false, storeOf 0 a, true, KOHist.empty⟩
   curIsFirst := true
   firstTurn := false
   attacked := false

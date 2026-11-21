@@ -89,6 +89,16 @@ CAVEATS = {
                     "switched its attacker out ('damaged'), or the attacker was Knocked Out by the same check "
                     "('Knocked Out'), the effect falls on the new Active Pokémon instead of the attacker or nothing "
                     "(Known gaps, triggered Abilities, M8b)",
+    'koAttackWide': "'Knocked Out by damage from an attack during your opponent's last turn' is read as 'Knocked Out by the "
+                    "Knock Out check after the turn's attack' (`Count.koLast w true`): Knock Outs by damage counters an "
+                    "attack's effect placed also count (Known gaps, one-turn history, milestone MV2)",
+    'koCheckup': "'Knocked Out during your opponent's last turn' (any cause) is `Count.koLast w false`, and the model "
+                 "records Knock Outs at Pokémon Checkup in no turn (Known gaps, one-turn history, milestone MV2): a Knock Out "
+                 "by Poison or Burn after the opponent's turn does not make the test true; whether the printed condition "
+                 "counts it was not checked against a ruling",
+    'movedUpPromotion': "'moved from your Bench to the Active Spot this turn' is `InPlay.movedUp`, which a promotion after a "
+                        "Knock Out of the player's own Active Pokémon in their own turn does not set (Known gaps, one-turn "
+                        "history, milestone MV2: an under-model)",
 }
 
 
@@ -122,6 +132,10 @@ CAVEAT_DIRECTION = {
     'trigKO': 'allows more',       # more Knock Outs fire the trigger than the printed "by damage from an attack"
     'trigAttacker': 'both',        # a different Pokémon gets the effect: the printed outcome is not among the
                                    # model's when the attacker was switched out or Knocked Out
+    'koAttackWide': 'both',        # the test is true in more states: the printed result of a false test (no bonus)
+                                   # is then absent, and the model's bonus is an outcome the printed card lacks
+    'koCheckup': 'forbids some',   # if a Checkup Knock Out counts in print, the model's test is false where it is true
+    'movedUpPromotion': 'forbids some',  # the printed bonus after such a promotion is not available
 }
 
 
@@ -175,6 +189,21 @@ def parse_filter(np, ctx):
     to a `Filter`. Singular and plural forms; refuses phrases the model has no filter for."""
     s = np.strip()
     s = re.sub(r'^(an?|any|the) ', '', s)
+    # milestone MV2: "Pokémon ex or Pokémon V" / "Pokémon ex and Pokémon V" (a count's union). The model's
+    # `RuleBox` has no V kind and today's Standard pool (H, I, J) has no Pokémon V, so no card of a game the
+    # model plays is a Pokémon V and the phrase is "Pokémon ex" (Pokemon/Card.lean, `Filter.ex`)
+    if s in ('Pokémon ex or Pokémon V', 'Pokémon ex and Pokémon V', 'Benched Pokémon ex or Benched Pokémon V'):
+        return ('ex',)
+    # milestone MV2: "Pokémon that has the Round attack" (`Filter.hasAttack`, the card's printed attacks) and
+    # "Pokémon that has an Ability" (`Filter.hasAbility`, the card's printed Abilities)
+    m = re.match(r'^Pokémon (?:that|which) (?:has|have) the (.+) attack$', s)
+    if m:
+        return ('and', ('pokemon',), has_attack(m.group(1)))
+    if s in ('Pokémon that has an Ability', 'Pokémon that have an Ability'):
+        return ('and', ('pokemon',), ('hasAbility',))
+    if s == 'Tera Pokémon':
+        # milestone MV2: `Filter.tera`, the card's Tera mark (every Tera Pokémon of today's Standard)
+        return ('and', ('pokemon',), ('tera',))
     m = re.match(r'^(.+?),? or (an? )?(.+)$', s)
     if m and ' or less' not in s and ' or more' not in s:
         return ('or', parse_filter(m.group(1), ctx), parse_filter(m.group(3), ctx))
@@ -255,6 +284,19 @@ KNOWN_NAMES = {}
 NAME_STAGES = {}
 
 
+# Names of the attacks Pokémon Tool cards of the whole dataset print (and may give, `ToolGrant`).
+TOOL_ATTACKS = set()
+
+
+def has_attack(n):
+    """`Filter.hasAttack n` reads the printed attacks of a Pokémon card, not attacks a Tool gives (Pokemon/Card.lean).
+    For a Pokémon in play that is the printed "has the X attack" unless a Tool can give an attack named X, so
+    such a name is refused (none is, in the dataset, for the names the importer meets)."""
+    if n in TOOL_ATTACKS:
+        raise Refuse('attack name a Pokémon Tool can give (Filter.hasAttack reads printed attacks only): ' + n)
+    return ('hasAttack', n)
+
+
 def bench_filter_ok(f):
     """`putBench` puts only a Basic Pokémon onto the Bench (`ZStep.putBench` requires `stage = .basic`,
     Pokemon/Effect.lean), which is the general rule for a card effect that puts Pokémon onto the Bench
@@ -275,7 +317,10 @@ def bench_filter_ok(f):
 def set_names(cards):
     KNOWN_NAMES.clear()
     NAME_STAGES.clear()
+    TOOL_ATTACKS.clear()
     for c in cards:
+        if c['supertype'] == 'Trainer' and 'Pokémon Tool' in c['_sub']:
+            TOOL_ATTACKS.update(norm(a.get('name')) for a in c.get('attacks') or [])
         sub = c['_sub']
         if c['supertype'] == 'Pokémon':
             NAME_STAGES.setdefault(norm(c['name']), set()).update(
@@ -371,6 +416,25 @@ def parse_count(x, ctx):
         f = parse_filter(m.group(1), ctx)
         w = OPP if m.group(2) else OWN
         return lambda k: ('count', ('pile', w, ('discard',), f), k)
+    # milestone MV2: "Pokémon in your discard pile that has the United Wings attack"
+    m = re.match(r"^Pokémon in your (opponent's )?discard pile that (?:has|have) the (.+) attack$", x)
+    if m:
+        w = OPP if m.group(1) else OWN
+        f = ('and', ('pokemon',), ('hasAttack', m.group(2)))
+        return lambda k: ('count', ('pile', w, ('discard',), f), k)
+    # milestone MV2: "of your [opponent's] F in play [that has the X attack / that has an Ability]": the
+    # Pokémon in play, Active and Benched, whose top card passes the filter (`Count.inPlay`)
+    m = re.match(r"^of your (opponent's )?(.+?) in play(?: that (?:has|have) (?:the (.+) attack|(an Ability)))?$", x)
+    if m:
+        w = OPP if m.group(1) else OWN
+        f = parse_filter(m.group(2), ctx)
+        if not is_pokemon_filter(f):
+            raise Refuse('count not expressible: ' + x)
+        if m.group(3):
+            f = ('and', f, has_attack(m.group(3)))
+        elif m.group(4):
+            f = ('and', f, ('hasAbility',))
+        return lambda k: ('count', ('inPlay', w, f), k)
     raise Refuse('count not expressible: ' + x)
 
 
@@ -446,7 +510,94 @@ def parse_test(c, ctx):
     m = re.match(r'^you have (\d+) or more (.+?) in your discard pile$', c)
     if m:
         return [('countGe', ('pile', OWN, ('discard',), parse_filter(m.group(2), ctx)), num(m.group(1)))], False
+    r = parse_test_mv2(c, ctx)
+    if r is not None:
+        return r
     raise Refuse('condition not expressible: ' + c)
+
+
+# milestone MV2, (C): the printed kinds of the opponent's Active Pokémon a test reads (`Test.top w f`, which reads
+# its top card, a printed card). "Pokémon ex" is `Filter.ex` (rule box ex or Mega Evolution ex: every Mega
+# Evolution Pokémon ex is a Pokémon ex, Pokemon/Card.lean `RuleBox`); "Evolution Pokémon" is "not Basic" (the
+# model's stages are Basic, Stage 1, Stage 2, and only Basic Pokémon are put into play other than by evolving).
+TOP_KINDS = {
+    'Pokémon ex': ('ex',),
+    'Pokémon ex or Pokémon V': ('ex',),
+    'Evolution Pokémon': ('not', ('basic',)),
+    'Basic Pokémon': ('basic',),
+    'Stage 1 Pokémon': ('stage', ('stage1',)),
+    'Stage 2 Pokémon': ('stage', ('stage2',)),
+    'Tera Pokémon': ('tera',),
+}
+
+KO_LAST = r'^any of your (.+?) were Knocked Out (by damage from an attack )?during your opponent\'s last turn$'
+
+
+def is_pokemon_filter(f):
+    """Only Pokémon cards pass the filter (a count or test of Pokémon in play reads top cards, which are
+    Pokémon cards; a filter that names another kind would be read as an empty count, so it is refused)."""
+    h = f[0]
+    if h in ('pokemon', 'basic', 'stage', 'ptype', 'ex', 'tera', 'hasAttack', 'hasAbility'):
+        return True
+    if h == 'named':
+        return KNOWN_NAMES.get(f[1]) == {'Pokémon'}
+    if h == 'and':
+        return is_pokemon_filter(f[1]) or is_pokemon_filter(f[2])
+    if h == 'or':
+        return is_pokemon_filter(f[1]) and is_pokemon_filter(f[2])
+    return False
+
+
+def tcav(ctx, code):
+    """A caveat of a test (recorded on the context; the caller moves it onto the item it builds)."""
+    ctx.setdefault('_tc', set()).add(code)
+
+
+def parse_test_mv2(c, ctx):
+    m = re.match(r"^(your opponent's Active Pokémon|the Defending Pokémon) is (?:a|an) (.+)$", c)
+    if m and m.group(2) in TOP_KINDS:
+        if m.group(1) == 'the Defending Pokémon' and ctx['kind'] != 'attack':
+            raise Refuse('the Defending Pokémon outside an attack')
+        return [('top', OPP, TOP_KINDS[m.group(2)])], False
+    if c == 'this Pokémon has a Pokémon Tool attached':
+        if ctx['kind'] == 'trainer':
+            raise Refuse('this Pokémon outside an attack')
+        return [('hasTool', OWN)], False
+    if c == "your opponent's Active Pokémon has a Pokémon Tool attached":
+        return [('hasTool', OPP)], False
+    m = re.match(r'^you have (?:any )?(.+?) in play$', c)
+    if m and not re.search(r',| and |\d', m.group(1)):
+        try:
+            f = parse_filter(m.group(1), ctx)
+        except Refuse:
+            return None
+        if is_pokemon_filter(f):
+            return [('countGe', ('inPlay', OWN, f), 1)], False
+    # (A) one-turn history
+    m = re.match(KO_LAST, c)
+    if m:
+        if m.group(1) != 'Pokémon':
+            raise Refuse(GAP_PREFIX + 'name prefix (a filter on part of a name)')
+        if m.group(2):
+            tcav(ctx, 'koAttackWide')
+            return [('countGe', ('koLast', OWN, True), 1)], False
+        tcav(ctx, 'koCheckup')
+        return [('countGe', ('koLast', OWN, False), 1)], False
+    if c == 'this Pokémon moved from your Bench to the Active Spot this turn':
+        if ctx['kind'] != 'attack':
+            raise Refuse('this Pokémon moved up: outside an attack')
+        tcav(ctx, 'movedUpPromotion')
+        return [('movedUp', OWN)], False
+    m = re.match(r'^this Pokémon evolved from (.+) during this turn$', c)
+    if m:
+        # `Test.evolved` is "evolved this turn"; "from X" is exact only when X is the card's own printed
+        # pre-evolution, the one card the model can evolve it from (no Rare Candy or evolution by effect)
+        if ctx['kind'] != 'attack':
+            raise Refuse('this Pokémon evolved: outside an attack')
+        if m.group(1) != ctx.get('evolvesFrom'):
+            raise Refuse('evolved from a card that is not its printed pre-evolution: ' + c)
+        return [('evolved', OWN)], False
+    return None
 
 
 def branch(tests, neg, a, b):
@@ -508,8 +659,8 @@ def abseq(*xs):
 class Cost:
     """A Trainer's cost ('You can use this card only if you discard N other cards from your hand'),
     resolved first."""
-    def __init__(self, e):
-        self.e = e
+    def __init__(self, e, cavs=()):
+        self.e, self.cavs = e, set(cavs)
 
 
 # ------------------------------------------------------------------ the sentence table
@@ -637,6 +788,70 @@ def _(m, ctx):
     return Eff(seq(('spreadDamage', OWN, n), ('spreadDamage', OPP, n)), {'benchMods'})
 
 
+# ---- milestone MV2, (B): damage and counters on several chosen Pokémon (Pokemon/Spread.lean)
+
+@rule('damage-to-M-opp', r"This attack does (\d+) damage to (\d+) of your opponent's Pokémon\.", 'A',
+      'Effect.hitSome m n, unfolded: ite (countGe (bench opp any) m) (choice (damage n; benchSome opp (m-1) any true n) '
+      '(benchSome opp m any true n)) (damage n; benchSome opp (m-1) any true n)')
+def _(m, ctx):
+    k = num(m.group(2))
+    if k < 2:
+        raise Refuse('wording')
+    return Dmg('targetM', k, counters(m.group(1)), cavs={'benchMods'})
+
+
+BENCH_KINDS = {'Pokémon': ('any',), 'Pokémon ex': ('ex',), 'Pokémon ex or Benched Pokémon V': ('ex',)}
+
+
+@rule('damage-to-M-opp-bench', r"This attack (also )?does (\d+) damage to (\d+) of your opponent's Benched "
+      r"(Pokémon|Pokémon ex|Pokémon ex or Benched Pokémon V)\.", 'A', 'benchSome opp m F true n')
+def _(m, ctx):
+    # "M of your opponent's Benched Pokémon [ex]": M distinct Benched Pokémon whose card passes F, all of them if
+    # fewer pass (`Hits`); attack damage with no Weakness or Resistance (as printed for the Bench) and in the
+    # model no other modifier (benchMods); none on a Benched Tera Pokémon (as printed)
+    if not m.group(1) and ctx['base'] is not None:
+        raise Refuse('Bench-only damage with a printed base damage')
+    return Eff(('benchSome', OPP, num(m.group(3)), BENCH_KINDS[m.group(4)], True, counters(m.group(2))), {'benchMods'})
+
+
+@rule('spread-any', r"Put (\d+) damage counters on your opponent's (Benched )?Pokémon in any way you like\.", 'B',
+      'N copies of (benchCounters opp 1), or of (one_of opp (counters 1) (benchCounters opp 1))')
+def _(m, ctx):
+    # One counter at a time on a chosen Pokémon (Effect.spreadAny's idea): every distribution of the N
+    # counters, and nothing else, because inside an attack no Knock Out is taken between the counters. Outside
+    # an attack (TRun) a Knock Out check follows each counter, so it is refused there. With the Active Pokémon
+    # among the targets each counter is `one_of`, not the bare `choice` of `Effect.spreadAny false`, whose
+    # `benchCounters` branch does nothing on an empty Bench and would let counters be dropped.
+    if ctx['kind'] != 'attack':
+        raise Refuse('damage counters "in any way you like" outside an attack (a Knock Out check follows each counter)')
+    n = num(m.group(1))
+    one = ('benchCounters', OPP, 1) if m.group(2) else one_of(OPP, ('counters', 1), ('benchCounters', OPP, 1))
+    return Eff(seq(*[one] * n))
+
+
+@rule('counters-M-opp', r"Choose (\d+) of your opponent's Pokémon and put (\d+) damage counters on each of them\.", 'A',
+      'Effect.countersSome m n, unfolded')
+def _(m, ctx):
+    k, n = num(m.group(1)), num(m.group(2))
+    if k < 2:
+        raise Refuse('wording')
+    return Eff(some_of(k, ('counters', n), lambda j: ('benchSome', OPP, j, ('any',), False, n)))
+
+
+@rule('opp-discards-more', r"Your opponent discards (\d+) more cards\.", 'A',
+      'as opp-discards: the cards after the ones a sentence before discarded')
+def _(m, ctx):
+    return Eff(opp_hand_discard(num(m.group(1)), ctx))
+
+
+def some_of(k, active, bench):
+    """`k` distinct Pokémon of the opponent's (`Effect.hitSome`, `Effect.countersSome`, Pokemon/Spread.lean): the
+    Active Pokémon and k-1 Benched ones, or k Benched ones when the Bench has that many; with fewer, the Active
+    Pokémon and every Benched one (`benchSome` takes all that pass when fewer than asked do)."""
+    return ite(('countGe', ('bench', OPP, ('any',)), k), choice(seq(active, bench(k - 1)), bench(k)),
+               seq(active, bench(k - 1)))
+
+
 @rule('recoil', r'This Pokémon also does (\d+) damage to itself\.', 'A', 'selfDamage n')
 def _(m, ctx):
     return Eff(('selfDamage', counters(m.group(1))), {'recoil'})
@@ -723,6 +938,10 @@ def _(m, ctx):
       'spreadCounters opp n')
 def _(m, ctx):
     return Eff(('spreadCounters', OPP, num(m.group(1))))
+
+
+# An effect with no resolution: exactly 1 card from the top 0 cards of the deck.
+NO_PLAY = ('move', OWN, ('top', 0), ('hand',), ('any',), ('exactly', 1))
 
 
 def draw(w, n):
@@ -1239,6 +1458,34 @@ def searches_deck(e):
     return any(searches_deck(x) for x in T.subs(e))
 
 
+# milestone MV2: the shapes of the three families (survey S13) that the model's Known gaps list as not modelled
+# (Pokemon/Rules.lean, items "one-turn history", "effects read only the two Active Pokémon" and "effects place
+# damage counters"), refused with a reason that names the gap instead of the generic one.
+GAP_PREFIX = 'not modelled (Known gaps, MV2): '
+GAP_SHAPES = [
+    ('history: the Supporter played this turn', r"(?:If|if) you (?:played|didn't play) .+ from your hand during this turn"),
+    ('history: an attack used last turn', r"used (?:.+|an attack) during your last turn"),
+    ('history: per-attack lock', r"During your next turn, this Pokémon can't use (?!attacks)"),
+    ('history: healed this turn', r"was healed during this turn"),
+    ('history: counted (damage or Prize cards of last turn)',
+     r"that much more damage|Prize cards? your opponent took during their last turn"),
+    ('history: next-turn trigger on this Pokémon', r"During your opponent's next turn, if this Pokémon is damaged"),
+    ('spread: amount computed by the text', r"damage (?:counters )?(?:to|on) \d+ of your opponent's (?:Benched )?Pokémon for each|"
+                                            r"for each damage counter on that Pokémon"),
+    ('spread: target filtered by its damage', r"Benched Pokémon that has any damage counters on it"),
+    ('name prefix (a filter on part of a name)', r'in its name|in the name|\b(?!Pok)[A-Z][a-z]+(?: [A-Z][a-z]+)?\'s (?:Pokémon|Mega)'),
+]
+GAP_OVERRIDABLE = ('unhandled sentence', 'condition not expressible', 'count not expressible', 'card kind with no filter',
+                   'history: ')
+
+
+def gap_reason(sent):
+    for name, rx in GAP_SHAPES:
+        if re.search(rx, sent):
+            return GAP_PREFIX + name
+    return None
+
+
 class Parser:
     """Walks the sentences of one text (an attack's or a Trainer's), collecting items, and refusals
     for the sentences it cannot translate."""
@@ -1264,7 +1511,12 @@ class Parser:
                 i = self.step(sents, i)
             except Refuse as r:
                 j = self.span(sents, i)
-                self.blockers.append((r.reason, r.sentence or ' '.join(sents[i:j])))
+                sent = r.sentence or ' '.join(sents[i:j])
+                why = r.reason
+                g = gap_reason(sent)
+                if g and why.startswith(GAP_OVERRIDABLE):
+                    why = g
+                self.blockers.append((why, sent))
                 i = j
         return self
 
@@ -1353,18 +1605,45 @@ class Parser:
                 self.items.append((i, Dmg('many', counters(m2.group(1)), bool(m2.group(2)))))
                 return i + 2
             raise Refuse('flip until tails not expressible', s + ' ' + nxt)
+        # milestone MV2: a Trainer's play condition on the Knock Out history. The card cannot be played when the test
+        # fails: the else branch takes exactly 1 card from the top 0 cards of the deck, a move with no resolution
+        # (`ZStep.move` needs `Split` of [] to take one card), and `Move.item` / `Move.supporter` need a resolution
+        m = re.match(r"^You can use this card only if (any of your Pokémon were Knocked Out during your opponent's last turn)\.$", s)
+        if m and ctx['kind'] == 'trainer':
+            ctx.pop('_tc', None)
+            tests, neg = parse_test(m.group(1), ctx)
+            assert not neg and len(tests) == 1
+            self.used.append(('play-condition-history', s))
+            self.items.append((i, Cost(ite(tests[0], SKIP, NO_PLAY), ctx.pop('_tc', set()))))
+            return i + 1
         # a condition: "If C, X."
         m = re.match(r'^If (.+?), (this attack does .+|.+)$', s)
         if m and not s.startswith('If you do') and not s.startswith("If you can't"):
+            ctx.pop('_tc', None)
             tests, neg = parse_test(m.group(1), ctx)
+            tc = ctx.pop('_tc', set())
+            # milestone MV2: "If C, this attack does N more damage, and X." (Hearthflame Mask Ogerpon ex): the
+            # conditional damage and the conditional effect X after it, both on the same test; the test reads
+            # nothing the damage step changes (no Knock Out is taken inside an attack)
+            m2 = re.match(r'^this attack does (\d+) more damage, and (.+)$', m.group(2))
+            if m2 and ctx['kind'] == 'attack' and all(t[0] in ('top', 'hasTool', 'movedUp', 'evolved') or
+                                                      (t[0] == 'countGe' and t[1][0] in ('koLast', 'inPlay'))
+                                                      for t in tests):
+                X = self.clause(m2.group(2))
+                self.used.append(('if-condition-more-and', s))
+                self.items.append((i, Dmg('cond', tests, neg, counters(m2.group(1)), reads=True, cavs=tc)))
+                self.items.append((i, Eff(branch(tests, neg, X.e, SKIP), X.cavs)))
+                return i + 1
             X = self.clause(m.group(2))
             self.used.append(('if-condition', s))
             if isinstance(X, Nothing):
+                if tc:
+                    raise Refuse('a caveated test around "this attack does nothing"', s)
                 self.items.append((i, ('wrapIf', tests, neg)))
             elif isinstance(X, Dmg) and X.op == 'add' and X.args[0][0] == 'const':
-                self.items.append((i, Dmg('cond', tests, neg, X.args[0][1], reads=True)))
+                self.items.append((i, Dmg('cond', tests, neg, X.args[0][1], reads=True, cavs=tc)))
             elif isinstance(X, Eff):
-                self.items.append((i, Eff(branch(tests, neg, X.e, SKIP), X.cavs)))
+                self.items.append((i, Eff(branch(tests, neg, X.e, SKIP), X.cavs | tc)))
             else:
                 raise Refuse('conditional consequence not expressible', s)
             return i + 1
@@ -1395,11 +1674,19 @@ class Parser:
         # "Discard all Energy from this Pokémon, and this attack [also] does ...": two sentences. The
         # discard and the damage commute in the model (the damage step reads no Energy of the attacker),
         # so the order of the two items does not matter.
-        m = re.match(r"^(Discard all Energy from this Pokémon), and (this attack (?:also )?does .+)$", s)
+        # Since importer 0.7 (milestone MV2 census, S13 §B) the discard may be of N, or of all of a type: the damage
+        # step and a damage-to-chosen-Pokémon step read no Energy of the attacker either.
+        m = re.match(r"^(Discard (?:all|an|a|\d+) (?:(?:Basic )?" + TYPE_RE + r" )?Energy from this Pokémon), and "
+                     r"(?P<dmg>this attack (?:also )?does (?!.*for each).+)$", s)
         if m and ctx['kind'] == 'attack':
             first = self.one(m.group(1) + '.')
-            second = self.one(m.group(2)[0].upper() + m.group(2)[1:])
+            second = self.one(m.group('dmg')[0].upper() + m.group('dmg')[1:])
             self.used.append(('discard-all-and', s))
+            if m.group(1) != 'Discard all Energy from this Pokémon' and isinstance(second, Dmg):
+                # importer 0.7.0: the discard is resolved before the damage step, as printed (a static bonus
+                # with an Energy condition on the attacker could otherwise see the Energy; validation, MV2). The
+                # v0.6.0 form "Discard all Energy from this Pokémon, and …" keeps its earlier term.
+                first = Eff(first.e, first.cavs, pre=True)
             self.items.append((i, first))
             self.items.append((i, second))
             return i + 1
@@ -1492,7 +1779,7 @@ def tmap(tree, f):
         return ('ite', tree[1], tmap(tree[2], f), tmap(tree[3], f))
     if tree[0] == 'choice':
         return ('choice', tmap(tree[1], f), tmap(tree[2], f))
-    if tree[0] == 'T1':
+    if tree[0] in ('T1', 'TM'):
         raise Refuse('computed damage to a chosen Pokémon')
     raise AssertionError(tree)
 
@@ -1514,6 +1801,12 @@ def to_effect(tree, drain=False):
             raise Refuse('drain with damage to a chosen Pokémon')
         n = tree[1]
         return one_of(OPP, ('damage', ('const', n)), ('benchDamage', OPP, n))
+    if tree[0] == 'TM':
+        # milestone MV2: `Effect.hitSome m n`, unfolded
+        if drain:
+            raise Refuse('drain with damage to chosen Pokémon')
+        _, k, n = tree
+        return some_of(k, ('damage', ('const', n)), lambda j: ('benchSome', OPP, j, ('any',), True, n))
     if tree[0] == 'ite':
         return ite(tree[1], to_effect(tree[2], drain), to_effect(tree[3], drain))
     if tree[0] == 'choice':
@@ -1629,6 +1922,18 @@ def build_attack(base, suffix, items, cost):
                 if tree is not None:
                     raise Refuse('damage to a chosen Pokémon with a printed base damage')
                 tree = ('T1', a[0])
+            elif op == 'targetM':
+                if tree is not None:
+                    raise Refuse('damage to chosen Pokémon with a printed base damage')
+                tree = ('TM', a[0], a[1])
+                # the choice reads the size of the opponent's Bench: an effect printed before it must not act on
+                # the opponent (the model resolves printed-earlier effects after the damage step)
+                if any(any(x[1:2] == (OPP,) or x[0] in ('switch', 'counters', 'inflict', 'scale') for x in T.prims(e))
+                       for i, e in post):
+                    raise Refuse('an effect on the opponent printed before damage to chosen Pokémon')
+                # effects printed before it (an Energy discard from this Pokémon) are resolved before it, as printed
+                pre += [e for i, e in post]
+                post = []
             elif op == 'each':
                 if tree is not None:
                     raise Refuse('damage to each Pokémon with a printed base damage')
@@ -1764,6 +2069,9 @@ def translate_trainer(c, res):
     if B:
         return res
     costs = [it.e for _, it in p.items if isinstance(it, Cost)]
+    for _, it in p.items:
+        if isinstance(it, Cost):
+            res['caveats'] |= it.cavs
     effs = []
     for _, it in p.items:
         if isinstance(it, Cost):
@@ -2514,7 +2822,11 @@ def ability_refusal(t):
         return "Ability: an effect that can't be stopped"
     if re.search(r"You can't use this Ability during your first turn", t):
         return 'Ability: first-turn limit'
-    if re.search(r'if you played .+ this turn|last turn', t):
+    # milestone MV2: "if any of your Pokémon were Knocked Out during your opponent's last turn" is a test
+    # (`Count.koLast`, `parse_test`); other history conditions are not
+    if re.search(r'if you played .+ this turn|last turn',
+                 re.sub(r"if any of your Pokémon were Knocked Out (?:by damage from an attack )?during your opponent's "
+                        r"last turn", '', t)):
         return 'Ability: condition on the history of the turn (this turn, last turn)'
     return None
 
@@ -2533,9 +2845,11 @@ def ab_condition(c, spot, ctx):
     if 'this Pokémon' in c and spot != ('active',):
         raise Refuse('Ability: condition on this Pokémon, which may be on the Bench: ' + c)
     try:
+        ctx.pop('_tc', None)
         tests, neg = parse_test(c, ctx)
     except Refuse as r:
         raise Refuse('Ability: ' + r.reason)
+    ctx['_cavs'] |= ctx.pop('_tc', set())
     if len(tests) == 1 and not neg:
         return ('cond', tests[0])
     return ('wrap', tests, neg)
@@ -3114,7 +3428,8 @@ def translate_attack(c, a, res):
     elif suffix:
         B.append(('printed damage not understood', d))
         return None
-    ctx = {'kind': 'attack', 'name': c['name'], 'base': base, 'cost': cost}
+    ctx = {'kind': 'attack', 'name': c['name'], 'base': base, 'cost': cost,
+           'evolvesFrom': norm(c.get('evolvesFrom')) or None}
     p = Parser(ctx).run(split_sentences(a.get('text')))
     res['used'] += p.used
     if p.blockers:

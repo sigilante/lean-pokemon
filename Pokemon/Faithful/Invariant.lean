@@ -355,7 +355,8 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
       have e : InPlay.abW { a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } =
           a.abW := rfl
-      simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs, e,
+      have e2 : q.moveUp.abW = q.abW := rfl
+      simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs, e, e2,
         List.length_append, List.length_cons]; omega
   | item _ _ _ hr => exact hr.abPot_le hw
   | supporter _ _ _ _ hr => exact hr.abPot_le hw

@@ -255,6 +255,7 @@ theorem Run.slot_nowrite {e : Effect} {g g' : GameState} (h : Run e g g') :
   | unmark w m g => intro _ s; cases w <;> exact Nat.le_refl _
   | benchCounters w n h => intro _ s; cases w <;> exact Nat.le_refl _
   | spreadCounters w n g => intro _ s; cases w <;> exact Nat.le_refl _
+  | benchSome w _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_refl _
   | switch w ha hb => intro _ s; cases w <;> exact Nat.le_refl _
   | benchDamage w n h => intro _ s; cases w <;> exact Nat.le_refl _
   | spreadDamage w n g => intro _ s; cases w <;> exact Nat.le_refl _
@@ -296,6 +297,7 @@ theorem Run.slot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
   | unmark w m g => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | benchCounters w n h => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | spreadCounters w n g => intro _ s; cases w <;> exact Nat.le_add_right _ _
+  | benchSome w _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | switch w ha hb => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | benchDamage w n h => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | spreadDamage w n g => intro _ s; cases w <;> exact Nat.le_add_right _ _
@@ -471,6 +473,7 @@ theorem Run.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} 
   | unmark w m g => intro _ _; cases w <;> exact Nat.le_refl _
   | benchCounters w n h => intro _ _; cases w <;> exact Nat.le_refl _
   | spreadCounters w n g => intro _ _; cases w <;> exact Nat.le_refl _
+  | benchSome w _ _ _ _ _ => intro _ _; cases w <;> exact Nat.le_refl _
   | switch w ha hb => intro _ _; cases w <;> exact Nat.le_refl _
   | benchDamage w n h => intro _ _; cases w <;> exact Nat.le_refl _
   | spreadDamage w n g => intro _ _; cases w <;> exact Nat.le_refl _
@@ -483,7 +486,7 @@ theorem KOBatch.disc_mono (w : Card → Nat) {g g' : GameState} (h : KOBatch g g
     g.discW w ≤ g'.discW w := by
   obtain ⟨-, -, d1, d2, -⟩ := h.piles
   simp only [GameState.discW, d1, d2, GameState.koStep, PlayerState.takePrizes, GameState.koOf,
-    PlayerState.koOut, GameState.side, wsum_append]
+    PlayerState.koOut, GameState.side, PlayerState.noteKO, wsum_append]
   omega
 
 theorem Resolve.disc_mono (w : Card → Nat) {g g' : GameState} (h : Resolve g g') :
@@ -538,6 +541,7 @@ theorem Run.flags_keep {e : Effect} {g g' : GameState} (h : Run e g g') : Flags 
   | unmark w m g => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | benchCounters w n h => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl, rfl⟩
+  | benchSome w _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | switch w ha hb => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | benchDamage w n h => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl, rfl⟩
@@ -593,7 +597,7 @@ theorem KOBatch.keeps {g g' : GameState} (h : KOBatch g g') :
   have hd : g.discAmt ≤ g'.discAmt := by
     obtain ⟨-, -, d1, d2, -⟩ := h.piles
     simp only [GameState.discAmt, d1, d2, GameState.koStep, PlayerState.takePrizes,
-      GameState.koOf, PlayerState.koOut, GameState.side, cardsAmt_append]
+      GameState.koOf, PlayerState.koOut, GameState.side, PlayerState.noteKO, cardsAmt_append]
     omega
   cases h <;> exact ⟨⟨hd, rfl, rfl, rfl⟩, fun _ => rfl⟩
 
@@ -1350,8 +1354,9 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
       | own =>
           simp only [GameState.side] at ha hb
           have e1 : a.cure.abW = a.abW := rfl
+          have e2 : (Whose.mover .own q).abW = q.abW := rfl
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, ha, hb, abWo, optN,
-            abWs_append, abWs, e1, List.length_append, List.length_cons]; omega
+            abWs_append, abWs, e1, e2, List.length_append, List.length_cons]; omega
       | opp => exact Nat.le_refl _
   | @benchDamage g q b₁ b₂ w n h =>
       cases w with
@@ -1366,6 +1371,19 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
       | own =>
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot,
             abWs_map (InPlay.abW_hitBench n), List.length_map]; omega
+      | opp => exact Nat.le_refl _
+  | benchSome w m f dmg n h =>
+      cases w with
+      | own =>
+          have hw : ∀ x : InPlay, (x.hitWith dmg n).abW = x.abW := fun x => by
+            cases dmg
+            · rfl
+            · exact InPlay.abW_hitBench n x
+          have e1 := h.congr abWs fun x y _ _ hy he => by
+            rcases hy with rfl | rfl <;> simp only [abWs, he, hw]
+          have e2 := h.congr List.length fun _ _ _ _ _ he => by simp only [List.length_cons, he]
+          simp only [GameState.side] at e1 e2
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, e1, e2]; omega
       | opp => exact Nat.le_refl _
   | moveCounter h =>
       obtain ⟨h1, h2⟩ := h.abPot

@@ -112,6 +112,16 @@ theorem mem_markss (k : Marks) : k ∈ markss := by
   exact ⟨a, mem_bools _, b, mem_bools _, c, mem_bools _, d, mem_bools _, e,
     mem_opts fun t _ => mem_etypes t, rfl⟩
 
+/-- Every value of a player's Knock Out history (milestone MV2): four flags. -/
+def kohists : List KOHist :=
+  bools.flatMap fun a => bools.flatMap fun b => bools.flatMap fun c => bools.map fun d =>
+  ⟨a, b, c, d⟩
+
+theorem mem_kohists (h : KOHist) : h ∈ kohists := by
+  obtain ⟨a, b, c, d⟩ := h
+  simp only [kohists, List.mem_flatMap, List.mem_map]
+  exact ⟨a, mem_bools _, b, mem_bools _, c, mem_bools _, d, mem_bools _, rfl⟩
+
 def winners : List (Option Outcome) :=
   [none, some (.win false), some (.win true), some .suddenDeath]
 
@@ -197,12 +207,13 @@ def inPlays (C : List Card) : List InPlay :=
   (List.range (bound C + 1)).flatMap fun damage => rots.flatMap fun rot =>
   bools.flatMap fun poisoned => bools.flatMap fun burned =>
   (List.range (bound C + 1)).flatMap fun poisonUp => bools.flatMap fun fresh =>
-  markss.flatMap fun marks => bools.map fun used =>
-  ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used⟩
+  markss.flatMap fun marks => bools.flatMap fun used => bools.map fun movedUp =>
+  ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used, movedUp⟩
 
 theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     (hd : p.damage ≤ bound C) (hu : p.poisonUp ≤ bound C) : p ∈ inPlays C := by
-  obtain ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used⟩ := p
+  obtain ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used,
+    movedUp⟩ := p
   have hw' : Within C (under ++ energy ++ tools) :=
     hw.of_sub (by simp [InPlay.cardList]) (fun _ hx => .tail _ hx)
   simp only [inPlays, List.mem_flatMap, List.mem_map]
@@ -210,7 +221,7 @@ theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     energy, mem_cardLists hw'.left.right, tools, mem_cardLists hw'.right,
     damage, List.mem_range.2 (Nat.lt_succ_of_le hd), rot, mem_rots _, poisoned, mem_bools _,
     burned, mem_bools _, poisonUp, List.mem_range.2 (Nat.lt_succ_of_le hu), fresh, mem_bools _,
-    marks, mem_markss _, used, mem_bools _, rfl⟩
+    marks, mem_markss _, used, mem_bools _, movedUp, mem_bools _, rfl⟩
 
 theorem length_le_benchCardList : ∀ b : List InPlay, b.length ≤ (benchCardList b).length
   | [] => Nat.le_refl _
@@ -246,14 +257,14 @@ def players (C : List Card) : List PlayerState :=
   (listsUpTo (inPlays C) C.length).flatMap fun bench =>
   bools.flatMap fun energyAttached => bools.flatMap fun supporterPlayed =>
   bools.flatMap fun retreated => bools.flatMap fun gxUsed => bools.flatMap fun vstarUsed =>
-  (stores (2 * bound C)).flatMap fun mods => bools.map fun hadTurn =>
+  (stores (2 * bound C)).flatMap fun mods => bools.flatMap fun hadTurn => kohists.map fun ko =>
   ⟨deck, hand, discard, prizes, lost, active, bench, energyAttached, supporterPlayed,
-    retreated, gxUsed, vstarUsed, mods, hadTurn⟩
+    retreated, gxUsed, vstarUsed, mods, hadTurn, ko⟩
 
 theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     (hd : SideDamageLe (bound C) s) : s ∈ players C := by
   obtain ⟨deck, hand, discard, prizes, lost, active, bench, energyAttached,
-    supporterPlayed, retreated, gxUsed, vstarUsed, mods, hadTurn⟩ := s
+    supporterPlayed, retreated, gxUsed, vstarUsed, mods, hadTurn, ko⟩ := s
   simp only [PlayerState.allCards] at hw
   have hbench : Within C (benchCardList bench) := hw.right
   have hactive : Within C (optCardList active) := hw.left.right
@@ -265,7 +276,7 @@ theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     lost, mem_cardLists hw.left.left.right,
     active, ?_, bench, ?_, energyAttached, mem_bools _,
     supporterPlayed, mem_bools _, retreated, mem_bools _, gxUsed, mem_bools _,
-    vstarUsed, mem_bools _, mods, mem_stores hd.2.2, hadTurn, mem_bools _, rfl⟩
+    vstarUsed, mem_bools _, mods, mem_stores hd.2.2, hadTurn, mem_bools _, ko, mem_kohists _, rfl⟩
   · refine mem_opts fun p hp => ?_
     subst hp
     exact mem_inPlays hactive (hd.1 p rfl).1 (hd.1 p rfl).2

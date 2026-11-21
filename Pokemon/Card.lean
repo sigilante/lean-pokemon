@@ -224,7 +224,8 @@ inductive TrainerKind where
 Supporter card", "a Basic Fire Energy card", "up to 2 Pokémon that don't have a Rule Box").
 Evaluated by `Filter.eval`, a `Bool`, so every filter is decidable; a new printed kind is one more
 constructor and one more clause of `Filter.eval`. Pokémon filters read the printed card (stage,
-type, name, HP, rule box), not the Pokémon in play. With Basic Energy only (no Special Energy in
+type, name, HP, rule box; since milestone MV2 also Tera, a printed attack's name and whether the
+card has an Ability), not the Pokémon in play. With Basic Energy only (no Special Energy in
 the model), "an Energy card" and "a Basic Energy card" are the same filter, `energy`. -/
 inductive Filter where
   /-- any card ("a card", "cards") -/
@@ -254,6 +255,18 @@ inductive Filter where
   | energy
   /-- a Basic Energy card of type `t` ("a Basic Fire Energy card") -/
   | energyOf (t : EType)
+  /-- a Pokémon ex, Mega Evolution Pokémon ex included (milestone MV2: "if your opponent's Active
+  Pokémon is a Pokémon ex"; the rule box gives it, `RuleBox`). Today's Standard has no Pokémon V,
+  so "a Pokémon ex or Pokémon V" is this filter -/
+  | ex
+  /-- a Tera Pokémon (milestone MV2: "if your opponent's Active Pokémon is a Tera Pokémon", "if you
+  have any Tera Pokémon on your Bench") -/
+  | tera
+  /-- a Pokémon card with a printed attack of this name (milestone MV2: "for each of your Pokémon in
+  play that has the Round attack"); attacks given by a Tool are not read -/
+  | hasAttack (n : String)
+  /-- a Pokémon card with a printed Ability (milestone MV2: "a Pokémon that has an Ability") -/
+  | hasAbility
   | and (a b : Filter)
   | or (a b : Filter)
   | not (a : Filter)
@@ -313,9 +326,20 @@ inductive Count where
   | bench (w : Whose) (f : Filter)
   | energy (w : Whose) (f : Filter)
   | energyAll (w : Whose) (f : Filter)
+  /-- the `w` player's Pokémon in play, Active and Benched, whose top card passes `f` (milestone
+  MV2: "for each of your Pokémon in play that has the Round attack", "if you have any Tera Pokémon
+  in play", "if you have Tornadus in play") -/
+  | inPlay (w : Whose) (f : Filter)
+  /-- 1 if any of the `w` player's Pokémon were Knocked Out during the previous turn (with `atk`:
+  by the Knock Out check after an attack), else 0 (milestone MV2, `KOHist`): "If any of your Pokémon
+  were Knocked Out by damage from an attack during your opponent's last turn, this attack does 60
+  more damage" (Iron Leaves sv6-19) is `ite (countGe (koLast .own true) 1) …`. A flag read as a
+  count, so that it is a read of the state that both clamps keep like every count -/
+  | koLast (w : Whose) (atk : Bool)
   deriving DecidableEq
 
-/-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. -/
+/-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. Milestone
+MV2 added tests on the Active Pokémon's printed card (`top`) and its Tools (`hasTool`). -/
 inductive Test where
   /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
   "if it has no damage counters" is the `else` branch of that test) -/
@@ -332,6 +356,22 @@ inductive Test where
   /-- the count is at least `n` (milestone MV; "if you have 3 or more cards in your hand"); it reads
   no Active Pokémon, and like every test it is made while the player has an Active Pokémon -/
   | countGe (c : Count) (n : Nat)
+  /-- its top card passes the filter `f` (milestone MV2: "if your opponent's Active Pokémon is a
+  Pokémon ex" is `top .opp .ex`; "is an Evolution Pokémon", `top .opp (.not .basic)`; "is a Stage 1
+  Pokémon", `top .opp (.stage .stage1)`; "is a Tera Pokémon", `top .opp .tera`). It reads the
+  printed card, which both clamps keep -/
+  | top (w : Whose) (f : Filter)
+  /-- it has a Pokémon Tool attached (milestone MV2) -/
+  | hasTool (w : Whose)
+  /-- it moved from the Bench to the Active Spot this turn (milestone MV2, `InPlay.movedUp`: "If
+  this Pokémon moved from your Bench to the Active Spot this turn", Keldeo ex rsv10pt5-30) -/
+  | movedUp (w : Whose)
+  /-- it evolved this turn (milestone MV2: "If this Pokémon evolved from Salandit during this turn",
+  Salazzle sv7-24): it was put into play or evolved this turn (`InPlay.fresh`) and has a card under
+  it. Exact without new state: only Basic Pokémon are put into play, evolution sets `fresh`, and
+  `fresh` is cleared at the end of its owner's turn; the printed "from X" is the card's own
+  pre-evolution, the only way the model evolves it -/
+  | evolved (w : Whose)
   deriving DecidableEq
 
 /-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
@@ -501,6 +541,15 @@ inductive Effect where
   when the effect resolves, nothing with an empty Bench; "discard a Pokémon Tool from 1 of your
   opponent's Pokémon" is a `choice` of the two, exact with one Tool per Pokémon) -/
   | discardTools (w : Whose) (sp : Spot)
+  /-- (milestone MV2) attack damage `n` (`dmg = true`, as `benchDamage`: no modifier, none on a Tera
+  Pokémon) or `n` damage counters (`dmg = false`, as `benchCounters`) on each of `m` distinct
+  Benched Pokémon of the `w` player whose card passes `f`, chosen when the effect resolves; all of
+  them if fewer pass ("This attack also does 130 damage to 2 of your opponent's Benched Pokémon",
+  Hydreigon ex sv8-119, is `benchSome .opp 2 .any true 13`; "This attack does 210 damage to 1 of
+  your opponent's Benched Pokémon ex", Zeraora sv10-78, `benchSome .opp 1 .ex true 21`). With the
+  Active Pokémon among the targets ("120 damage to 2 of your opponent's Pokémon") it is a derived
+  form, `Effect.hitSome`. Only attacks may use the damage form (`benchHitFree`) -/
+  | benchSome (w : Whose) (m : Nat) (f : Filter) (dmg : Bool) (n : Nat)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -536,6 +585,7 @@ Trainer cards place damage counters, not attack damage). -/
 def Effect.benchHitFree : Effect → Bool
   | .benchDamage _ _ => false
   | .spreadDamage _ _ => false
+  | .benchSome _ _ _ dmg _ => !dmg
   | .ite _ a b => a.benchHitFree && b.benchHitFree
   | .seq a b => a.benchHitFree && b.benchHitFree
   | .choice a b => a.benchHitFree && b.benchHitFree
@@ -557,6 +607,7 @@ included). -/
 def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
   | .countGe (.energy .own _) _ => true
+  | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own => true
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
@@ -635,7 +686,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -706,7 +757,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by
@@ -1147,6 +1198,10 @@ def Filter.eval : Filter → Card → Bool
   | .tool, .tool _ _ => true
   | .energy, .energy _ => true
   | .energyOf t, .energy e => decide (e.type = t)
+  | .ex, .pokemon p => decide (p.ruleBox ≠ .none)
+  | .tera, .pokemon p => p.tera
+  | .hasAttack n, .pokemon p => p.attacks.any fun a => decide (a.name = n)
+  | .hasAbility, .pokemon p => !p.abilities.isEmpty
   | .and a b, c => a.eval c && b.eval c
   | .or a b, c => a.eval c || b.eval c
   | .not a, c => !a.eval c

@@ -34,7 +34,7 @@ def strike : Card := .trainer "Strike" .item (.benchCounters .own 1)
 def tpl (hand : List Card) (active : InPlay) (bench : List InPlay) (discard : List Card) :
     PlayerState :=
   ⟨[mt], hand, discard, [mt, mt], [], some active, bench, false, false, false, false, false,
-    Store.empty, true⟩
+    Store.empty, true, KOHist.empty⟩
 
 def T (a b : PlayerState) : GameState := ⟨a, b, true, false, false, false, none, none, false, false⟩
 

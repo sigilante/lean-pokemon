@@ -78,10 +78,10 @@ def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List I
   { cur := { g.opp with
       active := some (a.checkup false fa sa ca), bench := bo,
       energyAttached := false, supporterPlayed := false, retreated := false,
-      mods := g.opp.mods.shift },
+      mods := g.opp.mods.shift, ko := g.opp.ko.shift },
     opp := { g.cur.unfresh with
       active := some (b.unfresh.checkup true fb sb cb), bench := bc,
-      mods := g.cur.mods.shift, hadTurn := true },
+      mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
     curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
     between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
     stadiumUsed := false }
@@ -176,6 +176,7 @@ theorem Run.sameTurn {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameTu
   | unmark w m g => cases w <;> exact .refl _
   | benchCounters w n h => cases w <;> exact .refl _
   | spreadCounters w n g => cases w <;> exact .refl _
+  | benchSome w _ _ _ _ _ => cases w <;> exact .refl _
   | switch w ha hb => cases w <;> exact .refl _
   | benchDamage w n h => cases w <;> exact .refl _
   | spreadDamage w n g => cases w <;> exact .refl _
@@ -235,6 +236,7 @@ theorem Run.stFlags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | unmark w m g => cases w <;> exact ⟨rfl, rfl⟩
   | benchCounters w n h => cases w <;> exact ⟨rfl, rfl⟩
   | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl⟩
+  | benchSome w _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl⟩
   | switch w ha hb => cases w <;> exact ⟨rfl, rfl⟩
   | benchDamage w n h => cases w <;> exact ⟨rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl⟩

@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.6.0'
+VERSION = '0.7.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -78,6 +78,10 @@ MECHS = [
     ('Stadium in other card text', r'Stadium'),
     ('Special Energy (card or text)', r'^Special Energy$|Special Energy'),
     ('Trainer played as a Pokémon', r'^Trainer played as a Pokémon$'),
+] + [
+    # milestone MV2 (importer 0.7.0): shapes of the three families that the model's Known gaps list as not modelled
+    (k + ' (not modelled, Known gaps MV2)', '^' + re.escape(TR.GAP_PREFIX + k)) for k, _ in TR.GAP_SHAPES
+] + [
     ('first-turn rules in text', r'first turn|go first|go second'),
     ('history (this turn, last turn, Knock Outs)', r'^Ability: condition on the history|last turn|this turn|during this game|Knocked Out|was healed|moved from your Bench'),
     ('evolution or devolution by effect', r'evolve|devolve'),

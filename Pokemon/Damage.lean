@@ -145,6 +145,7 @@ structure Agree (K : Nat) (c : Cap) (q p : InPlay) : Prop where
   used : q.used = p.used
   damage : c.dmg K q = c.dmg K p
   poisonUp : min q.poisonUp K = min p.poisonUp K
+  movedUp : q.movedUp = p.movedUp
 
 theorem agree_of_clamp {c : Cap} {q p : InPlay} (h : q.clampWith K c = p.clampWith K c) :
     Agree K c q p := by
@@ -160,14 +161,15 @@ theorem agree_of_clamp {c : Cap} {q p : InPlay} (h : q.clampWith K c = p.clampWi
   have h10 := congrArg InPlay.poisonUp h
   have h11 := congrArg InPlay.marks h
   have h12 := congrArg InPlay.used h
-  exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h12, h9, h10⟩
+  have h13 := congrArg InPlay.movedUp h
+  exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h12, h9, h10, h13⟩
 
 theorem clamp_of_agree {c : Cap} {q p : InPlay} (h : Agree K c q p) :
     q.clampWith K c = p.clampWith K c := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h12, h9, h10⟩ := h
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h12, h9, h10, h13⟩ := h
   cases q; cases p
-  simp only at h1 h2 h3 h4 h5 h6 h7 h8 h10 h11 h12
-  subst h1 h2 h3 h4 h5 h6 h7 h8 h11 h12
+  simp only at h1 h2 h3 h4 h5 h6 h7 h8 h10 h11 h12 h13
+  subst h1 h2 h3 h4 h5 h6 h7 h8 h11 h12 h13
   simp only [clampWith, h9, h10]
 
 /-- The damage as a cap sees it depends only on the damage (since milestone M6; before it, on the
@@ -214,13 +216,13 @@ theorem Agree.cardList {c : Cap} {q p : InPlay} (h : Agree K c q p) : q.cardList
 theorem Agree.recap {c c' : Cap} {q p : InPlay} (h : Agree K c q p) (hd : q.damage = p.damage) :
     Agree K c' q p :=
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
-    dmg_congr K c' h.top hd, h.poisonUp⟩
+    dmg_congr K c' h.top hd, h.poisonUp, h.movedUp⟩
 
 /-- Agreement capped at the bound `K` is agreement at `.hp` (milestone M6: `.hp` caps at `K`; before
 it, this needed the Pokémon's HP to be at most `k`). -/
 theorem Agree.hp_of_upto {q p : InPlay} (h : Agree K (.upto K) q p) : Agree K .hp q p :=
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
-    h.damage, h.poisonUp⟩
+    h.damage, h.poisonUp, h.movedUp⟩
 
 /-- Below the bound, agreement at `.hp` is agreement with equal damage. -/
 theorem Agree.exact_of_hp {q p : InPlay} (h : Agree K .hp q p) (hl : p.damage < K) :
@@ -230,10 +232,10 @@ theorem Agree.exact_of_hp {q p : InPlay} (h : Agree K .hp q p) (hl : p.damage < 
 /-- With equal damage, agreeing Pokémon differ at most in Poison strength. -/
 theorem Agree.eq_upd {c : Cap} {q p : InPlay} (h : Agree K c q p) (hd : q.damage = p.damage) :
     q = { p with poisonUp := q.poisonUp } := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h12, _, _⟩ := h
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h11, h12, _, _, h13⟩ := h
   cases q; cases p
-  simp only at h1 h2 h3 h4 h5 h6 h7 h8 h11 h12 hd
-  subst h1 h2 h3 h4 h5 h6 h7 h8 h11 h12 hd
+  simp only at h1 h2 h3 h4 h5 h6 h7 h8 h11 h12 h13 hd
+  subst h1 h2 h3 h4 h5 h6 h7 h8 h11 h12 h13 hd
   rfl
 
 theorem clampWith_setPoisonUp {c : Cap} (x : InPlay) (u : Nat)
@@ -281,16 +283,16 @@ theorem InPlay.Agree.upd {c : Cap} {q p : InPlay} (h : Agree K c q p) :
     (∀ k, Agree K c (q.inflict k) (p.inflict k)) ∧
     Agree K c q.cure p.cure ∧ Agree K c q.unfresh p.unfresh := by
   refine ⟨fun e => ⟨h.top, h.under, rfl, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
-      h.marks, h.used, h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩,
+      h.marks, h.used, h.dmg_of rfl rfl rfl rfl, h.poisonUp, h.movedUp⟩,
     fun n => ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
-      h.dmg_add n, h.poisonUp⟩,
+      h.dmg_add n, h.poisonUp, h.movedUp⟩,
     fun n => ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
-      h.dmg_of rfl rfl rfl rfl, ?_⟩,
+      h.dmg_of rfl rfl rfl rfl, ?_, h.movedUp⟩,
     fun k => ?_,
     ⟨h.top, h.under, h.energy, h.tools, rfl, rfl, rfl, h.fresh, h.marks, h.used,
-      h.dmg_of rfl rfl rfl rfl, by simp [InPlay.cure]⟩,
+      h.dmg_of rfl rfl rfl rfl, by simp [InPlay.cure], h.movedUp⟩,
     ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, rfl, h.marks, rfl,
-      h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩⟩
+      h.dmg_of rfl rfl rfl rfl, h.poisonUp, rfl⟩⟩
   · show min (q.poisonUp + n) K = min (p.poisonUp + n) K
     have hu := h.poisonUp
     omega
@@ -299,13 +301,13 @@ theorem InPlay.Agree.upd {c : Cap} {q p : InPlay} (h : Agree K c q p) :
     cases k <;>
       exact ⟨h.top, h.under, h.energy, h.tools, by first | rfl | exact h.rot,
         by first | rfl | exact h.poisoned, by first | rfl | exact h.burned, h.fresh, h.marks, h.used,
-        hd, by first | exact h.poisonUp | simp only [InPlay.inflict, Nat.zero_min]⟩
+        hd, by first | exact h.poisonUp | simp only [InPlay.inflict, Nat.zero_min], h.movedUp⟩
 
 /-- Agreement survives marking an Ability as used (milestone M8a). -/
 theorem InPlay.Agree.markUsed {c : Cap} {q p : InPlay} (h : Agree K c q p) :
     Agree K c q.markUsed p.markUsed :=
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, rfl,
-    h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩
+    h.dmg_of rfl rfl rfl rfl, h.poisonUp, h.movedUp⟩
 
 /-- Agreeing Pokémon have the same attacks and Abilities, their Tools' included (milestone M5). -/
 theorem InPlay.Agree.grants {c : Cap} {q p : InPlay} (h : Agree K c q p) :
@@ -316,13 +318,13 @@ theorem InPlay.Agree.grants {c : Cap} {q p : InPlay} (h : Agree K c q p) :
 theorem InPlay.Agree.setTools {c : Cap} {q p : InPlay} (h : Agree K c q p) (t : List Card) :
     Agree K c { q with tools := t } { p with tools := t } :=
   ⟨h.top, h.under, h.energy, rfl, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
-    h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩
+    h.dmg_of rfl rfl rfl rfl, h.poisonUp, h.movedUp⟩
 
 /-- Agreement survives a change of markers. -/
 theorem InPlay.Agree.setMarks {c : Cap} {q p : InPlay} (h : Agree K c q p) (f : Marks → Marks) :
     Agree K c (q.setMarks f) (p.setMarks f) :=
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
-    by simp only [InPlay.setMarks, h.marks], h.used, h.dmg_of rfl rfl rfl rfl, h.poisonUp⟩
+    by simp only [InPlay.setMarks, h.marks], h.used, h.dmg_of rfl rfl rfl rfl, h.poisonUp, h.movedUp⟩
 
 theorem InPlay.clampWith_setMarks (c : Cap) (f : Marks → Marks) :
     InPlay.clampWith K c ∘ InPlay.setMarks f = InPlay.setMarks f ∘ InPlay.clampWith K c := by
@@ -348,7 +350,7 @@ theorem InPlay.Agree.checkup {c : Cap} {q p : InPlay} (h : Agree K c q p)
     Agree K .hp (q.checkup o f s t) (p.checkup o f s t) := by
   have hu := h.poisonUp
   refine ⟨h.top, h.under, h.energy, h.tools, ?_, h.poisoned, ?_, h.fresh, h.marks, h.used, ?_,
-    h.poisonUp⟩
+    h.poisonUp, h.movedUp⟩
   · simp only [InPlay.checkup, h.rot]
   · simp only [InPlay.checkup, h.burned]
   · show min (q.damage + (if q.poisoned then 1 + q.poisonUp else 0) +
@@ -363,7 +365,7 @@ theorem InPlay.Agree.checkup {c : Cap} {q p : InPlay} (h : Agree K c q p)
 theorem InPlay.Agree.setDamage {c : Cap} {q p : InPlay} (h : Agree K c q p) (d : Nat) :
     Agree K c { q with damage := d } { p with damage := d } :=
   ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
-    InPlay.dmg_congr K c h.top rfl, h.poisonUp⟩
+    InPlay.dmg_congr K c h.top rfl, h.poisonUp, h.movedUp⟩
 
 /-- The clamps keep every count: counts read zones, Prize cards, the cards of the Pokémon in play
 and their attached Energy, never damage (milestone MV). -/
@@ -378,6 +380,9 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   have t3 : ∀ (cb : Cap) (o : Option InPlay),
       (o.map (InPlay.clampWith k cb)).map InPlay.energy = o.map InPlay.energy := fun cb o => by
     cases o <;> rfl
+  have t4 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith k cb)).map InPlay.top = o.map InPlay.top := fun cb o => by
+    cases o <;> rfl
   cases c with
   | pile w z f => cases w <;> cases z <;> rfl
   | prizes w => cases w <;> rfl
@@ -385,6 +390,8 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   | energy w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t3]
   | energyAll w f =>
       cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
+  | inPlay w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t1, t4]
+  | koLast w atk => cases w <;> rfl
 
 /-- States with equal `clampAt` have equal counts. -/
 theorem GameState.count_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
@@ -420,6 +427,10 @@ theorem Test.eval_agree (t : Test) {k : Nat} {g₁ g₂ : GameState} {q p : InPl
       show decide (q.type = t) = decide (p.type = t)
       rw [e]
   | countGe c n => simp only [Test.eval, hv c]
+  | movedUp w => simp only [Test.eval, h.movedUp]
+  | evolved w => simp only [Test.eval, h.fresh, h.under]
+  | top w f => simp only [Test.eval, h.top]
+  | hasTool w => simp only [Test.eval, h.tools]
 
 /-! ## Capped stores -/
 
@@ -693,6 +704,26 @@ theorem InPlay.Agree.hitBench {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q p
   split
   · exact h
   · exact h.upd.2.1 n
+
+/-- Damage or counters from `Effect.benchSome` preserve agreement (milestone MV2). -/
+theorem InPlay.Agree.hitWith {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q p) (dmg : Bool)
+    (n : Nat) : InPlay.Agree K c (q.hitWith dmg n) (p.hitWith dmg n) := by
+  cases dmg
+  · exact h.upd.2.1 n
+  · exact h.hitBench n
+
+theorem clampWith_hitWith {c : Cap} (dmg : Bool) (n : Nat) (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) :
+    InPlay.clampWith K c (y.hitWith dmg n) = InPlay.clampWith K c (x.hitWith dmg n) :=
+  InPlay.clamp_of_agree ((InPlay.agree_of_clamp h).hitWith dmg n)
+
+theorem InPlay.clampWith_moveUp (c : Cap) (x : InPlay) :
+    InPlay.clampWith K c x.moveUp = (InPlay.clampWith K c x).moveUp := by
+  cases c <;> rfl
+
+theorem clampWith_top {c : Cap} (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) : y.top = x.top :=
+  (InPlay.agree_of_clamp h).top
 
 /-- An update that preserves agreement keeps two agreeing Benches agreeing. -/
 theorem bench_map_agree {c : Cap} {U : InPlay → InPlay}
@@ -1244,7 +1275,7 @@ theorem tmax_le_cardsTmax {x : Card} : ∀ {cs : List Card}, x ∈ cs → x.tmax
 def cxCard : PokemonCard := ⟨"", .basic, none, 1, .grass, [], 0, none, none, .none, false, []⟩
 
 def cxSide (a : InPlay) : PlayerState :=
-  ⟨[], [], [], [], [], some a, [], false, false, false, false, false, Store.empty, true⟩
+  ⟨[], [], [], [], [], some a, [], false, false, false, false, false, Store.empty, true, KOHist.empty⟩
 
 /-- Both Active Pokémon have 10 HP and no damage; the opponent's is Poisoned. -/
 def cxState : GameState :=

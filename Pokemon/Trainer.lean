@@ -142,7 +142,7 @@ def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1, none, none, 
 /-- A player with the given hand, Prizes, Active Pokémon and Bench. -/
 def side (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerState :=
   ⟨[.energy .grass], hand, [], prizes, [], some a, bench, false, false, false, false,
-    false, Store.empty, true⟩
+    false, Store.empty, true, KOHist.empty⟩
 
 /-- A state is `Settled` if both Active Pokémon, and every Benched Pokémon, are below HP, when no
 static effect has a source in play (`GameState.Plain`, milestone M6: then HP is the printed HP;
@@ -191,9 +191,9 @@ pile with the Item, the opponent took a Prize card, `big` was promoted, and the 
 def after1 : GameState :=
   ⟨⟨[.energy .grass], [], [.pokemon mon, selfItem], [.energy .fire], [],
       some { InPlay.ofBasic big with damage := 0 - 5 }, [], false, false, false, false,
-      false, Store.empty, true⟩,
+      false, Store.empty, true, ⟨true, false, false, false⟩⟩,
     ⟨[.energy .grass], [.energy .fire], [], [.energy .fire], [], some (InPlay.ofBasic big), [],
-      false, false, false, false, false, Store.empty, true⟩,
+      false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
     true, false, false, false, none, none, false, false⟩
 
 theorem move_after1 : Move start1 after1 := by
@@ -248,10 +248,10 @@ player took a Prize card, the opponent promoted `big`, and the second round put 
 `big`. -/
 def after2 : GameState :=
   ⟨⟨[.energy .grass], [.energy .fire], [hitItem], [.energy .fire], [],
-      some (InPlay.ofBasic big), [], false, false, false, false, false, Store.empty, true⟩,
+      some (InPlay.ofBasic big), [], false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [],
       some { InPlay.ofBasic big with damage := 0 + 5 }, [], false, false, false, false,
-      false, Store.empty, true⟩,
+      false, Store.empty, true, ⟨true, false, false, false⟩⟩,
     true, false, false, false, none, none, false, false⟩
 
 theorem move_after2 : Move start2 after2 := by
@@ -303,9 +303,9 @@ theorem start3_settled : Settled start3 :=
 
 def after3 : GameState :=
   ⟨⟨[.energy .grass], [.energy .fire], [winItem], [], [], some (InPlay.ofBasic big),
-      [], false, false, false, false, false, Store.empty, true⟩,
+      [], false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [], none, [InPlay.ofBasic big],
-      false, false, false, false, false, Store.empty, true⟩,
+      false, false, false, false, false, Store.empty, true, ⟨true, false, false, false⟩⟩,
     true, false, false, false, some (.win true), none, false, false⟩
 
 theorem move_after3 : Move start3 after3 :=

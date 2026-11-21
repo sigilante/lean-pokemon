@@ -255,10 +255,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Benched Pokémon whose card passes a filter; the Energy passing a filter attached to a player's
   Active Pokémon or to all of their Pokémon in play; `Amt.count`, `Test.countGe`), none of which
   reads damage, so both clamps keep them exact (`Count.val_clampAt`, `Count.val_xclampAt`);
+  since milestone MV2 tests also read the printed card of either Active Pokémon (`Test.top`: "is a
+  Pokémon ex", "is an Evolution Pokémon", "is a Tera Pokémon") and whether it has a Tool
+  (`Test.hasTool`), and counts read the Pokémon in play passing a filter (`Count.inPlay`), all
+  exact under both clamps (`Pokemon/InPlayTests.lean`); absent: name-prefix filters ("has
+  \"Nidoking\" in its name", 8 refused cards in survey S13 §C), reads of the defender's Retreat
+  Cost or remaining HP, and Special Energy;
   there are no other reads of the damage on Benched Pokémon (no tests or counts of it), none of
   Poison strength, of HP ("if it has full
-  HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history ("if you
-  played a Supporter this turn"); a count test is made, like every test, while the player has an
+  HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history beyond
+  milestone MV2's (next item); a count test is made, like every test, while the player has an
   Active Pokémon; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
   Pokémon, Bench included); the damage step's amount (`Amt`) reads the damage on either
@@ -419,7 +425,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * effects place damage counters on either Active Pokémon (`counters`, `scale` on the
   opponent's, `selfDamage` on the player's own) and, since milestone M3, on one chosen Benched
   Pokémon of either player (`benchCounters`) or on each of a player's Benched Pokémon
-  (`spreadCounters`); recoil and other self-damage are written as damage counters
+  (`spreadCounters`), and since milestone MV2 on `m` distinct chosen Benched Pokémon passing a filter
+  (`benchSome`, attack damage or counters; "N damage to 2 of your opponent's Pokémon",
+  `Effect.hitSome`; "put N damage counters on your opponent's Pokémon in any way you like",
+  `Effect.spreadAny`, each counter on the Active Pokémon when the Bench is empty, proved exact for `Run`,
+  the semantics of an attack's effect, from a state with both Active Pokémon: every distribution of the counters is a resolution and nothing else is,
+  `Spread.spreadAny_sound`, `Spread.spreadAny_complete`; inside a Trainer effect a Knock Out check
+  would follow each counter; `Pokemon/Spread.lean`; absent: spread whose amount the text computes, "for each Energy
+  attached to this Pokémon", 7 refused cards in survey S13 §B, a target filtered by its damage, 2,
+  moving Energy or counters "in any way you like", 4, and "any number" of attachments); recoil and
+  other self-damage are written as damage counters
   (`selfDamage`), not as attack damage, so a printed recoil "This Pokémon also does 30 damage to
   itself" escapes the attacker's own Weakness, Resistance and modifiers in the model; attack
   damage reaches the opponent's Active Pokémon (the damage step, `dealtBy`) and, since M3, Benched
@@ -644,7 +659,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * zone moves (milestone MV, `Effect.move`, `drawTo`, `attach`, `putBench`, `discardEnergy`,
   `moveEnergy`, semantics `ZStep` lifted by `Run.zone`): cards that pass a filter (`Filter`:
   Pokémon, Basic, Stage, type, name, HP at most `n`, no rule box, Trainer, a Trainer kind, Energy,
-  Energy of a type, and Boolean combinations) move between one player's deck (searched, or its
+  Energy of a type, since milestone MV2 Pokémon ex, Tera, a named printed attack and a printed
+  Ability, and Boolean combinations) move between one player's deck (searched, or its
   top `n` cards), hand and discard pile, to the hand, the discard pile, the top or bottom of the
   deck or shuffled into it, "up to `n`", exactly `n` or all of them; Energy is attached from a
   zone to the Active Pokémon or a Benched one, Basic Pokémon are put onto the Bench from a zone,
@@ -670,6 +686,32 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Dudunsparce, Misty's Psyduck in S10), devolution, evolution by effect, switching a card in play
   with one in the discard pile (Transformation Tome, Ogre's Mask), Prize-card moves other than
   taking them, the Lost Zone, and "attach to each of" a varying set;
+* one-turn history (milestone MV2, survey S13 §A, `Pokemon/History.lean`): a per-player Knock Out
+  record (`KOHist`, read by `Count.koLast`), a per-Pokémon "moved from the Bench to the Active
+  Spot this turn" flag (`InPlay.movedUp`, `Test.movedUp`) and "evolved this turn" (`Test.evolved`,
+  from `fresh`). Departures: "Knocked Out by damage from an attack" is read as "Knocked Out by the
+  check after the turn's attack", so damage counters placed by an attack's effect count too (a
+  superset); the failed Confused attempt (`Move.attackConfused`) sets `GameState.attacked` like an
+  attack, so if its 3 damage counters bring the confused player's own Active Pokémon to its HP, the
+  batch Knock Out step records in that player's history a Knock Out "after an attack"
+  (`KOHist.nowAtk`) though no attack happened, and likewise a Knock Out of the attacker's own
+  Pokémon by recoil (`selfDamage`) is recorded in its owner's history as after an attack. The flag is read only through the record of the turn in which it was set: during the
+  next turn (the opponent's) by `Count.koLast .opp true`, and it is gone by the owner's own next
+  turn (`Move.endTurn` shifts it out). Both history shapes the census implements ("if any of your
+  Pokémon were Knocked Out [by damage from an attack] during your opponent's last turn") read
+  `Count.koLast .own`, the reader's own record of the opponent's turn, so no implemented card
+  notices; a card reading `koLast .opp true` would. Knock Outs at Checkup are recorded in no turn
+  (Checkup is between turns); a promotion
+  after a Knock Out of the player's own Active Pokémon in their own turn does not set `movedUp`
+  (an under-model). Absent, with the refused cards of today's Standard that need them (S13 §A;
+  cards can need several): "if you played [named, Future, Ancient, Team Rocket] Supporter this
+  turn" (7), "if this Pokémon used [attack] during your last turn" (4) and "if 1 of your Pokémon
+  used [attack] during your last turn" (3), the per-Pokémon attack lock "during your next turn,
+  this Pokémon can't use [attack]" (36 in its own family), "healed this turn" (3), "damaged during
+  your opponent's last turn … that much more damage" (2, an amount), next-turn per-Pokémon
+  triggers (4), filtered "during this turn" bonuses (4), Prize and Knock Out consequences (8),
+  "Prize cards your opponent took during their last turn" (1, the one counted quantity, at most 6),
+  and name prefixes ("any of your Ethan's Pokémon", 2 of the 10 Knock Out tests);
 * first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
   starting player cannot attack or play a Supporter on the first turn of the game
   (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
@@ -859,8 +901,10 @@ either player wins (`Outcome.ofWays`; a game already over stays over). Nobody is
 batch-KO the model took Knock Outs one at a time, in any order, with promotions in between. -/
 def GameState.koStep (g : GameState) : GameState :=
   { g with
-    cur := (g.koOf .own).takePrizes (g.koVal .opp),
-    opp := (g.koOf .opp).takePrizes (g.koVal .own),
+    cur := ((g.koOf .own).takePrizes (g.koVal .opp)).noteKO
+      (!g.between && decide (0 < g.koVal .own)) g.attacked,
+    opp := ((g.koOf .opp).takePrizes (g.koVal .own)).noteKO
+      (!g.between && decide (0 < g.koVal .opp)) g.attacked,
     winner := match g.winner with
       | none => Outcome.ofWays g.curIsFirst (winWays (g.koVal .opp) g.cur (g.koOf .opp))
           (winWays (g.koVal .own) g.opp (g.koOf .own))
@@ -1274,6 +1318,7 @@ theorem Run.hitRun {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchDamage w n h => exact ⟨_, _, .plain rfl (.benchDamage w n h)⟩
   | benchDamageNone w n h => exact ⟨_, _, .plain rfl (.benchDamageNone w n h)⟩
   | spreadDamage w n g => exact ⟨_, _, .plain rfl (.spreadDamage w n g)⟩
+  | benchSome w m f dmg n h => exact ⟨_, _, .plain rfl (.benchSome w m f dmg n h)⟩
   | moveCounter h => exact ⟨_, _, .plain rfl (.moveCounter h)⟩
   | discardStadium g => exact ⟨_, _, .plain rfl (.discardStadium g)⟩
 
@@ -1384,7 +1429,7 @@ inductive Move : GameState → GameState → Prop where
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
-        active := some q,
+        active := some q.moveUp,
         bench := b₁ ++ { a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } }
@@ -1558,10 +1603,10 @@ inductive Move : GameState → GameState → Prop where
         { cur := { g.opp with
             active := some (a.checkup false fa sa ca), bench := bo,
             energyAttached := false, supporterPlayed := false, retreated := false,
-            mods := g.opp.mods.shift },
+            mods := g.opp.mods.shift, ko := g.opp.ko.shift },
           opp := { g.cur.unfresh with
             active := some (b.unfresh.checkup true fb sb cb), bench := bc,
-            mods := g.cur.mods.shift, hadTurn := true },
+            mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
           stadiumUsed := false }
