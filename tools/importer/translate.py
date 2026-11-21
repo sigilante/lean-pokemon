@@ -10,9 +10,17 @@ can rank the mechanisms by how many cards each blocks alone.
 
 Abilities (milestone M8a, `translate_ability`): activated ("Once during your turn", "As often as you
 like during your turn") and on-play ("When you play this Pokémon from your hand …") Abilities whose
-conditions are a place or one test of the model and whose every sentence matches a rule; static,
-passive and triggered Abilities, first-turn rules, self Knock Outs, uses from the hand, returns from
-play and conditions the model cannot test are refused with a reason that starts with 'Ability: '.
+conditions are a place or one test of the model and whose every sentence matches a rule; first-turn
+rules, self Knock Outs, uses from the hand, returns from play and conditions the model cannot test are
+refused with a reason that starts with 'Ability: '.
+
+Triggered Abilities (milestone M8b, `translate_trigger`, importer 0.6.0): the two shapes the model has
+("… is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon
+is Knocked Out), …" and "… is Knocked Out by damage from an attack from your opponent's Pokémon, …"), on a
+Pokémon's Ability or as a Tool's text, when the effect translates by the ordinary rules into the trigger
+fragment (`Effect.trigOk`); the qualifiers and their caveats are documented above `TRIG_SUBJ_POKEMON`.
+Other triggered text is refused with a reason that starts with 'Ability: triggered' or 'Pokémon Tool:
+triggered'.
 
 Static text (milestone M6, `parse_static`): a static Ability, a Pokémon Tool's or a Stadium's text is
 written as the model's `Static` effects only in the shapes listed there (HP plus or minus, a damage bonus
@@ -70,6 +78,17 @@ CAVEATS = {
     'toolAbilityFlag': "an Ability a Pokémon Tool gives shares the use flag of the Pokémon it is attached to (`InPlay.used`), "
                        "so a Pokémon with an Ability of its own and one from a Tool uses only one of them in a turn "
                        "(Known gaps, M5)",
+    'trigDamaged': "'is in the Active Spot and is damaged by an attack' is decided on the attack's damage step (HitRun, "
+                   "HitTrig): a Pokémon damaged and then switched to the Bench by the same attack fires nothing, and when "
+                   "the Defending Pokémon was already at or above its HP before the damage step the trigger may fire or "
+                   "not (Known gaps, triggered Abilities, M8b: the two departures, one in each direction)",
+    'trigKO': "'is Knocked Out by damage from an attack' is read as 'Knocked Out by a Knock Out check while the turn's "
+              "attack has been made': Knock Outs by damage counters the attack placed, by later rounds of the check, "
+              "and in the check after a failed Confused attempt also fire it (Known gaps, triggered Abilities, M8b)",
+    'trigAttacker': "'the Attacking Pokémon' is the opponent's Active Pokémon when the trigger resolves: if the attack "
+                    "switched its attacker out ('damaged'), or the attacker was Knocked Out by the same check "
+                    "('Knocked Out'), the effect falls on the new Active Pokémon instead of the attacker or nothing "
+                    "(Known gaps, triggered Abilities, M8b)",
 }
 
 
@@ -98,6 +117,11 @@ CAVEAT_DIRECTION = {
     'staticBench': 'both',         # Bench damage is not reduced: more damage to a Benched Pokémon than printed
                                    # (forbids the printed survivals, allows Knock Outs the printed card prevents)
     'toolAbilityFlag': 'forbids some',  # fewer Ability uses per turn than the rulebook allows
+    'trigDamaged': 'both',         # damaged-then-switched fires nothing (forbids some); the corner at or above
+                                   # HP may fire a trigger the printed card would not (allows more)
+    'trigKO': 'allows more',       # more Knock Outs fire the trigger than the printed "by damage from an attack"
+    'trigAttacker': 'both',        # a different Pokémon gets the effect: the printed outcome is not among the
+                                   # model's when the attacker was switched out or Knocked Out
 }
 
 
@@ -1856,6 +1880,23 @@ def translate_tool(c, res, text, joined):
     if not sents:
         B.append(('Pokémon Tool: no text', ''))
         return res
+    if not grants and trig_shape(joined):
+        # triggered text of the two shapes of milestone M8b: a triggered Ability the Tool gives its holder
+        other = sub - {'Pokémon Tool', 'ACE SPEC'}
+        if other:
+            B.append(('Pokémon Tool: subtype not modelled on a Tool: ' + ','.join(sorted(other)), joined))
+            return res
+        if c.get('attacks') or len(text) != 1:
+            B.append(('Pokémon Tool: triggered (M8b shape), with other text', joined))
+            return res
+        r = translate_trigger(c, joined, res, tool=True)
+        if r is None:
+            return res
+        ab, holder = r
+        ab['name'] = c['name']
+        res['term'] = ('tool', c['name'], {'holder': holder, 'attacks': [], 'abilities': [ab]})
+        res['ok'] = True
+        return res
     if not grants:
         k = static_kind(joined)
         if k is not None and k.startswith('triggered'):
@@ -2543,6 +2584,17 @@ def translate_ability(c, a, res):
     if (a.get('type') or 'Ability') != 'Ability':
         B.append(('Ability: kind not modelled: ' + str(a.get('type')), t))
         return None
+    if trig_shape(t):
+        # a triggered Ability of the two shapes of milestone M8b
+        r = translate_trigger(c, t, res, tool=False)
+        if r is None:
+            return None
+        r[0]['name'] = name
+        return r[0]
+    if FLYGON_KO in t:
+        # an on-play Ability that may also be used on a Knock Out (Flygon me2-53): the on-play Ability, and an
+        # optional `koByAttack` trigger in the Active Spot with the same effect
+        return translate_also_ko(c, a, t, res)
     why = ability_refusal(t)
     if why == 'Ability: static or passive':
         return translate_static_ability(c, a, res)
@@ -2701,6 +2753,45 @@ def translate_ability(c, a, res):
     return ab
 
 
+def translate_also_ko(c, a, t, res):
+    """Flygon's Ability: "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your
+    Pokémon, you may use this Ability. You may also use this Ability if this Pokémon is in the Active Spot and is
+    Knocked Out by damage from an attack from your opponent's Pokémon. E": two Abilities of the model with the
+    same name and effect, the on-play one and `triggered .koByAttack true` with place `some .active`."""
+    B = res['blockers']
+    a2 = dict(a)
+    a2['text'] = t.replace(' ' + FLYGON_KO, '')
+    sub = {'ok': False, 'term': None, 'caveats': set(), 'blockers': [], 'used': []}
+    ab = translate_ability(c, a2, sub)
+    res['used'] += sub['used']
+    if ab is None or isinstance(ab, list) or ab['use'][0] != 'onPlay':
+        B += sub['blockers'] or [('Ability: on-play part of an on-play-or-Knock-Out Ability not translated', t)]
+        return None
+    R = 'Ability: triggered (M8b shape), '
+    cavs = set(sub['caveats'])
+    if any(x[0] == 'self' for x in _abeff_leaves(ab['effect'])):
+        B.append((R + 'effect on the Knocked Out Pokémon or its cards (not tracked after the Knock Out)', t))
+        return None
+    if cavs - {'upTo0', 'searchAny', 'mayFail', 'hiddenInfo'}:
+        B.append((R + 'effect needs a caveat of activated Abilities', t))
+        return None
+    ko = {'name': ab['name'], 'use': ('triggered', ('koByAttack',), True), 'spot': ('some', ('active',)),
+          'cond': None, 'effect': ab['effect']}
+    if not T.trig_ok(T.trig_script(ko)):
+        B.append((R + 'effect outside the trigger fragment (Effect.trigOk: a test or coin flip, a switch, a heal, '
+                  'an exact zone move, …)', t))
+        return None
+    res['used'].append(('trigger-koByAttack-also', FLYGON_KO))
+    res['caveats'] |= cavs | {'trigKO'}
+    return [ab, ko]
+
+
+def _abeff_leaves(a):
+    if a[0] in ('seq', 'choice'):
+        return _abeff_leaves(a[1]) + _abeff_leaves(a[2])
+    return [a]
+
+
 def translate_static_ability(c, a, res):
     """A static Ability (milestone M6): `AbilityUse.static` with its static effects, never used (its
     effect is `fx skip`, its place and condition none); refused with reason codes otherwise."""
@@ -2716,6 +2807,188 @@ def translate_static_ability(c, a, res):
     return {'name': a.get('name') or '', 'use': ('static', ss), 'spot': None, 'cond': None, 'effect': ('fx', SKIP)}
 
 
+# ------------------------------------------------------------------ triggered Abilities (milestone M8b)
+#
+# Two printed shapes, on a Pokémon's Ability or as a Tool's text (`ToolGrant.abilities`, for the holder):
+#   damaged:    "If this Pokémon [the X this card is attached to] is in the Active Spot and is damaged by an
+#               attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), E"
+#   koByAttack: "If this Pokémon [the X this card is attached to] [is in the Active Spot and] is Knocked Out by
+#               damage from an attack from your opponent's Pokémon, E"
+# and Flygon's "You may also use this Ability if this Pokémon is in the Active Spot and is Knocked Out by …",
+# a second, optional koByAttack Ability with the on-play Ability's effect (`translate_ability`).
+#
+# The qualifiers, against the model (Pokemon/Rules.lean, triggers section and Known gaps):
+# * "in the Active Spot": the Ability's place (`spot = some .active`). `damaged` fires only for the
+#   opponent's Active Pokémon in any case (`HitTrig`); for `koByAttack` the place decides whether a Benched
+#   Pokémon's Knock Out fires it (`GameState.koTrigs`, `Ability.spotOk`). Exact.
+# * "by an attack from your opponent's Pokémon": always so in the model; triggers of the player not to move
+#   fire only from that player's opponent's attack (`Move.attack`, `Move.knockOuts`). Exact.
+# * "(even if this Pokémon is Knocked Out)": `damaged` resolves after the attack and before the Knock Out
+#   check. Exact.
+# * "is damaged by an attack" (`damaged`): decided on the damage step, with two departures (caveat
+#   trigDamaged, both directions). "by damage from an attack" (`koByAttack`): read wider (caveat trigKO,
+#   allows more).
+# * "the Attacking Pokémon": read as the opponent's Active Pokémon when the trigger resolves (the sentence is
+#   rewritten to "your opponent's Active Pokémon" and translated by the ordinary rules, which give `counters`,
+#   `inflict`, …); wrong when the attack switched its attacker out or the attacker was Knocked Out by the
+#   same check (caveat trigAttacker, both). It matters for every effect on the attacker, of both events.
+# * "you may": `triggered ev true` (optional); otherwise mandatory.
+# * coin flips are tests (`ite`), outside `Effect.trigOk`: refused, as is every effect outside the fragment
+#   (a trigger outside it never fires in the model, which would under-model the card silently).
+# Refused with a reason: Prize changes, replacement effects ("instead of"), reads of the damage taken,
+# printed conditions (Weakness, Retreat Cost, another card in play, the attacker's kind, full HP), events of
+# another Pokémon, the damaged shape not restricted to the Active Spot, effects on the Knocked Out Pokémon or
+# its cards ("this Pokémon" is not tracked after a Knock Out), and other events (the M8a reasons).
+
+TRIG_SUBJ_POKEMON = r'^If this Pokémon'
+TRIG_SUBJ_TOOL = r'^If the (.+?) this card is attached to'
+TRIG_DAMAGED = (r" is in the Active Spot and is damaged by an attack from your opponent's Pokémon "
+                r"\(even if this (?:Pokémon|(?P<h2>.+?)) is Knocked Out\), ")
+TRIG_KO_ACTIVE = r" is in the Active Spot and is Knocked Out by damage from an attack from your opponent's Pokémon, "
+TRIG_KO = r" is Knocked Out by damage from an attack from your opponent's Pokémon, "
+TRIG_SHAPE = re.compile(r"(?:is damaged by an attack|takes \d+ or more damage from an attack) from your opponent's.*\(even if|"
+                        r"^If (?:this Pokémon|the [^.]*?this card is attached to)[^.]*? is Knocke[dt] Out by damage from an "
+                        r"attack from your opponent's Pokémon")
+DELUXE_DISCARD = 'If you placed any damage counters in this way, discard this card.'
+FLYGON_KO = ("You may also use this Ability if this Pokémon is in the Active Spot and is Knocked Out by damage from an "
+             "attack from your opponent's Pokémon.")
+
+
+def trig_shape(t):
+    """Is the text one of the two shapes of milestone M8b (survey S12 E1, E1', E2), whether or not it translates?"""
+    return bool(TRIG_SHAPE.search(t))
+
+
+def trig_head(t, tool):
+    """(event, spot, holder phrase or None, rest of the first sentence) for an opening of the two shapes, or None."""
+    m = re.match(TRIG_SUBJ_TOOL if tool else TRIG_SUBJ_POKEMON, t)
+    if not m:
+        return None
+    holder = m.group(1) if tool else None
+    rest = t[m.end():]
+    for rx, ev, spot in ((TRIG_DAMAGED, 'damaged', ('active',)), (TRIG_KO_ACTIVE, 'koByAttack', ('active',)),
+                         (TRIG_KO, 'koByAttack', None)):
+        k = re.match(rx, rest)
+        if k:
+            h2 = k.groupdict().get('h2')
+            if h2 is not None and h2 != holder:
+                return None
+            return ev, spot, holder, rest[k.end():]
+    return None
+
+
+def trig_refusal(t, tool):
+    """A specific reason why a text of the two shapes is not translated before its effect is read, or None."""
+    R = 'triggered (M8b shape), '
+    if 'Prize' in t:
+        return R + 'changes the Prize cards taken'
+    if 'instead of' in t:
+        return R + 'replacement effect ("instead of")'
+    if re.search(r'takes \d+ or more damage|damage (?:done|taken)|amount of damage', t):
+        return R + 'reads the damage taken'
+    if 'Knocket' in t:
+        return R + 'opening not recognised (misprint "Knocket Out" in the data)'
+    if trig_head(t, tool) is None:
+        if re.match(r'^If your ', t):
+            return R + "fires on another Pokémon's event (your Active Pokémon of a type or name)"
+        if re.match(r"^If this Pokémon is damaged by an attack", t):
+            return R + 'not restricted to the Active Spot (the model fires damaged triggers in the Active Spot only)'
+        return R + 'printed condition (Weakness, Retreat Cost, another card in play, the attacker\'s kind, a holder name)'
+    return None
+
+
+def attacking_to_active(s):
+    """The model's reading of "the Attacking Pokémon": the opponent's Active Pokémon (caveat trigAttacker)."""
+    return (s.replace('The Attacking Pokémon', "Your opponent's Active Pokémon")
+             .replace('the Attacking Pokémon', "your opponent's Active Pokémon"))
+
+
+def trig_effect(c, body, ev, spot, opt, cavs, tool):
+    """Translate the effect sentences of a trigger; raise Refuse with a reason starting 'triggered (M8b shape), '."""
+    R = 'triggered (M8b shape), '
+    place = T.TRIG_EVENTS[ev]
+    deluxe = False
+    if tool and body and body[-1] == DELUXE_DISCARD:
+        # Deluxe Bomb: the counters on the Attacking Pokémon are always placed (the opponent's Active Spot is
+        # filled), and "this card" is the Tool of the holder, which is in the Active Spot (`damaged`)
+        if ev != 'damaged' or len(body) != 2 or not re.match(r'^(?:Put|Place) \d+ damage counters on the Attacking Pokémon\.$',
+                                                             body[0]):
+            raise Refuse(R + "'If you placed any damage counters in this way' after another effect")
+        deluxe = True
+        body = body[:-1]
+    if any('Attacking Pokémon' in s for s in body):
+        cavs.add('trigAttacker')
+    sents = [attacking_to_active(s) for s in body]
+    ctx = {'kind': 'ability', 'name': c['name'], 'base': None, 'cost': None, '_cavs': cavs, 'spot': place}
+    p = Parser(ctx).run(sents)
+    if p.blockers:
+        why, s = p.blockers[0]
+        raise Refuse(R + 'effect sentence not translated (' + why + ')', s)
+    parts = []
+    for _, it in p.items:
+        if isinstance(it, Eff):
+            cavs |= it.cavs
+            parts.append(('fx', it.e))
+        elif isinstance(it, AbItem):
+            if place is None:
+                raise Refuse(R + 'effect on the Knocked Out Pokémon or its cards (not tracked after the Knock Out)')
+            cavs |= it.cavs
+            parts.append(it.a)
+        else:
+            raise Refuse(R + 'effect item not expressible in a trigger (' + type(it).__name__ + ')')
+    if deluxe:
+        parts.append(('fx', ('discardTools', OWN, ('active',))))
+    if not parts:
+        raise Refuse(R + 'no effect')
+    eff = abseq(*parts)
+    ab = {'name': None, 'use': ('triggered', (ev,), opt), 'spot': ('some', spot) if spot else None, 'cond': None,
+          'effect': eff}
+    e = T.trig_script(ab)
+    if not T.trig_ok(e):
+        raise Refuse(R + 'effect outside the trigger fragment (Effect.trigOk: a test or coin flip, a switch, a heal, '
+                     'an exact zone move, …)')
+    if 'noopUse' in cavs or 'selfBench' in cavs or 'koBetweenSteps' in cavs:
+        raise Refuse(R + 'effect needs a caveat of activated Abilities')
+    cavs.add('trigDamaged' if ev == 'damaged' else 'trigKO')
+    return ab
+
+
+def translate_trigger(c, t, res, tool):
+    """A triggered Ability of the two M8b shapes (a Pokémon's, or a Tool's text): (Ability, holder filter or
+    None); appends a blocker and returns None if it is refused."""
+    B = res['blockers']
+    head = 'Pokémon Tool: ' if tool else 'Ability: '
+    why = trig_refusal(t, tool)
+    if why:
+        B.append((head + why, t))
+        return None
+    sents = split_sentences(t)
+    ev, spot, holder_np, rest = trig_head(sents[0], tool)
+    opt = False
+    if rest.startswith('you may '):
+        opt, rest = True, rest[len('you may '):]
+    body = [cap(rest)] + sents[1:]
+    cavs = set()
+    holder = None
+    try:
+        if tool:
+            ctx = {'kind': 'trainer', 'name': c['name'], 'base': None, 'cost': None}
+            try:
+                holder = parse_filter(holder_np, ctx)
+            except Refuse as r:
+                raise Refuse('triggered (M8b shape), holder not expressible: ' + r.reason)
+            if not pokemon_only(holder):
+                # the holder filter is read on the holder's top card, a Pokémon card (`Card.grantAbilities`)
+                raise Refuse('triggered (M8b shape), holder filter not one on Pokémon')
+        ab = trig_effect(c, body, ev, spot, opt, cavs, tool)
+    except Refuse as r:
+        B.append((head + r.reason, r.sentence or t))
+        return None
+    res['used'].append(('trigger-' + ev, sents[0]))
+    res['caveats'] |= cavs
+    return ab, holder
+
+
 STAGES = {'Basic': ('basic',), 'Stage 1': ('stage1',), 'Stage 2': ('stage2',)}
 
 
@@ -2726,7 +2999,9 @@ def translate_pokemon(c, res):
     abilities = []
     for a in c.get('abilities') or []:
         ab = translate_ability(c, a, res)
-        if ab is not None:
+        if isinstance(ab, list):
+            abilities += ab
+        elif ab is not None:
             abilities.append(ab)
     if c.get('ancientTrait'):
         B.append(('Ancient Trait', ''))

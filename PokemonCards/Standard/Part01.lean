@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 8 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.5.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.6.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -357,6 +357,34 @@ def sv5_7 : Card := .pokemon
         gx := false },
       { name := "Knuckle Impact", cost := [.grass, .colorless], damage := 12,
         effect := .linger .own .after (.lock .attack),
+        gx := false }] }
+
+/-- Roselia (sv5-8). Records: sv5-8. Caveats: trigAttacker, trigDamaged. -/
+def sv5_8 : Card := .pokemon
+  { name := "Roselia", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Poison Point", use := .triggered .damaged false,
+        spot := some .active, cond := none,
+        effect := .fx (.inflict .poisoned) }],
+    attacks := [
+      { name := "Leaf Step", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Roserade (sv5-9). Records: sv5-9. Caveats: perPokemon, trigAttacker, trigDamaged. -/
+def sv5_9 : Card := .pokemon
+  { name := "Roserade", stage := .stage1, evolvesFrom := some "Roselia",
+    hp := 13, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Poison Point", use := .triggered .damaged false,
+        spot := some .active, cond := none,
+        effect := .fx (.inflict .poisoned) }],
+    attacks := [
+      { name := "Bind Down", cost := [.colorless, .colorless], damage := 7,
+        effect := .linger .opp .next (.lock .retreat),
         gx := false }] }
 
 /-- Turtwig (sv5-10). Records: sv5-10. Caveats: staticBench. -/
@@ -1255,6 +1283,20 @@ def sv5_134 : Card := .pokemon
         effect := .linger .own .after (.lock .attack),
         gx := false }] }
 
+/-- Iron Jugulis (sv5-139). Records: sv5-139. Caveats: trigAttacker, trigDamaged. -/
+def sv5_139 : Card := .pokemon
+  { name := "Iron Jugulis", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .colorless, retreat := 2, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Automated Combat", use := .triggered .damaged false,
+        spot := some .active, cond := none,
+        effect := .fx (.counters 3) }],
+    attacks := [
+      { name := "Blasting Wind", cost := [.colorless, .colorless, .colorless], damage := 11,
+        effect := .skip,
+        gx := false }] }
+
 /-- Buddy-Buddy Poffin (sv5-144). Records: sv5-144, sv6-223, sv8pt5-101, me1-167, me2pt5-184. Caveats: upTo0. -/
 def sv5_144 : Card := .trainer "Buddy-Buddy Poffin" .item
     (.seq (.seq (.putBench .own .deck (.and .basic (.hpLe 7))) (.putBench .own .deck (.and .basic (.hpLe 7)))) .shuffle)
@@ -1763,42 +1805,6 @@ def sv6_67 : Card := .pokemon
         effect := .linger .opp .next (.lock .retreat),
         gx := false }] }
 
-/-- Emolga (sv6-69). Records: sv6-69. Caveats: benchMods. -/
-def sv6_69 : Card := .pokemon
-  { name := "Emolga", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .lightning, retreat := 0, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Sky Wave", cost := [.colorless], damage := 1,
-        effect := .seq (.spreadDamage .own 1) (.spreadDamage .opp 1),
-        gx := false }] }
-
-/-- Helioptile (sv6-70). Records: sv6-70. -/
-def sv6_70 : Card := .pokemon
-  { name := "Helioptile", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Collect", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Static Shock", cost := [.lightning], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Heliolisk (sv6-71). Records: sv6-71, sv6-177. Caveats: recoil. -/
-def sv6_71 : Card := .pokemon
-  { name := "Heliolisk", stage := .stage1, evolvesFrom := some "Helioptile",
-    hp := 10, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Wild Charge", cost := [.lightning], damage := 7,
-        effect := .selfDamage 2,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1836,6 +1842,8 @@ def cards : List Card := [
   sv5_4,
   sv5_6,
   sv5_7,
+  sv5_8,
+  sv5_9,
   sv5_10,
   sv5_11,
   sv5_14,
@@ -1906,6 +1914,7 @@ def cards : List Card := [
   sv5_130,
   sv5_132,
   sv5_134,
+  sv5_139,
   sv5_144,
   sv5_148,
   sv5_152,
@@ -1947,10 +1956,7 @@ def cards : List Card := [
   sv6_59,
   sv6_65,
   sv6_66,
-  sv6_67,
-  sv6_69,
-  sv6_70,
-  sv6_71]
+  sv6_67]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1984,6 +1990,22 @@ theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ 10)) = true := b
 /-- The static damage reduction units of every card in this part (`Card.reduceGain`) are at most 5
 counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Roselia", "Roserade", "Iron Jugulis"] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
+theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
+theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part whose triggered Abilities can return a card from a discard pile (milestone M8b), by name. -/
+theorem cards_trigRecycles : (cards.filter Card.trigRecycles).map Card.label = [] := by decide +kernel
+
+/-- Every triggered Ability of this part has no printed condition and an effect of the trigger
+fragment (`Card.trigsOk`). -/
+theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/

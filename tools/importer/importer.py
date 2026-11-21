@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.5.0'
+VERSION = '0.6.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -36,7 +36,27 @@ CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special E
 
 # Blocking mechanisms for the not-imported cards, by keyword (an approximate classification of the
 # refusal reason and sentence, first match wins; card-level kinds come first).
+# Text of the two triggered shapes of milestone M8b that is refused, by reason (`translate.trig_refusal`,
+# `translate.trig_effect`); these come before the general Ability and Tool kinds.
+TRIG_REASONS = [
+    ('changes the Prize cards taken', 'changes the Prize'),
+    ('replacement effect ("instead of")', 'replacement'),
+    ('reads the damage taken', 'reads the damage'),
+    ("printed condition or holder name (Weakness, Retreat Cost, another card in play, the attacker's kind)",
+     'printed condition|holder not expressible|holder filter'),
+    ("fires on another Pokémon's event", "another Pokémon's event"),
+    ('not restricted to the Active Spot', 'not restricted'),
+    ('an effect sentence has no rule', 'effect sentence not translated'),
+    ('effect outside the trigger fragment (Effect.trigOk)', 'outside the trigger fragment'),
+    ('effect on the Knocked Out Pokémon or its cards', 'Knocked Out Pokémon or its cards'),
+    ('opening misprinted in the data', 'misprint'),
+    ('other', ''),
+]
+
 MECHS = [
+    ('triggered text of the M8b shapes: ' + d, r'^(?:Ability|Pokémon Tool): triggered \(M8b shape\), .*(?:' + rx + ')')
+    for d, rx in TRIG_REASONS
+] + [
     # static text of an Ability, a Tool or a Stadium outside the model's `Static` (milestone M6), by reason code
 ] + [('static text (Ability, Tool or Stadium): ' + d, r'^(?:Ability|Pokémon Tool|Stadium): static, ' + k + ' ')
      for k, d in TR.STATIC_DESC.items()] + [
@@ -216,6 +236,13 @@ def run(data, out, survey=None):
                    'counters (the largest over the imported pool). -/' % red_max)
         src.append('theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ %d)) = true := by decide +kernel\n'
                    % red_max)
+        for k, what, pred, fn in TRIG_LISTS:
+            src.append('/-- The cards of this part %s (milestone M8b), by name. -/' % what)
+            src.append('theorem cards_%s : (cards.filter %s).map Card.label = %s := by decide +kernel\n'
+                       % (k, pred, T.lean([recs[0]['name'] for recs, r in chunk if fn(r['term'])])))
+        src.append('/-- Every triggered Ability of this part has no printed condition and an effect of the trigger\n'
+                   'fragment (`Card.trigsOk`). -/')
+        src.append('theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel\n')
         src.append('/-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by\n'
                    'name. -/')
         src.append('theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = %s := by decide +kernel\n'
@@ -261,9 +288,10 @@ def run(data, out, survey=None):
            + ', '.join(pn + '.cards_ok' for pn in part_names) + ', Bool.and_self]\n',
            '/-- **No imported card is inert.** No imported Stadium or Tool is a card the model plays with no\n'
            'effect (`Card.inert`): every imported Stadium has an activated or (milestone M6) a static effect the\n'
-           'model expresses, every imported Tool gives an attack, an Ability or a static effect. (Triggered Stadium\n'
-           'and Tool text, and static text outside the model\'s `Static`, which the model would play as inert, is\n'
-           'refused by the importer.) -/',
+           'model expresses, every imported Tool gives an attack, an Ability (since importer 0.6.0 a triggered one,\n'
+           'milestone M8b) or a static effect. (Triggered Stadium and Tool text outside the two shapes of milestone\n'
+           'M8b, and static text outside the model\'s `Static`, which the model would play as inert, is refused by\n'
+           'the importer.) -/',
            'theorem notInert : ∀ c ∈ all, c.inert = false := by\n'
            '  have h : all.all (fun c => !c.inert) = true := by\n'
            '    simp only [all, List.all_append, '
@@ -357,6 +385,7 @@ def run(data, out, survey=None):
                 '          g₂\'.xclamp (Enum.bound g₀.allCards) = g₁\'.xclamp (Enum.bound g₀.allCards)) :=\n'
                 '  Faithful.xfinite (faithful g₀ hg)\n']
     src += static_theorems(imported, part_names, hp_max, gain_max, red_max)
+    src += trigger_theorems(imported, part_names)
     src += ['/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by\n'
             '`Move.attack`). -/',
             'theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=\n'
@@ -489,6 +518,54 @@ def stadium_tool_section(results):
     return L
 
 
+def trigger_section(results):
+    """Triggered Abilities and Tool text of the two shapes of milestone M8b: the imported cards by event,
+    the cards whose trigger translated but that are blocked elsewhere, and the refused triggers by reason."""
+    L = []
+    rows = []
+    for recs, r in results:
+        c = recs[0]
+        texts = [TR.norm(a.get('text')) for a in c.get('abilities') or []]
+        if 'Pokémon Tool' in c['_sub']:
+            texts += [TR.norm(x) for x in c.get('rules') or []]
+        if any(TR.trig_shape(t) or TR.FLYGON_KO in t for t in texts):
+            rows.append((recs, r))
+    used = lambda r: any(u[0].startswith('trigger-') for u in r['used'])  # noqa: E731
+    imp = [(recs, r) for recs, r in rows if r['ok']]
+    L.append('Triggered text of the two shapes of milestone M8b ("is in the Active Spot and is damaged by an attack '
+             'from your opponent\'s Pokémon (even if this Pokémon is Knocked Out)", "is Knocked Out by damage from an '
+             'attack from your opponent\'s Pokémon"), on Pokémon and Tools: %d cards; imported %d (exactly %d, with '
+             'caveats %d); trigger translated but the card blocked elsewhere %d; trigger refused %d.' % (
+                 len(rows), len(imp), sum(1 for _, r in imp if not r['caveats']), sum(1 for _, r in imp if r['caveats']),
+                 sum(1 for _, r in rows if not r['ok'] and used(r)), sum(1 for _, r in rows if not r['ok'] and not used(r))))
+    L.append('')
+    for ev in ('damaged', 'koByAttack'):
+        xs = [(recs, r) for recs, r in imp if term_trigs(r['term'], ev)]
+        L.append('Imported with a `%s` trigger (%d):' % (ev, len(xs)))
+        L.append('')
+        for recs, r in xs:
+            L.append('- %s (%s), %s [caveats: %s]: `%s`' % (
+                recs[0]['name'], ', '.join(x['id'] for x in recs), kind_of(recs[0]), ', '.join(sorted(r['caveats'])),
+                ' '.join(T.lean(ab['use']) + ' ' + T.lean(ab['spot']) + ' ' + T.lean(ab['effect'])
+                         for ab in term_trigs(r['term'], ev))))
+        L.append('')
+    bl = [(recs, r) for recs, r in rows if not r['ok'] and used(r)]
+    L.append('Trigger translated, card blocked elsewhere (%d): %s.' % (
+        len(bl), ', '.join('%s (%s; %s)' % (recs[0]['name'], recs[0]['id'], r['blockers'][0][0]) for recs, r in bl) or 'none'))
+    L.append('')
+    c = collections.Counter()
+    for recs, r in rows:
+        if not r['ok'] and not used(r):
+            ts = [a for a, _ in r['blockers'] if 'triggered (M8b shape)' in a]
+            c[mech_of(ts[0], '') if ts else 'other: ' + r['blockers'][0][0]] += 1
+    L.append('| trigger refused by reason | cards |')
+    L.append('|---|---|')
+    for k, v in sorted(c.items(), key=lambda kv: (-kv[1], kv[0])):
+        L.append('| %s | %d |' % (k, v))
+    L.append('')
+    return L
+
+
 def static_source(c):
     return 'Pokémon Tool' if 'Pokémon Tool' in c['_sub'] else 'Stadium' if 'Stadium' in c['_sub'] else 'Ability'
 
@@ -615,6 +692,50 @@ def card_effects(term):
         return [term[3]]
     return ([a['effect'] for a in card_attacks(term)]
             + [e for ab in card_abilities(term) for e in T.ability_scripts(ab)])
+
+
+def term_trigs(term, ev=None):
+    """The triggered Abilities (milestone M8b) of a card term, on `ev` if given."""
+    return [ab for ab in card_abilities(term) if ab['use'][0] == 'triggered' and (ev is None or ab['use'][1] == (ev,))]
+
+
+# The per-part and set-level lists of triggered Abilities: (suffix, description, Lean predicate, Python mirror).
+TRIG_LISTS = [
+    ('trigDamaged', 'with or giving a triggered Ability on `TrigEvent.damaged`', '(Card.hasTrig .damaged)',
+     lambda t: bool(term_trigs(t, 'damaged'))),
+    ('trigKO', 'with or giving a triggered Ability on `TrigEvent.koByAttack`', '(Card.hasTrig .koByAttack)',
+     lambda t: bool(term_trigs(t, 'koByAttack'))),
+    ('trigLingers', 'whose triggered Abilities write a lingering modifier', 'Card.trigLingers',
+     lambda t: any(T.lingers(e) for ab in term_trigs(t) for e in T.ability_scripts(ab))),
+    ('trigRecycles', 'whose triggered Abilities can return a card from a discard pile', 'Card.trigRecycles',
+     lambda t: any(T.rec_filters(e) for ab in term_trigs(t) for e in T.ability_scripts(ab))),
+]
+
+
+def trigger_theorems(imported, part_names):
+    """The set-level statements about triggered Abilities (milestone M8b)."""
+    pl = lambda suffix: ', '.join(pn + '.' + suffix for pn in part_names)  # noqa: E731
+    out = []
+    for k, what, pred, fn in TRIG_LISTS:
+        names = [recs[0]['name'] for recs, r in imported if fn(r['term'])]
+        out += ['/-- The imported cards %s (milestone M8b), by name (%d). Checked part by part. -/' % (what, len(names)),
+                'theorem %s : (all.filter %s).map Card.label = %s := by\n'
+                '  simp only [all, List.filter_append, List.map_append, %s]\n'
+                '  all_goals rfl\n' % (k, pred, T.lean(names), pl('cards_' + k))]
+    out += ['/-- **Every imported trigger fires wherever its place allows, and resolves an effect of the fragment**\n'
+            '(milestone M8b). For every triggered Ability an imported card has or (a Tool) gives, on its event `ev`,\n'
+            'the model\'s test `Ability.trigOn ev sp` is the test of its place (`Ability.spotOk sp`): no imported\n'
+            'trigger has a printed condition or an effect outside the trigger fragment, either of which would\n'
+            'silence it; and its effect satisfies `Effect.trigOk`, so it writes no lingering modifier, no store and\n'
+            'no turn flag (`Run.zoneOnly`) and always has a resolution with both Active Spots filled\n'
+            '(`Run.exists_of_trigOk`). Checked part by part. -/',
+            'theorem triggers_fire : ∀ c ∈ all, ∀ ab ∈ c.abilities, ∀ ev, ab.use.event = some ev → ∀ sp : Spot,\n'
+            '    ab.trigOn ev sp = ab.spotOk sp ∧ (ab.script ev.place).trigOk = true := by\n'
+            '  have h : all.all Card.trigsOk = true := by\n'
+            '    simp only [all, List.all_append, %s, Bool.and_self]\n'
+            '  intro c hc ab hab ev he sp\n'
+            '  exact trigOn_of_trigsOk (List.all_eq_true.1 h c hc) hab he sp\n' % pl('cards_trigsOk')]
+    return out
 
 
 def static_theorems(imported, part_names, hp_max, gain_max, red_max):
@@ -918,6 +1039,7 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
     L.append('')
     L += ability_section(results)
     L += stadium_tool_section(results)
+    L += trigger_section(results)
     L += static_section(results)
     # unhandled templates
     sc = collections.Counter()
