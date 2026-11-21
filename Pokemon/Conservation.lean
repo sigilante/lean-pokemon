@@ -4,16 +4,18 @@ import Pokemon.ListPerm
 /-!
 # Conservation of cards, and where finiteness can fail
 
-`Run.perm`, `Move.perm`, `Reach.perm`: legal play permutes the cards in the game. The list
+`Run.perm`, `TRun.perm`, `Move.perm`, `Reach.perm`: legal play permutes the cards in the game. The list
 `GameState.allCards` of every physical card in every zone of a reachable state is a
 permutation of that list for the start state, for decks whose text is expressible in
 `Effect`. No card is created, destroyed or altered. `Reach.cards_eq` (the NUMBER of cards is
 constant) is a corollary.
 
-`counters_unbounded`: inside the resolution of a single effect (a statement about `Run`, not
-`Reach`), damage on the opponent's Active Pokémon is unbounded. `DamageBounded` therefore
-cannot be an invariant of all reachable states: an effect can leave a Pokémon far above its
-HP, and the Knock Out is the next move. `Damage` treats this with a clamp.
+`counters_unbounded`: inside the resolution of a single effect by `Run` (an attack's effect;
+a statement about `Run`, not `Reach`), damage on the opponent's Active Pokémon is unbounded.
+`DamageBounded` therefore cannot be an invariant of all reachable states: an attack can leave a
+Pokémon far above its HP, and the Knock Out is the next move. `Damage` treats this with a clamp.
+(A Trainer card's effect, resolved by `TRun`, Knocks Out at once a Pokémon whose damage reaches
+its HP, but a single primitive step can still overshoot it.)
 -/
 
 namespace Pokemon
@@ -82,6 +84,38 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | handToBottom h =>
       have := fun x => h.count_eq x
       perm_count [this]
+  | seq _ _ ih₁ ih₂ => exact ih₂.trans ih₁
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact .refl _
+  | iterCons _ _ ih₁ ih₂ => exact ih₂.trans ih₁
+
+/-- A Knock Out move permutes the cards in the game. -/
+theorem KOMove.perm {g g' : GameState} (h : KOMove g g') : g'.allCards.Perm g.allCards := by
+  cases h with
+  | knockOut ha hk hp => perm_count [ha, hp]
+  | promote ha hb => perm_count [ha, hb]
+  | noPokemon ha hb => exact .refl _
+  | knockOutOwn ha hk hp => perm_count [ha, hp]
+  | promoteOwn ha hb => perm_count [ha, hb]
+  | noPokemonOwn ha hb => exact .refl _
+
+/-- Taking the Knock Outs permutes the cards in the game. -/
+theorem Resolve.perm {g g' : GameState} (h : Resolve g g') : g'.allCards.Perm g.allCards := by
+  induction h with
+  | done => exact .refl _
+  | step _ hm _ ih => exact ih.trans hm.perm
+
+/-- Resolving a Trainer card's effect, Knock Outs included, permutes the cards in the game:
+a Knock Out in mid-effect moves the Knocked Out Pokémon's cards to its owner's discard pile and
+a Prize card to the other player's hand. -/
+theorem TRun.perm {e : Effect} {g g' : GameState} (h : TRun e g g') :
+    g'.allCards.Perm g.allCards := by
+  induction h with
+  | prim _ _ hr hk => exact hk.perm.trans hr.perm
+  | stop => exact .refl _
+  | iteT _ _ _ _ ih => exact ih
+  | iteF _ _ _ _ ih => exact ih
   | seq _ _ ih₁ ih₂ => exact ih₂.trans ih₁
   | choiceL _ ih => exact ih
   | choiceR _ ih => exact ih

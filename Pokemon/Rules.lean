@@ -123,6 +123,85 @@ so a pending Knock Out is taken, and the Pokémon replaced, before any other mov
 def Settled (g : GameState) : Prop :=
   DamageBounded g ∧ g.cur.active ≠ none ∧ g.opp.active ≠ none
 
+/-- The six moves that resolve a Knock Out, as a relation of their own: they are the moves
+`Move.knockOut`, `Move.promote`, `Move.noPokemon`, `Move.knockOutOwn`, `Move.promoteOwn` and
+`Move.noPokemonOwn`, with the same premises and results (`KOMove.move`). `Resolve` uses them to
+take Knock Outs in the middle of a Trainer card's effect. -/
+inductive KOMove : GameState → GameState → Prop where
+  | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
+      (ha : g.opp.active = some p) (hk : p.top.hp ≤ p.damage)
+      (hp : g.cur.prizes = c :: ps) :
+      KOMove g { g with
+        opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
+        cur := { g.cur with prizes := ps, hand := c :: g.cur.hand },
+        winner := if ps.isEmpty then some g.curIsFirst else g.winner }
+  | promote {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
+      (ha : g.opp.active = none) (hb : g.opp.bench = b₁ ++ q :: b₂) :
+      KOMove g { g with opp := { g.opp with active := some q, bench := b₁ ++ b₂ } }
+  | noPokemon {g : GameState} (ha : g.opp.active = none) (hb : g.opp.bench = []) :
+      KOMove g { g with winner := some g.curIsFirst }
+  | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
+      (ha : g.cur.active = some p) (hk : p.top.hp ≤ p.damage)
+      (hp : g.opp.prizes = c :: ps) :
+      KOMove g { g with
+        cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
+        opp := { g.opp with prizes := ps, hand := c :: g.opp.hand },
+        winner := if ps.isEmpty then some (!g.curIsFirst) else g.winner }
+  | promoteOwn {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay}
+      (ha : g.cur.active = none) (hb : g.cur.bench = b₁ ++ q :: b₂) :
+      KOMove g { g with cur := { g.cur with active := some q, bench := b₁ ++ b₂ } }
+  | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
+      KOMove g { g with winner := some (!g.curIsFirst) }
+
+/-- `Resolve g g'`: take every pending Knock Out now. Knock Out moves (`KOMove`: a Prize to the
+other player, which may win the game; promotion of a Benched Pokémon chosen by its owner, a
+nondeterministic choice; or a loss if no Pokémon is left) are made one after another until the
+state is `Settled` or the game has a winner. Stopping earlier is not allowed: `done` requires
+one of the two, and no `KOMove` exists from a `Settled` state. -/
+inductive Resolve : GameState → GameState → Prop where
+  | done {g : GameState} (h : Settled g ∨ g.winner ≠ none) : Resolve g g
+  | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOMove g g₁) (hr : Resolve g₁ g') :
+      Resolve g g'
+
+/-- **Resolution of a Trainer card's effect**, with the rulebook's Knock Out timing: a Pokémon
+whose damage reaches its HP at any time other than during an attack or Checkup is Knocked Out
+at once. Each primitive step (`Effect.isPrim`, resolved by one step of `Run`) is followed by
+`Resolve`, which takes every Knock Out it caused, gives the Prize card and promotes the
+replacement before the next step; the rest of the effect then acts on the new board. Once the
+game has a winner the rest of the effect is not resolved (`stop`; `TRun.of_won`: a finished
+game is the only result). Tests (`ite`) and primitive steps require that the game is not over.
+
+Design. Of the two candidate semantics, the exact one (Knock Outs forced after every step) was
+chosen over a superset (Knock Outs allowed but not forced at every step): the superset would
+keep the model's ability to read and heal over-HP damage inside a Trainer effect, which the
+printed game lacks, so it would only over-approximate, and its finiteness would have to be
+proved anyway for the larger relation; the exact semantics costs no more to prove and makes
+the clamp a simulation for whole Trainer effects (`TRun.clamp_sim`). `TRun.guarded` states the
+timing: from a state that is `Settled` or finished, every primitive step and every test of a
+resolution starts in a `Settled` state, so no step of a Trainer effect is executed while an
+Active Pokémon is at or above its HP.
+
+At most one Active Pokémon can reach its HP in one step (each damaging primitive damages one
+Active Pokémon and the step starts `Settled`), so the order of simultaneous Knock Outs does not
+arise inside a Trainer effect; `Resolve` nonetheless allows any order. -/
+inductive TRun : Effect → GameState → GameState → Prop where
+  | prim {e : Effect} {g g₁ g₂ : GameState} (he : e.isPrim = true) (hn : g.winner = none)
+      (hr : Run e g g₁) (hk : Resolve g₁ g₂) : TRun e g g₂
+  | stop {e : Effect} {g : GameState} (hn : g.winner ≠ none) : TRun e g g
+  | iteT {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} (hn : g.winner = none)
+      (h : g.activeOf t.whose = some p) (ht : t.eval p = true) :
+      TRun a g g' → TRun (.ite t a b) g g'
+  | iteF {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} (hn : g.winner = none)
+      (h : g.activeOf t.whose = some p) (ht : t.eval p = false) :
+      TRun b g g' → TRun (.ite t a b) g g'
+  | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
+      TRun a g₁ g₂ → TRun b g₂ g₃ → TRun (.seq a b) g₁ g₃
+  | choiceL {a b : Effect} {g g' : GameState} : TRun a g g' → TRun (.choice a b) g g'
+  | choiceR {a b : Effect} {g g' : GameState} : TRun b g g' → TRun (.choice a b) g g'
+  | iterNil (a : Effect) (g : GameState) : TRun (.iter a) g g
+  | iterCons {a : Effect} {g₁ g₂ g₃ : GameState} :
+      TRun a g₁ g₂ → TRun (.iter a) g₂ g₃ → TRun (.iter a) g₁ g₃
+
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
@@ -160,18 +239,19 @@ inductive Move : GameState → GameState → Prop where
         bench := b₁ ++ { a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } }
-  /-- play an Item card: it goes to the discard pile and its effect resolves -/
+  /-- play an Item card: it goes to the discard pile and its effect resolves, with Knock Outs
+  taken at once in mid-effect (`TRun`) -/
   | item {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
       (hh : g.cur.hand = l₁ ++ Card.trainer n .item e :: l₂) (hbt : g.between = false)
       (hst : Settled g)
-      (hr : Run e { g with cur := { g.cur with
+      (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g') :
       Move g g'
-  /-- play a Supporter card, once per turn -/
+  /-- play a Supporter card, once per turn; its effect resolves as an Item's does (`TRun`) -/
   | supporter {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
       (hh : g.cur.hand = l₁ ++ Card.trainer n .supporter e :: l₂)
       (hs : g.cur.supporterPlayed = false) (hbt : g.between = false) (hst : Settled g)
-      (hr : Run e { g with cur := { g.cur with
+      (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g') :
       Move g g'
@@ -257,5 +337,15 @@ inductive Move : GameState → GameState → Prop where
 inductive Reach : GameState → GameState → Prop where
   | refl (g : GameState) : Reach g g
   | step {g₀ g g' : GameState} : Reach g₀ g → g.winner = none → Move g g' → Reach g₀ g'
+
+/-- A Knock Out move is a move. -/
+theorem KOMove.move {g g' : GameState} (h : KOMove g g') : Move g g' := by
+  cases h with
+  | knockOut ha hk hp => exact .knockOut ha hk hp
+  | promote ha hb => exact .promote ha hb
+  | noPokemon ha hb => exact .noPokemon ha hb
+  | knockOutOwn ha hk hp => exact .knockOutOwn ha hk hp
+  | promoteOwn ha hb => exact .promoteOwn ha hb
+  | noPokemonOwn ha hb => exact .noPokemonOwn ha hb
 
 end Pokemon

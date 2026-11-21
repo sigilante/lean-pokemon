@@ -64,23 +64,6 @@ theorem start_damageBounded : DamageBounded start := by
 theorem start_settled : Settled start :=
   ⟨start_damageBounded, by simp [start, side], by simp [start, side]⟩
 
-theorem run_iter_st : ∀ n u, Run (.iter (.poisonUp 1)) (st u) (st (u + n))
-  | 0, u => .iterNil _ _
-  | n + 1, u => by
-      have h := run_iter_st n (u + 1)
-      have e : u + 1 + n = u + (n + 1) := by omega
-      rw [e] at h
-      exact .iterCons (.poisonUp 1 rfl rfl) h
-
-theorem reach_st (n : Nat) : Reach start (st n) := by
-  have hr : Run eff
-      { start with cur := { start.cur with hand := [] ++ [], discard := [item] } }
-      (st (0 + n)) :=
-    .seq (.inflict .poisoned rfl) (run_iter_st n 0)
-  rw [Nat.zero_add] at hr
-  exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl
-    start_settled hr)
-
 theorem st_damageBounded (n : Nat) : DamageBounded (st n) := by
   intro p hp
   rcases hp with hp | hp | hp | hp
@@ -88,6 +71,29 @@ theorem st_damageBounded (n : Nat) : DamageBounded (st n) := by
   · cases hp
   · cases hp; show 0 < 5; decide
   · cases hp
+
+theorem st_settled (n : Nat) : Settled (st n) :=
+  ⟨st_damageBounded n, by simp [st, side], by simp [st, side]⟩
+
+/-- Each round of `poisonUp 1` is one primitive step; it damages nothing, so no Knock Out is
+taken and the state stays `Settled`. -/
+theorem trun_iter_st : ∀ n u, TRun (.iter (.poisonUp 1)) (st u) (st (u + n))
+  | 0, u => .iterNil _ _
+  | n + 1, u => by
+      have h := trun_iter_st n (u + 1)
+      have e : u + 1 + n = u + (n + 1) := by omega
+      rw [e] at h
+      exact .iterCons (.prim rfl rfl (.poisonUp 1 rfl rfl) (.done (.inl (st_settled (u + 1))))) h
+
+theorem reach_st (n : Nat) : Reach start (st n) := by
+  have hr : TRun eff
+      { start with cur := { start.cur with hand := [] ++ [], discard := [item] } }
+      (st (0 + n)) :=
+    .seq (.prim rfl rfl (.inflict .poisoned rfl) (.done (.inl (st_settled 0))))
+      (trun_iter_st n 0)
+  rw [Nat.zero_add] at hr
+  exact .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "PoisonUpItem") rfl rfl
+    start_settled hr)
 
 /-- Poison strength on the opponent's Active Pokémon. -/
 def oppPoisonUp (g : GameState) : Nat :=

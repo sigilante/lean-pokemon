@@ -104,16 +104,19 @@ theorem run_clamp_not_sim :
       cases h
       exact absurd ht (by decide)
 
-/-- An Item that places 9 damage counters on the player's own Active Pokémon. -/
-def selfItem : Card := .trainer "SelfDamageItem" .item (.selfDamage 9)
+/-- A 50-HP Basic Pokémon whose free attack does no base damage and places 9 damage counters
+on itself. -/
+def hurter : PokemonCard :=
+  ⟨"Hurter", .basic, none, 5, .grass, [⟨"Hurt", [], 0, .selfDamage 9⟩], 1⟩
 
 def start2 : GameState :=
-  ⟨side [selfItem] [] (InPlay.ofBasic mon), side [] [] (InPlay.ofBasic mon),
+  ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),
     true, false, false, false, none⟩
 
 def after2 : GameState :=
-  ⟨side [] [selfItem] { InPlay.ofBasic mon with damage := 9 }, side [] [] (InPlay.ofBasic mon),
-    true, false, false, false, none⟩
+  ⟨side [] [] { InPlay.ofBasic hurter with damage := 9 },
+    side [] [] { InPlay.ofBasic mon with damage := 0 + 0 },
+    true, false, true, false, none⟩
 
 theorem start2_damageBounded : DamageBounded start2 := by
   intro p hp
@@ -128,13 +131,17 @@ theorem start2_wellFormed : WellFormed start2 := by
     intro p hp <;> cases hp
 
 theorem reach_after2 : Reach start2 after2 :=
-  .step (.refl _) rfl (.item (l₁ := []) (l₂ := []) (n := "SelfDamageItem") rfl rfl
-    ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩ (.selfDamage 9 rfl))
+  .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9⟩) rfl (.head _)
+    (Nat.zero_le _) rfl rfl rfl rfl
+    ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
+    (.seq (.counters 0 rfl) (.selfDamage 9 rfl)))
 
 /-- **The old bound on the player's own Active Pokémon is false.** From a well-formed start with
-no pending Knock Out, one Item reaches, during the turn, a state whose own Active Pokémon has
-more than `maxHp + 3` damage counters (`Reach.activeLe` of the previous version claimed at most
-`maxHp + 3`). The Knock Out is the next move (`Move.pending_untouched`). -/
+no pending Knock Out, one attack whose effect damages the attacker reaches, during the turn, a
+state whose own Active Pokémon has more than `maxHp + 3` damage counters (`Reach.activeLe` of
+the previous version claimed at most `maxHp + 3`). The Knock Out is the next move
+(`Move.pending_untouched`). An Item with the same effect cannot do this: its Knock Out is taken
+in mid-effect (`TRun`), and the move ends with the Pokémon in the discard pile. -/
 theorem activeLe_false :
     ∃ g₀, WellFormed g₀ ∧ DamageBounded g₀ ∧
       ∃ g p, Reach g₀ g ∧ g.between = false ∧ g.cur.active = some p ∧
