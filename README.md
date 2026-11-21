@@ -192,6 +192,14 @@ a changed definition: the internal `Counter.Fits.toCur`, `Counter.Fits.toOpp` (t
 `after3` and `StaticWitness.tg2`, whose Knock Outs now leave a record. Not expressible: the played
 Supporter's name this turn, attacks used last turn and per-Pokémon attack locks, healing this turn,
 spread amounts computed by the text, name-prefix filters (Known gaps).
+Milestone MV3 (effect vocabulary 3; census in survey S15) added, in stage 1, damage steps that
+ignore steps of the damage calculation: `Effect.damage a ig` carries a flag record `Ign` (Weakness,
+Resistance, effects on the defender), and the damage is `GameState.dealtI ig n`, the rulebook's
+calculation with step 3, 4 or 5 switched off (2026 rulebook p. 19; step 2, the attacker's own
+bonuses, is kept); `damage a` is `damage a {}`, the full calculation (`GameState.dealtI_none`). Five
+printed variants, 39 refused Standard cards. Both clamps keep it with no new hypothesis
+(`dealtBy_cap_ign`); witnesses in `Pokemon/Ignore.lean` (one defender, Resistance and a reduction:
+1 damage counter from the plain attack, 6 from the one that ignores them).
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

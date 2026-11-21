@@ -443,7 +443,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       cases w <;>
         exact ⟨_, .linger _ s m _, by
           simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁, he₂]⟩
-  | @damage g p a n hv h =>
+  | @damage g p a ig n hv h =>
       intro _ g₂ hc
       have hv₂ := hv.of_xrclamp hc
       have hwr := GameState.wr_of_xclampAt hc
@@ -451,13 +451,13 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
       rw [h] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-      have e : GameState.dealt n
+      have e : GameState.dealtI ig n
           { g with cur := { g.cur with active := c₂, bench := e₁ },
-                   opp := { g.opp with active := some q, bench := e₂ } } = g.dealt n := by
-        simp only [GameState.dealt, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce]
-      exact ⟨_, .damage hv₂ rfl, by
+                   opp := { g.opp with active := some q, bench := e₂ } } = g.dealtI ig n := by
+        simp only [GameState.dealtI, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce]
+      exact ⟨_, .damage (ig := ig) hv₂ rfl, by
         simp only [GameState.xrclamp, GameState.xclampAt, e, Option.map_some, hc₂,
-          InPlay.clamp_of_agree (hq.upd.2.1 (g.dealt n)), he₁, he₂]⟩
+          InPlay.clamp_of_agree (hq.upd.2.1 (g.dealtI ig n)), he₁, he₂]⟩
   | @drain g p q a n hv h hq =>
       intro _ g₂ hc
       have hv₂ := hv.of_xrclamp hc

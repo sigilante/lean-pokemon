@@ -116,8 +116,18 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Weakness is ×2 to one type and Resistance −N to one type, as printed today (S9: every Standard
   Weakness is ×2; Resistance −30, once −20). Absent: "+10" to "+40" Weakness on older cards,
   two Weaknesses or two Resistances on one card (dual-type Pokémon, S8 C6; a Pokémon has one
-  type here), and effects that change or ignore Weakness or Resistance (S8 E2); Weakness and
-  Resistance never apply to the Bench (milestone M3: attack damage to Benched Pokémon skips them);
+  type here), and effects that change Weakness or Resistance (S8 E2; survey S15 §1: "has no
+  Weakness", "Weakness is now …", 3 refused Standard cards); Weakness and Resistance never apply to
+  the Bench (milestone M3: attack damage to Benched Pokémon skips them). Since milestone MV3 an
+  attack's damage step may ignore them and the effects on the defender (`Ign`, `GameState.dealtI`:
+  "This attack's damage isn't affected by Weakness / Resistance / any effects on your opponent's
+  Active Pokémon" and their combinations, 39 refused Standard cards in survey S15; exact: the
+  rulebook's step 3, 4 or 5 is switched off, 2026 p. 19, and step 2, the attacker's bonuses, is
+  kept). Absent from the same family: a reduction of the Defending Pokémon's attacks before Weakness
+  ("attacks used by the Defending Pokémon do 30 less damage (before applying Weakness and
+  Resistance)", 10 cards), an increase after it ("the Defending Pokémon takes 50 more damage", 4),
+  per-attack bonuses ("this Pokémon's Meteor Mash attack does 60 more damage", 4), and the static
+  form on an Ability (Walking Wake ex svp-127, 1);
 * Knock Outs (milestone batch-KO; before it, separate moves taken one at a time in any order, a
   DEPARTURE from the rulebook since milestone M6 that is now removed, see below): every Knock Out
   is taken by the batch Knock Out step (`KOBatch`, the move `Move.knockOuts`, and the steps of
@@ -294,7 +304,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage) is not modified, as in the rulebook. The bonus is placed at step 2 and the reduction
   at step 5, which is what printed modifiers say ("… more damage … (before applying Weakness
   and Resistance)", "… less damage … (after applying Weakness and Resistance)", survey S9);
-  modifiers that name the other step are not expressible. Absent: threshold
+  modifiers that name the other step are not expressible. An attack whose damage "isn't affected
+  by any effects on your opponent's Active Pokémon" (milestone MV3, `Ign.fx`) reads the defender's
+  store as empty and its static reduction as 0: no reduction and no prevention apply to it. Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, effects that change Weakness,
   Resistance or type (other than the Coloring counter), "attack twice" and "take another turn",
@@ -1199,7 +1211,7 @@ def GameState.damagedB (g g' : GameState) : Bool :=
 replaces it (milestone M8b): every primitive but the damage steps (`damage`, `drain`) and
 `switch .opp`; not the compound effects. -/
 def Effect.plain : Effect → Bool
-  | .damage _ => false
+  | .damage _ _ => false
   | .drain _ => false
   | .switch .opp => false
   | .ite .. => false
@@ -1210,7 +1222,7 @@ def Effect.plain : Effect → Bool
 
 /-- The damage steps. -/
 def Effect.isHit : Effect → Bool
-  | .damage _ => true
+  | .damage _ _ => true
   | .drain _ => true
   | _ => false
 
@@ -1221,7 +1233,8 @@ damage step did damage to the opponent's Active Pokémon and no `switch .opp` re
 that step. So `hit` is "the Pokémon in the opponent's Active Spot after the attack was damaged by
 it, while in the Active Spot". It is read on the damage step itself (`hit`): the defender is the
 opponent's Active Pokémon at that step, and the damage done is the rise of its damage over the
-step (`GameState.damagedB` on the step), which is `GameState.dealt` of the amount. One corner is
+step (`GameState.damagedB` on the step), which is `GameState.dealtI` of the amount (`GameState.dealt`
+when the step switches nothing off). One corner is
 left free: when the defender is already at or above its derived HP before the step (counters
 placed earlier in the same attack, or its derived HP lowered earlier in the same attack), `hit`
 may be either value. (This keeps the capped clamp of the tame decks a simulation,

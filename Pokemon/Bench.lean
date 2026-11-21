@@ -494,7 +494,7 @@ namespace Pokemon
 /-- `HitAt e g h`: resolving `e` from `g` reaches a damage step (`damage` or `drain`) in the
 state `h`; the steps before it are resolved by `Run`, as in the resolution of `e`. -/
 inductive HitAt : Effect → GameState → GameState → Prop where
-  | damage (a : Amt) (g : GameState) : HitAt (.damage a) g g
+  | damage (a : Amt) (ig : Ign) (g : GameState) : HitAt (.damage a ig) g g
   | drain (a : Amt) (g : GameState) : HitAt (.drain a) g g
   | iteT {t : Test} {a b : Effect} {g h : GameState} {p : InPlay}
       (hp : g.activeOf t.whose = some p) (ht : t.eval g p = true) :

@@ -629,7 +629,8 @@ theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
       cases hv
       rw [hp] at h'; cases h'
       have hc := hs.opp
-      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5, dealt_shape hs hns hw hr], h6⟩,
+      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
+        simp only [h5, GameState.dealtI_none, dealt_shape hs hns hw hr], h6⟩,
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
@@ -645,7 +646,8 @@ theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := 
       cases hv
       rw [hp] at h'; cases h'
       have hc := hs.opp
-      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5, dealt_zero, Nat.add_zero], h6⟩,
+      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
+        simp only [h5, GameState.dealtI_none, dealt_zero, Nat.add_zero], h6⟩,
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he

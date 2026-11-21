@@ -42,4 +42,5 @@ import Pokemon.NoTriggers
 import Pokemon.InPlayTests
 import Pokemon.Spread
 import Pokemon.History
+import Pokemon.Ignore
 import Pokemon.Audit

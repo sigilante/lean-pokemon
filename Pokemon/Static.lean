@@ -235,6 +235,18 @@ def GameState.dealt (n : Nat) (g : GameState) : Nat :=
   dealtBy n g.weak g.resist (g.cur.mods.add .always (.bonus g.sBonus))
     (g.opp.mods.add .always (.reduce g.sReduce))
 
+/-- **The damage calculation with steps switched off** (milestone MV3, `Ign`): as `GameState.dealt`,
+with no Weakness if `ig.weak` (step 3), no Resistance if `ig.resist` (step 4), and, if `ig.fx`, none
+of the effects on the Defending Pokémon (step 5): its stored modifiers are read as the empty store
+and its static reduction as 0. The attacker's bonuses (step 2) are always applied. `dealtI {}` is
+`dealt` by definition (`GameState.dealtI_none`). -/
+def GameState.dealtI (ig : Ign) (n : Nat) (g : GameState) : Nat :=
+  dealtBy n (cond ig.weak false g.weak) (cond ig.resist 0 g.resist)
+    (g.cur.mods.add .always (.bonus g.sBonus))
+    ((cond ig.fx Store.empty g.opp.mods).add .always (.reduce (cond ig.fx 0 g.sReduce)))
+
+@[simp] theorem GameState.dealtI_none (n : Nat) (g : GameState) : g.dealtI {} n = g.dealt n := rfl
+
 @[simp] theorem Store.add_bonus_zero (t : Store) : t.add .always (.bonus 0) = t := rfl
 
 @[simp] theorem Store.add_reduce_zero (t : Store) : t.add .always (.reduce 0) = t := rfl

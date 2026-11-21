@@ -594,6 +594,19 @@ theorem dealtBy_cap_reduce {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
       · simp only [Bool.false_eq_true, ↓reduceIte]; omega
       · simp only [↓reduceIte]; omega
 
+/-- **The cap survives a calculation with step 5 switched off** (milestone MV3, `Ign.fx`): with
+`fx` the defender's stores are read as the empty store and its static reduction as 0, which is the
+same in both states; without it, `dealtBy_cap_reduce`. -/
+theorem dealtBy_cap_ign {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
+    (hc : c₂.cap (2 * k) = c₁.cap (2 * k)) (ho : o₂.cap (2 * k) = o₁.cap (2 * k))
+    (hn : o₁.NoReduce) (n : Nat) (w : Bool) {r s : Nat} (fx : Bool) (hr : r + s ≤ k) :
+    min (dealtBy n w r c₂ ((cond fx Store.empty o₂).add .always (.reduce (cond fx 0 s)))) k =
+      min (dealtBy n w r c₁ ((cond fx Store.empty o₁).add .always (.reduce (cond fx 0 s)))) k := by
+  cases fx
+  · exact dealtBy_cap_reduce hk hc ho hn n w hr
+  · exact dealtBy_cap_reduce hk hc rfl ⟨rfl, rfl, rfl, rfl⟩ n w (Nat.le_trans (Nat.add_le_add_left
+      (Nat.zero_le _) _) hr)
+
 /-- The flags in effect agree when the stores agree at a cap. -/
 theorem Store.flags_of_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
     a.live.prevent = b.live.prevent ∧ a.live.noAttack = b.live.noAttack ∧

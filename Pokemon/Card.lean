@@ -396,6 +396,23 @@ inductive Amt where
   | count (c : Count) (k : Nat)
   deriving DecidableEq
 
+/-- Which steps of the damage calculation an attack's damage step switches off (milestone MV3): the
+Defending Pokémon's Weakness (step 3), its Resistance (step 4), and every effect on it (step 5: its
+stored reduction and prevention and the static reductions and preventions in force on it). The
+2026 rulebook's steps (p. 19): "3) Increase the damage by the amount next to your opponent's Active
+Pokémon's Weakness … 4) Reduce the damage by the amount next to your opponent's Active Pokémon's
+Resistance … 5) Figure out damage effects of Trainer or Energy cards, or other effects on your
+opponent's Active Pokémon". The printed variants: "This attack's damage isn't affected by
+Weakness" (`weak`), "… by Resistance" (`resist`), "… by Weakness or Resistance" (both), "… by any
+effects on your opponent's Active Pokémon" (`fx`), and "… by Weakness or Resistance, or by any
+effects on your opponent's Active Pokémon" (all three). Step 2, the attacker's own bonuses, is
+never switched off: the text names only the defender. The default, `{}`, switches nothing off. -/
+structure Ign where
+  weak : Bool := false
+  resist : Bool := false
+  fx : Bool := false
+  deriving DecidableEq
+
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
 `iter` covers "flip until tails" and "as often as you like". -/
 inductive Effect where
@@ -449,8 +466,11 @@ inductive Effect where
   opponent's Active Pokémon. An attack has at most one damage step on each line of resolution
   (`Effect.oneHit`, required by `Move.attack`), so the calculation is made once per attack, and
   Item and Supporter effects have none (`Effect.hitFree`, required by `Move.item` and
-  `Move.supporter`): printed Trainer cards place damage counters, not attack damage -/
-  | damage (a : Amt)
+  `Move.supporter`): printed Trainer cards place damage counters, not attack damage. Since milestone
+  MV3 the step carries `ig : Ign`, the steps of the calculation its text switches off ("This
+  attack's damage isn't affected by Resistance" is `damage a { resist := true }`); `damage a` is
+  `damage a {}`, the full calculation -/
+  | damage (a : Amt) (ig : Ign := {})
   /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
   | drain (a : Amt)
@@ -571,7 +591,7 @@ structure Attack where
 
 /-- No damage step (`damage` or `drain`) anywhere in the effect. -/
 def Effect.hitFree : Effect → Bool
-  | .damage _ => false
+  | .damage _ _ => false
   | .drain _ => false
   | .ite _ a b => a.hitFree && b.hitFree
   | .seq a b => a.hitFree && b.hitFree
@@ -622,7 +642,7 @@ def Effect.ownFree : Effect → Bool
   | .cure => false
   | .selfDamage _ => false
   | .healAll => false
-  | .damage _ => false
+  | .damage _ _ => false
   | .drain _ => false
   | .scale .own _ => false
   | .switch .own => false
@@ -683,7 +703,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
   | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
-  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _, _ | .drain _, _
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
@@ -737,7 +757,7 @@ def Attack.wf (atk : Attack) : Bool :=
   atk.effect.oneHit && (decide (atk.damage = 0) || atk.effect.hitFree) && atk.effect.switchSafe
 
 theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneHit = true
-  | .damage _, h => by simp [Effect.hitFree] at h
+  | .damage _ _, h => by simp [Effect.hitFree] at h
   | .drain _, h => by simp [Effect.hitFree] at h
   | .ite _ a b, h => by
       simp only [Effect.hitFree, Bool.and_eq_true] at h

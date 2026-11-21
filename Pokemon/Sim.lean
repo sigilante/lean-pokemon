@@ -423,15 +423,16 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
         exact ⟨_, .linger _ s m _, by
           simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂,
             Store.cap_add hm₁, Store.cap_add hm₂, he₁, he₂]⟩
-  | @damage g p a n hv h =>
+  | @damage g p a ig n hv h =>
       intro _ _ hn hR g₂ hc
       have hwr := GameState.wr_of_rclamp hc
       have hsf := GameState.sameField_of_clampAt hc
-      have hr : g.resist + g.sReduce ≤ k := by
+      have hr : cond ig.resist 0 g.resist + g.sReduce ≤ k := by
         have h1 := hR.2 _ (GameState.top_mem_opp_active h)
         have h2 := g.sReduce_le
         have h3 : g.resist ≤ p.top.resistAmt :=
           GameState.resist_le fun d hd => by rw [h] at hd; cases hd; exact Nat.le_refl _
+        have h4 : cond ig.resist 0 g.resist ≤ g.resist := by cases ig.resist <;> simp
         omega
       by_cases hlt : p.damage < k
       · have hv₂ := hv.congr (GameState.count_of_clampAt hc) fun w p' hp' => by
@@ -445,16 +446,19 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
         obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
         rw [h] at ha₂
         obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-        refine ⟨_, .damage hv₂ rfl, ?_⟩
+        refine ⟨_, .damage (ig := ig) hv₂ rfl, ?_⟩
         have hq' : InPlay.Agree k (.upto k)
-            { q with damage := q.damage + (dealtBy n g.weak g.resist
-                (m₁.add .always (.bonus g.sBonus)) (m₂.add .always (.reduce g.sReduce))) }
-            { p with damage := p.damage + (dealtBy n g.weak g.resist
-                (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce))) } :=
+            { q with damage := q.damage + (dealtBy n (cond ig.weak false g.weak)
+                (cond ig.resist 0 g.resist) (m₁.add .always (.bonus g.sBonus))
+                ((cond ig.fx Store.empty m₂).add .always (.reduce (cond ig.fx 0 g.sReduce)))) }
+            { p with damage := p.damage + (dealtBy n (cond ig.weak false g.weak)
+                (cond ig.resist 0 g.resist) (g.cur.mods.add .always (.bonus g.sBonus))
+                ((cond ig.fx Store.empty g.opp.mods).add .always
+                  (.reduce (cond ig.fx 0 g.sReduce)))) } :=
           ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
-            hq.marks, hq.used, hq.dmg_add_upto (dealtBy_cap_reduce hk0 (Store.cap_add hm₁ _ _) hm₂
-              hn.2 n g.weak hr), hq.poisonUp, hq.movedUp⟩
-        simp only [GameState.rclamp, GameState.clampAt, GameState.dealt, hwr.1, hwr.2, hsf.sBonus,
+            hq.marks, hq.used, hq.dmg_add_upto (dealtBy_cap_ign hk0 (Store.cap_add hm₁ _ _) hm₂
+              hn.2 n _ ig.fx hr), hq.poisonUp, hq.movedUp⟩
+        simp only [GameState.rclamp, GameState.clampAt, GameState.dealtI, hwr.1, hwr.2, hsf.sBonus,
           hsf.sReduce, Option.map_some, hc₂, hm₁, hm₂,
           InPlay.clamp_of_agree hq', he₁, he₂]
       · obtain ⟨n₂, hv₂⟩ := hv.transfer fun w p' hp' => by
@@ -463,14 +467,14 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
         obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
         rw [h] at ha₂
         obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
-        refine ⟨_, .damage hv₂ rfl, ?_⟩
+        refine ⟨_, .damage (ig := ig) hv₂ rfl, ?_⟩
         have hd := hq.damage
         simp only [Cap.dmg] at hd
         have hq' : InPlay.Agree k (.upto k)
-            { q with damage := q.damage + GameState.dealt n₂ { g with
+            { q with damage := q.damage + GameState.dealtI ig n₂ { g with
                 cur := { g.cur with active := c₂, bench := e₁, mods := m₁ },
                 opp := { g.opp with active := some q, bench := e₂, mods := m₂ } } }
-            { p with damage := p.damage + g.dealt n } :=
+            { p with damage := p.damage + g.dealtI ig n } :=
           ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
             hq.marks, hq.used, by simp only [Cap.dmg]; omega, hq.poisonUp, hq.movedUp⟩
         simp only [GameState.rclamp, GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
