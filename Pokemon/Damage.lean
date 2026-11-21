@@ -3,38 +3,39 @@ import Pokemon.WellFormed
 /-!
 # Damage and Poison strength: what is bounded, and a clamp that makes the rest bounded
 
-Two numeric components of the state can be made large by legal play: damage (on the
-opponent's Active Pokémon during a turn, `counters_unbounded`; on either Active Pokémon after
-Checkup) and the Poison strength `poisonUp` of a Poisoned Pokémon (`poisonUp_unbounded`).
-This file shows that the excess carries no information.
+Two numeric components of the state can be made large by legal play: damage on either Active
+Pokémon (inside one effect, `counters_unbounded`; an attack, Trainer card or Checkup can leave
+it far above HP, and the Knock Out is then the next move) and the Poison strength `poisonUp`
+of a Poisoned Pokémon (`poisonUp_unbounded`). This file shows that the excess carries no
+information at the level of moves.
 
 * `InPlay.clampWith c` caps `poisonUp` at the printed HP, and, when `c` is true, caps the
-  damage at the HP too. `GameState.clamp` applies `clampWith true` to the OPPONENT'S Active
-  Pokémon, and to the player's own Active Pokémon `clampWith g.between`: damage is capped
-  there only between turns. Nothing else changes.
-* `Run.clamp_sim` (during a turn), `Move.clamp_sim`, `Reach.clamp_sim`: states with the same
-  clamp have the same moves, up to the same clamp. So the kernel of `clamp` is a (strong)
-  bisimulation for `Move`, and every question about legal play that does not read the
-  capped quantities above HP can be asked of the clamped states instead.
-* `Reach.activeLe`: from a `DamageBounded`, `WellFormed` start, during every turn the player's
-  own Active Pokémon has at most `maxHp g₀.allCards + 3` damage counters.
+  damage at the HP too. `GameState.clampAt c` applies it to both Active Pokémon; nothing else
+  changes. `GameState.clamp` is `clampAt true`.
+* `Run.exact_sim`: the kernel of `clampAt false` (equal damage everywhere, Poison strength
+  equal up to HP) is a bisimulation for `Run`. Effects read damage exactly, so inside an
+  effect only Poison strength may be capped; `Reads.run_clamp_not_sim` shows that the HP clamp
+  of damage is NOT a simulation for `Run` once effects read damage.
+* `Move.clamp_sim`, `Reach.clamp_sim`: states with the same `clamp` have the same moves, up to
+  the same clamp. So the kernel of `clamp` is a (strong) bisimulation for `Move`, and every
+  question about legal play that does not read the capped quantities above HP can be asked of
+  the clamped states instead.
 * `Move.damageBounded_of_startTurn`: the turn proper starts with no pending Knock Out.
   `Move.endTurn_pending_ko`: the earlier `Move.damageBounded_of_turn` is false with Checkup.
 
-Why the clamp is sound. Poison strength is read only by Checkup, which adds it to damage, and
-by nothing else (`poisonUp` effects add to it, curing resets it). Damage on the opponent's
-Active Pokémon, and on either Active Pokémon between turns, is read only by the Knock Out
-test `hp ≤ damage` and its negation (no effect heals the opponent, and no effect resolves
-between turns). Both are threshold tests at HP, and `min (d + u) h` depends on `u` only through
-`min u h`.
+Why the clamp is sound at the level of moves. Every move that resolves an effect, and every
+other move except the six that resolve Knock Outs, requires the state to be `Settled`: no
+Pokémon in play is at or above its HP. In such a state the two clamps agree: damage below HP is
+not capped, so states with the same `clamp` have the same damage (`map_exact_of_clamp`), and
+`Run.exact_sim` applies to the effect. A Pokémon at or above its HP is read only by the Knock
+Out test `hp ≤ damage` and its negation, a threshold test at HP. Poison strength is read only
+by Checkup, which adds it to damage that is then capped at HP; `min (d + u) h` depends on `u`
+only through `min u h`. No effect reads Poison strength.
 
-Why the player's own Active Pokémon keeps its exact damage during a turn. It can exceed its
-HP then (after evolving into a card with less HP, or from Confusion), but `heal` reads its
-damage exactly (`5 - 2 = 3 ≥ 3` while `min 5 3 - 2 = 1 < 3`), so clamping it would not be a
-bisimulation. Its damage is instead bounded by `Reach.activeLe`: the turn starts with it below
-HP, evolution keeps the damage, and Confusion adds 3 counters at most once per turn (it uses
-the turn's attack). Checkup damage, which Croagunk can make arbitrarily large, lands only
-between turns, where heal cannot run and the clamp caps it.
+The previous version of this file capped the damage on the player's own Active Pokémon only
+between turns and bounded it during the turn by a separate invariant (`Reach.activeLe`, at most
+`maxHp + 3`). With `selfDamage` that invariant is false (`Reads.activeLe_false`), and with the
+Knock Out timing of `Settled` it is not needed: the clamp now caps both Active Pokémon always.
 -/
 
 namespace Pokemon
@@ -44,13 +45,14 @@ def InPlay.clampWith (c : Bool) (p : InPlay) : InPlay :=
   { p with damage := if c then min p.damage p.top.hp else p.damage,
            poisonUp := min p.poisonUp p.top.hp }
 
-/-- Cap the damage and the Poison strength on the opponent's Active Pokémon, and the Poison
-strength on the player's own Active Pokémon, at the printed HP; between turns, cap the damage
-on the player's own Active Pokémon too. Every other component, including the damage on every
-Benched Pokémon, is unchanged. -/
-def GameState.clamp (g : GameState) : GameState :=
-  { g with cur := { g.cur with active := g.cur.active.map (InPlay.clampWith g.between) },
-           opp := { g.opp with active := g.opp.active.map (InPlay.clampWith true) } }
+/-- Apply `InPlay.clampWith c` to both Active Pokémon. Every other component, including the
+damage on every Benched Pokémon, is unchanged. -/
+def GameState.clampAt (c : Bool) (g : GameState) : GameState :=
+  { g with cur := { g.cur with active := g.cur.active.map (InPlay.clampWith c) },
+           opp := { g.opp with active := g.opp.active.map (InPlay.clampWith c) } }
+
+/-- Cap the damage and the Poison strength on both Active Pokémon at the printed HP. -/
+def GameState.clamp (g : GameState) : GameState := g.clampAt true
 
 /-! ## Turn boundaries -/
 
@@ -231,23 +233,42 @@ theorem InPlay.Agree.checkup {c : Bool} {q p : InPlay} (h : Agree c q p)
     cases p.poisoned <;> cases p.burned <;>
       simp only [Bool.false_eq_true, ite_false, ite_true] <;> omega
 
-/-- Two states with the same clamp differ at most in the two Active Pokémon, and there only
-as `Agree` allows. -/
-theorem GameState.clamp_inv {g₁ g₂ : GameState} (h : g₁.clamp = g₂.clamp) :
+
+/-- Agreeing Pokémon given the same damage still agree. -/
+theorem InPlay.Agree.setDamage {c : Bool} {q p : InPlay} (h : Agree c q p) (d : Nat) :
+    Agree c { q with damage := d } { p with damage := d } :=
+  ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh,
+    by show (if c then min d q.top.hp else d) = (if c then min d p.top.hp else d); rw [h.top],
+    h.poisonUp⟩
+
+/-- Tests read only what `Agree false` keeps equal. -/
+theorem Test.eval_agree (t : Test) {q p : InPlay} (h : InPlay.Agree false q p) :
+    t.eval q = t.eval p := by
+  have hd : q.damage = p.damage := h.damage_eq
+  cases t with
+  | atLeast w n => simp only [Test.eval, hd]
+  | exactly w n => simp only [Test.eval, hd]
+  | cond w c => cases c <;> simp only [Test.eval, InPlay.has, h.poisoned, h.burned, h.rot]
+
+/-- The state with both Active Spots replaced. -/
+theorem GameState.clampAt_upd (c : Bool) (g : GameState) (c₂ a₂ : Option InPlay) :
+    ({ g with cur := { g.cur with active := c₂ }, opp := { g.opp with active := a₂ } }
+      : GameState).clampAt c =
+    { g with cur := { g.cur with active := c₂.map (InPlay.clampWith c) },
+             opp := { g.opp with active := a₂.map (InPlay.clampWith c) } } := rfl
+
+/-- Two states with the same `clampAt c` differ at most in the two Active Pokémon, and there
+only as `Agree c` allows. -/
+theorem GameState.clamp_inv {c : Bool} {g₁ g₂ : GameState} (h : g₁.clampAt c = g₂.clampAt c) :
     ∃ c₂ a₂, g₂ = { g₁ with cur := { g₁.cur with active := c₂ },
                             opp := { g₁.opp with active := a₂ } } ∧
-      c₂.map (InPlay.clampWith g₁.between) = g₁.cur.active.map (InPlay.clampWith g₁.between) ∧
-      a₂.map (InPlay.clampWith true) = g₁.opp.active.map (InPlay.clampWith true) := by
-  have hb : g₁.between = g₂.between := by
-    have := congrArg GameState.between h
-    exact this
-  have hc : g₂.cur.active.map (InPlay.clampWith g₂.between)
-      = g₁.cur.active.map (InPlay.clampWith g₁.between) :=
-    (congrArg (fun g => g.cur.active) h).symm
-  rw [← hb] at hc
-  refine ⟨g₂.cur.active, g₂.opp.active, ?_, hc, (congrArg (fun g => g.opp.active) h).symm⟩
-  have e : g₂ = { g₂.clamp with cur := { g₂.clamp.cur with active := g₂.cur.active },
-                                opp := { g₂.clamp.opp with active := g₂.opp.active } } := rfl
+      c₂.map (InPlay.clampWith c) = g₁.cur.active.map (InPlay.clampWith c) ∧
+      a₂.map (InPlay.clampWith c) = g₁.opp.active.map (InPlay.clampWith c) := by
+  refine ⟨g₂.cur.active, g₂.opp.active, ?_, (congrArg (fun g => g.cur.active) h).symm,
+    (congrArg (fun g => g.opp.active) h).symm⟩
+  have e : g₂ = { g₂.clampAt c with cur := { (g₂.clampAt c).cur with active := g₂.cur.active },
+                                    opp := { (g₂.clampAt c).opp with active := g₂.opp.active } } :=
+    rfl
   refine e.trans ?_
   rw [← h]
   rfl
@@ -265,112 +286,190 @@ theorem none_of_map {c : Bool} {o : Option InPlay}
     o = none :=
   Option.map_eq_none_iff.1 h
 
-/-- The kernel of `clamp` is a bisimulation for `Run`, during a turn (effects resolve only
-then). -/
-theorem Run.clamp_sim {e : Effect} {g₁ g₁' : GameState} (h : Run e g₁ g₁') :
-    ∀ {g₂ : GameState}, g₁.clamp = g₂.clamp → g₁.between = false →
-      ∃ g₂', Run e g₂ g₂' ∧ g₁'.clamp = g₂'.clamp := by
+/-- Equal damage gives the HP clamp. -/
+theorem map_clamp_of_exact {o₁ o₂ : Option InPlay}
+    (h : o₂.map (InPlay.clampWith false) = o₁.map (InPlay.clampWith false)) :
+    o₂.map (InPlay.clampWith true) = o₁.map (InPlay.clampWith true) := by
+  cases o₁ with
+  | none => rw [none_of_map h]
+  | some p =>
+      obtain ⟨q, rfl, hq⟩ := agree_of_map h
+      simp only [Option.map_some, InPlay.clamp_of_agree (hq.recap (c' := true) hq.damage_eq)]
+
+/-- Below HP, the HP clamp gives equal damage. -/
+theorem map_exact_of_clamp {o₁ o₂ : Option InPlay}
+    (h : o₂.map (InPlay.clampWith true) = o₁.map (InPlay.clampWith true))
+    (hk : ∀ p, o₁ = some p → p.damage < p.top.hp) :
+    o₂.map (InPlay.clampWith false) = o₁.map (InPlay.clampWith false) := by
+  cases o₁ with
+  | none => rw [none_of_map h]
+  | some p =>
+      obtain ⟨q, rfl, hq⟩ := agree_of_map h
+      simp only [Option.map_some,
+        InPlay.clamp_of_agree (hq.recap (c' := false) (hq.damage_eq_of_lt (hk p rfl)))]
+
+/-- The Active Pokémon read by a test, in a state with the same `clampAt c`. -/
+theorem GameState.activeOf_agree {c : Bool} {g₁ g₂ : GameState} (h : g₁.clampAt c = g₂.clampAt c)
+    {w : Whose} {p : InPlay} (hp : g₁.activeOf w = some p) :
+    ∃ q, g₂.activeOf w = some q ∧ InPlay.Agree c q p := by
+  cases w with
+  | own =>
+      have e := (congrArg (fun g => g.cur.active) h).symm
+      simp only [GameState.clampAt] at e
+      rw [show g₁.cur.active = some p from hp] at e
+      exact agree_of_map e
+  | opp =>
+      have e := (congrArg (fun g => g.opp.active) h).symm
+      simp only [GameState.clampAt] at e
+      rw [show g₁.opp.active = some p from hp] at e
+      exact agree_of_map e
+
+/-- **The kernel of `clampAt false` is a bisimulation for `Run`.** Two states that agree
+everywhere except in Poison strength above HP have the same effect resolutions, up to the
+same relation. Damage is not capped: effects read it exactly (`Reads.run_clamp_not_sim`). -/
+theorem Run.exact_sim {e : Effect} {g₁ g₁' : GameState} (h : Run e g₁ g₁') :
+    ∀ {g₂ : GameState}, g₁.clampAt false = g₂.clampAt false →
+      ∃ g₂', Run e g₂ g₂' ∧ g₁'.clampAt false = g₂'.clampAt false := by
   induction h with
-  | skip g => intro g₂ hc _; exact ⟨g₂, .skip g₂, hc⟩
+  | skip g => intro g₂ hc; exact ⟨g₂, .skip g₂, hc⟩
   | draw h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
-      exact ⟨_, .draw h, by simp only [GameState.clamp, hbt, hc₂, ha₂]⟩
+      exact ⟨_, .draw h, by simp only [GameState.clampAt, hc₂, ha₂]⟩
   | drawEmpty h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
       exact ⟨_, .drawEmpty h, hc⟩
   | @heal g p n h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
       rw [h] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have hq' : InPlay.Agree false { q with damage := q.damage - n }
-          { p with damage := p.damage - n } :=
-        ⟨hq.top, hq.under, hq.energy, hq.tools, hq.rot, hq.poisoned, hq.burned, hq.fresh,
-          by show q.damage - n = p.damage - n; rw [hq.damage_eq], hq.poisonUp⟩
+          { p with damage := p.damage - n } := by
+        rw [hq.damage_eq]; exact hq.setDamage _
       exact ⟨_, .heal n rfl, by
-        simp only [GameState.clamp, hbt, Option.map_some, InPlay.clamp_of_agree hq', ha₂]⟩
+        simp only [GameState.clampAt, Option.map_some, InPlay.clamp_of_agree hq', ha₂]⟩
   | counters n h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
       rw [h] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
       exact ⟨_, .counters n rfl, by
-        simp only [GameState.clamp, hbt, Option.map_some, hc₂,
+        simp only [GameState.clampAt, Option.map_some, hc₂,
           InPlay.clamp_of_agree (hq.upd.2.1 n)]⟩
   | inflict k h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
       rw [h] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
       exact ⟨_, .inflict k rfl, by
-        simp only [GameState.clamp, hbt, Option.map_some, hc₂,
+        simp only [GameState.clampAt, Option.map_some, hc₂,
           InPlay.clamp_of_agree (hq.upd.2.2.2.1 k)]⟩
   | poisonUp n h hp =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
       rw [h] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
       exact ⟨_, .poisonUp n rfl (hq.poisoned.trans hp), by
-        simp only [GameState.clamp, hbt, Option.map_some, hc₂,
+        simp only [GameState.clampAt, Option.map_some, hc₂,
           InPlay.clamp_of_agree (hq.upd.2.2.1 n)]⟩
   | poisonUpSkip n h hp =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
       rw [h] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
       exact ⟨_, .poisonUpSkip n rfl (hq.poisoned.trans hp), hc⟩
   | cure h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
       rw [h] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .cure rfl, by
-        simp only [GameState.clamp, hbt, Option.map_some, ha₂,
+        simp only [GameState.clampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree hq.upd.2.2.2.2.1]⟩
+  | iteT h ht _ ih =>
+      intro g₂ hc
+      obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree hc h
+      obtain ⟨g₂', r', hc'⟩ := ih hc
+      exact ⟨g₂', .iteT hq (by rw [Test.eval_agree _ hqa]; exact ht) r', hc'⟩
+  | iteF h ht _ ih =>
+      intro g₂ hc
+      obtain ⟨q, hq, hqa⟩ := GameState.activeOf_agree hc h
+      obtain ⟨g₂', r', hc'⟩ := ih hc
+      exact ⟨g₂', .iteF hq (by rw [Test.eval_agree _ hqa]; exact ht) r', hc'⟩
+  | @scale g p q w k hs h =>
+      intro g₂ hc
+      obtain ⟨s, hs₂, hsa⟩ := GameState.activeOf_agree hc hs
+      obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
+      rw [h] at ha₂
+      obtain ⟨q₂, rfl, hq⟩ := agree_of_map ha₂
+      have hq' : InPlay.Agree false { q₂ with damage := q₂.damage + k * s.damage }
+          { q with damage := q.damage + k * p.damage } := by
+        rw [hq.damage_eq, hsa.damage_eq]; exact hq.setDamage _
+      exact ⟨_, .scale w k hs₂ rfl, by
+        simp only [GameState.clampAt, Option.map_some, hc₂, InPlay.clamp_of_agree hq']⟩
+  | @selfDamage g p n h =>
+      intro g₂ hc
+      obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
+      rw [h] at hc₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+      exact ⟨_, .selfDamage n rfl, by
+        simp only [GameState.clampAt, Option.map_some, ha₂,
+          InPlay.clamp_of_agree (hq.upd.2.1 n)]⟩
+  | @healAll g p h =>
+      intro g₂ hc
+      obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
+      rw [h] at hc₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+      exact ⟨_, .healAll rfl, by
+        simp only [GameState.clampAt, Option.map_some, ha₂,
+          InPlay.clamp_of_agree (hq.setDamage 0)]⟩
   | shuffle h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
-      exact ⟨_, .shuffle h, by simp only [GameState.clamp, hbt, hc₂, ha₂]⟩
+      exact ⟨_, .shuffle h, by simp only [GameState.clampAt, hc₂, ha₂]⟩
   | search h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
-      exact ⟨_, .search h, by simp only [GameState.clamp, hbt, hc₂, ha₂]⟩
+      exact ⟨_, .search h, by simp only [GameState.clampAt, hc₂, ha₂]⟩
   | handToBottom h =>
-      intro g₂ hc hbt
+      intro g₂ hc
       obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv hc
-      rw [hbt] at hc₂
-      exact ⟨_, .handToBottom h, by simp only [GameState.clamp, hbt, hc₂, ha₂]⟩
-  | seq r₁ _ ih₁ ih₂ =>
-      intro g₂ hc hbt
-      obtain ⟨g₂', h₁, hc'⟩ := ih₁ hc hbt
-      obtain ⟨g₂'', h₂, hc''⟩ := ih₂ hc' (r₁.between_eq.trans hbt)
+      exact ⟨_, .handToBottom h, by simp only [GameState.clampAt, hc₂, ha₂]⟩
+  | seq _ _ ih₁ ih₂ =>
+      intro g₂ hc
+      obtain ⟨g₂', h₁, hc'⟩ := ih₁ hc
+      obtain ⟨g₂'', h₂, hc''⟩ := ih₂ hc'
       exact ⟨g₂'', .seq h₁ h₂, hc''⟩
   | choiceL _ ih =>
-      intro g₂ hc hbt
-      obtain ⟨g₂', h₁, hc'⟩ := ih hc hbt
+      intro g₂ hc
+      obtain ⟨g₂', h₁, hc'⟩ := ih hc
       exact ⟨g₂', .choiceL h₁, hc'⟩
   | choiceR _ ih =>
-      intro g₂ hc hbt
-      obtain ⟨g₂', h₁, hc'⟩ := ih hc hbt
+      intro g₂ hc
+      obtain ⟨g₂', h₁, hc'⟩ := ih hc
       exact ⟨g₂', .choiceR h₁, hc'⟩
-  | iterNil a g => intro g₂ hc _; exact ⟨g₂, .iterNil a g₂, hc⟩
-  | iterCons r₁ _ ih₁ ih₂ =>
-      intro g₂ hc hbt
-      obtain ⟨g₂', h₁, hc'⟩ := ih₁ hc hbt
-      obtain ⟨g₂'', h₂, hc''⟩ := ih₂ hc' (r₁.between_eq.trans hbt)
+  | iterNil a g => intro g₂ hc; exact ⟨g₂, .iterNil a g₂, hc⟩
+  | iterCons _ _ ih₁ ih₂ =>
+      intro g₂ hc
+      obtain ⟨g₂', h₁, hc'⟩ := ih₁ hc
+      obtain ⟨g₂'', h₂, hc''⟩ := ih₂ hc'
       exact ⟨g₂'', .iterCons h₁ h₂, hc''⟩
+
+/-- Equal `clampAt false` gives equal `clamp`. -/
+theorem GameState.clamp_of_exact {g₁ g₂ : GameState} (h : g₁.clampAt false = g₂.clampAt false) :
+    g₁.clamp = g₂.clamp := by
+  obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv h
+  simp only [GameState.clamp, GameState.clampAt, map_clamp_of_exact hc₂, map_clamp_of_exact ha₂]
+
+/-- With no pending Knock Out, equal `clamp` gives equal `clampAt false`. -/
+theorem GameState.exact_of_clamp {g₁ g₂ : GameState} (h : g₁.clamp = g₂.clamp)
+    (hk : DamageBounded g₁) : g₁.clampAt false = g₂.clampAt false := by
+  obtain ⟨c₂, a₂, rfl, hc₂, ha₂⟩ := GameState.clamp_inv h
+  simp only [GameState.clampAt,
+    map_exact_of_clamp hc₂ fun p hp => hk p (Or.inl hp),
+    map_exact_of_clamp ha₂ fun p hp => hk p (Or.inr (Or.inr (Or.inl hp)))]
 
 theorem GameState.damageBounded_of_clamp {g₁ g₂ : GameState} (h : g₁.clamp = g₂.clamp)
     (hk : DamageBounded g₁) : DamageBounded g₂ := by
@@ -388,131 +487,157 @@ theorem GameState.damageBounded_of_clamp {g₁ g₂ : GameState} (h : g₁.clamp
     exact (InPlay.agree_of_clamp hfa.symm).lt (hk a (Or.inr (Or.inr (Or.inl ha))))
   · exact hk p (Or.inr (Or.inr (Or.inr hp)))
 
-/-- The kernel of `clamp` is a bisimulation for `Move`: if `g₁` and `g₂` have the same
+theorem GameState.settled_of_clamp {g₁ g₂ : GameState} (h : g₁.clamp = g₂.clamp)
+    (hs : Settled g₁) : Settled g₂ := by
+  refine ⟨GameState.damageBounded_of_clamp h hs.1, fun hn => hs.2.1 ?_, fun hn => hs.2.2 ?_⟩
+  · have e := congrArg (fun g => g.cur.active) h
+    simp only [GameState.clamp, GameState.clampAt, hn, Option.map_none] at e
+    exact Option.map_eq_none_iff.1 e
+  · have e := congrArg (fun g => g.opp.active) h
+    simp only [GameState.clamp, GameState.clampAt, hn, Option.map_none] at e
+    exact Option.map_eq_none_iff.1 e
+
+/-- **The kernel of `clamp` is a bisimulation for `Move`**: if `g₁` and `g₂` have the same
 clamp, every move from `g₁` is matched by a move from `g₂` to a state with the same clamp.
 (The relation is symmetric, so this gives both directions.) -/
 theorem Move.clamp_sim {g₁ g₁' g₂ : GameState} (h : Move g₁ g₁')
     (hc : g₁.clamp = g₂.clamp) : ∃ g₂', Move g₂ g₂' ∧ g₁'.clamp = g₂'.clamp := by
   have hk₂ := GameState.damageBounded_of_clamp hc
+  have hs₂ := GameState.settled_of_clamp hc
+  have hx := GameState.exact_of_clamp hc
   obtain ⟨c₂, a₂, hg, hc₂, ha₂⟩ := GameState.clamp_inv hc
   cases h with
-  | playBasic hh hs hhp hb hbt =>
+  | playBasic hh hs hhp hb hbt hst =>
+      have hs' := hs₂ hst
       subst hg
-      exact ⟨_, .playBasic hh hs hhp hb hbt, by simp only [GameState.clamp, hc₂, ha₂]⟩
-  | @attach l₁ l₂ t a hh hf ha hbt =>
+      exact ⟨_, .playBasic hh hs hhp hb hbt hs', by
+        simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂]⟩
+  | @attach l₁ l₂ t a hh hf ha hbt hst =>
+      have hs' := hs₂ hst
       subst hg
-      rw [ha, hbt] at hc₂
+      rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      have key := hq.clamp_map (c' := false) hq.damage_eq
+      have key := hq.clamp_map (c' := true) (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
         (fun x => { x with energy := Card.energy t :: x.energy }) (fun _ => rfl) rfl rfl
-      exact ⟨_, .attach hh hf rfl hbt, by
-        simp only [GameState.clamp, hbt, Option.map_some, ha₂, key]⟩
-  | evolve hh ha he hfr hf hbt =>
+      exact ⟨_, .attach hh hf rfl hbt hs', by
+        simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, key]⟩
+  | @evolve l₁ l₂ p a hh ha he hfr hf hbt hst =>
+      have hs' := hs₂ hst
       subst hg
-      rw [ha, hbt] at hc₂
+      rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      have e := hq.eq_upd hq.damage_eq
-      refine ⟨_, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt, ?_⟩
+      have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
+      refine ⟨_, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt hs', ?_⟩
       rw [e]
-      simp only [GameState.clamp, hbt, ha₂]
-  | retreat ha hb hr he hp hk hs hbt =>
+      simp only [GameState.clamp, GameState.clampAt, ha₂]
+  | @retreat a q' b₁ b₂ paid rest ha hb hr he hp hs hbt hst =>
+      have hs' := hs₂ hst
       subst hg
-      rw [ha, hbt] at hc₂
+      rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      have e := hq.eq_upd hq.damage_eq
+      have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
       refine ⟨_, .retreat rfl hb hr (hq.energy.trans he) (by rw [hq.top]; exact hp)
-        (hq.lt hk) (by rw [hq.rot]; exact hs) hbt, ?_⟩
+        (by rw [hq.rot]; exact hs) hbt hs', ?_⟩
       rw [e]
-      simp only [GameState.clamp, hbt, ha₂]
-  | @item g' l₁ l₂ n e hh hbt hr =>
-      obtain ⟨g₂', hr', hc'⟩ := Run.clamp_sim hr (g₂ := { g₂ with cur := { g₂.cur with
+      simp only [GameState.clamp, GameState.clampAt, ha₂]
+  | @item g' l₁ l₂ n e hh hbt hst hr =>
+      have hs' := hs₂ hst
+      have hx' := hx hst.1
+      obtain ⟨c₃, a₃, hg', hc₃, ha₃⟩ := GameState.clamp_inv hx'
+      obtain ⟨g₂', hr', hc'⟩ := Run.exact_sim hr (g₂ := { g₂ with cur := { g₂.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g₂.cur.discard } })
-        (by subst hg; simp only [GameState.clamp, hc₂, ha₂]) hbt
-      exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hr', hc'⟩
-  | @supporter g' l₁ l₂ n e hh hs hbt hr =>
-      obtain ⟨g₂', hr', hc'⟩ := Run.clamp_sim hr (g₂ := { g₂ with cur := { g₂.cur with
+        (by subst hg'; simp only [GameState.clampAt, hc₃, ha₃])
+      exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr',
+        GameState.clamp_of_exact hc'⟩
+  | @supporter g' l₁ l₂ n e hh hs hbt hst hr =>
+      have hs' := hs₂ hst
+      have hx' := hx hst.1
+      obtain ⟨c₃, a₃, hg', hc₃, ha₃⟩ := GameState.clamp_inv hx'
+      obtain ⟨g₂', hr', hc'⟩ := Run.exact_sim hr (g₂ := { g₂ with cur := { g₂.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g₂.cur.discard } })
-        (by subst hg; simp only [GameState.clamp, hc₂, ha₂]) hbt
+        (by subst hg'; simp only [GameState.clampAt, hc₃, ha₃])
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
-        (by subst hg; exact hbt) hr', hc'⟩
-  | attack ha hm hc' hs hn hf hbt hr =>
-      obtain ⟨g₂', hr', hc''⟩ := Run.clamp_sim hr hc hbt
+        (by subst hg; exact hbt) hs' hr', GameState.clamp_of_exact hc'⟩
+  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr =>
+      have hs' := hs₂ hst
+      obtain ⟨g₂', hr', hc''⟩ := Run.exact_sim hr (hx hst.1)
       subst hg
-      rw [ha, hbt] at hc₂
+      rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       refine ⟨_, .attack rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hr', ?_⟩
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' hr', ?_⟩
       have := congrArg (fun g : GameState => ({ g with attacked := true } : GameState)) hc''
-      exact this
-  | attackConfused ha hm hc' hs hn hf hbt =>
+      exact GameState.clamp_of_exact this
+  | attackConfused ha hm hc' hs hn hf hbt hst =>
+      have hs' := hs₂ hst
       subst hg
-      rw [ha, hbt] at hc₂
+      rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .attackConfused rfl (by rw [hq.top]; exact hm) (by rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt, by
-        simp only [GameState.clamp, hbt, Option.map_some, ha₂,
+        (by rw [hq.rot]; exact hs) hn hf hbt hs', by
+        simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3)]⟩
   | knockOut ha hk hp =>
       subst hg
       rw [ha] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
       exact ⟨_, .knockOut rfl (hq.ko hk) hp, by
-        simp only [GameState.clamp, Option.map_none, hc₂, hq.cardList]⟩
+        simp only [GameState.clamp, GameState.clampAt, Option.map_none, hc₂, hq.cardList]⟩
   | promote ha hb =>
       subst hg
       rw [ha] at ha₂
       have := none_of_map ha₂
       subst this
-      exact ⟨_, .promote rfl hb, by simp only [GameState.clamp, hc₂]⟩
+      exact ⟨_, .promote rfl hb, by simp only [GameState.clamp, GameState.clampAt, hc₂]⟩
   | noPokemon ha hb =>
       subst hg
       rw [ha] at ha₂
       have := none_of_map ha₂
       subst this
-      exact ⟨_, .noPokemon rfl hb, by simp only [GameState.clamp, hc₂, ha, Option.map_none]⟩
+      exact ⟨_, .noPokemon rfl hb, by
+        simp only [GameState.clamp, GameState.clampAt, hc₂, ha, Option.map_none]⟩
   | knockOutOwn ha hk hp =>
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .knockOutOwn rfl (hq.ko hk) hp, by
-        simp only [GameState.clamp, Option.map_none, ha₂, hq.cardList]⟩
+        simp only [GameState.clamp, GameState.clampAt, Option.map_none, ha₂, hq.cardList]⟩
   | promoteOwn ha hb =>
       subst hg
       rw [ha] at hc₂
       have := none_of_map hc₂
       subst this
-      exact ⟨_, .promoteOwn rfl hb, by simp only [GameState.clamp, ha₂]⟩
+      exact ⟨_, .promoteOwn rfl hb, by simp only [GameState.clamp, GameState.clampAt, ha₂]⟩
   | noPokemonOwn ha hb =>
       subst hg
       rw [ha] at hc₂
       have := none_of_map hc₂
       subst this
-      exact ⟨_, .noPokemonOwn rfl hb, by simp only [GameState.clamp, ha₂, ha, Option.map_none]⟩
+      exact ⟨_, .noPokemonOwn rfl hb, by
+        simp only [GameState.clamp, GameState.clampAt, ha₂, ha, Option.map_none]⟩
   | endTurn fa sa fb sb ha hb hk hbt =>
       have hk' := hk₂ hk
       subst hg
       rw [ha] at ha₂
-      rw [hb, hbt] at hc₂
+      rw [hb] at hc₂
       obtain ⟨qa, rfl, hqa⟩ := agree_of_map ha₂
       obtain ⟨qb, rfl, hqb⟩ := agree_of_map hc₂
       have h1 := hqa.checkup (hqa.damage_eq_of_lt (hk _ (Or.inr (Or.inr (Or.inl ha))))) false fa sa
-      have h2 := hqb.upd.2.2.2.2.2.checkup hqb.damage_eq true fb sb
+      have h2 := hqb.upd.2.2.2.2.2.checkup (hqb.damage_eq_of_lt (hk _ (Or.inl hb))) true fb sb
       refine ⟨_, .endTurn fa sa fb sb rfl rfl hk' hbt, ?_⟩
-      simp only [GameState.clamp, PlayerState.unfresh, Option.map_some, hb,
+      simp only [GameState.clamp, GameState.clampAt, PlayerState.unfresh, Option.map_some, hb,
         InPlay.clamp_of_agree h1, InPlay.clamp_of_agree h2]
   | startTurn hbt ha hb hk hd =>
       have hk' := hk₂ hk
       subst hg
       rw [ha] at ha₂
-      rw [hb, hbt] at hc₂
+      rw [hb] at hc₂
       obtain ⟨qa, rfl, hqa⟩ := agree_of_map ha₂
       obtain ⟨qb, rfl, hqb⟩ := agree_of_map hc₂
-      have h1 : InPlay.Agree false qb _ :=
-        hqb.recap (hqb.damage_eq_of_lt (hk _ (Or.inl hb)))
       refine ⟨_, .startTurn hbt rfl rfl hk' hd, ?_⟩
-      simp only [GameState.clamp, Option.map_some, ha, hb, InPlay.clamp_of_agree hqa,
-        InPlay.clamp_of_agree h1]
+      simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha, hb,
+        InPlay.clamp_of_agree hqa, InPlay.clamp_of_agree hqb]
   | deckOut hbt ha hb hk hd =>
       have hk' := hk₂ hk
       subst hg
@@ -521,8 +646,8 @@ theorem Move.clamp_sim {g₁ g₁' g₂ : GameState} (h : Move g₁ g₁')
       obtain ⟨qa, rfl, hqa⟩ := agree_of_map ha₂
       obtain ⟨qb, rfl, hqb⟩ := agree_of_map hc₂
       exact ⟨_, .deckOut hbt rfl rfl hk' hd, by
-        simp only [GameState.clamp, Option.map_some, ha, hb, InPlay.clamp_of_agree hqa,
-          InPlay.clamp_of_agree hqb]⟩
+        simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha, hb,
+          InPlay.clamp_of_agree hqa, InPlay.clamp_of_agree hqb]⟩
 
 /-- The kernel of `clamp` is a bisimulation for `Reach`: from start states with the same
 clamp, the same clamped states are reachable. -/
@@ -538,7 +663,7 @@ theorem Reach.clamp_sim {g₀ h₀ g₁ : GameState} (h : Reach g₀ g₁) (hc :
         exact e.symm.trans hw
       exact ⟨g₂', .step hr hw' hm', hc''⟩
 
-/-! ## Damage on the player's own Active Pokémon is bounded -/
+/-! ## Bounds from the cards -/
 
 /-- The largest printed HP among the Pokémon cards in a list (0 if there are none). -/
 def maxHp : List Card → Nat
@@ -577,84 +702,6 @@ theorem GameState.top_mem_opp_bench {g : GameState} {a : InPlay}
     (ha : a ∈ g.opp.bench) : Card.pokemon a.top ∈ g.allCards := by
   have := mem_benchCardList (x := Card.pokemon a.top) (.head _) ha
   simp [GameState.allCards, PlayerState.allCards, this]
-
-/-- During a turn, the player's own Active Pokémon has at most `M + 3` damage counters, and
-at most `M` before the player has attacked this turn. (Between turns its damage is capped by
-the clamp instead.) -/
-def ActiveLe (M : Nat) (g : GameState) : Prop :=
-  g.between = false →
-    ∀ p, g.cur.active = some p → p.damage ≤ M + 3 ∧ (g.attacked = false → p.damage ≤ M)
-
-theorem Run.activeLe {e : Effect} {g g' : GameState} {M : Nat} (h : Run e g g') :
-    ActiveLe M g → ActiveLe M g' := by
-  induction h with
-  | heal n h =>
-      intro hJ hbt p hp
-      cases hp
-      have := hJ hbt _ h
-      exact ⟨Nat.le_trans (Nat.sub_le _ _) this.1,
-        fun hn => Nat.le_trans (Nat.sub_le _ _) (this.2 hn)⟩
-  | cure h => intro hJ hbt p hp; cases hp; have := hJ hbt _ h; exact this
-  | seq _ _ ih₁ ih₂ => intro hJ; exact ih₂ (ih₁ hJ)
-  | choiceL _ ih => exact ih
-  | choiceR _ ih => exact ih
-  | iterCons _ _ ih₁ ih₂ => intro hJ; exact ih₂ (ih₁ hJ)
-  | _ => exact id
-
-theorem Move.activeLe {g g' : GameState} {M : Nat} (h : Move g g')
-    (hM : ∀ p, Card.pokemon p ∈ g.allCards → p.hp ≤ M) (hw : WellFormed g)
-    (hJ : ActiveLe M g) : ActiveLe M g' := by
-  have hbench : ∀ q ∈ g.cur.bench, q.damage ≤ M := fun q hq =>
-    Nat.le_of_lt (Nat.lt_of_lt_of_le (hw.2.1 q hq).1 (hM _ (GameState.top_mem_cur_bench hq)))
-  cases h with
-  | playBasic hh hs hhp hb hbt => exact hJ
-  | attach hh hf ha hbt => intro _ p hp; cases hp; have := hJ hbt _ ha; exact this
-  | evolve hh ha he hfr hf hbt => intro _ p hp; cases hp; have := hJ hbt _ ha; exact this
-  | retreat ha hb hr he hp' hk hs hbt =>
-      rename_i a q b₁ b₂ _ _
-      intro _ p hp; cases hp
-      have := hbench q (by rw [hb]; exact List.mem_append_right _ (.head _))
-      exact ⟨by omega, fun _ => this⟩
-  | item hh hbt hr => exact hr.activeLe hJ
-  | supporter hh hs hbt hr => exact hr.activeLe hJ
-  | attack ha hm hc hs hn hf hbt hr =>
-      intro hb' p hp
-      exact ⟨(hr.activeLe hJ hb' p hp).1, fun h => nomatch h⟩
-  | attackConfused ha hm hc hs hn hf hbt =>
-      intro _ p hp; cases hp
-      have := (hJ hbt _ ha).2 hn
-      exact ⟨by simp only; omega, fun h => nomatch h⟩
-  | knockOut ha hk hp => exact hJ
-  | promote ha hb => exact hJ
-  | noPokemon ha hb => exact hJ
-  | knockOutOwn ha hk hp => intro _ p hp; cases hp
-  | promoteOwn ha hb =>
-      rename_i q b₁ b₂
-      intro _ p hp; cases hp
-      have := hbench q (by rw [hb]; exact List.mem_append_right _ (.head _))
-      exact ⟨by omega, fun _ => this⟩
-  | noPokemonOwn ha hb => exact hJ
-  | endTurn fa sa fb sb ha hb hk hbt => intro h; nomatch h
-  | startTurn hbt ha hb hk hd =>
-      intro _ p hp
-      have := Nat.le_of_lt (Nat.lt_of_lt_of_le (hk p (Or.inl hp))
-        (hM _ (GameState.top_mem_cur_active hp)))
-      exact ⟨by omega, fun _ => this⟩
-  | deckOut hbt ha hb hk hd => exact hJ
-
-/-- From a well-formed start with no pending Knock Out, during every turn of play the player's
-own Active Pokémon has at most `maxHp g₀.allCards + 3` damage counters. -/
-theorem Reach.activeLe {g₀ g : GameState} (h₀ : DamageBounded g₀) (hw : WellFormed g₀)
-    (h : Reach g₀ g) : ActiveLe (maxHp g₀.allCards) g := by
-  induction h with
-  | refl =>
-      intro _ p hp
-      have := Nat.le_of_lt (Nat.lt_of_lt_of_le (h₀ p (Or.inl hp))
-        (hp_le_maxHp (GameState.top_mem_cur_active hp)))
-      exact ⟨by omega, fun _ => this⟩
-  | step hr _ hm ih =>
-      exact hm.activeLe (fun p hp => hp_le_maxHp ((hr.perm.mem_iff).1 hp))
-        (hr.wellFormed hw) ih
 
 /-! ## The old turn-boundary statement fails: Checkup leaves a pending Knock Out -/
 

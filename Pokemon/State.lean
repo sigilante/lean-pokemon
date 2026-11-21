@@ -80,7 +80,27 @@ def checkup (ownersTurnEnded burnHeads sleepHeads : Bool) (p : InPlay) : InPlay 
 def cure (p : InPlay) : InPlay :=
   { p with rot := .none, poisoned := false, burned := false, poisonUp := 0 }
 
+/-- Is this Pokémon affected by the Special Condition `c`? -/
+def has : Condition → InPlay → Bool
+  | .poisoned, p => p.poisoned
+  | .burned, p => p.burned
+  | .asleep, p => match p.rot with | .asleep => true | _ => false
+  | .confused, p => match p.rot with | .confused => true | _ => false
+  | .paralyzed, p => match p.rot with | .paralyzed => true | _ => false
+
 end InPlay
+
+/-- Whose Active Pokémon the test reads. -/
+def Test.whose : Test → Whose
+  | .atLeast w _ => w
+  | .exactly w _ => w
+  | .cond w _ => w
+
+/-- The value of a test on the Active Pokémon it reads. -/
+def Test.eval : Test → InPlay → Bool
+  | .atLeast _ n, p => Nat.ble n p.damage
+  | .exactly _ n, p => Nat.beq p.damage n
+  | .cond _ c, p => p.has c
 
 def optCards : Option InPlay → Nat
   | none => 0
@@ -160,6 +180,11 @@ structure GameState where
   between : Bool
   /-- `some b`: the game is over, won by the first player iff `b` -/
   winner : Option Bool
+
+/-- The Active Pokémon of the player to move (`own`) or of the opponent (`opp`). -/
+def GameState.activeOf : Whose → GameState → Option InPlay
+  | .own, g => g.cur.active
+  | .opp, g => g.opp.active
 
 def GameState.cards (g : GameState) : Nat := g.cur.cards + g.opp.cards
 

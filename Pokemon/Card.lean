@@ -26,6 +26,22 @@ inductive Condition where
   | poisoned | burned | asleep | confused | paralyzed
   deriving DecidableEq
 
+/-- Whose Active Pokémon an effect reads: the player's own, or the opponent's. -/
+inductive Whose where
+  | own | opp
+  deriving DecidableEq
+
+/-- A test an effect can make on one Active Pokémon. -/
+inductive Test where
+  /-- it has at least `n` damage counters ("if it has any damage counters" is `atLeast w 1`;
+  "if it has no damage counters" is the `else` branch of that test) -/
+  | atLeast (w : Whose) (n : Nat)
+  /-- it has exactly `n` damage counters (Mega Absol ex, me1-86) -/
+  | exactly (w : Whose) (n : Nat)
+  /-- it is affected by the Special Condition `c` -/
+  | cond (w : Whose) (c : Condition)
+  deriving DecidableEq
+
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
 `iter` covers "flip until tails" and "as often as you like". -/
 inductive Effect where
@@ -51,6 +67,16 @@ inductive Effect where
   | search
   /-- put the player's hand on the bottom of their deck in a chosen order -/
   | handToBottom
+  /-- if the test holds then `a` else `b` -/
+  | ite (t : Test) (a b : Effect)
+  /-- place `k` damage counters on the opponent's Active Pokémon for each damage counter on
+  the `w` Active Pokémon (`k · d` counters in all; with `w = opp` and `k = 1` this doubles
+  the damage on the opponent's Active Pokémon, as Lunala cel25-15 does) -/
+  | scale (w : Whose) (k : Nat)
+  /-- place `n` damage counters on the player's own Active Pokémon -/
+  | selfDamage (n : Nat)
+  /-- remove all damage counters from the player's own Active Pokémon -/
+  | healAll
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)

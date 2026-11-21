@@ -24,6 +24,8 @@ def Run.Frame (g g' : GameState) : Prop :=
 
 theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g g' := by
   induction h with
+  | iteT _ _ _ ih => exact ih
+  | iteF _ _ _ ih => exact ih
   | seq _ _ ih₁ ih₂ =>
       obtain ⟨a1, a2, a3, a4, a5, a6, a7⟩ := ih₁
       obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := ih₂
@@ -64,8 +66,9 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         exact ⟨hhp, rfl, rfl, rfl, rfl⟩
   | attach hh hf ha => exact hw
   | evolve hh ha he hfr hf => exact hw
-  | retreat ha hb hr he hp hk hs =>
+  | retreat ha hb hr he hp hs hbt hst =>
       rename_i a q b₁ b₂ _ _
+      have hk : a.damage < a.top.hp := hst.1 a (Or.inl ha)
       refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩
       rcases List.mem_append.1 hp with hp | hp
       · exact hw.2.1 p (by rw [hb]; exact List.mem_append_left _ hp)
@@ -73,9 +76,9 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         | head => exact ⟨hk, rfl, rfl, rfl, rfl⟩
         | tail _ hp =>
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
-  | item hh hbt hr => exact WellFormed.of_frame hw hr.frame
-  | supporter hh hs hbt hr => exact WellFormed.of_frame hw hr.frame
-  | attack ha hm hc hs hn hf hbt hr => exact WellFormed.of_frame hw hr.frame
+  | item hh hbt hst hr => exact WellFormed.of_frame hw hr.frame
+  | supporter hh hs hbt hst hr => exact WellFormed.of_frame hw hr.frame
+  | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | knockOut ha hk hp =>
       rename_i p c ps
