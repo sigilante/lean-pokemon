@@ -13,6 +13,12 @@ like during your turn") and on-play ("When you play this Pokémon from your hand
 conditions are a place or one test of the model and whose every sentence matches a rule; static,
 passive and triggered Abilities, first-turn rules, self Knock Outs, uses from the hand, returns from
 play and conditions the model cannot test are refused with a reason that starts with 'Ability: '.
+
+Static text (milestone M6, `parse_static`): a static Ability, a Pokémon Tool's or a Stadium's text is
+written as the model's `Static` effects only in the shapes listed there (HP plus or minus, a damage bonus
+before Weakness and Resistance, a damage reduction after them, Retreat Cost more or less, with the
+model's selectors, filters, places and Energy conditions); everything else static is refused with a
+reason code (`STATIC_CODES`), stacking rules included.
 """
 import re
 
@@ -57,6 +63,10 @@ CAVEATS = {
                    "Pokémon to your Active Pokémon') is a move between any two of the player's Pokémon (moveEnergy)",
     'onePerName': "'You can't use more than 1 X Ability each turn' is not modelled: the use flag is per Pokémon, so "
                   "each of several Pokémon with that Ability can use it in the same turn",
+    'staticBench': "a static damage reduction ('takes N less damage from attacks') is subtracted at step 5 of the "
+                   "damage calculation, which only damage to the Active Pokémon passes through: attack damage to a "
+                   "Benched Pokémon takes no reduction in the model (Known gaps, milestone M3: Bench damage takes no "
+                   "bonus, reduction or prevention; milestone M6)",
     'toolAbilityFlag': "an Ability a Pokémon Tool gives shares the use flag of the Pokémon it is attached to (`InPlay.used`), "
                        "so a Pokémon with an Ability of its own and one from a Tool uses only one of them in a turn "
                        "(Known gaps, M5)",
@@ -85,6 +95,8 @@ CAVEAT_DIRECTION = {
     'selfBench': 'allows more',
     'moveAnyPair': 'allows more',
     'onePerName': 'allows more',     # more uses per turn; still bounded by the model's potential (abPot)
+    'staticBench': 'both',         # Bench damage is not reduced: more damage to a Benched Pokémon than printed
+                                   # (forbids the printed survivals, allows Knock Outs the printed card prevents)
     'toolAbilityFlag': 'forbids some',  # fewer Ability uses per turn than the rulebook allows
 }
 
@@ -1846,8 +1858,13 @@ def translate_tool(c, res, text, joined):
         return res
     if not grants:
         k = static_kind(joined)
+        if k is not None and k.startswith('triggered'):
+            B.append(('Pokémon Tool: triggered', joined))
+            return res
+        if 'this card is attached to' in joined:
+            return translate_static_tool(c, res, sents, joined)
         if k is not None:
-            B.append(('Pokémon Tool: ' + ('triggered' if k.startswith('triggered') else 'static (' + k + ')'), joined))
+            B += static_blockers('Pokémon Tool: ', joined, static_codes(joined)[0])
         elif 'this card is attached to' not in joined:
             B.append(('Pokémon Tool: record text names no holder (an Item-like text; unclassified record)', joined))
         else:
@@ -1890,6 +1907,30 @@ def translate_tool(c, res, text, joined):
     return res
 
 
+def translate_static_tool(c, res, sents, joined):
+    """A Tool whose whole text is static (milestone M6): `ToolGrant.statics`, for the holder the text
+    names; refused with reason codes otherwise."""
+    B = res['blockers']
+    other = c['_sub'] - {'Pokémon Tool', 'ACE SPEC'}
+    if other:
+        B.append(('Pokémon Tool: subtype not modelled on a Tool: ' + ','.join(sorted(other)), joined))
+        return res
+    if c.get('attacks'):
+        B.append(('Pokémon Tool: static text with a printed attack', joined))
+        return res
+    ctx = {'kind': 'trainer', 'name': c['name'], 'base': None, 'cost': None}
+    try:
+        holder, ss = parse_static(sents, 'tool', ctx)
+    except Refuse as r:
+        B += static_blockers('Pokémon Tool: ', joined, r.reason)
+        return res
+    res['used'].append(('static-tool', joined))
+    res['caveats'] |= static_caveats(ss)
+    res['term'] = ('tool', c['name'], {'holder': holder, 'attacks': [], 'abilities': [], 'statics': ss})
+    res['ok'] = True
+    return res
+
+
 def filter_names_pokemon(f):
     """The holder of a grant is a Pokémon in play: the filter is 'Pokémon', or names Pokémon only."""
     if f == ('pokemon',):
@@ -1919,6 +1960,8 @@ def translate_stadium(c, res, text, joined):
     X", X translating by the rules for Trainers (`.own` is the player who uses it)."""
     B = res['blockers']
     name = c['name']
+    if not any(t.startswith("Once during each player's turn") for t in text):
+        return translate_static_stadium(c, res, text, joined)
     if len(text) != 1:
         k = static_kind(joined)
         B.append(('Stadium: ' + ('static (' + k + ')' if k else 'text of several paragraphs, not one activated effect'),
@@ -1970,10 +2013,27 @@ def translate_stadium(c, res, text, joined):
         res['term'] = ('trainer', name, ('stadium',), e)
         res['ok'] = True
         return res
-    k = static_kind(t)
-    if k is None and re.search(r'can put this card into play only if', t):
-        k = 'play condition'
-    B.append(('Stadium: ' + ('triggered' if k and k.startswith('triggered') else 'static (' + (k or 'other') + ')'), t))
+    raise AssertionError(t)  # unreachable: a Stadium with no activated line is translate_static_stadium's
+
+
+def translate_static_stadium(c, res, text, joined):
+    """A Stadium whose whole text is static (milestone M6): `Card.trainer n .stadium .skip statics`;
+    triggered text, and static text outside the shapes of `parse_static`, are refused."""
+    B = res['blockers']
+    k = static_kind(joined)
+    if k is not None and k.startswith('triggered'):
+        B.append(('Stadium: triggered', joined))
+        return res
+    ctx = {'kind': 'trainer', 'name': c['name'], 'base': None, 'cost': None}
+    try:
+        _, ss = parse_static([x for r in text for x in split_sentences(r)], 'stadium', ctx)
+    except Refuse as r:
+        B += static_blockers('Stadium: ', joined, r.reason)
+        return res
+    res['used'].append(('static-stadium', joined))
+    res['caveats'] |= static_caveats(ss)
+    res['term'] = ('trainer', c['name'], ('stadium',), SKIP, ss)
+    res['ok'] = True
     return res
 
 
@@ -2023,6 +2083,345 @@ def reads_own_discard(e, term):
             walk(s)
     walk(e)
     return bool(found)
+
+
+# ------------------------------------------------------------------ static text (milestone M6)
+#
+# Static text of a Pokémon's Ability, of a Pokémon Tool or of a Stadium is written as the model's
+# `Static` (Pokemon/Card.lean; its semantics in Pokemon/Static.lean) only in the shapes below. Each
+# shape was read against `staticsInForce` (who is reached: `Sel`, the filter on the affected
+# Pokémon's top card, its place `tgt`, the source's place `src`, the Energy condition `need`),
+# `GameState.hpOf` (printed HP plus every `hpPlus`, less every `hpMinus`), `GameState.sBonus` (added
+# with the attacker's stored bonus at step 2 of `dealtBy`, before Weakness and Resistance, to damage
+# to the opponent's Active Pokémon only), `GameState.sReduce` (subtracted at step 5, after Weakness
+# and Resistance, from damage to the Active Pokémon only) and `GameState.retreatOf`. Every sentence
+# of the text must match a shape; otherwise the text is refused, with every reason code of
+# `STATIC_CODES` whose pattern the text matches (an approximate keyword classification, for ranking).
+#
+# Shapes (N, M numbers; F a filter phrase of `static_filter`; X a Retreat Cost amount):
+#   Ability   [As long as this Pokémon is in the Active Spot / on your Bench, ]
+#             [If this Pokémon has any / K or more [T] Energy attached, it …]
+#             This Pokémon gets +N HP [for each [T] Energy attached to it].            self
+#             This Pokémon takes N less damage from attacks [from your opponent's F]
+#               (after applying Weakness and Resistance).                               self
+#             Attacks used by this Pokémon do N more damage to your opponent's Active F
+#               (before applying Weakness and Resistance).                              self
+#             All of your F [that have any T Energy attached] take N less damage from attacks from
+#               your opponent's F (after …).                                            own
+#             Attacks used by your F do N more damage to your opponent's Active F (before …).  own
+#             Your F [in play] get +N HP.                                               own
+#             Your Active Pokémon's Retreat Cost is X less/more.                        own, Active
+#             Your opponent's Active F's Retreat Cost is X more/less.                   opp, Active
+#   Tool      The F this card is attached to gets +N HP / takes N less damage from attacks
+#               [from your opponent's F] (after …).                                    holder
+#             Attacks used by the F this card is attached to do N more damage to your opponent's
+#               Active F (before …).                                                    holder
+#             If the Pokémon this card is attached to doesn't have a Rule Box, the attacks it uses
+#               do N more damage to your opponent's Active F (before …).               holder
+#             The Retreat Cost of the F this card is attached to is X less/more.       holder
+#             As long as the F this card is attached to is in the Active Spot, the Retreat Cost of
+#               both Active Pokémon is X more/less.                                     all, Active
+#   Stadium   Each F in play (both yours and your opponent's) gets +N / -N HP.          all
+#             F (both yours and your opponent's) take N less damage from attacks from the
+#               opponent's F (after …).                                                 all
+#             Attacks used by F (both yours and your opponent's) do N more damage to the
+#               opponent's Active F (before …).                                         all
+#             The Retreat Cost of each F in play (both yours and your opponent's) is X less/more.
+#
+# Not expressible, refused: stacking rules ("The effect of X doesn't stack": the model adds every
+# effect in force, so two sources give twice the amount, a different number in either direction;
+# refused rather than imported with a one-way caveat), "has no Retreat Cost" (a set form: the
+# model has more and less only), set or copied HP, conditions on Prize cards, the hand, damage,
+# other Pokémon in play, Special Conditions or Special Energy, filters the model has not (name
+# prefixes such as "Hop's", Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex),
+# prevention and immunities, locks, cost changes, Bench size, type and Weakness changes, the
+# opponent's attacks doing less damage before Weakness and Resistance, and anything triggered.
+
+STATIC_CODES = [
+    ('stack', r"doesn't stack|can't apply more than 1",
+     'stacking rule ("doesn\'t stack"): the model adds every effect in force'),
+    ('play', r'can put this card into play only|into play only with',
+     'a rule on putting the card into play'),
+    ('prevent', r"[Pp]revent all|can't be affected|isn't affected|can't be healed|can't be (?:Asleep|Burned|Confused|"
+                r"Paralyzed|Poisoned)|recovers? from all Special Conditions|don't recover",
+     'prevention or immunity (damage, effects, Special Conditions, healing)'),
+    ('lock', r"ha(?:ve|s) no Abilities|lose any Ability|can't play|can't attack|can't use|can't be put into|can't be moved|"
+             r"Tools attached .* have no effect",
+     'a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)'),
+    ('cost', r"costs? (?:\d+ Energy|(?:Colorless)+) (?:less|more)|in the costs? of|attack for |provides .* Energy",
+     'attack cost or Energy provision'),
+    ('noRetreat', r'no Retreat Cost', '"has no Retreat Cost" (a set form; the model has more and less only)'),
+    ('readsHp', r'remaining HP|full HP|maximum HP|damage counters on it',
+     'reads HP or damage'),
+    ('bench', r'on their Bench', 'Bench size'),
+    ('typeWeak', r'Weakness of|apply Weakness|it is \w+ and \w+ type',
+     'a change of type or Weakness'),
+    ('oppLess', r"[Aa]ttacks used by your opponent's .*do \d+ less damage",
+     "the opponent's attacks do less damage before Weakness and Resistance (the model's static reduction is at step 5)"),
+    ('evolve', r'can evolve|\bevolve\b|devolve', 'evolution rules'),
+    ('coins', r'coin flips', 'coin re-flips'),
+    ('attacks', r'can use (?:any attack|the attacks)', 'use of other attacks'),
+    ('toolCount', r'Pokémon Tool cards attached', 'the number of Tools'),
+    ('checkup', r'Pokémon Checkup', 'Pokémon Checkup'),
+    ('cond', r'Prize card|cards in (?:your|their) hand|If you have|As long as you have|If your opponent has|Poisoned|'
+             r'Special Energy|has a Pokémon Tool attached|2 or more damage counters|that have \d+ or less Energy',
+     'a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special '
+     'Conditions, Special Energy, Tools, damage)'),
+    ('filter', r"Cynthia's|Hop's|Steven's|\bN's|Team Rocket's|Ancient|Future|Tera|that ha(?:s|ve) an Ability|"
+               r"Mega Evolution Pokémon ex|except any",
+     'a filter the model has not (name prefix, Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex)'),
+]
+STATIC_DESC = dict((k, d) for k, _, d in STATIC_CODES)
+STATIC_DESC['other'] = 'other static text'
+
+BWR = r' \(before applying Weakness and Resistance\)\.$'
+AWR = r' \(after applying Weakness and Resistance\)\.$'
+BOTH = r" \(both yours and your opponent's\)"
+RULEBOX_REMINDER = re.compile(r'^\(Pokémon ex, Pokémon V(?:_atk)?, etc\. have Rule Boxes\.\)$')
+
+
+def static_codes(text):
+    """The reason codes of a static text that is not expressible (every pattern it matches; 'other' if none)."""
+    cs = [k for k, rx, _ in STATIC_CODES if re.search(rx, text)]
+    return cs or ['other']
+
+
+def pokemon_only(f):
+    """A filter on a Pokémon's top card built from the parts that name Pokémon (no `hpLe`: no static
+    condition reads HP, printed or derived)."""
+    h = f[0]
+    if h in ('any', 'pokemon', 'basic', 'stage', 'ptype', 'noRuleBox'):
+        return True
+    if h == 'named':
+        return KNOWN_NAMES.get(f[1]) == {'Pokémon'}
+    if h in ('and', 'or'):
+        return pokemon_only(f[1]) and pokemon_only(f[2])
+    if h == 'not':
+        return pokemon_only(f[1])
+    return False
+
+
+def static_filter(np, ctx):
+    """A phrase naming Pokémon ("Pokémon", "Basic Pokémon", "Evolution Fire Pokémon", "Fire or Water
+    Pokémon", "Grass Pokémon and Fire Pokémon", "Pokémon ex", "Psyduck") to a `Filter` on the top card;
+    `.any` for every Pokémon."""
+    s = np.strip()
+    if s == 'Pokémon':
+        return ('any',)
+    m = re.match(r'^([A-Za-z, ]+?),? or ([A-Za-z]+) Pokémon$', s)
+    if m:
+        ws = [w.strip() for w in m.group(1).split(',')] + [m.group(2)]
+        if all(w in T.TYPES for w in ws):
+            f = ('ptype', etype(ws[-1]))
+            for w in reversed(ws[:-1]):
+                f = ('or', ('ptype', etype(w)), f)
+            return f
+    m = re.match(r'^(.+ Pokémon) and (.+ Pokémon)$', s)
+    if m:
+        return ('or', static_filter(m.group(1), ctx), static_filter(m.group(2), ctx))
+    try:
+        f = parse_filter(s, ctx)
+    except Refuse:
+        raise Refuse('filter', s)
+    if not pokemon_only(f):
+        raise Refuse('filter', s)
+    return f
+
+
+def retreat_n(x):
+    """A printed Retreat Cost change: 'Colorless' symbols, or a number."""
+    if re.fullmatch(r'(?:Colorless)+', x):
+        return len(x) // len('Colorless')
+    if re.fullmatch(r'\d+', x):
+        return int(x)
+    raise Refuse('other', x)
+
+
+def retreat_eff(x, way):
+    return ('retreatPlus', retreat_n(x)) if way == 'more' else ('retreatMinus', retreat_n(x))
+
+
+def mk_static(sel, eff, filt=('any',), tgt=None, src=None, need=None):
+    """A `Static` as a Python dict, in the field order of the structure."""
+    return {'sel': (sel,), 'filt': filt, 'tgt': ('some', (tgt,)) if tgt else None,
+            'src': ('some', (src,)) if src else None,
+            'need': ('some', ('pair', need[0], need[1])) if need else None, 'eff': eff}
+
+
+def static_ability_sentence(s, ctx, src=None, need=None):
+    """One sentence of a static Ability to `Static`s; `src` and `need` from the prefixes."""
+    m = re.match(r'^As long as this Pokémon is (in the Active Spot|on your Bench), (.+)$', s)
+    if m:
+        if src is not None:
+            raise Refuse('other', s)
+        return static_ability_sentence(cap(m.group(2)), ctx, 'active' if 'Active' in m.group(1) else 'bench', need)
+    m = re.match(r'^If this Pokémon has (any|(\d+) or more) (?:(Basic) )?(?:' + TYPE_RE + r' )?Energy attached, it (.+)$', s)
+    if m:
+        if need is not None:
+            raise Refuse('other', s)
+        k = int(m.group(2)) if m.group(2) else 1
+        nd = (energy_filter(m.group(3), m.group(4)), k)
+        rest = m.group(5)
+        m2 = re.match(r'^(gets \+\d+ HP), and the attacks it uses (do .+)$', rest)
+        if m2:
+            return (static_ability_sentence('This Pokémon ' + m2.group(1) + '.', ctx, src, nd)
+                    + static_ability_sentence('Attacks used by this Pokémon ' + m2.group(2), ctx, src, nd))
+        return static_ability_sentence('This Pokémon ' + rest, ctx, src, nd)
+    S = lambda sel, eff, **kw: [mk_static(sel, eff, src=src, need=need, **kw)]  # noqa: E731
+    m = re.match(r'^This Pokémon gets \+(\d+) HP\.$', s)
+    if m:
+        return S('self', ('hpPlus', ('const', counters(m.group(1)))))
+    m = re.match(r'^This Pokémon gets \+(\d+) HP for each (?:(Basic) )?(?:' + TYPE_RE + r' )?Energy (?:card )?attached to '
+                 r'(?:it|this Pokémon)\.$', s)
+    if m:
+        return S('self', ('hpPlus', ('perEnergy', energy_filter(m.group(2), m.group(3)), counters(m.group(1)))))
+    m = re.match(r"^This Pokémon takes (\d+) less damage from attacks(?: from your opponent's (.+?))?" + AWR, s)
+    if m:
+        fr = static_filter(m.group(2), ctx) if m.group(2) else ('any',)
+        return S('self', ('reduce', counters(m.group(1)), fr))
+    m = re.match(r"^Attacks used by this Pokémon do (\d+) more damage to your opponent's Active (.+?)" + BWR, s)
+    if m:
+        return S('self', ('bonus', counters(m.group(1)), static_filter(m.group(2), ctx)))
+    m = re.match(r"^This Pokémon's Retreat Cost is (\w+) (more|less)\.$", s)
+    if m:
+        return S('self', retreat_eff(m.group(1), m.group(2)))
+    m = re.match(r'^(?:All of your|Your|Each of your) (.+?)(?: in play)? gets? \+(\d+) HP\.$', s)
+    if m:
+        return S('own', ('hpPlus', ('const', counters(m.group(2)))), filt=static_filter(m.group(1), ctx))
+    m = re.match(r"^Attacks used by your (.+?) do (\d+) more damage to your opponent's Active (.+?)" + BWR, s)
+    if m:
+        return S('own', ('bonus', counters(m.group(2)), static_filter(m.group(3), ctx)),
+                 filt=static_filter(m.group(1), ctx))
+    m = re.match(r"^All of your (.+?)(?: that have any (?:(Basic) )?(?:" + TYPE_RE + r" )?Energy attached)? take (\d+) less "
+                 r"damage from attacks from your opponent's (.+?)" + AWR, s)
+    if m:
+        if 'that ha' in m.group(1):
+            raise Refuse('other', s)
+        nd = need
+        if re.search(r' that have any ', s.split(' take ')[0]):
+            if need is not None:
+                raise Refuse('other', s)
+            nd = (energy_filter(m.group(2), m.group(3)), 1)
+        return [mk_static('own', ('reduce', counters(m.group(4)), static_filter(m.group(5), ctx)),
+                          filt=static_filter(m.group(1), ctx), src=src, need=nd)]
+    m = re.match(r"^Your Active Pokémon's Retreat Cost is (\w+) (more|less)\.$", s)
+    if m:
+        return S('own', retreat_eff(m.group(1), m.group(2)), tgt='active')
+    m = re.match(r"^Your opponent's Active (.+?)'s Retreat Cost is (\w+) (more|less)\.$", s)
+    if m:
+        return S('opp', retreat_eff(m.group(2), m.group(3)), filt=static_filter(m.group(1), ctx), tgt='active')
+    raise Refuse('other', s)
+
+
+def static_tool_sentence(s, ctx):
+    """One sentence of a Tool's static text to (holder phrase, `Static`s); `self` is the holder."""
+    m = re.match(r'^The (.+?) this card is attached to gets \+(\d+) HP\.$', s)
+    if m:
+        return m.group(1), [mk_static('self', ('hpPlus', ('const', counters(m.group(2)))))]
+    m = re.match(r"^The (.+?) this card is attached to takes (\d+) less damage from attacks(?: from your opponent's (.+?))?"
+                 + AWR, s)
+    if m:
+        fr = static_filter(m.group(3), ctx) if m.group(3) else ('any',)
+        return m.group(1), [mk_static('self', ('reduce', counters(m.group(2)), fr))]
+    m = re.match(r"^Attacks used by the (.+?) this card is attached to do (\d+) more damage to your opponent's Active (.+?)"
+                 + BWR, s)
+    if m:
+        return m.group(1), [mk_static('self', ('bonus', counters(m.group(2)), static_filter(m.group(3), ctx)))]
+    m = re.match(r"^If the (.+?) this card is attached to doesn't have a Rule Box, the attacks it uses do (\d+) more damage "
+                 r"to your opponent's Active (.+?)" + BWR, s)
+    if m:
+        return m.group(1), [mk_static('self', ('bonus', counters(m.group(2)), static_filter(m.group(3), ctx)),
+                                      filt=('noRuleBox',))]
+    m = re.match(r'^The Retreat Cost of the (.+?) this card is attached to is (\w+) (more|less)\.$', s)
+    if m:
+        return m.group(1), [mk_static('self', retreat_eff(m.group(2), m.group(3)))]
+    m = re.match(r'^As long as the (.+?) this card is attached to is in the Active Spot, the Retreat Cost of both Active '
+                 r'Pokémon is (\w+) (more|less)\.$', s)
+    if m:
+        return m.group(1), [mk_static('all', retreat_eff(m.group(2), m.group(3)), tgt='active', src='active')]
+    raise Refuse('other', s)
+
+
+def static_stadium_sentence(s, ctx):
+    """One sentence of a Stadium's static text to `Static`s (`all`: both players' Pokémon)."""
+    m = re.match(r'^Each (.+?) in play' + BOTH + r' gets ([+-])(\d+) HP\.$', s)
+    if m:
+        n = counters(m.group(3))
+        eff = ('hpPlus', ('const', n)) if m.group(2) == '+' else ('hpMinus', n)
+        return [mk_static('all', eff, filt=static_filter(m.group(1), ctx))]
+    m = re.match(r"^(.+?)(?: in play)?" + BOTH + r" take (\d+) less damage from attacks from the opponent's (.+?)" + AWR, s)
+    if m:
+        return [mk_static('all', ('reduce', counters(m.group(2)), static_filter(m.group(3), ctx)),
+                          filt=static_filter(m.group(1), ctx))]
+    m = re.match(r"^Attacks used by (.+?)(?: in play)?" + BOTH + r" do (\d+) more damage to the opponent's Active (.+?)" + BWR, s)
+    if m:
+        return [mk_static('all', ('bonus', counters(m.group(2)), static_filter(m.group(3), ctx)),
+                          filt=static_filter(m.group(1), ctx))]
+    m = re.match(r'^The Retreat Cost of each (.+?) in play' + BOTH + r' is (\w+) (more|less)\.$', s)
+    if m:
+        return [mk_static('all', retreat_eff(m.group(2), m.group(3)), filt=static_filter(m.group(1), ctx))]
+    raise Refuse('other', s)
+
+
+def static_caveats(ss):
+    """`staticBench`: a static damage reduction protects only the Active Pokémon in the model."""
+    cv = set()
+    for s in ss:
+        if s['eff'][0] == 'reduce' and s['tgt'] != ('some', ('active',)):
+            cv.add('staticBench')
+    return cv
+
+
+def parse_static(sents, kind, ctx):
+    """The sentences of a static text to (holder, statics), or raise Refuse(code, text) with the first
+    reason code. `kind` is 'ability', 'tool' or 'stadium'; `holder` is the Tool's holder filter."""
+    text = ' '.join(sents)
+    if re.search(STATIC_CODES[0][1], text):
+        raise Refuse('stack', text)
+    out = []
+    holders = set()
+    body = [x for x in sents if not RULEBOX_REMINDER.match(x)]
+    if len(body) < len(sents) and 'Rule Box' not in ' '.join(body):
+        raise Refuse('other', text)
+    if not body:
+        raise Refuse('other', text)
+    try:
+        for s in body:
+            if kind == 'ability':
+                out += static_ability_sentence(s, ctx)
+            elif kind == 'tool':
+                h, ss = static_tool_sentence(s, ctx)
+                holders.add(h)
+                out += ss
+            else:
+                out += static_stadium_sentence(s, ctx)
+    except Refuse as r:
+        raise Refuse(static_codes(text)[0] if r.reason == 'other' else r.reason, text)
+    holder = None
+    if kind == 'tool':
+        if len(holders) != 1:
+            raise Refuse('other', text)
+        h = holders.pop()
+        try:
+            holder = parse_filter(h, ctx)
+        except Refuse:
+            holder = None
+        if holder is None or not pokemon_only(holder):
+            code = static_codes(text)[0]
+            raise Refuse('filter' if code == 'other' else code, text)
+    return holder, out
+
+
+def static_blockers(head, text, first):
+    """The blockers of a refused static text: the first reason, then every other code the text matches."""
+    found = [k for k in static_codes(text) if k != 'other']
+    if first == 'stack' or not found:
+        codes = [first] + [k for k in found if k != first]
+    else:
+        # the parser's reason (a phrase it could not read as a filter, or no shape) is less specific
+        # than the keyword classification when that finds something
+        codes = found
+    return [(head + 'static, ' + k + ' (' + STATIC_DESC[k] + ')', text) for k in codes]
 
 
 # ------------------------------------------------------------------ Abilities (milestone M8a)
@@ -2145,6 +2544,8 @@ def translate_ability(c, a, res):
         B.append(('Ability: kind not modelled: ' + str(a.get('type')), t))
         return None
     why = ability_refusal(t)
+    if why == 'Ability: static or passive':
+        return translate_static_ability(c, a, res)
     if why:
         B.append((why, t))
         return None
@@ -2300,6 +2701,21 @@ def translate_ability(c, a, res):
     return ab
 
 
+def translate_static_ability(c, a, res):
+    """A static Ability (milestone M6): `AbilityUse.static` with its static effects, never used (its
+    effect is `fx skip`, its place and condition none); refused with reason codes otherwise."""
+    t = norm(a.get('text'))
+    ctx = {'kind': 'ability', 'name': c['name'], 'base': None, 'cost': None}
+    try:
+        _, ss = parse_static(split_sentences(t), 'ability', ctx)
+    except Refuse as r:
+        res['blockers'] += static_blockers('Ability: ', t, r.reason)
+        return None
+    res['used'].append(('static-ability', t))
+    res['caveats'] |= static_caveats(ss)
+    return {'name': a.get('name') or '', 'use': ('static', ss), 'spot': None, 'cond': None, 'effect': ('fx', SKIP)}
+
+
 STAGES = {'Basic': ('basic',), 'Stage 1': ('stage1',), 'Stage 2': ('stage2',)}
 
 
@@ -2367,6 +2783,11 @@ def translate_pokemon(c, res):
         rb = 'none'
     else:
         rb = 'none'
+    if stage is not None and stage != ('basic',) and not c.get('evolvesFrom'):
+        # a Stage 1 or Stage 2 record with no evolves-from field (a data defect: Zoroark me55-96 evolves
+        # from Zorua) would be a card that can never be played (`Move.evolve` needs `evolvesFrom`); found
+        # in validation, importer 0.5.0
+        B.append(('evolution card with no evolves-from field in the data', ''))
     tera = 'Tera' in sub
     rules = [norm(r) for r in c.get('rules') or []]
     allowed = list(RULEBOX_TEXT.get(rb, []))

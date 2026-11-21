@@ -55,8 +55,7 @@ theorem start_wellFormed : WellFormed start := by
     intro p hp <;> cases hp
 
 theorem start_damageBounded : DamageBounded start := by
-  intro p hp
-  rcases hp with hp | hp | hp | hp
+  refine DamageBounded.intro' (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_)
   · cases hp; decide
   · cases hp
   · cases hp; decide
@@ -66,11 +65,13 @@ theorem start_settled : Settled start :=
   ⟨start_damageBounded, by simp [start, side], by simp [start, side]⟩
 
 theorem st_damageBounded (n : Nat) : DamageBounded (st n) := by
-  intro p hp
-  rcases hp with hp | hp | hp | hp
-  · cases hp; show 0 < 5; decide
+  have hsf : GameState.SameField (st 0) (st n) := ⟨rfl, rfl, rfl, rfl⟩
+  refine DamageBounded.intro' (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_)
+  · cases hp; rw [hsf.hpOf .own .active (p := InPlay.ofBasic mon) rfl]; decide
   · cases hp
-  · cases hp; show 0 < 5; decide
+  · cases hp
+    exact Nat.lt_of_lt_of_eq (by decide : 0 < (st 0).hpOf .opp .active (InPlay.ofBasic mon))
+      (hsf.hpOf .opp .active rfl).symm
   · cases hp
 
 theorem st_settled (n : Nat) : Settled (st n) :=
@@ -142,7 +143,7 @@ theorem endTurn_pending_ko_reachable :
     st_damageBounded 5, rfl, .endTurn false false false false false false rfl rfl (st_damageBounded 5) rfl
       .nil .nil,
     by decide, rfl, fun hk => ?_⟩
-  have := hk _ (Or.inl rfl)
+  have := hk .own .active _ rfl
   exact absurd this (by decide)
 
 end Pokemon.Infinite

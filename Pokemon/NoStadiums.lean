@@ -38,7 +38,7 @@ theorem GameState.NoStadiums.safe {g : GameState} (h : g.NoStadiums) : g.Stadium
 
 /-- Without Stadiums, `StadiumQuiet` holds. -/
 theorem GameState.NoStadiums.quiet {g : GameState} (h : g.NoStadiums) : g.StadiumQuiet :=
-  fun _ _ hx => by have := h _ hx; simp [Card.isStadium] at this
+  fun _ _ _ hx => by have := h _ hx; simp [Card.isStadium] at this
 
 /-- Without Stadiums, the Stadium weight of a list of cards is 0. -/
 theorem cardsStQ_zero (P : Nat) : ∀ C : List Card, (∀ x ∈ C, x.isStadium = false) →
@@ -57,19 +57,19 @@ theorem cardsStQ_zero (P : Nat) : ∀ C : List Card, (∀ x ∈ C, x.isStadium =
 
 /-- `Card.freeRec` of milestone M8a. -/
 def Card.freeRecM8a : Card → List Filter
-  | .trainer _ _ e => e.recFilters
+  | .trainer _ _ e _ => e.recFilters
   | .pokemon p => unlimitedRec p.abilities
   | .tool _ gr => unlimitedRec gr.abilities
   | _ => []
 
 /-- `Card.wAmt` of milestone M8a. -/
 def Card.wAmtM8a : Card → Nat
-  | .trainer _ k e => if k = .supporter then 0 else e.amt
+  | .trainer _ k e _ => if k = .supporter then 0 else e.amt
   | _ => 0
 
 /-- `Card.alAmt` of milestone M8a. -/
 def Card.alAmtM8a : Card → Nat
-  | .trainer _ _ e => e.amtAt .always
+  | .trainer _ _ e _ => e.amtAt .always
   | _ => 0
 
 /-- `GameState.RecycleSafe` of milestone M8a. -/

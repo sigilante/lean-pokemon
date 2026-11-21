@@ -21,10 +21,10 @@ turn is in effect in that turn, one for the turn after is in effect two turns on
 the rest of the game stays. The between-turns phase and `startTurn` belong to the new turn.
 
 What is proved about finiteness.
-* For decks whose cards are *tame* (no damage reduction, no `drain`) and a start with no damage
-  reduction in effect, the damage bonus can be capped: the clamp `GameState.clamp k`, which caps
-  every bonus at `2 * k` with `k = bound` (more than every printed HP, Resistance and test
-  constant in the cards), is a bisimulation (`Move.clamp_sim`, `Reach.clamp_sim`, under `GameState.Fit k`; `Fit` holds
+* For decks whose cards are *tame* (no stored damage reduction, no `drain`) and a start with no
+  damage reduction stored, the damage bonus can be capped: the clamp `GameState.clamp k`, which caps
+  every bonus at `2 * k` with `k = bound` (more than every derived HP, every Resistance plus the
+  static damage reduction bound, and every test constant in the cards), is a bisimulation (`Move.clamp_sim`, `Reach.clamp_sim`, under `GameState.Fit k`; `Fit` holds
   at `bound` by `GameState.fit_bound`), and the clamps of the reachable states lie in a finite
   list (`Reach.finite` states both; the list half alone, `Reach.clamp_mem`, holds for every deck
   but says nothing about play without `Fit`). The reason: a bonus is read only by the damage
@@ -109,14 +109,24 @@ def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
 def st (hand discard : List Card) (a b : InPlay) (s t : Store) : GameState :=
   ⟨side hand discard a s, side [] [] b t, true, false, false, false, none, none, false, false⟩
 
+/-- No static effect has a source in play (milestone M6): the witnesses' cards have none. -/
+theorem plain_st (hand discard : List Card) (a b : InPlay) (s t : Store)
+    (hsa : a.sv.statics = []) (hsb : b.sv.statics = []) : (st hand discard a b s t).Plain :=
+  GameState.Plain.intro (fun _ hp => by cases hp; exact hsa) (fun _ hp => by cases hp)
+    (fun _ hp => by cases hp; exact hsb) (fun _ hp => by cases hp) rfl
+
 theorem settled_st (hand discard : List Card) (a b : InPlay) (s t : Store)
-    (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp) :
+    (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp)
+    (hsa : a.sv.statics = [] := by rfl) (hsb : b.sv.statics = [] := by rfl) :
     Settled (st hand discard a b s t) := by
-  refine ⟨fun p hp => ?_, by simp [st, side], by simp [st, side]⟩
-  rcases hp with hp | hp | hp | hp
-  · simp only [st, side, Option.some.injEq] at hp; subst hp; exact ha
+  have hpl := plain_st hand discard a b s t hsa hsb
+  refine ⟨DamageBounded.intro' (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_)
+    (fun p hp => ?_), by simp [st, side], by simp [st, side]⟩
+  · rw [hpl.hpOf (w := .own) (sp := .active) hp]
+    simp only [st, side, Option.some.injEq] at hp; subst hp; exact ha
   · simp [st, side] at hp
-  · simp only [st, side, Option.some.injEq] at hp; subst hp; exact hb
+  · rw [hpl.hpOf (w := .opp) (sp := .active) hp]
+    simp only [st, side, Option.some.injEq] at hp; subst hp; exact hb
   · simp [st, side] at hp
 
 theorem wellFormed_st (hand discard : List Card) (a b : InPlay) (s t : Store) :
@@ -183,10 +193,16 @@ theorem reach_red (k : Nat) (i : Bool) :
             (.done (.inl (settled_st _ _ _ _ _ _ (by decide) (by decide))))))) rfl rfl rfl rfl)
 
 theorem hpLe_red₀ {k : Nat} (hk : 3 ≤ k) : (red₀ k).HpLe k := by
-  intro p hp
-  simp [red₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
-    stadiumCardList, InPlay.cardList, InPlay.ofBasic, redItem, hitter, target, mon] at hp
-  rcases hp with rfl | rfl <;> refine ⟨?_, ?_⟩ <;> simp [PokemonCard.resistAmt] <;> omega
+  refine ⟨hpBound_le_of (fun c hc => ?_) (fun p hp => ?_), fun p hp => ?_⟩
+  · simp [red₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
+      stadiumCardList, InPlay.cardList, InPlay.ofBasic] at hc
+    rcases hc with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
+  · simp [red₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
+      stadiumCardList, InPlay.cardList, InPlay.ofBasic, redItem, hitter, target, mon] at hp
+    rcases hp with rfl | rfl <;> simp <;> omega
+  · simp [red₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
+      stadiumCardList, InPlay.cardList, InPlay.ofBasic, redItem, hitter, target, mon] at hp
+    rcases hp with rfl | rfl <;> simp [PokemonCard.resistAmt] <;> omega
 
 theorem tmax_red₀ {k : Nat} (hk : 3 ≤ k) : ∀ x ∈ (red₀ k).allCards, x.tmax < k := by
   intro x hx
@@ -260,7 +276,10 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
               | skip =>
                   have e := congrArg (fun g : GameState => g.opp.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg, red, st,
-                    side, GameState.dealt, dealtBy, GameState.weak, GameState.resist,
+                    side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,
+                    GameState.sReduce, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
+                    InPlay.sv, SView.statics, stadiumStatics, sumOf, List.flatMap_cons,
+                    List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge, Store.add,
                     Mods.addMod, Store.empty, Mods.empty, bonusNow, InPlay.ofBasic, target,
                     hitter, mon] at e <;> omega
@@ -280,12 +299,16 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | knockOut ha hk =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
+      rw [GameState.Plain.hpOf (g := red k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
+        (w := .opp) (sp := .active) rfl] at hk
       simp [InPlay.ofBasic, target, mon] at hk
   | promote ha => simp [red, st, side] at ha
   | noPokemon ha => simp [red, st, side] at ha
   | knockOutOwn ha hk =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
+      rw [GameState.Plain.hpOf (g := red k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
+        (w := .own) (sp := .active) rfl] at hk
       simp [InPlay.ofBasic, hitter, mon] at hk
   | promoteOwn ha => simp [red, st, side] at ha
   | noPokemonOwn ha => simp [red, st, side] at ha
@@ -339,10 +362,16 @@ theorem reach_dr (k : Nat) (i : Bool) :
           (.done (.inl (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)))))) rfl rfl rfl rfl)
 
 theorem hpLe_dr₀ {k : Nat} (hk : 2 ≤ k) : (dr₀ k).HpLe k := by
-  intro p hp
-  simp [dr₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
-    stadiumCardList, InPlay.cardList, InPlay.ofBasic, bonusItem, drainer, prey, mon] at hp
-  rcases hp with rfl | rfl <;> refine ⟨?_, ?_⟩ <;> simp [PokemonCard.resistAmt] <;> omega
+  refine ⟨hpBound_le_of (fun c hc => ?_) (fun p hp => ?_), fun p hp => ?_⟩
+  · simp [dr₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
+      stadiumCardList, InPlay.cardList, InPlay.ofBasic] at hc
+    rcases hc with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
+  · simp [dr₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
+      stadiumCardList, InPlay.cardList, InPlay.ofBasic, bonusItem, drainer, prey, mon] at hp
+    rcases hp with rfl | rfl <;> simp <;> omega
+  · simp [dr₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
+      stadiumCardList, InPlay.cardList, InPlay.ofBasic, bonusItem, drainer, prey, mon] at hp
+    rcases hp with rfl | rfl <;> simp [PokemonCard.resistAmt] <;> omega
 
 theorem tmax_dr₀ {k : Nat} (hk : 2 ≤ k) : ∀ x ∈ (dr₀ k).allCards, x.tmax < k := by
   intro x hx
@@ -420,7 +449,10 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
                   subst hp hq
                   have e := congrArg (fun g : GameState => g.cur.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg,
-                    dr, st, side, GameState.dealt, dealtBy, GameState.weak, GameState.resist,
+                    dr, st, side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,
+                    GameState.sReduce, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
+                    InPlay.sv, SView.statics, stadiumStatics, sumOf, List.flatMap_cons,
+                    List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge,
                     Store.add, Mods.addMod, Store.empty, Mods.empty, bonusNow,
                     InPlay.ofBasic, drainer, prey, mon] at e <;> omega
@@ -440,12 +472,16 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | knockOut ha hk =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha
+      rw [GameState.Plain.hpOf (g := dr k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
+        (w := .opp) (sp := .active) rfl] at hk
       simp [InPlay.ofBasic, prey, mon] at hk
   | promote ha => simp [dr, st, side] at ha
   | noPokemon ha => simp [dr, st, side] at ha
   | knockOutOwn ha hk =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha
+      rw [GameState.Plain.hpOf (g := dr k (2 * k + 2)) (plain_st _ _ _ _ _ _ rfl rfl)
+        (w := .own) (sp := .active) rfl] at hk
       simp [InPlay.ofBasic, drainer, mon] at hk
   | promoteOwn ha => simp [dr, st, side] at ha
   | noPokemonOwn ha => simp [dr, st, side] at ha

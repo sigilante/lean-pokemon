@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.4.0'
+VERSION = '0.5.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -37,15 +37,19 @@ CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special E
 # Blocking mechanisms for the not-imported cards, by keyword (an approximate classification of the
 # refusal reason and sentence, first match wins; card-level kinds come first).
 MECHS = [
-    ('static or passive Ability', r'^Ability: static'),
+    # static text of an Ability, a Tool or a Stadium outside the model's `Static` (milestone M6), by reason code
+] + [('static text (Ability, Tool or Stadium): ' + d, r'^(?:Ability|Pokémon Tool|Stadium): static, ' + k + ' ')
+     for k, d in TR.STATIC_DESC.items()] + [
+    ('static Ability: first-turn rule', r'^Ability: static \(first-turn rule\)'),
+    ('data defect: a Stage 1 or Stage 2 record with no evolves-from field', r'^evolution card with no evolves-from'),
     ("triggered Ability (Knock Out, damage, Checkup, opponent's action, move between spots)", r'^Ability: triggered'),
     ('Ability with a first-turn rule ("once during your first turn", "can\'t use … during your first turn")',
      r'^Ability: (?:once during your first turn|first-turn limit)'),
     ('Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms)',
      r'^Ability: (?!returns|condition on the history)|^Ability$|^Ancient Trait$'),
-    ('Pokémon Tool card: static or triggered text (the model would play it inert; refused)',
-     r'^Pokémon Tool: (?:static|triggered)'),
-    ('Stadium card: static or triggered text (the model would play it inert; refused)', r'^Stadium: (?:static|triggered|text of several)'),
+    ('Pokémon Tool card: triggered text (the model would play it inert; refused)', r'^Pokémon Tool: triggered'),
+    ('Stadium card: triggered text, or several paragraphs (the model would play it inert; refused)',
+     r'^Stadium: (?:triggered|text of several)'),
     ('Stadium card: activated effect the model cannot express', r'^Stadium: activated'),
     ('Pokémon Tool card: other (attack grant not expressible, end-of-turn discard, Mega rule, unclassified record)',
      r'^Pokémon Tool: '),
@@ -149,17 +153,37 @@ def run(data, out, survey=None):
     files = {}
 
     # ---------------------------------------------------------------- Lean parts
-    imported = [(recs, r) for recs, r in results if r['ok']]
+    all_imported = [(recs, r) for recs, r in results if r['ok']]
+    # Two cards of the pool whose records differ only in text the importer reads as a reminder (a Tool's
+    # "Attach a Pokémon Tool to 1 of your Pokémon …" line, a misprinted "Pokémon V_atk" in the Rule Box
+    # reminder) translate to the same term (milestone M6: Air Balloon, Brave Bangle). The term is written
+    # once, for the earlier card; the later one is listed in `sameTerm` with the card whose term it is.
+    first = {}
+    imported, same = [], []
+    for recs, r in all_imported:
+        k = emit.card_src(r['term'])
+        if k in first:
+            same.append((recs, r, first[k]))
+        else:
+            first[k] = recs
+            imported.append((recs, r))
+    term_of = {id(recs): first[emit.card_src(r['term'])] for recs, r in all_imported}
     idents = [emit.ident(recs[0]) for recs, _ in imported]
     assert len(set(idents)) == len(idents)
-    # distinct cards have distinct terms (checked again in Lean: `all_nodup`)
+    # distinct written terms (checked again in Lean: `all_nodup`)
     srcs = [emit.card_src(r['term']) for _, r in imported]
     assert len(set(srcs)) == len(srcs), 'two imported cards have the same Lean term'
-    # the pool is partitioned: every card is imported or not, once
-    assert len(results) == len(imported) + sum(1 for _, r in results if not r['ok'])
+    # the pool is partitioned: every card is imported (with its own term, or one it shares) or not, once
+    assert len(results) == len(imported) + len(same) + sum(1 for _, r in results if not r['ok'])
     assert len({id(recs) for recs, _ in results}) == len(results)
     parts = [imported[i:i + PART_SIZE] for i in range(0, len(imported), PART_SIZE)]
     part_names = []
+    # the largest printed HP and the largest HP units of one card's static effects, over the imported
+    # pool (the constants of the HP bound, `hpOf_le`)
+    hp_max = max(printed_hp(r['term']) for _, r in imported)
+    gain_max = max(hp_gain(r['term']) for _, r in imported)
+    # the largest static damage reduction units of one card (`Card.reduceGain`; the constant of `sReduce_le`)
+    red_max = max(reduce_gain(r['term']) for _, r in imported)
     for k, chunk in enumerate(parts, 1):
         pn = 'Part%02d' % k
         part_names.append(pn)
@@ -177,6 +201,25 @@ def run(data, out, survey=None):
         src.append('theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel\n')
         src.append('/-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/')
         src.append('theorem cards_nodup : nodupFp cards = true := by decide +kernel\n')
+        for k, what, pred, _ in STATIC_KINDS:
+            src.append('/-- The cards of this part with a static %s effect (milestone M6), by name. -/' % what)
+            src.append('theorem cards_static%s : (cards.filter (Card.hasStatic %s)).map Card.label = %s := by decide +kernel\n'
+                       % (k, pred, T.lean([recs[0]['name'] for recs, r in chunk if k in static_kinds(r['term'])])))
+        src.append('/-- Every printed HP in this part is at most %d counters (the largest over the imported pool). -/' % hp_max)
+        src.append('theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ %d)) = true := by decide +kernel\n'
+                   % hp_max)
+        src.append('/-- The HP units of every card\'s static effects in this part (`Card.hpGain`) are at most %d counters\n'
+                   '(the largest over the imported pool). -/' % gain_max)
+        src.append('theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ %d)) = true := by decide +kernel\n'
+                   % gain_max)
+        src.append('/-- The static damage reduction units of every card in this part (`Card.reduceGain`) are at most %d\n'
+                   'counters (the largest over the imported pool). -/' % red_max)
+        src.append('theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ %d)) = true := by decide +kernel\n'
+                   % red_max)
+        src.append('/-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by\n'
+                   'name. -/')
+        src.append('theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = %s := by decide +kernel\n'
+                   % T.lean([recs[0]['name'] for recs, r in chunk if not card_tame(r['term'])]))
         src.append('end PokemonCards.Standard.' + pn + '\n')
         files['PokemonCards/Standard/' + pn + '.lean'] = '\n'.join(src)
 
@@ -191,8 +234,14 @@ def run(data, out, survey=None):
            '\n'.join('import PokemonCards.Standard.' + pn for pn in part_names),
            'import PokemonCards.Props\n',
            'namespace PokemonCards.Standard\nopen Pokemon\n',
-           '/-- Every imported card (%d of the pool\'s %d cards). -/' % (n_imp, n_pool),
+           '/-- Every imported card (%d terms, for %d of the pool\'s %d cards: %d cards share the term of another,\n'
+           '`sameTerm`). -/' % (n_imp, n_imp + len(same), n_pool, len(same)),
            'def all : List Card :=\n  ' + ' ++\n  '.join(pn + '.cards' for pn in part_names) + '\n',
+           '/-- The imported cards whose term is that of an earlier card in `all` (their records differ only in\n'
+           'text read as a reminder): representative record id, name, and the id of the card whose term it is. -/',
+           'def sameTerm : List (String × String × String) := ['
+           + ', '.join('(' + T.lean_str(recs[0]['id']) + ', ' + T.lean_str(recs[0]['name']) + ', '
+                       + T.lean_str(o[0]['id']) + ')' for recs, _, o in same) + ']\n',
            '/-- The cards of the pool that were not imported, each with its representative record id, name and\n'
            'first blocking reason (the full list of reasons is in tools/importer/out/not-imported.tsv). -/',
            'def notImported : List (String × String × String) := [\n  '
@@ -202,18 +251,19 @@ def run(data, out, survey=None):
            'theorem all_length : all.length = %d := by decide +kernel\n' % n_imp,
            '/-- `notImported` has %d entries. -/' % len(not_imp),
            'theorem notImported_length : notImported.length = %d := by decide +kernel\n' % len(not_imp),
-           '/-- Arithmetic on the two lengths, and nothing more: %d + %d = %d. That the two lists partition the\n'
-           'pool\'s %d cards (every card of the pool in exactly one of them, once) is established outside Lean, by\n'
-           'the importer (`tools/importer/importer.py`, which asserts it when it writes this file) and by an\n'
-           'external check script; the pool itself is not a Lean object. -/' % (n_imp, len(not_imp), n_pool, n_pool),
-           'theorem pool_size : all.length + notImported.length = %d := by decide +kernel\n' % n_pool,
+           '/-- Arithmetic on the three lengths, and nothing more: %d + %d + %d = %d. That the three lists partition\n'
+           'the pool\'s %d cards (every card of the pool in exactly one of them, once) is established outside Lean, by\n'
+           'the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself\n'
+           'is not a Lean object. -/' % (n_imp, len(same), len(not_imp), n_pool, n_pool),
+           'theorem pool_size : all.length + sameTerm.length + notImported.length = %d := by decide +kernel\n' % n_pool,
            '/-- Every imported card passes the per-card checks. -/',
            'theorem all_ok : all.all Card.importOk = true := by\n  simp only [all, List.all_append, '
            + ', '.join(pn + '.cards_ok' for pn in part_names) + ', Bool.and_self]\n',
            '/-- **No imported card is inert.** No imported Stadium or Tool is a card the model plays with no\n'
-           'effect (`Card.inert`): every imported Stadium has an effect the model expresses, every imported Tool\n'
-           'gives an attack or an Ability. (Static and triggered Stadium and Tool text, which the model would\n'
-           'play as inert, is refused by the importer.) -/',
+           'effect (`Card.inert`): every imported Stadium has an activated or (milestone M6) a static effect the\n'
+           'model expresses, every imported Tool gives an attack, an Ability or a static effect. (Triggered Stadium\n'
+           'and Tool text, and static text outside the model\'s `Static`, which the model would play as inert, is\n'
+           'refused by the importer.) -/',
            'theorem notInert : ∀ c ∈ all, c.inert = false := by\n'
            '  have h : all.all (fun c => !c.inert) = true := by\n'
            '    simp only [all, List.all_append, '
@@ -295,20 +345,25 @@ def run(data, out, survey=None):
                 '`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `Faithful.xfinite` applies to it. -/',
                 'theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=\n'
                 '  faithful_of all_ok recSafe g hg\n',
-                '/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged. -/',
+                '/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged; the clamp\n'
+                'is taken at `Enum.bound g₀.allCards`, which bounds every derived HP (milestone M6). -/',
                 'theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :\n'
-                '    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧\n'
-                '      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →\n'
-                '        (∀ g₁\', Move g₁ g₁\' → ∃ g₂\', Move g₂ g₂\' ∧ g₁\'.xclamp = g₂\'.xclamp) ∧\n'
-                '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧ g₂\'.xclamp = g₁\'.xclamp) :=\n'
+                '    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧\n'
+                '      ∀ g₁ g₂, Reach g₀ g₁ →\n'
+                '        g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →\n'
+                '        (∀ g₁\', Move g₁ g₁\' → ∃ g₂\', Move g₂ g₂\' ∧\n'
+                '          g₁\'.xclamp (Enum.bound g₀.allCards) = g₂\'.xclamp (Enum.bound g₀.allCards)) ∧\n'
+                '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧\n'
+                '          g₂\'.xclamp (Enum.bound g₀.allCards) = g₁\'.xclamp (Enum.bound g₀.allCards)) :=\n'
                 '  Faithful.xfinite (faithful g₀ hg)\n']
+    src += static_theorems(imported, part_names, hp_max, gain_max, red_max)
     src += ['/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by\n'
             '`Move.attack`). -/',
             'theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=\n'
             '  attacks_wf_of all_ok\n',
             '/-- Every imported Trainer effect is `hitFree` and `benchHitFree` (required by `Move.item`,\n'
             '`Move.supporter` and, for a Stadium\'s effect, `Move.stadiumUse`). -/',
-            'theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e, c = .trainer n k e →\n'
+            'theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e ss, c = .trainer n k e ss →\n'
             '    e.hitFree = true ∧ e.benchHitFree = true :=\n  trainers_of all_ok\n',
             '/-- Every script of every Ability an imported card has or (a Tool) gives has no attack damage step\n'
             'and no attack damage to the Bench (premises of `Move.ability` and `Move.onPlay`). -/',
@@ -330,10 +385,11 @@ def run(data, out, survey=None):
     files['PokemonCards/Standard.lean'] = '\n'.join(src)
 
     # ---------------------------------------------------------------- TSVs
-    rows = [('id', 'name', 'kind', 'status', 'caveats', 'records', 'lean_name')]
-    for recs, r in imported:
+    rows = [('id', 'name', 'kind', 'status', 'caveats', 'records', 'lean_name', 'static_kinds')]
+    for recs, r in all_imported:
         rows.append((recs[0]['id'], recs[0]['name'], kind_of(recs[0]), status_of(r), ','.join(sorted(r['caveats'])),
-                     ' '.join(x['id'] for x in recs), emit.ident(recs[0])))
+                     ' '.join(x['id'] for x in recs), emit.ident(term_of[id(recs)][0]),
+                     ','.join(static_kinds(r['term']))))
     files['tools/importer/out/imported.tsv'] = tsv(rows)
     rows = [('id', 'name', 'kind', 'mechanisms', 'reasons', 'records')]
     for recs, r in not_imp:
@@ -356,6 +412,8 @@ def ability_status(recs, r):
     texts = [TR.norm(a.get('text')) for a in recs[0].get('abilities') or []]
     for a, b in r['blockers']:
         if a.startswith('Ability') or (b and any(b in t for t in texts)):
+            if a.startswith('Ability: static, '):
+                return a.split(' (')[0]
             if a.startswith('Ability'):
                 return ':'.join(a.split(':')[:2])
             if a == 'unhandled sentence':
@@ -421,12 +479,109 @@ def stadium_tool_section(results):
             if not r['ok']:
                 a = r['blockers'][0][0]
                 a = re.sub(r'^(Stadium: activated effect not expressible): .*$', r'\1', a)
+                a = re.sub(r'^((?:Stadium|Pokémon Tool): static, \w+) .*$', r'\1', a)
                 c[a] += 1
         L.append('| refused by reason | cards |')
         L.append('|---|---|')
         for k, v in sorted(c.items(), key=lambda kv: (-kv[1], kv[0])):
             L.append('| %s | %d |' % (k, v))
         L.append('')
+    return L
+
+
+def static_source(c):
+    return 'Pokémon Tool' if 'Pokémon Tool' in c['_sub'] else 'Stadium' if 'Stadium' in c['_sub'] else 'Ability'
+
+
+def static_texts(c):
+    """The static texts of a card that the importer read as static (milestone M6): each static Ability's text,
+    a Tool's or a Stadium's whole text."""
+    out = []
+    if c['supertype'] == 'Pokémon':
+        for a in c.get('abilities') or []:
+            t = TR.norm(a.get('text'))
+            if TR.ability_refusal(t) == 'Ability: static or passive':
+                out.append(t)
+    return out
+
+
+def static_section(results):
+    """Static text (milestone M6): the imported static effects by kind and source, the refused static texts
+    by reason code, and the stacking texts."""
+    L = []
+    imp = [(recs, r) for recs, r in results if r['ok'] and card_statics(r['term'])]
+    L.append('Static text (milestone M6). Cards imported with a static effect: %d (Pokémon with a static Ability %d, '
+             'Pokémon Tools %d, Stadiums %d). By kind (a card may have several):' % (
+                 len(imp), sum(1 for recs, _ in imp if recs[0]['supertype'] == 'Pokémon'),
+                 sum(1 for recs, _ in imp if 'Pokémon Tool' in recs[0]['_sub']),
+                 sum(1 for recs, _ in imp if 'Stadium' in recs[0]['_sub'])))
+    L.append('')
+    L.append('| kind | cards | names |')
+    L.append('|---|---|---|')
+    for k, what, _, _ in STATIC_KINDS:
+        xs = [(recs, r) for recs, r in imp if k in static_kinds(r['term'])]
+        L.append('| %s | %d | %s |' % (what, len(xs), ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in xs)))
+    L.append('')
+    for recs, r in imp:
+        L.append('- %s (%s)%s: `%s`' % (recs[0]['name'], recs[0]['id'],
+                                       ' [caveats: ' + ', '.join(sorted(r['caveats'])) + ']' if r['caveats'] else '',
+                                       ' '.join(T.lean(card_statics(r['term'])).split())))
+    L.append('')
+    # refused static texts, by reason code: the first, and every code recorded
+    first = collections.Counter()
+    anyc = collections.Counter()
+    alone = collections.Counter()
+    by_src = collections.defaultdict(collections.Counter)
+    n_txt = 0
+    for recs, r in results:
+        seen = collections.OrderedDict()
+        for a, b in r['blockers']:
+            m = re.match(r'^(Ability|Pokémon Tool|Stadium): static, (\w+) ', a)
+            if m:
+                seen.setdefault(b, []).append((m.group(1), m.group(2)))
+        for b, codes in seen.items():
+            n_txt += 1
+            first[codes[0][1]] += 1
+            by_src[codes[0][1]][codes[0][0]] += 1
+            for _, k in codes:
+                anyc[k] += 1
+            if len({k for _, k in codes}) == 1:
+                alone[codes[0][1]] += 1
+    L.append('Static texts refused (%d texts, counted per card: an Ability text, or a whole Tool or Stadium text), by '
+             'reason code: "first" is the code reported first, "alone" the texts with no other code, "any" the texts '
+             'with this code among theirs (a keyword classification of the text):' % n_txt)
+    L.append('')
+    L.append('| code | meaning | first | Ability / Tool / Stadium (first) | alone | any |')
+    L.append('|---|---|---|---|---|---|')
+    for k, v in sorted(first.items(), key=lambda kv: (-kv[1], kv[0])):
+        b = by_src[k]
+        L.append('| `%s` | %s | %d | %d / %d / %d | %d | %d |' % (k, TR.STATIC_DESC[k], v, b['Ability'], b['Pokémon Tool'],
+                                                             b['Stadium'], alone[k], anyc[k]))
+    for k in sorted(set(anyc) - set(first)):
+        L.append('| `%s` | %s | 0 | 0 / 0 / 0 | 0 | %d |' % (k, TR.STATIC_DESC[k], anyc[k]))
+    L.append('')
+    # stacking texts
+    st = []
+    for recs, r in results:
+        for t in static_texts(recs[0]):
+            if re.search(TR.STATIC_CODES[0][1], t):
+                sents = [x for x in TR.split_sentences(t) if not re.search(TR.STATIC_CODES[0][1], x)]
+                try:
+                    TR.parse_static(sents, 'ability', {'kind': 'ability', 'name': recs[0]['name'], 'base': None, 'cost': None})
+                    rest = 'the rest translates'
+                except TR.Refuse as e:
+                    rest = 'the rest is refused too (%s)' % e.reason
+                st.append('- %s (%s): "%s" Refused; without the stacking sentence %s.' % (recs[0]['name'], recs[0]['id'], t, rest))
+    L.append('Stacking texts ("The effect of X doesn\'t stack", "You can\'t apply more than 1 … at a time") in static '
+             'Abilities: %d, all refused. The model adds every static effect in force, so two Pokémon with the Ability '
+             'give twice the amount, where the printed card gives it once: a different HP, damage or reduction, which '
+             'changes outcomes in both directions (more HP lets a Pokémon survive what the printed card Knocks Out, '
+             'and a larger bonus Knocks Out what the printed card leaves standing), so the term would not be an '
+             'over-approximation and an "allows more" caveat would be false. Pokémon Tools and Stadiums in the pool '
+             'print no stacking text (a player has one Stadium in play; one Tool per Pokémon).' % len(st))
+    L.append('')
+    L += st
+    L.append('')
     return L
 
 
@@ -460,6 +615,140 @@ def card_effects(term):
         return [term[3]]
     return ([a['effect'] for a in card_attacks(term)]
             + [e for ab in card_abilities(term) for e in T.ability_scripts(ab)])
+
+
+def static_theorems(imported, part_names, hp_max, gain_max, red_max):
+    """The set-level statements about static effects (milestone M6): the imported cards with a static
+    effect, by kind; the HP bound; the bound on static damage reduction; the cards that are not tame."""
+    out = []
+    pl = lambda suffix: ', '.join(pn + '.' + suffix for pn in part_names)  # noqa: E731
+    untame_names = [recs[0]['name'] for recs, r in imported if not card_tame(r['term'])]
+    # `List.append_nil` closes the combined list only when the last part contributes nothing to it
+    last_tame = all(card_tame(r['term']) for _, r in imported[(len(imported) - 1) // PART_SIZE * PART_SIZE:])
+    for k, what, pred, _ in STATIC_KINDS:
+        names = [recs[0]['name'] for recs, r in imported if k in static_kinds(r['term'])]
+        out += ['/-- The imported cards with a static %s effect (milestone M6), by name (%d). Checked part by part. -/'
+                % (what, len(names)),
+                'theorem static%s : (all.filter (Card.hasStatic %s)).map Card.label = %s := by\n'
+                '  simp only [all, List.filter_append, List.map_append, %s, List.cons_append, List.nil_append,\n'
+                '    List.append_nil]\n' % (k, pred, T.lean(names), pl('cards_static' + k))]
+    out += ['/-- Every printed HP of an imported Pokémon is at most %d counters. -/' % hp_max,
+            'theorem printedHp_le : ∀ c ∈ all, c.printedHp ≤ %d := by\n'
+            '  have h : all.all (fun c => decide (c.printedHp ≤ %d)) = true := by\n'
+            '    simp only [all, List.all_append, %s, Bool.and_self]\n'
+            '  intro c hc\n'
+            '  exact of_decide_eq_true (List.all_eq_true.1 h c hc)\n' % (hp_max, hp_max, pl('cards_printedHp')),
+            '/-- The HP units of the static effects of every imported card (`Card.hpGain`: a constant "+N HP", or\n'
+            'the N of "+N HP for each Energy") are at most %d counters. -/' % gain_max,
+            'theorem hpGain_le : ∀ c ∈ all, c.hpGain ≤ %d := by\n'
+            '  have h : all.all (fun c => decide (c.hpGain ≤ %d)) = true := by\n'
+            '    simp only [all, List.all_append, %s, Bool.and_self]\n'
+            '  intro c hc\n'
+            '  exact of_decide_eq_true (List.all_eq_true.1 h c hc)\n' % (gain_max, gain_max, pl('cards_hpGain')),
+            '/-- **A bound on derived HP** (milestone M6). In every game whose cards are all imported cards and\n'
+            'number at most `N`, every Pokémon in play has derived HP (`GameState.hpOf`, in counters: printed HP\n'
+            'changed by the static effects in force) at most %d + 2 (N + 1) (N %d). It is the model\'s `hpBound`\n'
+            '(`GameState.hpOf_le_hpBound`) bounded with the two constants above; a bound, far from the largest HP\n'
+            'reachable, about the model\'s terms and not about printed cards. The model has no deck size, hence\n'
+            'the hypothesis on `N`. -/' % (hp_max, gain_max),
+            'theorem hpOf_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : Nat} (hn : g.allCards.length ≤ N)\n'
+            '    {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) :\n'
+            '    g.hpOf w sp p ≤ %d + 2 * (N + 1) * (N * %d) :=\n'
+            '  hpOf_le_of printedHp_le hpGain_le hg hn hp\n' % (hp_max, gain_max),
+            '/-- The bound for two 60-card decks (120 cards): derived HP at most %d counters (%d HP). -/'
+            % (hp_max + 2 * 121 * 120 * gain_max, 10 * (hp_max + 2 * 121 * 120 * gain_max)),
+            'theorem hpOf_le_120 (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) (hn : g.allCards.length ≤ 120)\n'
+            '    {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) : g.hpOf w sp p ≤ %d :=\n'
+            '  hpOf_le g hg hn hp\n' % (hp_max + 2 * 121 * 120 * gain_max),
+            '/-- The static damage reduction units of every imported card (`Card.reduceGain`: the sum of the\n'
+            '`reduce` constants of its static effects) are at most %d counters. -/' % red_max,
+            'theorem reduceGain_le : ∀ c ∈ all, c.reduceGain ≤ %d := by\n'
+            '  have h : all.all (fun c => decide (c.reduceGain ≤ %d)) = true := by\n'
+            '    simp only [all, List.all_append, %s, Bool.and_self]\n'
+            '  intro c hc\n'
+            '  exact of_decide_eq_true (List.all_eq_true.1 h c hc)\n' % (red_max, red_max, pl('cards_reduceGain')),
+            '/-- **A bound on static damage reduction** (milestone M6). In every game whose cards are all imported\n'
+            'cards and number at most `N`, the static damage reduction in force (`GameState.sReduce`) is at most the\n'
+            'model\'s bound `sReduceBound` of the cards, which is at most 2 (N %d). `sReduceBound` is a summand of\n'
+            '`Enum.bound`, so the clamp of `xfinite` caps above it. -/' % red_max,
+            'theorem sReduce_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : Nat} (hn : g.allCards.length ≤ N) :\n'
+            '    g.sReduce ≤ sReduceBound g.allCards ∧ sReduceBound g.allCards ≤ 2 * (N * %d) :=\n'
+            '  sReduce_le_of reduceGain_le hg hn\n' % red_max,
+            '/-- **The imported cards that are not tame** (%d), by name. Checked part by part. The tame-deck theorem\n'
+            '`Reach.finite` asks, through `GameState.Fit`, that every card of the game be `Card.tame` (no `drain`, no\n'
+            'stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`\n'
+            '(Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game\n'
+            '(`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards\n'
+            'is not covered by `Reach.finite`; every game of imported cards is `Faithful` (`faithful`), and\n'
+            '`Faithful.xfinite` (`xfinite`) applies to all of them. -/' % len(untame_names),
+            'theorem untame : (all.filter (fun c => !c.tame)).map Card.label = %s := by\n'
+            '  simp only [all, List.filter_append, List.map_append, %s, List.cons_append, List.nil_append%s]\n'
+            % (T.lean(untame_names), pl('cards_untame'),
+               ',\n    List.append_nil' if last_tame else '')]
+    return out
+
+
+def ab_statics(ab):
+    """`Ability.statics`."""
+    return list(ab['use'][1]) if ab['use'][0] == 'static' else []
+
+
+def card_statics(term):
+    """`Card.statics` (milestone M6): a Pokémon's static Abilities; a Tool's static text and static
+    Abilities; a Stadium's static text."""
+    if term[0] == 'pokemon':
+        return [x for ab in term[1]['abilities'] for x in ab_statics(ab)]
+    if term[0] == 'tool':
+        return list(term[2].get('statics') or []) + [x for ab in term[2]['abilities'] for x in ab_statics(ab)]
+    if term[0] == 'trainer' and term[2] == ('stadium',) and len(term) > 4:
+        return list(term[4])
+    return []
+
+
+# The kinds of static effect, with the Lean predicate on a `Static` (PokemonCards/Props.lean; `Static.isReduce`
+# is a nonzero `Static.reduceUnit`, the model's) and the `SEff` constructors of the kind.
+STATIC_KINDS = [('Hp', 'HP', 'Static.isHp', ('hpPlus', 'hpMinus')),
+                ('Bonus', 'damage bonus', 'Static.isBonus', ('bonus',)),
+                ('Reduce', 'damage reduction', 'Static.isReduce', ('reduce',)),
+                ('Retreat', 'Retreat Cost', 'Static.isRetreat', ('retreatPlus', 'retreatMinus'))]
+
+
+def static_kinds(term):
+    # a `reduce` counts only with a nonzero constant (`Static.isReduce`)
+    return [k for k, _, _, effs in STATIC_KINDS
+            if any(x['eff'][0] in effs and (x['eff'][0] != 'reduce' or x['eff'][1] != 0) for x in card_statics(term))]
+
+
+def printed_hp(term):
+    """`Card.printedHp`."""
+    return term[1]['hp'] if term[0] == 'pokemon' else 0
+
+
+def hp_gain(term):
+    """`Card.hpGain`: the HP units of the card's static effects (`Static.hpUnit`)."""
+    out = 0
+    for x in card_statics(term):
+        e = x['eff']
+        if e[0] == 'hpPlus':
+            out += e[1][1] if e[1][0] == 'const' else e[1][2]
+    return out
+
+
+def reduce_gain(term):
+    """`Card.reduceGain`: the reduction units of the card's static effects (`Static.reduceUnit`)."""
+    return sum(x['eff'][1] for x in card_statics(term) if x['eff'][0] == 'reduce')
+
+
+def effect_tame(e):
+    """`Effect.tame`: no `drain` and no stored damage reduction (`linger _ _ (.reduce _)`)."""
+    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] == 'reduce'):
+        return False
+    return all(effect_tame(x) for x in T.subs(e))
+
+
+def card_tame(term):
+    """`Card.tame`: every effect of the card (`card_effects`) is tame."""
+    return all(effect_tame(e) for e in card_effects(term))
 
 
 def ability_writes(term, pred):
@@ -629,6 +918,7 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
     L.append('')
     L += ability_section(results)
     L += stadium_tool_section(results)
+    L += static_section(results)
     # unhandled templates
     sc = collections.Counter()
     exs = {}

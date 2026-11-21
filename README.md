@@ -107,8 +107,9 @@ evolution (the evolved Pokémon has the new card's Abilities). Ability effects m
 Pokémon" (`SelfOp`: heal it, put damage counters on it, attach Energy to it, switch it in, move
 Energy to it): exact in the Active Spot, on the Bench a chosen Benched Pokémon (a superset); and a
 new primitive moves a damage counter between the player's own Pokémon (`Effect.moveCounter`, Team
-Rocket's Orbeetle), which both clamps keep exact (`CMove.sim`). Static and triggered Abilities,
-Ability locks and per-Pokémon modifiers are not modelled (Known gaps). Milestone M5 added Stadiums
+Rocket's Orbeetle), which both clamps keep exact (`CMove.sim`). Triggered Abilities (other than
+on-play), Ability locks and per-Pokémon modifiers are not modelled (Known gaps); static Abilities
+came with milestone M6 (below). Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
 Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and
@@ -120,9 +121,10 @@ any number per turn; it stays attached and goes to the discard pile with its Pok
 that Pokémon attacks and activated Abilities, for a holder passing a filter (`ToolGrant`,
 `InPlay.attacks`, `InPlay.abilities`; Core Memory's attack for Mega Zygarde ex). Two primitives
 discard a Stadium in play (`Effect.discardStadium`) and the Tools of a Pokémon
-(`Effect.discardTools`). Static and triggered Stadium and Tool text (HP, damage and Retreat Cost
-modifiers, Bench size, locks, Knock Out and damage triggers) is not modelled: such a card is
-played as a card with no effect (`Card.inert`), which under-models it; the kinds and their counts
+(`Effect.discardTools`). Triggered Stadium and Tool text, and static text outside the language of
+milestone M6 (Bench size, locks, prevention, cost changes; HP, damage and Retreat Cost changes are
+expressed since M6, below), is not modelled: such a card is played as a card with no effect
+(`Card.inert`), which under-models it; the kinds and their counts
 in today's Standard are in the Known gaps. Of the 37 distinct Standard Stadiums, 3 are expressed
 with their effect (Academy at Night, Levincia, Prism Tower), 9 have an activated effect the model
 cannot express exactly, and 25 are static or triggered; of the 45 Tools, 1 is expressed (Core
@@ -133,7 +135,30 @@ second time in the turn, used by the second player in their turn, replaced by Ac
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the
 same-name ban) and `Pokemon/Tools.lean` (a Tool on a Benched Pokémon discarded with it on a Knock
 Out; a second Tool refused; an attack given by a Tool to its holder only; Tools discarded by an
-effect). For that model it proves:
+effect). Milestone M6 added effects that hold while a card is in play: a static effect (`Static`:
+an HP change, a constant or a constant per Energy attached; a damage bonus with a filter on the
+defender; a damage reduction with a filter on the attacker; a Retreat Cost change) applies to the
+source Pokémon itself, to its owner's Pokémon, to the opponent's, or to all, with conditions on the
+affected Pokémon (a card filter, its place, an Energy count) and on the source's place; static
+Abilities (`AbilityUse.static`), Tools (`ToolGrant.statics`) and Stadiums (the `statics` of
+`Card.trainer`) carry them, and they are in force exactly while their source is in play. The
+quantities they change are computed from the state, never stored (`Pokemon/Static.lean`): derived
+HP (`GameState.hpOf`), the static bonus and reduction, which enter the damage calculation at steps
+2 and 5 (`GameState.dealt`), and the Retreat Cost (`GameState.retreatOf`). Every Knock Out premise
+reads derived HP, so HP that drops when a source leaves play (a Tool discarded, a Stadium replaced,
+Energy removed, a Pokémon with a static Ability Knocked Out) is followed by the Knock Out the model
+already takes (between moves, `Settled`; in mid-effect, `Resolve`); the rulebook says nothing about
+damage when HP drops, and the counters stay. Derived HP of every Pokémon in play is at most
+`hpBound` of the cards of the game (`GameState.hpOf_le_hpBound`: every amount is a constant times a
+count of cards), and the clamps now cap damage and Poison strength at that bound instead of at the
+printed HP. Witnesses in `Pokemon/StaticWitness.lean` (a Pokémon surviving above its printed HP on
+a Tool and Knocked Out when the Tool is discarded; a Stadium replacement Knocking Out a Benched
+Pokémon; an Energy-scaled HP bonus raising HP in mid-effect; two Knock Outs in a chain from one
+removal; a static reduction applied after Weakness); for decks without static effects every derived
+quantity is the printed one (`Pokemon/NoStatics.lean`). Not expressible: circular HP (Ditto copying
+HP; an HP bonus keyed to a Retreat Cost keyed to the remaining HP), "set" HP and its order against
+"+", stacking rules, Bench size, locks and prevention, cost changes and every triggered effect
+(Known gaps). For that model it proves:
 
 * play permutes the cards in the game (`Reach.perm`), Knock Outs inside Trainer effects
   and zone moves included (`TRun.perm`, `ZStep.perm`);
@@ -161,14 +186,16 @@ effect). For that model it proves:
   (`Reach.knockOut_of_pending`; with every Prize count 1 this is the earlier statement "exactly
   one"); a move never changes an Active Pokémon at or above its HP
   except by Knocking it Out (`Move.pending_untouched`);
-* **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at the Pokémon's HP the
+* **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at `bound` the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and
   reduction at `2 · bound` (`bound` is a constant computed from the cards: more than every
-  printed HP, every Resistance and every test constant; the factor 2 absorbs Resistance, which is
-  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no damage reduction, no
-  `drain`) and with no reduction in effect (`GameState.Fit` at `bound`, which
-  `GameState.fit_bound` gives), the clamps of all reachable states lie in one finite list, and
+  HP a Pokémon can have (`hpBound`, since milestone M6, when HP became derived; before it the clamp
+  capped at the printed HP), every Resistance plus the bound `sReduceBound` on static damage
+  reductions (M6), and every test constant; the factor 2 absorbs Resistance, which is
+  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no stored damage reduction, no
+  `drain`; static reductions are allowed) and with no reduction stored (`GameState.Fit` at
+  `bound`, which `GameState.fit_bound` gives from those two hypotheses alone), the clamps of all reachable states lie in one finite list, and
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
   `Reach.clamp_sim`), so the excesses the clamp removes cannot be observed by play. This holds
   with the Trainer timing above. The list half alone (`Reach.clamp_mem`) holds from every
@@ -243,16 +270,17 @@ clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the two decks 
 S10 found no Item or Supporter card in today's Standard pool whose discard-pile filter admits a
 modifier-writing Item, and no rest-of-game Trainer writer there, so the model's
 encodings of those Trainers and attacks satisfy clause 3 for every pairing of decks (a reading
-of the card pool, not a theorem; static Stadium and Tool text, static Abilities and returns from play
-are outside the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
+of the card pool, not a theorem; static text outside the language of `Static` (milestone M6), triggered
+text and returns from play are outside the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
 Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
 damage…"), so printed decks are not all tame. The model over-approximates modifiers on purpose;
 `Reach.finite` covers only the tame decks, and `Faithful.xfinite` (next paragraph) covers decks
 with reductions such as Iron Defender's.
 
 Exact stores. Both clamp counterexamples reach two states whose stores differ only above the
-cap. The clamp `GameState.xclamp` (`Pokemon/Exact.lean`) caps damage and Poison strength on every
-Pokémon in play at HP and keeps both stores exact, so those states are not identified. Every
+cap. The clamp `GameState.xclamp K` (`Pokemon/Exact.lean`) caps damage and Poison strength on
+every Pokémon in play at `K` (since milestone M6 a parameter, taken to be `Enum.bound` of the cards,
+which bounds every derived HP; before it the cap was the printed HP) and keeps both stores exact, so those states are not identified. Every
 reader of the stores sees equal values in two states with equal `xclamp`: the damage step
 computes the same `dealtBy` (the same amount, Weakness, Resistance and stores; `drain` heals the
 attacker by that amount), locks and prevention are flags in the stores, and `endTurn` shifts
@@ -369,8 +397,8 @@ finiteness; the deck condition `Faithful` buys it back:
   not faithful, and some of them are finite (tame decks that violate `GXOnly` are covered by
   `Reach.finite`).
 
-Which theorem applies. `Reach.finite` needs tame cards (no damage reduction, no `drain`) and no
-reduction in effect at the start; it allows bonus writes under `iter` and rest-of-game bonuses
+Which theorem applies. `Reach.finite` needs tame cards (no stored damage reduction, no `drain`;
+static reductions are allowed) and no reduction stored at the start; it allows bonus writes under `iter` and rest-of-game bonuses
 in attacks that are not GX attacks, and recycling of every kind (milestone MV), and gives a
 coarser quotient (the clamp caps stored bonuses). `Faithful.xfinite` allows damage reduction,
 `drain`, carried modifiers and Trainer modifiers; it forbids amounts written under `iter`,
@@ -386,9 +414,9 @@ that write a modifier (outside clause 4); static and triggered Abilities and Sta
 use or trigger its Ability again in the same turn, which the Ability bound does not cover);
 "attack twice", "attack again" after a Knock Out, and extra turns (absent: more than
 one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers (absent), from Abilities
-(outside clause 4) and from Stadium effects (outside clause 5); copy attacks, for instance copying a GX attack (absent); static modifiers and
-modifiers from static Stadium or Tool text, static Abilities or Special Energy (absent: every modifier is written
-by an effect when it resolves); per-Pokémon modifiers (Feraligatr's "attacks used by this Pokémon
+(outside clause 4) and from Stadium effects (outside clause 5); copy attacks, for instance copying a GX attack (absent); static modifiers outside the language of `Static`
+and modifiers from Special Energy (absent; static HP, damage and Retreat Cost changes are constants
+of the cards in play since milestone M6, not stored, and need no store bound); per-Pokémon modifiers (Feraligatr's "attacks used by this Pokémon
 do 120 more damage" is the player's bonus in the model, milestone M7); reductions restricted by type (printed Iron Defender protects Metal
 Pokémon only, whereas the model's reduction protects all of a player's Pokémon); effects that
 lock GX attacks (absent). The store bound rests on clause 3, on at most one attack per turn, and
@@ -461,10 +489,19 @@ today's Standard pool (survey S9's pool B: regulation marks H, I, J plus Basic E
 `Card` terms, conservatively, and writes them to `PokemonCards/Standard/Part*.lean` with
 per-card checks, plus `PokemonCards/Standard.lean` (the count of imported cards, the named
 list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.faithful`:
-every game whose cards all come from the imported pool is `Faithful`, all five clauses).
-Since importer version 0.3.0 activated ("once during your turn", "as often as you like") and
-on-play Abilities are translated when every sentence has a rule; static, passive and triggered
-Abilities, and the other forms the model lacks, are refused with a reason. Regenerate with
+every game whose cards all come from the imported pool is `Faithful`, all five clauses, and
+`PokemonCards.Standard.xfinite`, `Faithful.xfinite` for those games, both stated with the clamp
+at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
+damage reduction). Of the pool's 2,161 cards, 1,109 are imported (855 exactly, 254 with
+caveats) as 1,107 distinct terms, and 1,052 are refused, each with a reason
+(`tools/importer/out/coverage.md`). Since importer version 0.3.0 activated ("once during your
+turn", "as often as you like") and on-play Abilities are translated when every sentence has a
+rule, and since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
+the model's `Static`; passive and triggered Abilities, static text in other shapes, and the
+other forms the model lacks are refused with a reason. The tame-deck theorem `Reach.finite`
+does not cover imported decks in general: `Standard.untame` lists the imported cards that are
+not tame (a `drain` attack or a stored damage reduction); its clause on static reductions holds
+for every game (`reduceLe_bound`), and `Standard.sReduce_le` bounds the static reduction in force. Regenerate with
 `python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
 memory and diffs); build with `lake build PokemonCards`, which runs its own axiom gate
 (`PokemonCards/Audit.lean`). These are facts about the generated terms; whether a term says

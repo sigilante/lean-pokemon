@@ -28,6 +28,20 @@ statements the model's theorems use. Every check is stated with the model's own 
 * `nodupFp`: a check that a list of cards has no two equal terms, cheap enough for the kernel on
   the whole imported list (`nodup_of_nodupFp`).
 
+Since milestone M6 a card may carry static effects (`Card.statics`: a static Ability's, a Tool's
+static text, a Stadium's static text). `Faithful` has no clause about them and `Faithful.xfinite`
+holds with the clamp at `Enum.bound`, which bounds every derived HP and every static damage
+reduction; `Card.hasStatic` lists the cards by kind (a static damage reduction is `Static.isReduce`,
+a nonzero `Static.reduceUnit` of the model), `hpOf_le_of` bounds derived HP over a pool, and
+`sReduce_le_of` bounds the static damage reduction in force over a pool.
+
+The tame-deck theorem `Reach.finite` does not apply to imported decks in general: its premise
+`GameState.Fit` asks every card to be `Card.tame` (no `drain`, no stored damage reduction), and the
+imported pool has cards with `drain` attacks and with stored damage reductions. Its new clause
+`ReduceLe` (Resistance plus `sReduceBound`) holds at `Enum.bound` for every game by the definition
+of the bound (`reduceLe_bound`), so static reductions do not stand in the way; tameness does.
+For imported decks the theorem that applies is `Faithful.xfinite`, through `faithful_of`.
+
 These are facts about the Lean terms; whether a term says what its printed card says is the
 importer's claim, checked by eye in survey S11, not by Lean.
 -/
@@ -40,7 +54,7 @@ def Card.attacksWf (c : Card) : Bool := c.attacks.all Attack.wf
 /-- A Trainer's effect (an Item's or a Supporter's when played, a Stadium's when used) has no
 attack damage step and no attack damage to the Bench. -/
 def Card.trainerOk : Card → Bool
-  | .trainer _ _ e => e.hitFree && e.benchHitFree
+  | .trainer _ _ e _ => e.hitFree && e.benchHitFree
   | _ => true
 
 /-- The per-card part of `GXOnly`: an attack the card has or gives that is not a GX attack writes no
@@ -69,7 +83,7 @@ def Effect.lingers : Effect → Bool
 /-- A Trainer card's effect (an Item's or Supporter's when played, a Stadium's when used), `skip`
 for other cards. -/
 def Card.trainerEffect : Card → Effect
-  | .trainer _ _ e => e
+  | .trainer _ _ e _ => e
   | _ => .skip
 
 /-- The card writes a lingering damage bonus or reduction (`Effect.writes`) in an attack or an
@@ -98,10 +112,54 @@ def Card.hasUnlimited (c : Card) : Bool := c.abilities.any fun ab => ab.use == .
 def Card.abilityRecycles (c : Card) : Bool :=
   c.abilities.any fun ab => ab.scripts.any fun e => !e.recFilters.isEmpty
 
+/-! ### Static effects (milestone M6) -/
+
+/-- A static HP change ("+N HP", "−N HP", "+N HP for each Energy"). -/
+def Static.isHp (s : Static) : Bool :=
+  match s.eff with
+  | .hpPlus _ => true
+  | .hpMinus _ => true
+  | _ => false
+
+/-- A static damage bonus. -/
+def Static.isBonus (s : Static) : Bool :=
+  match s.eff with
+  | .bonus _ _ => true
+  | _ => false
+
+/-- A static damage reduction: a static effect whose reduction constant (`Static.reduceUnit`, the
+model's) is nonzero, that is one that counts in the model's bound `sReduceBound`. -/
+def Static.isReduce (s : Static) : Bool := s.reduceUnit != 0
+
+theorem Static.isReduce_iff (s : Static) : s.isReduce = true ↔ 0 < s.reduceUnit := by
+  unfold Static.isReduce
+  cases s.reduceUnit with
+  | zero => decide
+  | succ n => exact ⟨fun _ => Nat.succ_pos n, fun _ => rfl⟩
+
+/-- The reduction units of a card's static effects (`Static.reduceUnit`), the summand of the model's
+`sReduceBound`. -/
+def Card.reduceGain (c : Card) : Nat := c.gain Static.reduceUnit
+
+/-- A static Retreat Cost change. -/
+def Static.isRetreat (s : Static) : Bool :=
+  match s.eff with
+  | .retreatPlus _ => true
+  | .retreatMinus _ => true
+  | _ => false
+
+/-- The card has a static effect of the kind `k` (`Card.statics`, the model's). -/
+def Card.hasStatic (k : Static → Bool) (c : Card) : Bool := c.statics.any k
+
+/-- The printed HP of a Pokémon card, 0 for other cards. -/
+def Card.printedHp : Card → Nat
+  | .pokemon p => p.hp
+  | _ => 0
+
 /-- The printed name (Basic Energy cards are labelled by kind only). -/
 def Card.label : Card → String
   | .pokemon p => p.name
-  | .trainer n _ _ => n
+  | .trainer n _ _ _ => n
   | .tool n _ => n
   | .energy _ => "Basic Energy"
 
@@ -159,8 +217,8 @@ theorem attacks_wf_of {C : List Card} (h : C.all Card.importOk = true) :
   fun c hc a ha => List.all_eq_true.1 (importOk_parts (List.all_eq_true.1 h c hc)).1 a ha
 
 theorem trainers_of {C : List Card} (h : C.all Card.importOk = true) :
-    ∀ c ∈ C, ∀ n k e, c = .trainer n k e → e.hitFree = true ∧ e.benchHitFree = true := by
-  intro c hc n k e he
+    ∀ c ∈ C, ∀ n k e ss, c = .trainer n k e ss → e.hitFree = true ∧ e.benchHitFree = true := by
+  intro c hc n k e ss he
   have := (importOk_parts (List.all_eq_true.1 h c hc)).2.1
   subst he
   simpa only [Card.trainerOk, Bool.and_eq_true] using this
@@ -219,7 +277,7 @@ def cardFp : Card → Nat
       (((p.hp * 8 + p.retreat) * 16 + etypeIdx p.type) * 16 +
         (match p.weakness with | some t => etypeIdx t + 1 | none => 0))) * 3
   | .energy _ => 1
-  | .trainer _ _ _ => 2
+  | .trainer _ _ _ _ => 2
   | .tool _ _ => 4
 
 /-- No card of `l₁` is the same term as a card of `l₂`. -/
@@ -270,6 +328,57 @@ theorem nodup_of_nodupFp {l : List Card} (h : nodupFp l = true) : l.Nodup := by
     have := List.all_eq_true.1 (List.all_eq_true.1 h.1 a (List.mem_singleton_self a)) a hm
     rw [decide_eq_true rfl, decide_eq_true rfl] at this
     exact absurd this (by decide)
+
+/-! ### Static effects over a pool (milestone M6) -/
+
+theorem csum_le_mul {f : Card → Nat} {G : Nat} :
+    ∀ {C : List Card}, (∀ c ∈ C, f c ≤ G) → csum f C ≤ C.length * G
+  | [], _ => Nat.zero_le _
+  | c :: cs, h => by
+      have ih := csum_le_mul (C := cs) fun x hx => h x (.tail _ hx)
+      have hc := h c (.head _)
+      rw [csum_cons, List.length_cons, Nat.succ_mul]
+      omega
+
+/-- **Derived HP over a pool.** If every card of `C` has printed HP at most `M` and static HP units
+(`Card.hpGain`) at most `G`, then in every game of at most `N` cards all from `C`, every Pokémon in play
+has derived HP at most `M + 2 (N + 1) (N G)`: the model's `hpBound` (`GameState.hpOf_le_hpBound`), bounded
+with `M`, `G` and `N`. -/
+theorem hpOf_le_of {C : List Card} {M G N : Nat} (hm : ∀ c ∈ C, c.printedHp ≤ M)
+    (hgn : ∀ c ∈ C, c.hpGain ≤ G) {g : GameState} (hg : ∀ x ∈ g.allCards, x ∈ C)
+    (hn : g.allCards.length ≤ N) {w : Whose} {sp : Spot} {p : InPlay} (hp : g.In w sp p) :
+    g.hpOf w sp p ≤ M + 2 * (N + 1) * (N * G) := by
+  have h1 := g.hpOf_le_hpBound hp
+  have h2 : maxHp g.allCards ≤ M :=
+    maxHp_le fun q hq => by simpa only [Card.printedHp] using hm _ (hg _ hq)
+  have h3 : csum Card.hpGain g.allCards ≤ g.allCards.length * G :=
+    csum_le_mul fun c hc => hgn c (hg c hc)
+  have h4 : 2 * (g.allCards.length + 1) * csum Card.hpGain g.allCards ≤ 2 * (N + 1) * (N * G) :=
+    Nat.mul_le_mul (Nat.mul_le_mul_left 2 (Nat.succ_le_succ hn))
+      (Nat.le_trans h3 (Nat.mul_le_mul_right G hn))
+  unfold hpBound at h1
+  omega
+
+/-- **Static damage reduction over a pool.** If every card of `C` has static reduction units
+(`Card.reduceGain`) at most `R`, then in every game of at most `N` cards all from `C`, the static
+damage reduction in force (`GameState.sReduce`) and the model's bound `sReduceBound` of the cards
+are at most `2 (N R)`. -/
+theorem sReduce_le_of {C : List Card} {R N : Nat} (hr : ∀ c ∈ C, c.reduceGain ≤ R) {g : GameState}
+    (hg : ∀ x ∈ g.allCards, x ∈ C) (hn : g.allCards.length ≤ N) :
+    g.sReduce ≤ sReduceBound g.allCards ∧ sReduceBound g.allCards ≤ 2 * (N * R) := by
+  have h3 : csum (Card.gain Static.reduceUnit) g.allCards ≤ g.allCards.length * R :=
+    csum_le_mul fun c hc => hr c (hg c hc)
+  have h4 := Nat.le_trans h3 (Nat.mul_le_mul_right R hn)
+  refine ⟨g.sReduce_le, ?_⟩
+  unfold sReduceBound
+  omega
+
+/-- The clause `ReduceLe` of `GameState.Fit` (milestone M6: every Resistance plus the static reduction
+bound `sReduceBound` at most `k`) holds at `Enum.bound` for every game, by the definition of the bound. -/
+theorem reduceLe_bound (g : GameState) : g.ReduceLe (Enum.bound g.allCards) := fun p hp => by
+  have := resist_le_maxResist hp
+  simp only [Enum.bound]
+  omega
 
 /-- **Faithful decks from a checked pool.** If every card of `C` passes `Card.importOk` and
 `recSafeB C` holds, every game whose cards all come from `C` is `Faithful`: `LoopFree`, `GXOnly`,

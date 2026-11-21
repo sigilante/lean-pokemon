@@ -3,7 +3,7 @@ import Pokemon.Exact
 /-!
 # Finiteness up to the exact-store clamp, on states with bounded stores
 
-`GameState.xclamp` (`Pokemon/Exact.lean`) keeps the modifier stores exact, so its values are
+`GameState.xclamp K` (`Pokemon/Exact.lean`) keeps the modifier stores exact, so its values are
 finite in number only where the stores are bounded. This file states that bound as a property
 of a state, not of the proof, and proves finiteness under it.
 
@@ -42,14 +42,15 @@ def GameState.BoundedStores (B : Nat) (g : GameState) : Prop :=
 
 /-- `BoundedStores` is a property of the `xclamp` class: the clamp keeps the stores. -/
 theorem GameState.BoundedStores.of_xclamp {B : Nat} {g₁ g₂ : GameState}
-    (h : g₁.BoundedStores B) (hc : g₁.xclamp = g₂.xclamp) : g₂.BoundedStores B := by
+    (h : g₁.BoundedStores B) (hc : g₁.xclamp K = g₂.xclamp K) : g₂.BoundedStores B := by
   obtain ⟨e₁, e₂⟩ := GameState.mods_of_xclamp hc
   exact ⟨e₁ ▸ h.1, e₂ ▸ h.2⟩
 
 /-- The exact-store clamp is the capped clamp with the stores put back. -/
 theorem GameState.xclamp_eq (k : Nat) (g : GameState) :
-    g.xclamp = { g.clamp k with cur := { (g.clamp k).cur with mods := g.cur.mods },
-                                opp := { (g.clamp k).opp with mods := g.opp.mods } } :=
+    g.xclamp k =
+      { (g.clamp k) with cur := { (g.clamp k).cur with mods := g.cur.mods },
+                         opp := { (g.clamp k).opp with mods := g.opp.mods } } :=
   rfl
 
 /-- The finite list: every state of `states C` with both stores replaced by stores whose
@@ -60,10 +61,10 @@ def Enum.xstates (C : List Card) (B : Nat) : List GameState :=
 
 /-- **The exact-store clamps of reachable states with bounded stores lie in a finite list.**
 From any start state `g₀` (well-formed or not), for every `B` there is a finite list `L`, chosen before
-the reachable state (it depends only on `g₀` and `B`), containing `g.xclamp` for every state
+the reachable state (it depends only on `g₀` and `B`), containing `g.xclamp K` for every state
 `g` reachable from `g₀` that satisfies `BoundedStores B`. -/
 theorem Reach.xclamp_mem_bounded {g₀ : GameState} (B : Nat) :
-    ∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp ∈ L := by
+    ∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp (bound g₀.allCards) ∈ L := by
   refine ⟨xstates g₀.allCards B, fun g h hb => ?_⟩
   have hm : g.clamp (bound g₀.allCards) ∈ states g₀.allCards :=
     mem_states (by rw [GameState.allCards_clamp]; exact h.perm) h.clamp_bounded
@@ -89,11 +90,11 @@ finite quotient is `Faithful.xfinite`, under a deck condition that keeps every r
 in the bounded part. As for `Reach.finite`, the list is not computed and the quotient's moves
 are not shown computable. -/
 theorem Reach.xfinite_bounded {g₀ : GameState} (B : Nat) :
-    (∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp ∈ L) ∧
-      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
+    (∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp (bound g₀.allCards) ∈ L) ∧
+      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp (bound g₀.allCards) = g₂.xclamp (bound g₀.allCards) →
         (g₁.BoundedStores B → g₂.BoundedStores B) ∧
-        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
-        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) :=
+        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp (bound g₀.allCards) = g₂'.xclamp (bound g₀.allCards)) ∧
+        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp (bound g₀.allCards) = g₁'.xclamp (bound g₀.allCards)) :=
   ⟨Reach.xclamp_mem_bounded B, fun _ _ h hc =>
     ⟨fun hb => hb.of_xclamp hc, (Reach.xclamp_bisim h hc).1, (Reach.xclamp_bisim h hc).2⟩⟩
 

@@ -49,17 +49,18 @@ moves and the clamp would fail as above. -/
 namespace Pokemon
 
 /-- **Knock Out timing.** A move leaves an Active Pokémon at or above its HP either unchanged
-in its Active Spot or removed from it (Knocked Out), and does not pass the turn. -/
+in its Active Spot or removed from it (Knocked Out), and does not pass the turn. (Milestone M6:
+"its HP" is its derived HP, `GameState.hpOf`, in the state before the move.) -/
 theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') :
-    (g.cur.active = some p → p.top.hp ≤ p.damage →
+    (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage →
         (g'.cur.active = some p ∨ g'.cur.active = none) ∧ g'.curIsFirst = g.curIsFirst) ∧
-      (g.opp.active = some p → p.top.hp ≤ p.damage →
+      (g.opp.active = some p → g.hpOf .opp .active p ≤ p.damage →
         (g'.opp.active = some p ∨ g'.opp.active = none) ∧ g'.curIsFirst = g.curIsFirst) := by
   have bounded : DamageBounded g → ∀ X Y : Prop,
-      (g.cur.active = some p → p.top.hp ≤ p.damage → X) ∧
-        (g.opp.active = some p → p.top.hp ≤ p.damage → Y) := fun hk X Y =>
-    ⟨fun ha hl => absurd (hk p (Or.inl ha)) (Nat.not_lt.2 hl),
-      fun ha hl => absurd (hk p (Or.inr (Or.inr (Or.inl ha)))) (Nat.not_lt.2 hl)⟩
+      (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage → X) ∧
+        (g.opp.active = some p → g.hpOf .opp .active p ≤ p.damage → Y) := fun hk X Y =>
+    ⟨fun ha hl => absurd (hk .own .active p ha) (Nat.not_lt.2 hl),
+      fun ha hl => absurd (hk .opp .active p ha) (Nat.not_lt.2 hl)⟩
   cases hm with
   | playBasic _ _ _ _ _ hst => exact bounded hst.1 _ _
   | attach _ _ _ _ hst => exact bounded hst.1 _ _
@@ -101,38 +102,48 @@ def rs (d : Nat) : GameState :=
   ⟨side [] [] (InPlay.ofBasic mon), side [] [] { InPlay.ofBasic mon with damage := d },
     true, false, false, false, none, none, false, false⟩
 
-/-- If the opponent's Active Pokémon has at least 6 damage counters, do nothing; else draw. -/
-def probe : Effect := .ite (.atLeast .opp 6) .skip .draw
+/-- If the opponent's Active Pokémon has at least `k + 1` damage counters, do nothing; else
+draw. -/
+def probe (k : Nat) : Effect := .ite (.atLeast .opp (k + 1)) .skip .draw
 
-/-- `rs 5` after drawing a card. -/
-def drawn : GameState :=
+/-- `rs k` after drawing a card. -/
+def drawn (k : Nat) : GameState :=
   ⟨⟨[.energy .grass], [.energy .grass], [], [.energy .fire], [], some (InPlay.ofBasic mon), [],
     false, false, false, false, false, Store.empty, true⟩,
-    side [] [] { InPlay.ofBasic mon with damage := 5 }, true, false, false, false, none, none, false, false⟩
+    side [] [] { InPlay.ofBasic mon with damage := k }, true, false, false, false, none, none, false,
+    false⟩
 
-theorem rs_clamp (k : Nat) : (rs 5).clamp k = (rs 6).clamp k := rfl
+/-- `rs k` and `rs (k + 1)` have the same clamp at `k`, which caps damage at `k` (milestone M6:
+before it the clamp capped at the printed HP, 5, and the witness was `rs 5` and `rs 6`). -/
+theorem rs_clamp (k : Nat) : (rs k).clamp k = (rs (k + 1)).clamp k := by
+  have h : min k k = min (k + 1) k := by omega
+  simp only [rs, side, GameState.clamp, GameState.clampAt, Option.map_some, List.map_nil,
+    InPlay.clampWith, Cap.dmg, h]
 
-/-- **The HP clamp is not a simulation for `Run`** once effects read damage: `rs 5` and `rs 6`
-have the same clamp (whatever the cap `k` on damage bonuses), `probe` takes `rs 5` to `drawn`,
-and every resolution of `probe` from `rs 6` ends in a state whose clamp differs from that of
-`drawn` (the hand has no card). -/
+/-- **The clamp is not a simulation for `Run`** once effects read damage: `rs k` and `rs (k + 1)`
+have the same clamp `k`, `probe k` takes `rs k` to `drawn k`, and every resolution of `probe k`
+from `rs (k + 1)` ends in a state whose clamp differs from that of `drawn k` (the hand has no
+card). (Milestone M6 changed the witness from `rs 5`, `rs 6` and a test against 6: the clamp now
+caps damage at `k`, not at the printed HP.) -/
 theorem run_clamp_not_sim (k : Nat) :
     ∃ e g₁ g₂ g₁', g₁.clamp k = g₂.clamp k ∧ Run e g₁ g₁' ∧
       ∀ g₂', Run e g₂ g₂' → g₁'.clamp k ≠ g₂'.clamp k := by
-  refine ⟨probe, rs 5, rs 6, drawn, rs_clamp k, .iteF rfl rfl (.draw rfl),
+  refine ⟨probe k, rs k, rs (k + 1), drawn k, rs_clamp k,
+    .iteF rfl (Bool.eq_false_iff.mpr fun h => by
+      simp only [Test.eval, Nat.ble_eq] at h; exact absurd h (by simp)) (.draw rfl),
     fun g₂' hr heq => ?_⟩
   cases hr with
   | iteT h ht r =>
       cases r with
       | skip =>
           exact absurd (congrArg (fun g : GameState => g.cur.hand.length) heq)
-            (show ¬ (drawn.cur.hand.length = (rs 6).cur.hand.length) by decide)
+            (by simp [drawn, rs, side, GameState.clamp, GameState.clampAt])
       | touchActive he => simp [Effect.touch] at he
       | touchBench he => simp [Effect.touch] at he
       | zone hw => simp [Effect.zSide] at hw
   | iteF h ht r =>
       cases h
-      exact absurd ht (by decide)
+      exact absurd ht (by simp [Test.eval])
   | touchActive he => simp [probe, Effect.touch] at he
   | touchBench he => simp [probe, Effect.touch] at he
   | zone hw => simp [probe, Effect.zSide] at hw
@@ -152,8 +163,7 @@ def after2 : GameState :=
     true, false, true, false, none, none, false, false⟩
 
 theorem start2_damageBounded : DamageBounded start2 := by
-  intro p hp
-  rcases hp with hp | hp | hp | hp
+  refine DamageBounded.intro' (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_)
   · cases hp; decide
   · cases hp
   · cases hp; decide

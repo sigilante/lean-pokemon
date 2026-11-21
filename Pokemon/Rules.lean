@@ -123,10 +123,27 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the same attack or Checkup the first Knock Out taken decides the game: there is no Sudden
   Death (2023 rulebook p. 21), no tiebreaker game (2026, S8 J4), and no "if you win in both ways
   and your opponent wins in only one way, you are the victor" (p. 21). A promotion may also be
-  made while a Benched Pokémon's Knock Out is pending, and may promote that Pokémon, which is
-  then Knocked Out from the Active Spot: the cards and Prize cards are the same, but the model
-  has orders of Knock Outs and promotions that the rulebook's "Knock Outs, then a new Active
-  Pokémon" does not. A player with no Pokémon to promote loses at once. A Knock Out gives the
+  made while a Benched Pokémon's Knock Out is pending, and may promote that Pokémon.
+  DEPARTURE (since milestone M6): with derived HP the order of Knock Outs and promotions changes
+  the outcome, and the model's one-at-a-time Knock Outs depart from the rulebook's single check
+  ("check to see if any Pokémon were Knocked Out by the attack … check every Pokémon that was
+  affected", and only then is a new Active Pokémon chosen; 2023 rulebook p. 14) in both
+  directions. (i) A Pokémon the rule Knocks Out can survive in the model: a Benched Pokémon with
+  printed HP 3 and a static "+3 HP while in the Active Spot" takes 3 counters from the attack that
+  Knocks Out its owner's Active Pokémon; the model takes the Active Pokémon's Knock Out first and
+  promotes the Benched Pokémon while its own Knock Out is pending, and in the Active Spot its HP
+  is 6, so it is no longer pending (`StaticWitness.promotion_rescues`). (ii) A double Knock Out
+  the rule takes is unreachable in the model: two Pokémon of one player each carry a static "your
+  Pokémon get −1 HP" (own selector) and are at HP 2 with 2 counters; whichever Knock Out is taken
+  first raises the other's HP to 3, so it is never Knocked Out by that attack
+  (`StaticWitness.double_knockOut_lost`, proved for both orders; that no other move intervenes is
+  read off the state, not proved). So in this respect the model is neither a
+  superset nor a subset of rulebook play. The finiteness and bisimulation theorems
+  (`Reach.finite`, `Faithful.xfinite`, `Reach.xclamp_bisim` and the rest) are statements about the
+  model's moves and are unaffected; what they do not cover is play the model lacks, and they
+  include play the rulebook lacks. The planned repair is a batch Knock Out step: compute the set
+  of pending Knock Outs once, remove those Pokémon together, and promote only afterwards. A
+  player with no Pokémon to promote loses at once. A Knock Out gives the
   Prize cards of the Knocked Out Pokémon's rule box (`PokemonCard.prizeCount`: 1, 2 for
   Pokémon ex, 3 for Mega Evolution Pokémon ex), the top ones of the Prize list
   (`PlayerState.takePrizes`); with fewer left, all are taken and the taker wins
@@ -152,10 +169,33 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   owner's choice, but outcomes in which later steps of the effect find an empty Active Spot
   are absent from the model); when a Prize ends the game, or its owner has no Pokémon to promote, the
   game ends and the rest of the effect is not resolved. Several Knock Outs after one step are
-  taken by `Resolve` in any order, as after an attack;
+  taken by `Resolve` in any order, as after an attack (with the same departure from a single
+  check);
 * a Knock Out takes the top Prize cards of the Prize list, whereas the rulebook lets the player
   choose which Prize cards to take (a finite choice);
-* HP is the printed value: there are no HP modifiers (the survey's loophole L1);
+* HP is derived (milestone M6; the survey's loophole L1): `GameState.hpOf` is the printed HP plus
+  every `hpPlus` and less every `hpMinus` of the static effects in force (`Static`, from static
+  Abilities, Tools and the Stadium in play), computed from the state and never stored, and every
+  Knock Out premise (`DamageBounded`, `Settled`, the Knock Out moves, `moveCounter`'s "without
+  Knocking it Out") reads it. When a source leaves play (a Tool discarded, a Stadium replaced,
+  Energy removed, a Pokémon with a static Ability Knocked Out, a Pokémon moved out of the place its
+  bonus needs) HP can drop below the damage; no card text or rule found says what then happens to
+  the damage (survey S7 §A), and the model keeps the counters and takes the Knock Out by its
+  ordinary timing (between moves, `Settled`; in mid-effect, `Resolve` inside `TRun`; after an
+  attack or Checkup), a reading recorded here as a modelling decision. Chains are taken in turn
+  (`StaticWitness.chain_knock_out`). Not expressible, and open: HP defined by copying another
+  Pokémon's HP (Ditto dp6-27, base3-3: circular between two Dittos), an HP bonus keyed to the
+  Retreat Cost combined with a Retreat Cost keyed to the remaining HP (Heavy Boots with Rescue
+  Board: no condition of `Static` reads HP or the Retreat Cost, so HP is never defined in terms of
+  itself), "set" forms ("its maximum HP is 300", Crystal Wall; "max HP is 80", Koga's Ditto) and
+  the order of "set" and "add" (the model adds, then subtracts, stopping at 0), stacking rules
+  ("The effect of Vibrant Dance doesn't stack", "You can't apply more than 1 … at a time": the
+  model adds every effect in force), HP bonuses counted per Prize card taken, per Benched Pokémon
+  or per named Pokémon in play (Brambleghast, Pangoro, Nidoking), effects that read "remaining HP"
+  (Rescue Board), and Special Energy HP bonuses (no Special Energy). Before milestone M6 HP was the
+  printed value, and the clamps capped damage there; they now cap at a bound on every derived HP
+  (`hpBound`, `Enum.bound`). A Pokémon whose derived HP is 0 (its `hpMinus` effects reach its
+  printed HP plus its `hpPlus` effects) is a pending Knock Out at once, with no damage on it;
 * markers (`Marks`): Imprison, Shock-wave, Lightning Rod and Char are flags, and the Coloring
   counter is a type. The printed Imprison and Shock-wave counts are uncapped, but only "has
   any" is read and removal takes them all, so a flag is exact for them (`Markers.flag_exact`;
@@ -254,11 +294,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `Stadiums.stadium_writer_breaks_bound`). What `Faithful.xfinite` covers is the model: for a
   deck containing a card whose static or triggered text is not modelled (the Stadium and Tool
   item below, static and triggered Abilities), it is a theorem about the inert card the model
-  plays, not the printed one. The omission that most directly makes the model's finiteness easier
-  than the real game's is HP modifiers (Hero's Cape, Cynthia's Power Weight, Ancient Booster Energy
-  Capsule, Gravity Mountain and others below): the exact-store clamp caps damage at printed HP, and
-  `Settled` forces a Knock Out at printed HP, so the real states in which a Pokémon survives with
-  damage between its printed and its modified HP do not exist in the model. The other static
+  plays, not the printed one. Until milestone M6 the omission that most directly made the model's
+  finiteness easier than the real game's was HP modifiers: the clamps capped damage at printed HP,
+  and `Settled` forced a Knock Out at printed HP. Since M6 HP is derived (item above): the clamps
+  cap damage and Poison strength at a bound `K` on every derived HP (`hpBound`, a function of the
+  cards of the game), and `Reach.finite` and `Faithful.xfinite` hold with the clamp at that bound
+  (`GameState.xclamp_bisim` is stated at `K = Enum.bound` of the state's cards, and holds at any
+  larger `K`, `GameState.xclamp_bisim_of_le`);
+  for `Reach.finite` the bound also exceeds every Resistance plus the static damage reductions the
+  cards can put in force (`sReduceBound`): unlike a stored reduction, a static one is bounded by the
+  cards (`GameState.sReduce_le`), so tame decks may have them. The other static
   omissions are milder: static damage bonuses and reductions, Bench-size and cost changes are
   constants of a card, not stored amounts; Ability and Tool locks only remove behaviour; triggered
   Tools add behaviour. The
@@ -402,7 +447,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   own damage is exact inside an attack; `CMove.sim`); moving counters off the opponent's Active
   Pokémon would read damage that the capped clamp `rclamp` knows only up to its cap inside an
   attack;
-* Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
+* Bench size is the constant `benchLimit = 5` (milestone M6 did not add a Bench-size static effect:
+  a shrinking Bench needs a discard rule, S7 §D) ("Each player may have up to 5 Pokémon on the
   Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
   Underdepths, S8 L2) are static Stadium effects, not modelled (next item but one);
 * Stadium and Tool cards (milestone M5; survey S8 B9, B10): a Stadium is played from the hand
@@ -430,17 +476,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   effect is `skip`, a Tool with an empty grant): it occupies the slot or the Tool place and does
   nothing, which under-models the printed card (it removes the printed outcomes the text adds and
   keeps the ones it forbids). `Faithful.xfinite` for a deck containing such a card is a theorem
-  about the inert card, not the printed one; of the kinds below, HP changes make the model's
-  finiteness most directly easier than the real game's (see the finiteness paragraph above:
-  damage is capped, and Knock Outs taken, at printed HP). Absent kinds, for a later milestone (derived HP, per-Pokémon and
-  static modifiers, triggers): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively
-  Stadium; Tools 3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage
-  bonuses (Stadium 1, Postwick; Tools 8: Binding Mochi, Brave Bangle ×2, Future Booster Energy
-  Capsule, Hop's Choice Band, Light Ball, Maximum Belt ×2); damage reduction or prevention
-  (Stadiums 4: Battle Cage, Full Metal Lab, Granite Cave, Neutralization Zone; Tools 3: Custom Vest,
-  Sacred Charm, Thick Scale); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort;
-  Tools 5: Air Balloon ×2, Gravity Gemstone, Rescue Board ×2, and Future Booster Energy Capsule);
-  attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
+  about the inert card, not the printed one. Since milestone M6 static text in the language of
+  `Static` is expressed (`ToolGrant.statics`, the `statics` of a Stadium; `Card.inert` is false
+  for such a card): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively Stadium; Tools
+  3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage bonuses with a
+  filter on the defender (Stadium 1, Postwick; Tools: Hop's Choice Band, Light Ball, Maximum Belt
+  and others whose condition is a filter on a top card; Binding Mochi's "if this Pokémon is
+  Poisoned" is not expressible; Brave Bangle's conditions are, as the static's filter `noRuleBox`
+  on the holder and the bonus filter "Pokémon with a Rule Box" on the defender, which is "Pokémon
+  ex" because `RuleBox` has no kind but `ex` and `megaEx`); damage reduction (Stadiums 2: Full
+  Metal Lab, Granite Cave; Tools 2: Sacred Charm, Thick Scale; the Berries and Custom Vest are
+  triggered or conditional); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort; Tools 2:
+  Air Balloon, Gravity Gemstone; Rescue Board reads the remaining HP and is not expressible). These
+  counts are a regular-expression classification of the card data by kind (milestone M6), not a
+  card-by-card check of every condition. Absent kinds, for a later milestone: damage prevention
+  (Battle Cage, Neutralization Zone); attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
   Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no
   Abilities": Stadiums 2, Legendary Pyroduct, Team Rocket's Watchtower); Tool locks (Stadiums 2:
   Jamming Tower ×2); Special Condition rules (Stadiums 3: Dizzying Valley, Festival Grounds ×2;
@@ -482,9 +532,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Out pending; per-Pokémon bonuses ("attacks used by this Pokémon do 120 more damage", Feraligatr
   sv5-41) are the player's (per-Pokémon lingering modifiers are milestone M7); a condition is a
   `Test` on an Active Pokémon or a count (conditions on the Bench or on rule boxes, such as "if you
-  have any Fire Mega Evolution Pokémon ex in play", are not expressible). Absent: static (passive)
-  and triggered Abilities other than on-play ones, Checkup and Knock Out triggers (milestone
-  M8b; survey S9: 124 static, 33 damage-reaction or Knock Out, 16 other triggers), Ability locks
+  have any Fire Mega Evolution Pokémon ex in play", are not expressible). Since milestone M6 a
+  static Ability (`AbilityUse.static`) carries static effects in the language of `Static` (HP,
+  damage bonus and reduction, Retreat Cost; a regular-expression count of today's Standard by kind:
+  about 5 HP, 13 bonus, 17 reduction and 11 Retreat Cost Abilities, of which those with conditions
+  beyond a top-card filter, a place or an Energy count are not expressible); it is never used.
+  Absent: other static (passive) Abilities (immunities, locks, cost changes and the like, about 57
+  in today's Standard by the same count) and triggered Abilities other than on-play ones, Checkup
+  and Knock Out triggers (milestone M8b; survey S9: 124 static, 33 damage-reaction or Knock Out, 16
+  other triggers; triggered effects stay out of scope after M6), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
   (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
@@ -538,16 +594,43 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 
 namespace Pokemon
 
-/-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP.
-Every move except the Knock Out moves requires it (through `Settled`, or directly). It is NOT
+/-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP, its
+derived HP (`GameState.hpOf`, milestone M6: printed HP changed by the static effects in force in
+`g`). Every move except the Knock Out moves requires it (through `Settled`, or directly). It is NOT
 an invariant of all reachable states: an attack or Trainer card can leave a Pokémon at or above
 its HP (then the Knock Out must be taken next), and so can Checkup
-(`Infinite.endTurn_pending_ko_reachable`); it holds when the turn proper begins
+(`Infinite.endTurn_pending_ko_reachable`), and since milestone M6 so can any move that removes a
+source of HP (a Tool discarded, a Stadium replaced, Energy removed, a Pokémon with a static Ability
+Knocked Out, a Pokémon moved out of the place its bonus needs); it holds when the turn proper begins
 (`Move.damageBounded_of_startTurn`). -/
 def DamageBounded (g : GameState) : Prop :=
-  ∀ p : InPlay,
-    (g.cur.active = some p ∨ p ∈ g.cur.bench ∨ g.opp.active = some p ∨ p ∈ g.opp.bench) →
-      p.damage < p.top.hp
+  ∀ (w : Whose) (sp : Spot) (p : InPlay), g.In w sp p → p.damage < g.hpOf w sp p
+
+/-- `DamageBounded`, place by place. -/
+theorem DamageBounded.intro' {g : GameState}
+    (h1 : ∀ p, g.cur.active = some p → p.damage < g.hpOf .own .active p)
+    (h2 : ∀ p ∈ g.cur.bench, p.damage < g.hpOf .own .bench p)
+    (h3 : ∀ p, g.opp.active = some p → p.damage < g.hpOf .opp .active p)
+    (h4 : ∀ p ∈ g.opp.bench, p.damage < g.hpOf .opp .bench p) : DamageBounded g := by
+  intro w sp p hp
+  cases w <;> cases sp
+  · exact h1 p hp
+  · exact h2 p hp
+  · exact h3 p hp
+  · exact h4 p hp
+
+/-- `DamageBounded` depends only on the Pokémon in play, the Stadium and who goes first (milestone
+M6: derived HP reads them). -/
+theorem DamageBounded.congr {g g' : GameState} (h : DamageBounded g)
+    (hc : g'.cur.active = g.cur.active) (hcb : g'.cur.bench = g.cur.bench)
+    (ho : g'.opp.active = g.opp.active) (hob : g'.opp.bench = g.opp.bench)
+    (hs : g'.stadium = g.stadium) (hf : g'.curIsFirst = g.curIsFirst) : DamageBounded g' := by
+  have hsf : GameState.SameField g g' :=
+    ⟨by simp only [PlayerState.field, hc, hcb], by simp only [PlayerState.field, ho, hob], hs, hf⟩
+  intro w sp p hp
+  rw [hsf.hpOf w sp rfl]
+  cases w <;> cases sp <;> simp only [GameState.In, GameState.side, hc, hcb, ho, hob] at hp <;>
+    exact h _ _ p hp
 
 /-- A Benched Pokémon as the rules leave it: with no Special Condition ("When a Pokémon evolves
 or moves to the Bench, it recovers from all Special Conditions", rulebook 2023 p. 16) and so with
@@ -574,13 +657,20 @@ Knock Out is taken, and the Active Pokémon replaced, before any other move. -/
 def Settled (g : GameState) : Prop :=
   DamageBounded g ∧ g.cur.active ≠ none ∧ g.opp.active ≠ none
 
+/-- `Settled` depends only on the Pokémon in play, the Stadium and who goes first. -/
+theorem Settled.congr {g g' : GameState} (h : Settled g)
+    (hc : g'.cur.active = g.cur.active) (hcb : g'.cur.bench = g.cur.bench)
+    (ho : g'.opp.active = g.opp.active) (hob : g'.opp.bench = g.opp.bench)
+    (hs : g'.stadium = g.stadium) (hf : g'.curIsFirst = g.curIsFirst) : Settled g' :=
+  ⟨h.1.congr hc hcb ho hob hs hf, by rw [hc]; exact h.2.1, by rw [ho]; exact h.2.2⟩
+
 /-- The eight moves that resolve a Knock Out, as a relation of their own: they are the moves
 `Move.knockOut`, `Move.knockOutBench`, `Move.promote`, `Move.noPokemon` and their `Own` versions,
 with the same premises and results (`KOMove.move`). `Resolve` uses them to take Knock Outs in
 the middle of a Trainer card's effect. -/
 inductive KOMove : GameState → GameState → Prop where
   | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.opp.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.opp.active = some p) (hk : g.hpOf .opp .active p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       KOMove g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
@@ -592,7 +682,7 @@ inductive KOMove : GameState → GameState → Prop where
   | noPokemon {g : GameState} (ha : g.opp.active = none) (hb : g.opp.bench = []) :
       KOMove g { g with winner := some g.curIsFirst }
   | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.cur.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.cur.active = some p) (hk : g.hpOf .own .active p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       KOMove g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
@@ -604,14 +694,14 @@ inductive KOMove : GameState → GameState → Prop where
   | noPokemonOwn {g : GameState} (ha : g.cur.active = none) (hb : g.cur.bench = []) :
       KOMove g { g with winner := some (!g.curIsFirst) }
   | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
-      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : g.hpOf .opp .bench p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       KOMove g { g with
         opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
         cur := g.cur.takePrizes p.top.prizeCount,
         winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
   | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
-      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       KOMove g { g with
         cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },
@@ -818,7 +908,7 @@ inductive Move : GameState → GameState → Prop where
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
       (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
-      (hp : paid.length = a.top.retreat)
+      (hp : paid.length = g.retreatOf a)
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
@@ -858,15 +948,15 @@ inductive Move : GameState → GameState → Prop where
   pending, like an Item; an Item lock does not stop it (a Stadium is not an Item). Playing it
   resolves nothing: its effect is used by `Move.stadiumUse`, and the new Stadium has not been
   used this turn (`stadiumUsed := false`) -/
-  | stadium {g : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
-      (hh : g.cur.hand = l₁ ++ Card.trainer n .stadium e :: l₂)
+  | stadium {g : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect} {ss : List Static}
+      (hh : g.cur.hand = l₁ ++ Card.trainer n .stadium e ss :: l₂)
       (hs : g.stadiumPlayed = false) (hn : g.stadiumNamed n = false)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
       Move g { g with
         cur := { g.cur with
           hand := l₁ ++ l₂, discard := stadiumTo g.curIsFirst g.stadium ++ g.cur.discard },
         opp := { g.opp with discard := stadiumTo (!g.curIsFirst) g.stadium ++ g.opp.discard },
-        stadium := some (g.curIsFirst, Card.trainer n .stadium e),
+        stadium := some (g.curIsFirst, Card.trainer n .stadium e ss),
         stadiumPlayed := true, stadiumUsed := false }
   /-- attach a Pokémon Tool from the hand to the player's Active Pokémon (milestone M5), which must
   have no Tool attached ("Each Pokémon can have only 1 Pokémon Tool attached at a time", rulebook
@@ -897,8 +987,8 @@ inductive Move : GameState → GameState → Prop where
   Knock Out pending, and with no attack damage step. A use spends no allowance of the turn. So at
   most two Stadium effects are used in one turn: the Stadium in play, and the one Stadium the
   player may play after using it -/
-  | stadiumUse {g g' : GameState} {o : Bool} {n : String} {e : Effect}
-      (hs : g.stadium = some (o, Card.trainer n .stadium e)) (hu : g.stadiumUsed = false)
+  | stadiumUse {g g' : GameState} {o : Bool} {n : String} {e : Effect} {ss : List Static}
+      (hs : g.stadium = some (o, Card.trainer n .stadium e ss)) (hu : g.stadiumUsed = false)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :
@@ -973,7 +1063,7 @@ inductive Move : GameState → GameState → Prop where
   /-- Knock Out the opponent's Active Pokémon and take a Prize card (during the turn or
   between turns) -/
   | knockOut {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.opp.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.opp.active = some p) (hk : g.hpOf .opp .active p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       Move g { g with
         opp := { g.opp with active := none, discard := p.cardList ++ g.opp.discard },
@@ -990,7 +1080,7 @@ inductive Move : GameState → GameState → Prop where
   after Confusion, after an effect that damages it, or after Checkup); the opponent takes a
   Prize card -/
   | knockOutOwn {g : GameState} {p : InPlay} {c : Card} {ps : List Card}
-      (ha : g.cur.active = some p) (hk : p.top.hp ≤ p.damage)
+      (ha : g.cur.active = some p) (hk : g.hpOf .own .active p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       Move g { g with
         cur := { g.cur with active := none, discard := p.cardList ++ g.cur.discard },
@@ -1006,7 +1096,7 @@ inductive Move : GameState → GameState → Prop where
   /-- Knock Out one of the opponent's Benched Pokémon and take its Prize cards; no promotion
   follows (milestone M3) -/
   | knockOutBench {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card} {ps : List Card}
-      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      (hb : g.opp.bench = b₁ ++ p :: b₂) (hk : g.hpOf .opp .bench p ≤ p.damage)
       (hp : g.cur.prizes = c :: ps) :
       Move g { g with
         opp := { g.opp with bench := b₁ ++ b₂, discard := p.cardList ++ g.opp.discard },
@@ -1014,7 +1104,7 @@ inductive Move : GameState → GameState → Prop where
         winner := if g.cur.prizesOut p.top.prizeCount then some g.curIsFirst else g.winner }
   /-- Knock Out one of the player's own Benched Pokémon; the opponent takes its Prize cards -/
   | knockOutBenchOwn {g : GameState} {p : InPlay} {b₁ b₂ : List InPlay} {c : Card}
-      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : p.top.hp ≤ p.damage)
+      {ps : List Card} (hb : g.cur.bench = b₁ ++ p :: b₂) (hk : g.hpOf .own .bench p ≤ p.damage)
       (hp : g.opp.prizes = c :: ps) :
       Move g { g with
         cur := { g.cur with bench := b₁ ++ b₂, discard := p.cardList ++ g.cur.discard },

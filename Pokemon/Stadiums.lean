@@ -65,8 +65,9 @@ def S (b : Nat) : GameState :=
     some (true, gym), false, false⟩
 
 theorem settled_mon {g : GameState} (hc : g.cur.active = some mon) (ho : g.opp.active = some mon)
-    (h1 : g.cur.bench = []) (h2 : g.opp.bench = []) : Settled g :=
-  Abilities.settled_two hc ho (show 0 < 10 by decide) (show 0 < 10 by decide) h1 h2
+    (h1 : g.cur.bench = []) (h2 : g.opp.bench = [])
+    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl) : Settled g :=
+  Abilities.settled_two hc ho (show 0 < 10 by decide) (show 0 < 10 by decide) h1 h2 hpl
 
 /-- **One round**: the first player uses the Stadium and ends the turn, the second player draws,
 uses the Stadium and ends the turn, the first player draws: both rest-of-game bonuses are one
@@ -116,7 +117,7 @@ theorem S_not_stadiumSafe : ¬ (S 0).StadiumSafe := by
 /-- The rest-of-game bonus of the player to move. -/
 def bon (g : GameState) : Nat := g.cur.mods.always.bonus
 
-theorem bon_xclamp (g : GameState) : bon g.xclamp = bon g := rfl
+theorem bon_xclamp (g : GameState) : bon (g.xclamp K) = bon g := rfl
 
 /-- **A Stadium whose effect writes a rest-of-game bonus breaks the store bound** (milestone M5).
 There is a well-formed start satisfying clauses 1 to 4 of `Faithful` and violating clause 5
@@ -128,7 +129,7 @@ effects, is needed for `Faithful.reach_boundedStores` and the finiteness half of
 theorem stadium_writer_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧
       g₀.AbilitySafe ∧ ¬ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
-      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L := by
+      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨S 0, S_wellFormed, by unfold GameState.LoopFree; rw [S_allCards]; decide, S_gxOnly,
     by unfold GameState.RecycleSafe; rw [S_allCards]; decide,
     by unfold GameState.AbilitySafe; rw [S_allCards]; decide, S_not_stadiumSafe, fun B => ?_, ?_⟩
@@ -139,7 +140,7 @@ theorem stadium_writer_breaks_bound :
   · intro ⟨L, hL⟩
     let n := (L.map bon).sum + 1
     have hm := hL _ (reach_S n)
-    have : bon (S n).xclamp ≤ (L.map bon).sum := Infinite.le_sum (List.mem_map_of_mem hm)
+    have : bon ((S n).xclamp K) ≤ (L.map bon).sum := Infinite.le_sum (List.mem_map_of_mem hm)
     rw [bon_xclamp] at this
     simp only [bon, S, spl, ab, n] at this
     omega
@@ -200,8 +201,13 @@ def W (a b : PlayerState) (cf bt : Bool) (st : Option (Bool × Card)) (sp su : B
 
 theorem W_settled (a b : PlayerState) (cf bt : Bool) (st : Option (Bool × Card)) (sp su : Bool)
     (ha : a.active = some mon) (hb : b.active = some mon) (ha' : a.bench = [])
-    (hb' : b.bench = []) : Settled (W a b cf bt st sp su) :=
-  settled_mon ha hb ha' hb'
+    (hb' : b.bench = []) (hst : stadiumStatics st = [] := by rfl) :
+    Settled (W a b cf bt st sp su) :=
+  settled_mon ha hb ha' hb' (GameState.Plain.intro
+    (fun p hp => by simp only [W] at hp; rw [ha] at hp; cases hp; rfl)
+    (fun p hp => by simp only [W] at hp; rw [ha'] at hp; cases hp)
+    (fun p hp => by simp only [W] at hp; rw [hb] at hp; cases hp; rfl)
+    (fun p hp => by simp only [W] at hp; rw [hb'] at hp; cases hp) hst)
 
 /-- The first player holds Levincia, and each player has Basic Lightning Energy in the discard
 pile; the second player holds Academy at Night. -/
@@ -271,12 +277,12 @@ theorem levincia_refused : ∀ g', Move W2 g' → g'.curIsFirst = true →
       simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
   | knockOut ha hk =>
       simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
-      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+      exact absurd hk (by decide)
   | promote ha => simp [W2, W, wpl] at ha
   | noPokemon ha => simp [W2, W, wpl] at ha
   | knockOutOwn ha hk =>
       simp only [W2, W, wpl, Option.some.injEq] at ha; subst ha
-      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+      exact absurd hk (by decide)
   | promoteOwn ha => simp [W2, W, wpl] at ha
   | noPokemonOwn ha => simp [W2, W, wpl] at ha
   | knockOutBench hb => simp [W2, W, wpl] at hb
@@ -341,7 +347,7 @@ theorem same_name_refused : ∀ g', Move (X levincia) g' → g'.curIsFirst = tru
   | stadium hh _ hn =>
       have hm := mem_of_eq hh
       simp only [X, W, wpl, levincia, List.mem_singleton, Card.trainer.injEq] at hm
-      obtain ⟨rfl, -, rfl⟩ := hm
+      obtain ⟨rfl, -, rfl, rfl⟩ := hm
       exact absurd hn (by decide)
   | tool hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
   | toolBench hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
@@ -363,12 +369,12 @@ theorem same_name_refused : ∀ g', Move (X levincia) g' → g'.curIsFirst = tru
       simp [InPlay.attacks, Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hm
   | knockOut ha hk =>
       simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
-      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+      exact absurd hk (by decide)
   | promote ha => simp [X, W, wpl] at ha
   | noPokemon ha => simp [X, W, wpl] at ha
   | knockOutOwn ha hk =>
       simp only [X, W, wpl, Option.some.injEq] at ha; subst ha
-      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+      exact absurd hk (by decide)
   | promoteOwn ha => simp [X, W, wpl] at ha
   | noPokemonOwn ha => simp [X, W, wpl] at ha
   | knockOutBench hb => simp [X, W, wpl] at hb

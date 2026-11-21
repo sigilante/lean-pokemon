@@ -195,18 +195,20 @@ theorem counter_not_gxOnly (M : Machine) (a b : Nat) (h : M.instr 0 ≠ .halt) :
   | halt => exact h rfl
 
 /-- The exact-store clamp is idempotent. -/
-theorem InPlay.clampWith_hp_idem (p : InPlay) :
-    (p.clampWith .hp).clampWith .hp = p.clampWith .hp := by
+theorem InPlay.clampWith_hp_idem (K : Nat) (p : InPlay) :
+    (p.clampWith K .hp).clampWith K .hp = p.clampWith K .hp := by
   simp only [InPlay.clampWith, Cap.dmg, Nat.min_assoc, Nat.min_self]
 
-theorem xclamp_idem (g : GameState) : g.xclamp.xclamp = g.xclamp := by
-  have hf : InPlay.clampWith .hp ∘ InPlay.clampWith .hp = InPlay.clampWith .hp :=
-    funext InPlay.clampWith_hp_idem
+theorem xclamp_idem (K : Nat) (g : GameState) : (g.xclamp K).xclamp K = g.xclamp K := by
+  have hf : InPlay.clampWith K .hp ∘ InPlay.clampWith K .hp = InPlay.clampWith K .hp :=
+    funext (InPlay.clampWith_hp_idem K)
   simp only [GameState.xclamp, GameState.xclampAt, Option.map_map, List.map_map, hf]
 
-/-- States with the same `xclamp` encode the same configuration. -/
-theorem Encodes.inj_xclamp {M : Machine} {c c' : Config} {g g' : GameState} (h : Encodes M c g)
-    (h' : Encodes M c' g') (hx : g.xclamp = g'.xclamp) : c = c' := by
+/-- States with the same `xclamp` encode the same configuration, when the clamp's bound is at
+least the Clock's HP (milestone M6 added `hK`: the clamp caps at its bound, not at the HP). -/
+theorem Encodes.inj_xclamp {M : Machine} {c c' : Config} {g g' : GameState} {K : Nat}
+    (h : Encodes M c g) (h' : Encodes M c' g') (hx : g.xclamp K = g'.xclamp K)
+    (hK : (clock M).hp ≤ K) : c = c' := by
   obtain ⟨s, rfl, hg, -, -, hs, -⟩ := h
   obtain ⟨s', rfl, hg', -, -, hs', -⟩ := h'
   obtain ⟨p, hp, ht, -, -, -, hd, -⟩ := hs.cur.active
@@ -214,8 +216,8 @@ theorem Encodes.inj_xclamp {M : Machine} {c c' : Config} {g g' : GameState} (h :
   have e := congrArg (fun g => g.cur.active) hx
   simp only [GameState.xclamp, GameState.xclampAt, hp, hp', Option.map_some,
     Option.some.injEq] at e
-  have ed : min p.damage p.top.hp = min p'.damage p'.top.hp := congrArg InPlay.damage e
-  rw [ht, ht', hd, hd'] at ed
+  have ed : min p.damage K = min p'.damage K := congrArg InPlay.damage e
+  rw [hd, hd'] at ed
   have hA := hg.hpA false true
   have hA' := hg'.hpA false true
   obtain ⟨m₁, m₂⟩ := GameState.mods_of_xclamp hx
@@ -223,7 +225,7 @@ theorem Encodes.inj_xclamp {M : Machine} {c c' : Config} {g g' : GameState} (h :
   have e2 := storeOf_inj (hs.opp.mods.symm.trans (m₂.trans hs'.opp.mods))
   obtain ⟨hq, hrA, -⟩ := hg
   obtain ⟨hq', hrA', -⟩ := hg'
-  simp only [pkA, pkB] at ed hA hA' e1 e2
+  simp only [pkA, pkB] at ed hA hA' e1 e2 hK
   have hW : W M = 2 * V M := rfl
   simp only [Abs.cfg, Config.mk.injEq]
   refine ⟨?_, ?_, ?_⟩ <;> omega
@@ -234,11 +236,20 @@ clause 2, the `xclamp`s of the reachable states lie in no finite list. Like
 `Counter.not_finite_up_to`, this is about how states are represented (`countUp` never reads its
 counter); the behavioural statement is `Counter.universal`. -/
 theorem xclamp_not_finite :
-    ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g → g.xclamp ∈ L := by
+    ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g →
+      g.xclamp (Enum.bound (start countUp 0 0).allCards) ∈ L := by
   intro ⟨L, hL⟩
-  refine not_finite_up_to (fun g h => g.xclamp = h.xclamp) ⟨fun _ => rfl, Eq.symm, Eq.trans⟩
-    (fun c c' g g' h h' e => Encodes.inj_xclamp h h' e) ⟨L, fun g h => ⟨g.xclamp, hL g h, ?_⟩⟩
-  exact (xclamp_idem g).symm
+  have hK : (clock countUp).hp ≤ Enum.bound (start countUp 0 0).allCards := by
+    have hm : Card.pokemon (clock countUp) ∈ (start countUp 0 0).allCards := by
+      simp [start, GameState.allCards, PlayerState.allCards, optCardList, InPlay.cardList, onPlay]
+    have := hp_le_maxHp hm
+    simp only [Enum.bound, hpBound]
+    omega
+  refine not_finite_up_to (fun g h => g.xclamp (Enum.bound (start countUp 0 0).allCards) =
+      h.xclamp (Enum.bound (start countUp 0 0).allCards)) ⟨fun _ => rfl, Eq.symm, Eq.trans⟩
+    (fun c c' g g' h h' e => Encodes.inj_xclamp h h' e hK)
+    ⟨L, fun g h => ⟨g.xclamp (Enum.bound (start countUp 0 0).allCards), hL g h, ?_⟩⟩
+  exact (xclamp_idem _ g).symm
 
 /-- **The dichotomy** (a sharpness result for clause 2, `GXOnly`, not a partition of decks).
 Items 2 and 3 show that clause 2 cannot be dropped from item 1. They concern the two-counter
@@ -267,15 +278,16 @@ With Minsky's theorem (prose, not formalised), item 2 makes reachability of the 
 undecidable over the family of two-counter starts, each of which violates clause 2 only. -/
 theorem dichotomy :
     (∀ g₀ : GameState, WellFormed g₀ → g₀.Faithful →
-      (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧
-      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
-        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
-        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp)) ∧
+      (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧
+      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →
+        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp (Enum.bound g₀.allCards) = g₂'.xclamp (Enum.bound g₀.allCards)) ∧
+        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp (Enum.bound g₀.allCards) = g₁'.xclamp (Enum.bound g₀.allCards))) ∧
     (∀ (M : Machine) (a b : Nat), M.instr 0 ≠ .halt →
       WellFormed (start M a b) ∧ (start M a b).LoopFree ∧ (start M a b).RecycleSafe ∧
         (start M a b).AbilitySafe ∧ (start M a b).StadiumSafe ∧ ¬ (start M a b).GXOnly ∧
       ((∃ g, Reach (start M a b) g ∧ HaltMarked g) ↔ M.Halts (Machine.init a b))) ∧
-    ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g → g.xclamp ∈ L :=
+    ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g →
+      g.xclamp (Enum.bound (start countUp 0 0).allCards) ∈ L :=
   ⟨fun _ _ hF => xfinite hF,
     fun M a b h => ⟨start_wellFormed M a b, counter_loopFree M a b, counter_recycleSafe M a b,
       counter_abilitySafe M a b, counter_stadiumSafe M a b, counter_not_gxOnly M a b h,

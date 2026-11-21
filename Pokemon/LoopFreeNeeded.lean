@@ -75,7 +75,7 @@ theorem S0_not_loopFree : ¬ S0.LoopFree := by
 /-- The this-turn bonus of the player to move. -/
 def bon (g : GameState) : Nat := g.cur.mods.now.bonus
 
-theorem bon_xclamp (g : GameState) : bon g.xclamp = bon g := rfl
+theorem bon_xclamp (g : GameState) : bon (g.xclamp K) = bon g := rfl
 
 /-- **A damage bonus written under `iter` breaks the store bound.** There is a well-formed start
 satisfying clauses 2 to 5 of `Faithful` and violating clause 1 (`LoopFree`), whose reachable
@@ -87,7 +87,7 @@ representation, not play: no Pokémon of the deck has an attack, so nothing read
 theorem iter_writer_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ ¬ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧
       g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
-      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L := by
+      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨S0, S0_wellFormed, S0_not_loopFree,
     GameState.GXOnly.of_noAttacks (by rw [S0_allCards]; decide),
     by unfold GameState.RecycleSafe; rw [S0_allCards]; decide,
@@ -100,7 +100,7 @@ theorem iter_writer_breaks_bound :
   · intro ⟨L, hL⟩
     let n := (L.map bon).sum + 1
     have hm := hL _ (reach_T n)
-    have : bon (T n).xclamp ≤ (L.map bon).sum := Infinite.le_sum (List.mem_map_of_mem hm)
+    have : bon ((T n).xclamp K) ≤ (L.map bon).sum := Infinite.le_sum (List.mem_map_of_mem hm)
     rw [bon_xclamp] at this
     simp only [bon, T, pl, nowB, n] at this
     omega

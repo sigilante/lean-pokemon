@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 8 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.4.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.5.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -234,6 +234,11 @@ def svp_148 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Paradise Resort (svp-150). Records: svp-150. -/
+def svp_150 : Card := .trainer "Paradise Resort" .stadium
+    .skip [
+      { sel := .all, filt := .named "Psyduck", tgt := none, src := none, need := none, eff := .retreatMinus 1 }]
+
 /-- Gouging Fire (svp-151). Records: svp-151, sv8-38. -/
 def svp_151 : Card := .pokemon
   { name := "Gouging Fire", stage := .basic, evolvesFrom := none,
@@ -352,6 +357,20 @@ def sv5_7 : Card := .pokemon
         gx := false },
       { name := "Knuckle Impact", cost := [.grass, .colorless], damage := 12,
         effect := .linger .own .after (.lock .attack),
+        gx := false }] }
+
+/-- Turtwig (sv5-10). Records: sv5-10. Caveats: staticBench. -/
+def sv5_10 : Card := .pokemon
+  { name := "Turtwig", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .grass, retreat := 3, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Solid Shell", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 2 .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Leafage", cost := [.grass, .colorless, .colorless], damage := 3,
+        effect := .skip,
         gx := false }] }
 
 /-- Grotle (sv5-11). Records: sv5-11, sv5-164. Caveats: perPokemon. -/
@@ -1240,9 +1259,30 @@ def sv5_134 : Card := .pokemon
 def sv5_144 : Card := .trainer "Buddy-Buddy Poffin" .item
     (.seq (.seq (.putBench .own .deck (.and .basic (.hpLe 7))) (.putBench .own .deck (.and .basic (.hpLe 7)))) .shuffle)
 
+/-- Full Metal Lab (sv5-148). Records: sv5-148. Caveats: staticBench. -/
+def sv5_148 : Card := .trainer "Full Metal Lab" .stadium
+    .skip [
+      { sel := .all, filt := .ptype .metal, tgt := none, src := none, need := none, eff := .reduce 3 .any }]
+
+/-- Hero's Cape (sv5-152). Records: sv5-152. Caveats: aceSpec. -/
+def sv5_152 : Card := .tool "Hero's Cape"
+  { holder := .pokemon,
+    attacks := [],
+    abilities := [],
+    statics := [
+      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .hpPlus (.const 10) }] }
+
 /-- Master Ball (sv5-153). Records: sv5-153. Caveats: aceSpec. -/
 def sv5_153 : Card := .trainer "Master Ball" .item
     (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle)
+
+/-- Maximum Belt (sv5-154). Records: sv5-154, sv8pt5-117. Caveats: aceSpec. -/
+def sv5_154 : Card := .tool "Maximum Belt"
+  { holder := .pokemon,
+    attacks := [],
+    abilities := [],
+    statics := [
+      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
 
 /-- Tangela (sv6-1). Records: sv6-1. -/
 def sv6_1 : Card := .pokemon
@@ -1256,6 +1296,20 @@ def sv6_1 : Card := .pokemon
         gx := false },
       { name := "Vine Slap", cost := [.grass, .colorless], damage := 3,
         effect := .skip,
+        gx := false }] }
+
+/-- Tangrowth (sv6-2). Records: sv6-2. Caveats: staticBench. -/
+def sv6_2 : Card := .pokemon
+  { name := "Tangrowth", stage := .stage1, evolvesFrom := some "Tangela",
+    hp := 15, type := .grass, retreat := 4, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Thicket Body", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 3 .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Loom Over", cost := [.grass, .colorless, .colorless], damage := 0,
+        effect := .damage (.sub (.const 15) (.per .own 1)),
         gx := false }] }
 
 /-- Spinarak (sv6-4). Records: sv6-4. -/
@@ -1745,84 +1799,6 @@ def sv6_71 : Card := .pokemon
         effect := .selfDamage 2,
         gx := false }] }
 
-/-- Morpeko (sv6-72). Records: sv6-72. -/
-def sv6_72 : Card := .pokemon
-  { name := "Morpeko", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Snack Seek", use := .once,
-        spot := none, cond := none,
-        effect := .fx (.choice (.move .own (.top 1) .discard .any .all) .skip) }],
-    attacks := [
-      { name := "Pick and Stick", cost := [.lightning], damage := 0,
-        effect := .seq (.choice (.attach .own .discard .energy .active .any) (.attach .own .discard .energy .bench .any)) (.choice (.attach .own .discard .energy .active .any) (.attach .own .discard .energy .bench .any)),
-        gx := false }] }
-
-/-- Tadbulb (sv6-73). Records: sv6-73. -/
-def sv6_73 : Card := .pokemon
-  { name := "Tadbulb", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tackle", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Electro Ball", cost := [.lightning, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Bellibolt (sv6-74). Records: sv6-74. -/
-def sv6_74 : Card := .pokemon
-  { name := "Bellibolt", stage := .stage1, evolvesFrom := some "Tadbulb",
-    hp := 14, type := .lightning, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Thunder Shock", cost := [.lightning, .colorless], damage := 5,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false },
-      { name := "Electric Ball", cost := [.lightning, .lightning, .colorless], damage := 13,
-        effect := .skip,
-        gx := false }] }
-
-/-- Wattrel (sv6-75). Records: sv6-75, sv6-178. -/
-def sv6_75 : Card := .pokemon
-  { name := "Wattrel", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .lightning, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Thunder Shock", cost := [.lightning], damage := 1,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false }] }
-
-/-- Kilowattrel (sv6-76). Records: sv6-76. Caveats: perPokemon. -/
-def sv6_76 : Card := .pokemon
-  { name := "Kilowattrel", stage := .stage1, evolvesFrom := some "Wattrel",
-    hp := 12, type := .lightning, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Wind Power Charge", cost := [.colorless], damage := 1,
-        effect := .linger .own .after (.bonus 12),
-        gx := false },
-      { name := "Strong Volt", cost := [.lightning, .colorless], damage := 10,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Clefairy (sv6-78). Records: sv6-78, me2pt5-74. -/
-def sv6_78 : Card := .pokemon
-  { name := "Clefairy", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .psychic, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Moon Kick", cost := [.colorless, .colorless], damage := 4,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1850,6 +1826,7 @@ def cards : List Card := [
   svp_123,
   svp_131,
   svp_148,
+  svp_150,
   svp_151,
   svp_155,
   svp_157,
@@ -1859,6 +1836,7 @@ def cards : List Card := [
   sv5_4,
   sv5_6,
   sv5_7,
+  sv5_10,
   sv5_11,
   sv5_14,
   sv5_16,
@@ -1929,8 +1907,12 @@ def cards : List Card := [
   sv5_132,
   sv5_134,
   sv5_144,
+  sv5_148,
+  sv5_152,
   sv5_153,
+  sv5_154,
   sv6_1,
+  sv6_2,
   sv6_4,
   sv6_6,
   sv6_7,
@@ -1968,13 +1950,7 @@ def cards : List Card := [
   sv6_67,
   sv6_69,
   sv6_70,
-  sv6_71,
-  sv6_72,
-  sv6_73,
-  sv6_74,
-  sv6_75,
-  sv6_76,
-  sv6_78]
+  sv6_71]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1985,5 +1961,32 @@ theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kern
 
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
 theorem cards_nodup : nodupFp cards = true := by decide +kernel
+
+/-- The cards of this part with a static HP effect (milestone M6), by name. -/
+theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape"] := by decide +kernel
+
+/-- The cards of this part with a static damage bonus effect (milestone M6), by name. -/
+theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Maximum Belt"] := by decide +kernel
+
+/-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig", "Full Metal Lab", "Tangrowth"] := by decide +kernel
+
+/-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
+theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Paradise Resort"] := by decide +kernel
+
+/-- Every printed HP in this part is at most 38 counters (the largest over the imported pool). -/
+theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ 38)) = true := by decide +kernel
+
+/-- The HP units of every card's static effects in this part (`Card.hpGain`) are at most 10 counters
+(the largest over the imported pool). -/
+theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ 10)) = true := by decide +kernel
+
+/-- The static damage reduction units of every card in this part (`Card.reduceGain`) are at most 5
+counters (the largest over the imported pool). -/
+theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
+
+/-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
+name. -/
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle", "Trevenant", "Torkoal"] := by decide +kernel
 
 end PokemonCards.Standard.Part01

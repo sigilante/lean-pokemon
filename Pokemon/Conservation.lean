@@ -110,7 +110,7 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
 
 /-- Moving a damage counter moves no card (milestone M8a). -/
 theorem CMove.cardLists {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
-    (h : CMove f noKO a b a' b') :
+    (h : CMove f noKO hp a b a' b') :
     optCardList a' = optCardList a ∧ benchCardList b' = benchCardList b := by
   cases h with
   | ab => exact ⟨rfl, by simp only [benchCardList_append, benchCardList, InPlay.cardList,
@@ -286,7 +286,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | supporter hh hs hbt hst hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
-  | @stadium l₁ l₂ n e hh =>
+  | @stadium l₁ l₂ n e ss hh =>
       refine ListPerm.perm_of_count fun x => ?_
       have := count_stadiumTo g.curIsFirst g.stadium x
       simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,

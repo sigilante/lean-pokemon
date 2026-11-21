@@ -4,16 +4,18 @@ import Pokemon.Sim
 # Finiteness
 
 `Reach.finite`, the headline: from any start state (well-formed or not) that is `Fit` at
-`k = bound g₀.allCards` (tame cards: no damage reduction, no `drain`; no reduction in effect),
+`k = bound g₀.allCards` (tame cards: no stored damage reduction, no `drain`; no reduction stored;
+static damage reductions are allowed, and `bound` accounts for them),
 the clamps `clamp k` of all reachable states lie in one finite list, and the kernel of the clamp
-is a bisimulation for moves along reachable states. `bound C` is larger than every printed HP,
-every printed Resistance and every test constant in the cards `C`; the clamp caps damage and
-Poison strength on every Pokémon in play (Active and, since milestone M3, Benched) at HP and every
+is a bisimulation for moves along reachable states. `bound C` is larger than every HP a Pokémon
+made of the cards `C` can have (`hpBound`, milestone M6), every printed Resistance plus the static
+damage reduction bound (`sReduceBound`, milestone M6) and every test constant in the cards `C`; the clamp caps damage and Poison strength on every Pokémon in play
+(Active and, since milestone M3, Benched) at `bound C` (milestone M6: before it, at HP) and every
 damage bonus and reduction at
 `2 * bound` (twice, because Resistance is subtracted after the bonus). So for tame decks the
 clamped game is a finite transition system that answers every question about legal play that
-does not read the damage or Poison strength above HP on any Pokémon in play (Active or Benched),
-or a damage bonus above `2 * bound`.
+does not read the damage or Poison strength above `bound` on any Pokémon in play (Active or
+Benched), or a damage bonus or reduction above `2 * bound`.
 
 `Reach.clamp_mem` is the list-membership half alone, from any start with no tameness
 hypothesis. On its own it says nothing about play: for every cap `k ≥ 3` there is a deck with
@@ -31,7 +33,7 @@ an attack's effect these reads see damage above HP, so the HP clamp is not a sim
 `Run` (`Reads.run_clamp_not_sim`); but no move other than a Knock Out starts from a state with
 a Pokémon at or above its HP (`Settled`), and from such a state equal clamps mean equal damage.
 Inside a Trainer effect every step starts `Settled`, so the clamp simulates it step by step
-(`TRun.clamp_sim`). The cap on damage stays at HP; the cap on the damage bonus must exceed the
+(`TRun.clamp_sim`). The cap on damage is `bound`, at least every derived HP; the cap on the damage bonus must exceed the
 cards' test constants, since a bonus is read through the damage it adds inside an attack
 (`Run.cap_sim`).
 
@@ -146,9 +148,12 @@ theorem mem_cardLists {C l : List Card} (h : Within C l) : l ∈ cardLists C :=
   mem_listsUpTo h.1 h.2
 
 /-- The bound used for damage and Poison strength (and, doubled, for damage bonuses and
-reductions, `GameState.clamp`): larger than every printed HP, every printed Resistance and every
-test constant in the cards of `C`. -/
-def bound (C : List Card) : Nat := maxHp C + maxResist C + cardsTmax C + 1
+reductions, `GameState.clamp`): larger than every HP a Pokémon made of the cards of `C` can have
+(`hpBound`: since milestone M6 HP is derived, and can exceed the printed HP; before it this term
+was the largest printed HP, `maxHp C`, which `hpBound C` is for cards with no static effect), than
+every printed Resistance plus every static damage reduction in force (`sReduceBound`, milestone M6;
+0 for cards with no static effect), and than every test constant in the cards of `C`. -/
+def bound (C : List Card) : Nat := hpBound C + maxResist C + sReduceBound C + cardsTmax C + 1
 
 /-- Every value of one turn's modifiers with amounts at most `M`. -/
 def modss (M : Nat) : List Mods :=
@@ -298,7 +303,7 @@ end Enum
 open Enum
 
 theorem optCardList_clamp (c : Cap) (o : Option InPlay) :
-    optCardList (o.map (InPlay.clampWith c)) = optCardList o := by
+    optCardList (o.map (InPlay.clampWith K c)) = optCardList o := by
   cases o <;> rfl
 
 theorem GameState.allCards_clamp (k : Nat) (g : GameState) : (g.clamp k).allCards = g.allCards := by
@@ -306,32 +311,27 @@ theorem GameState.allCards_clamp (k : Nat) (g : GameState) : (g.clamp k).allCard
     optCardList_clamp, benchCardList_clamp]
 
 /-- In the clamp of a reachable state, every Pokémon in play has damage and Poison strength at
-most `bound g₀.allCards`: the clamp caps every Pokémon in play, Active or Benched, at its HP.
+most `bound g₀.allCards`: the clamp caps every Pokémon in play, Active or Benched, at its bound
+(since milestone M6, `bound g₀.allCards` itself; before it, at the Pokémon's printed HP).
 (Before milestone M3 the clamp capped only the Active Pokémon, and this used `Reach.wellFormed`:
 Benched Pokémon were below HP with no Poison strength. Benched Pokémon can now be damaged, and
 reach or pass their HP, so the clamp caps them too and well-formedness is not needed here.) -/
-theorem Reach.clamp_bounded {g₀ g : GameState} (h : Reach g₀ g) :
+theorem Reach.clamp_bounded {g₀ g : GameState} (_h : Reach g₀ g) :
     SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).cur ∧
       SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).opp := by
-  have hM : ∀ p, Card.pokemon p ∈ g.allCards → p.hp ≤ maxHp g₀.allCards :=
-    fun p hp => hp_le_maxHp (h.perm.mem_iff.1 hp)
-  have hA : ∀ q : InPlay, Card.pokemon q.top ∈ g.allCards →
-      (q.clampWith .hp).damage ≤ bound g₀.allCards ∧
-        (q.clampWith .hp).poisonUp ≤ bound g₀.allCards := by
-    intro q hq
-    have := hM _ hq
-    simp only [InPlay.clampWith, Cap.dmg, bound]
-    exact ⟨by omega, by omega⟩
+  have hA : ∀ q : InPlay, (q.clampWith (bound g₀.allCards) .hp).damage ≤ bound g₀.allCards ∧
+      (q.clampWith (bound g₀.allCards) .hp).poisonUp ≤ bound g₀.allCards :=
+    fun _ => ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩
   refine ⟨⟨fun p hp => ?_, fun p hp => ?_, storeLe_cap _ _⟩,
     ⟨fun p hp => ?_, fun p hp => ?_, storeLe_cap _ _⟩⟩
-  · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
-    exact hA q (GameState.top_mem_cur_active hq)
-  · obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
-    exact hA q (GameState.top_mem_cur_bench hq)
-  · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
-    exact hA q (GameState.top_mem_opp_active hq)
-  · obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
-    exact hA q (GameState.top_mem_opp_bench hq)
+  · obtain ⟨q, _, rfl⟩ := Option.map_eq_some_iff.1 hp
+    exact hA q
+  · obtain ⟨q, _, rfl⟩ := List.mem_map.1 hp
+    exact hA q
+  · obtain ⟨q, _, rfl⟩ := Option.map_eq_some_iff.1 hp
+    exact hA q
+  · obtain ⟨q, _, rfl⟩ := List.mem_map.1 hp
+    exact hA q
 
 /-- **The clamps of reachable states lie in a finite list.** From any start state (well-formed
 or not),
@@ -349,19 +349,23 @@ theorem Reach.clamp_mem {g₀ : GameState} :
   refine ⟨states g₀.allCards, fun g h => mem_states ?_ h.clamp_bounded⟩
   rw [GameState.allCards_clamp]; exact h.perm
 
-/-- A start state with tame cards (no damage reduction, no `drain`) and no damage reduction in
-effect is `Fit` at `bound`, so `Reach.finite` applies to it. -/
+/-- A start state with tame cards (no stored damage reduction, no `drain`) and no damage reduction
+stored is `Fit` at `bound`, so `Reach.finite` applies to it. Static damage reductions are allowed
+(milestone M6: `bound` includes their bound `sReduceBound`). -/
 theorem GameState.fit_bound {g₀ : GameState} (ht : ∀ x ∈ g₀.allCards, x.tame = true)
     (hn : g₀.NoReduce) : g₀.Fit (bound g₀.allCards) := by
-  refine ⟨by simp only [bound]; omega, fun p hp => ?_, fun x hx => ⟨ht x hx, ?_⟩, hn⟩
-  · have := hp_le_maxHp hp; have := resist_le_maxResist hp; simp only [bound]
-    exact ⟨by omega, by omega⟩
+  refine ⟨by simp only [bound]; omega, ⟨by simp only [bound]; omega, fun p hp => ?_⟩,
+    fun x hx => ⟨ht x hx, ?_⟩, hn, fun p hp => ?_⟩
+  · have := resist_le_maxResist hp; simp only [bound]; omega
   · have := tmax_le_cardsTmax hx; simp only [bound]; omega
+  · have := resist_le_maxResist hp; simp only [bound]; omega
 
 /-- **Finiteness, for tame decks.** Let `g₀` be any start state (well-formed or not) that is
 `Fit` at
-`k = bound g₀.allCards` (every card tame, that is without damage reduction or `drain`; no damage
-reduction in effect; `GameState.fit_bound` gives this). Then
+`k = bound g₀.allCards` (every card tame, that is without stored damage reduction or `drain`; no
+damage reduction stored; `HpLe k` and `ReduceLe k`, which hold at `bound` by its definition;
+`GameState.fit_bound` gives all of this from tameness and no stored reduction alone: static damage
+reductions are allowed). Then
 
 * the clamps `g.clamp k` of all states reachable from `g₀` lie in one finite list `L`; and
 * the kernel of the clamp is a bisimulation along reachable states: if `g₁` is reachable and
@@ -370,8 +374,8 @@ reduction in effect; `GameState.fit_bound` gives this). Then
 
 So the quotient of the reachable states by the clamp is a finite transition system with the same
 moves, and any question about play whose answer depends only on the clamp (every question that
-does not read damage or Poison strength above HP on a Pokémon in play, Active or Benched, or a
-damage bonus above `2 * k`) has the same answer in it. The list is not computed, and the move
+does not read damage or Poison strength above `k` on a Pokémon in play, Active or Benched, or a
+damage bonus or reduction above `2 * k`) has the same answer in it. The list is not computed, and the move
 relation of the quotient is not shown to be computable, so decidability of such questions is not
 formalized. -/
 theorem Reach.finite {g₀ : GameState} (hF : g₀.Fit (bound g₀.allCards)) :

@@ -274,7 +274,7 @@ theorem GameState.slotAmt_linger (g : GameState) (w : Whose) (s s' : Slot) (m : 
 /-- The amount a card's effect can write when it is played: a Trainer card's effect amount;
 nothing for other cards (attacks are counted separately). -/
 def Card.amt : Card → Nat
-  | .trainer _ _ e => e.amt
+  | .trainer _ _ e _ => e.amt
   | _ => 0
 
 def cardsAmt : List Card → Nat
@@ -340,7 +340,7 @@ def Card.loopFree : Card → Bool
   | .pokemon p => (p.attacks.all fun a => a.effect.loopFree) &&
       p.abilities.all fun a => a.scripts.all fun e => e.loopFree
   | .energy _ => true
-  | .trainer _ _ e => e.loopFree
+  | .trainer _ _ e _ => e.loopFree
   | .tool _ gr => (gr.attacks.all fun a => a.effect.loopFree) &&
       gr.abilities.all fun a => a.scripts.all fun e => e.loopFree
 
@@ -894,7 +894,7 @@ entering play (`GameState.abPot`); a Stadium's effect (milestone M5) is used at 
 turn (`GameState.stPot`) and paid per use by `Card.stQ`. (Before milestone M8a this was
 `Card.trainerRec`, the Trainer part; before milestone M5 it included Stadium effects.) -/
 def Card.freeRec : Card → List Filter
-  | .trainer _ k e => if k = .stadium then [] else e.recFilters
+  | .trainer _ k e _ => if k = .stadium then [] else e.recFilters
   | .pokemon p => unlimitedRec p.abilities
   | .tool _ gr => unlimitedRec gr.abilities
   | _ => []
@@ -903,7 +903,7 @@ def Card.freeRec : Card → List Filter
 included. -/
 def Card.allRec : Card → List Filter
   | .pokemon p => attacksRec p.attacks ++ abilitiesRec p.abilities
-  | .trainer _ _ e => e.recFilters
+  | .trainer _ _ e _ => e.recFilters
   | .tool _ gr => attacksRec gr.attacks ++ abilitiesRec gr.abilities
   | _ => []
 
@@ -911,26 +911,26 @@ def Card.allRec : Card → List Filter
 most once per turn by the rules, and (milestone M5) playing a Stadium writes nothing (its effect
 is used by `Move.stadiumUse`, at most twice in a turn, and is counted by `Card.stQ`). -/
 def Card.wAmt : Card → Nat
-  | .trainer _ k e => if k = .item then e.amt else 0
+  | .trainer _ k e _ => if k = .item then e.amt else 0
   | _ => 0
 
 /-- The rest-of-game amount an Item or Supporter card writes when it is played (milestone M5: a
 Stadium writes nothing when played, and its effect writes no rest-of-game amount, clause 5). -/
 def Card.alAmt : Card → Nat
-  | .trainer _ k e => if k = .stadium then 0 else e.amtAt .always
+  | .trainer _ k e _ => if k = .stadium then 0 else e.amtAt .always
   | _ => 0
 
 theorem Card.wAmt_tw : TrainerWeight Card.wAmt := ⟨fun _ => rfl, fun _ => rfl⟩
 theorem Card.alAmt_tw : TrainerWeight Card.alAmt := ⟨fun _ => rfl, fun _ => rfl⟩
 
 theorem Card.wAmt_le : ∀ c : Card, c.wAmt ≤ c.amt
-  | .trainer _ k e => by simp only [Card.wAmt, Card.amt]; split <;> omega
+  | .trainer _ k e _ => by simp only [Card.wAmt, Card.amt]; split <;> omega
   | .pokemon _ => Nat.le_refl _
   | .energy _ => Nat.le_refl _
   | .tool _ _ => Nat.le_refl _
 
 theorem Card.alAmt_le : ∀ c : Card, c.alAmt ≤ c.amt
-  | .trainer _ k e => by
+  | .trainer _ k e _ => by
       simp only [Card.alAmt, Card.amt]; split
       · exact Nat.zero_le _
       · exact e.amtAt_le_amt .always
@@ -1106,7 +1106,7 @@ would grow without limit (`Stadiums.stadium_writer_breaks_bound`). Other writes 
 a Stadium are allowed: its uses are at most two in a turn (`GameState.stPot`), each paid for by
 `Card.stQ`. Decidable; every deck without Stadium cards satisfies it. -/
 def Card.stadiumSafe : Card → Bool
-  | .trainer _ .stadium e => e.amtAt .always == 0
+  | .trainer _ .stadium e _ => e.amtAt .always == 0
   | _ => true
 
 @[inherit_doc Card.stadiumSafe]
@@ -1116,7 +1116,8 @@ instance (g : GameState) : Decidable g.StadiumSafe := by
   unfold GameState.StadiumSafe; infer_instance
 
 theorem GameState.StadiumSafe.get {g : GameState} (h : g.StadiumSafe) {n : String} {e : Effect}
-    (hx : Card.trainer n .stadium e ∈ g.allCards) : e.amtAt .always = 0 :=
+    {ss : List Static}
+    (hx : Card.trainer n .stadium e ss ∈ g.allCards) : e.amtAt .always = 0 :=
   Nat.eq_of_beq_eq_true (h _ hx)
 
 theorem GameState.StadiumSafe.of_perm {g g' : GameState} (h : g.StadiumSafe)
@@ -1127,16 +1128,17 @@ theorem GameState.StadiumSafe.of_perm {g g' : GameState} (h : g.StadiumSafe)
 which the per-game bound of decks that recycle nothing (`reach_boundedStores_noRecycle`) survives
 Stadiums, whose effects are used every turn. Every deck without Stadium cards satisfies it. -/
 def GameState.StadiumQuiet (g : GameState) : Prop :=
-  ∀ (n : String) (e : Effect), Card.trainer n .stadium e ∈ g.allCards → e.amt = 0
+  ∀ (n : String) (e : Effect) (ss : List Static), Card.trainer n .stadium e ss ∈ g.allCards →
+    e.amt = 0
 
 theorem GameState.StadiumQuiet.of_perm {g g' : GameState} (h : g.StadiumQuiet)
     (hp : g'.allCards.Perm g.allCards) : g'.StadiumQuiet :=
-  fun n e hx => h n e (hp.mem_iff.1 hx)
+  fun n e ss hx => h n e ss (hp.mem_iff.1 hx)
 
 /-- What one use of a Stadium's effect can add to the per-turn count (milestone M5): `Effect.q`
 of the effect, what it writes plus `P` if it recycles. 0 for every other card. -/
 def Card.stQ (P : Nat) : Card → Nat
-  | .trainer _ .stadium e => e.q P
+  | .trainer _ .stadium e _ => e.q P
   | _ => 0
 
 /-- The largest `Card.stQ P` among the cards `C` (0 for a deck without Stadium cards). -/
@@ -1406,7 +1408,7 @@ theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
 
 /-- Moving a damage counter keeps the weights and the number of Pokémon in play. -/
 theorem CMove.abPot {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
-    (h : CMove f noKO a b a' b') :
+    (h : CMove f noKO hp a b a' b') :
     abWo a' + abWs b' = abWo a + abWs b ∧ optN a' + b'.length = optN a + b.length := by
   cases h with
   | @ab x q b₁ b₂ =>
@@ -1775,11 +1777,11 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
   | stadium =>
       refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
       simp only [GameState.discAmt, cardsAmt_append]; omega
-  | @stadiumUse g'' o n e hs hu hbt hst hat hr hnd hbh =>
+  | @stadiumUse g'' o n e ss hs hu hbt hst hat hr hnd hbh =>
       have hxC := GameState.mem_allCards_of_stadium hs
       have hlf : e.loopFree = true := hL _ hxC
       have hk' := hr.keeps (hN _ hxC)
-      have h0 := hSQ n e hxC
+      have h0 := hSQ n e ss hxC
       refine hi.keeps ⟨hk'.disc, hk'.attacked, hk'.gxCur, hk'.gxOpp⟩ fun s => ?_
       have h1 := hr.slot_le hlf s; have h2 := e.amtAt_le_amt s
       simp only [GameState.slotAmt] at h1 ⊢; omega
@@ -2039,9 +2041,9 @@ theorem _root_.Pokemon.Move.stPot_le {g g' : GameState} (hm : Move g g')
   cases hm with
   | item _ _ _ hr => exact Nat.le_of_eq (GameState.stPot_congr hr.stFlags.1 hr.stFlags.2)
   | supporter _ _ _ _ hr => exact Nat.le_of_eq (GameState.stPot_congr hr.stFlags.1 hr.stFlags.2)
-  | @stadium l₁ l₂ n e hh hs =>
+  | @stadium l₁ l₂ n e ss hh hs =>
       cases hu : g.stadiumUsed <;> simp [GameState.stPot, hs, hu]
-  | @stadiumUse g' o n e hs hu _ _ _ hr =>
+  | @stadiumUse g' o n e ss hs hu _ _ _ hr =>
       rw [GameState.stPot_congr hr.stFlags.1 hr.stFlags.2]
       simp [GameState.stPot, hu]
   | ability hu _ _ _ _ _ _ _ _ hr =>
@@ -2318,7 +2320,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
       exact ⟨X₀ + e.amt, X₁, X₂, D, E, by omega, hi.x1, hi.x2, hi.e,
         fun _ => Nat.le_trans hp hpg, fun _ => by omega, by omega, by omega, by omega, by omega⟩
-  | @stadiumUse g' o n e hs hu hbt hst hat hr hnd hbh =>
+  | @stadiumUse g' o n e ss hs hu hbt hst hat hr hnd hbh =>
       have hxC := GameState.mem_allCards_of_stadium hs
       have hpay : Q * ({ g with stadiumUsed := true } : GameState).abPot +
           R * ({ g with stadiumUsed := true } : GameState).stPot + R ≤
@@ -2345,6 +2347,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       have hs₁ : g₁.stPot = g.stPot := GameState.stPot_congr hu.stFlags.1 hu.stFlags.2
       cases hab : ab.use with
       | onPlay w => rw [hab] at hk; cases hk
+      | static _ => rw [hab] at hk; cases hk
       | once =>
           have hu0 : x.used = false := hn hab
           have hpu := hu.abPot
@@ -2584,13 +2587,18 @@ So the quotient of the reachable states by `xclamp` is a finite transition syste
 moves. Unlike `Reach.finite`, this allows damage reduction, `drain`, and carried and
 rest-of-game modifiers (the latter only from GX attacks and Item and Supporter cards); unlike
 `Reach.finite`, it forbids amounts under `iter`. The bisimulation half holds for all pairs of
-states with equal `xclamp` (`GameState.xclamp_bisim`). The list is not computed and the quotient's moves are not shown
+states with equal `xclamp` (`GameState.xclamp_bisim`). Since milestone M6 the clamp takes its bound,
+`Enum.bound g₀.allCards`, which bounds every derived HP; before it the clamp capped at the printed HP
+and had no parameter. The list is not computed and the quotient's moves are not shown
 computable. -/
 theorem xfinite {g₀ : GameState} (hF : g₀.Faithful) :
-    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp ∈ L) ∧
-      ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp = g₂.xclamp →
-        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp = g₂'.xclamp) ∧
-        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp) := by
+    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧
+      ∀ g₁ g₂, Reach g₀ g₁ →
+        g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →
+        (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧
+          g₁'.xclamp (Enum.bound g₀.allCards) = g₂'.xclamp (Enum.bound g₀.allCards)) ∧
+        (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧
+          g₂'.xclamp (Enum.bound g₀.allCards) = g₁'.xclamp (Enum.bound g₀.allCards)) := by
   obtain ⟨L, hL⟩ := Reach.xclamp_mem_bounded (storeBound g₀)
   exact ⟨⟨L, fun g h => hL g h (reach_boundedStores hF h)⟩,
     fun _ _ h hc => Reach.xclamp_bisim h hc⟩

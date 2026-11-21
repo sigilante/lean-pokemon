@@ -32,6 +32,9 @@ def lean(x, top=True):
         return 'none'
     if isinstance(x, list):
         return '[' + ', '.join(lean(a) for a in x) + ']'
+    if isinstance(x, dict):
+        # a structure instance (a `Static`, milestone M6), fields in the structure's order
+        return '{ ' + ', '.join(k + ' := ' + lean(v) for k, v in x.items()) + ' }'
     assert isinstance(x, tuple) and x, x
     if x[0] == 'some':
         s = 'some ' + lean(x[1], False)

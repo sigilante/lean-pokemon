@@ -39,9 +39,10 @@ def tpl (hand : List Card) (active : InPlay) (bench : List InPlay) (discard : Li
 def T (a b : PlayerState) : GameState := ⟨a, b, true, false, false, false, none, none, false, false⟩
 
 theorem T_settled {a b : PlayerState} (ha : a.active = some mon) (hb : b.active = some mon)
-    (hab : ∀ p ∈ a.bench, p.damage < p.top.hp) (hbb : b.bench = []) : Settled (T a b) :=
+    (hab : ∀ p ∈ a.bench, p.damage < p.top.hp) (hbb : b.bench = [])
+    (hpl : (T a b).Plain := by exact GameState.plain_of_plainB rfl) : Settled (T a b) :=
   Trainer.settled_of ha hb (show 0 < 10 by decide) (show 0 < 10 by decide) hab
-    (by intro p hp; change p ∈ b.bench at hp; rw [hbb] at hp; cases hp)
+    (by intro p hp; change p ∈ b.bench at hp; rw [hbb] at hp; cases hp) hpl
 
 /-- **A Tool attached to a Benched Pokémon goes to the discard pile with it on a Knock Out**: the
 player attaches `helmet` to the Benched `small` and plays `strike`, which Knocks it Out; the
@@ -78,6 +79,7 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
   | evolveBench hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])
   | retreat ha hb hr he hp =>
       simp only [R, T, tpl, Option.some.injEq] at ha; subst ha
+      rw [(GameState.plain_of_plainB (g := R) rfl).retreatOf rfl] at hp
       have := congrArg List.length he
       simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at this hp
       omega
@@ -119,12 +121,12 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
         Card.grantAttacks, ToolGrant.none] at hm
   | knockOut ha hk =>
       simp only [R, T, wpl, Option.some.injEq] at ha; subst ha
-      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+      exact absurd hk (by decide)
   | promote ha => simp [R, T, wpl] at ha
   | noPokemon ha => simp [R, T, wpl] at ha
   | knockOutOwn ha hk =>
       simp only [R, T, tpl, Option.some.injEq] at ha; subst ha
-      simp [Stadiums.mon, InPlay.ofBasic, Recycle.guard] at hk
+      exact absurd hk (by decide)
   | promoteOwn ha => simp [R, T, tpl] at ha
   | noPokemonOwn ha => simp [R, T, tpl] at ha
   | knockOutBench hb => simp [R, T, wpl] at hb
@@ -132,7 +134,7 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
       simp only [R, T, tpl] at hb
       rcases List.cons_eq_append_iff.1 hb with ⟨rfl, h⟩ | ⟨_, rfl, h⟩
       · simp only [List.cons.injEq] at h; obtain ⟨rfl, -⟩ := h
-        simp [smallAt, InPlay.ofBasic, small] at hk
+        exact absurd hk (by decide)
       · simp at h
   | endTurn => simp [R, T] at hc
   | startTurn hbt => simp [R, T] at hbt
@@ -145,7 +147,7 @@ def hit : Attack := ⟨"Hit", [], 1, .skip, false⟩
 
 /-- A Tool that gives `hit` to a Pokémon named "Small" only (as Core Memory gives its attack to
 Mega Zygarde ex only). -/
-def memory : Card := .tool "Memory" ⟨.named "Small", [hit], []⟩
+def memory : Card := .tool "Memory" ⟨.named "Small", [hit], [], []⟩
 
 /-- The player to move has `small` Active with `memory` attached; the opponent has `mon`. -/
 def G (t : List Card) (top : PokemonCard) : GameState :=
