@@ -1,4 +1,4 @@
-import Pokemon.State
+import Pokemon.Static
 
 /-!
 # Semantics of effects

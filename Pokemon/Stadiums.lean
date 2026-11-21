@@ -341,7 +341,7 @@ theorem same_name_refused : ∀ g', Move (X levincia) g' → g'.curIsFirst = tru
   | stadium hh _ hn =>
       have hm := mem_of_eq hh
       simp only [X, W, wpl, levincia, List.mem_singleton, Card.trainer.injEq] at hm
-      obtain ⟨rfl, -, rfl⟩ := hm
+      obtain ⟨rfl, -, rfl, rfl⟩ := hm
       exact absurd hn (by decide)
   | tool hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
   | toolBench hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])

@@ -858,15 +858,15 @@ inductive Move : GameState → GameState → Prop where
   pending, like an Item; an Item lock does not stop it (a Stadium is not an Item). Playing it
   resolves nothing: its effect is used by `Move.stadiumUse`, and the new Stadium has not been
   used this turn (`stadiumUsed := false`) -/
-  | stadium {g : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
-      (hh : g.cur.hand = l₁ ++ Card.trainer n .stadium e :: l₂)
+  | stadium {g : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect} {ss : List Static}
+      (hh : g.cur.hand = l₁ ++ Card.trainer n .stadium e ss :: l₂)
       (hs : g.stadiumPlayed = false) (hn : g.stadiumNamed n = false)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
       Move g { g with
         cur := { g.cur with
           hand := l₁ ++ l₂, discard := stadiumTo g.curIsFirst g.stadium ++ g.cur.discard },
         opp := { g.opp with discard := stadiumTo (!g.curIsFirst) g.stadium ++ g.opp.discard },
-        stadium := some (g.curIsFirst, Card.trainer n .stadium e),
+        stadium := some (g.curIsFirst, Card.trainer n .stadium e ss),
         stadiumPlayed := true, stadiumUsed := false }
   /-- attach a Pokémon Tool from the hand to the player's Active Pokémon (milestone M5), which must
   have no Tool attached ("Each Pokémon can have only 1 Pokémon Tool attached at a time", rulebook
@@ -897,8 +897,8 @@ inductive Move : GameState → GameState → Prop where
   Knock Out pending, and with no attack damage step. A use spends no allowance of the turn. So at
   most two Stadium effects are used in one turn: the Stadium in play, and the one Stadium the
   player may play after using it -/
-  | stadiumUse {g g' : GameState} {o : Bool} {n : String} {e : Effect}
-      (hs : g.stadium = some (o, Card.trainer n .stadium e)) (hu : g.stadiumUsed = false)
+  | stadiumUse {g g' : GameState} {o : Bool} {n : String} {e : Effect} {ss : List Static}
+      (hs : g.stadium = some (o, Card.trainer n .stadium e ss)) (hu : g.stadiumUsed = false)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :

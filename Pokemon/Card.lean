@@ -703,6 +703,71 @@ theorem Attack.script_switchSafe {atk : Attack} (h : atk.wf = true) :
   · simp only [Effect.switchSafe, Effect.switchesOwn, h.2, Bool.not_false, Bool.true_or,
       Bool.and_self]
 
+/-! ## Static effects (milestone M6)
+
+A static effect is in force exactly while its source is in play: a Pokémon's static Ability
+(while that Pokémon is in play, or only while it is Active or Benched), a Tool's static text (while
+attached, for its holder), a Stadium's static text (while it is in play, for both players). The
+quantities it changes (HP, the damage of an attack, the Retreat Cost) are computed from the state
+when they are read (`Pokemon/Static.lean`); nothing is stored. -/
+
+/-- Which Pokémon in play a static effect applies to, relative to its source: the source Pokémon
+itself (for a Tool: its holder; nothing for a Stadium), every Pokémon in play of the source's owner,
+every Pokémon in play of the owner's opponent, or every Pokémon in play. A Stadium belongs to the
+player who played it (`GameState.stadium`); printed Stadium text says "each player's" or "all",
+which is `all`. -/
+inductive Sel where
+  | self | own | opp | all
+  deriving DecidableEq
+
+/-- The amount of a static change: a printed number (`const`), or `k` for each Energy card passing
+`f` attached to the affected Pokémon (`perEnergy`: Conkeldurr's "+40 HP for each Fighting Energy
+attached to this Pokémon", Galarian Stunfisk V). -/
+inductive SAmt where
+  | const (n : Nat)
+  | perEnergy (f : Filter) (k : Nat)
+  deriving DecidableEq
+
+/-- What a static effect changes, for the Pokémon it applies to (counters, like everything else).
+
+* `hpPlus a`: "+N HP" (Hero's Cape, Lively Stadium, Ludicolo sv9-37's Vibrant Dance);
+* `hpMinus n`: "−N HP" (Gravity Mountain: "Stage 2 Pokémon in play get −30 HP"); HP is the
+  printed HP plus every `hpPlus` less every `hpMinus`, stopping at 0 (`GameState.hpOf`);
+* `bonus n vs`: the attacks of the affected Pokémon do `n` more damage to the opponent's Active
+  Pokémon, if its top card passes `vs` (Maximum Belt: "to your opponent's Active Pokémon ex");
+  added at step 2 of the damage calculation, with the attacker's stored bonus (rulebook 2023
+  p. 20; `GameState.dealt`);
+* `reduce n fr`: the affected Pokémon takes `n` less damage from attacks of Pokémon whose top card
+  passes `fr`; subtracted at step 5, with the defender's stored reduction;
+* `retreatPlus n`, `retreatMinus n`: its Retreat Cost is `n` more or `n` less, stopping at 0
+  (`GameState.retreatOf`; Air Balloon "−2", Gravity Gemstone "+1"). -/
+inductive SEff where
+  | hpPlus (a : SAmt)
+  | hpMinus (n : Nat)
+  | bonus (n : Nat) (vs : Filter)
+  | reduce (n : Nat) (fr : Filter)
+  | retreatPlus (n : Nat)
+  | retreatMinus (n : Nat)
+  deriving DecidableEq
+
+/-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative
+to its source), with conditions on the affected Pokémon (its top card passes `filt`; it is at `tgt`,
+if given; at least `n` Energy cards passing `f` are attached to it, if `need = some (f, n)`) and on
+the source (it is at `src`, if given: "as long as this Pokémon is in the Active Spot"; ignored for a
+Stadium). Several effects in force add up: no stacking rule is modelled ("The effect of Vibrant Dance
+doesn't stack" is not expressible; Known gaps). No condition reads HP, damage or the Retreat Cost:
+an HP amount is a constant or a count of attached Energy, so HP is never defined in terms of HP
+(the circular cases of survey S7 §A, Ditto copying HP and Heavy Boots with Rescue Board, are not
+expressible). -/
+structure Static where
+  sel : Sel
+  filt : Filter
+  tgt : Option Spot
+  src : Option Spot
+  need : Option (Filter × Nat)
+  eff : SEff
+  deriving DecidableEq
+
 /-! ## Abilities (milestone M8a) -/
 
 /-- How an on-play Ability is triggered: "When you play this Pokémon from your hand onto your
@@ -715,12 +780,14 @@ inductive PlayWay where
 /-- The use limit of an Ability (survey S9 part 2, `ability_kind`): "Once during your turn, you
 may …" (`once`: once per turn for each Pokémon in play that has it); "As often as you like during
 your turn, you may …" (`unlimited`); or a trigger on entering play from the hand (`onPlay`; "you
-may", so optional). Static (passive) and other triggered Abilities are milestone M8b and have no
-constructor. -/
+may", so optional); or (milestone M6) static (`static ss`: never used; its static effects `ss` are
+in force while the Pokémon is in play, `Pokemon/Static.lean`). Triggered Abilities other than
+on-play ones have no constructor. -/
 inductive AbilityUse where
   | once
   | unlimited
   | onPlay (w : PlayWay)
+  | static (ss : List Static)
   deriving DecidableEq
 
 /-- An effect on "this Pokémon", the Pokémon whose Ability resolves (milestone M8a): heal `n`
@@ -831,6 +898,13 @@ def AbilityUse.activated : AbilityUse → Bool
   | .once => true
   | .unlimited => true
   | .onPlay _ => false
+  | .static _ => false
+
+/-- The static effects of an Ability (milestone M6): those of a static Ability, none otherwise. -/
+def Ability.statics (ab : Ability) : List Static :=
+  match ab.use with
+  | .static ss => ss
+  | _ => []
 
 /-- Can the Ability be used by a Pokémon at `sp`? -/
 def Ability.spotOk (ab : Ability) (sp : Spot) : Bool :=
@@ -923,18 +997,21 @@ theorem PokemonCard.resistTo_le (d : PokemonCard) (t : EType) : d.resistTo t ≤
 can use ("The Pokémon this card is attached to can use the attack on this card. (You still need
 the necessary Energy to use this attack.)", Technical Machine: Fluorite sv8-188, Mega Rayquaza Cap
 me6-100) and activated Abilities, both only while the Pokémon's top card passes `holder` ("The Mega
-Zygarde ex this card is attached to can use the attack on this card", Core Memory me3-70). Static
-and triggered Tool text (HP, damage and Retreat Cost modifiers, "If the Pokémon this card is
-attached to is Knocked Out…") is not modelled: a Tool with such text is a Tool with an empty grant
+Zygarde ex this card is attached to can use the attack on this card", Core Memory me3-70), and
+(milestone M6) static effects in force while it is attached (`statics`: HP, damage and Retreat Cost
+changes, "The Pokémon this card is attached to gets +100 HP", Hero's Cape), for the same holders;
+`Sel.self` in them means the holder. Triggered Tool text ("If the Pokémon this card is attached to
+is Knocked Out…") is not modelled: a Tool with only such text is a Tool with an empty grant
 (`ToolGrant.none`), which can be attached and does nothing (Known gaps in `Pokemon/Rules.lean`). -/
 structure ToolGrant where
   holder : Filter
   attacks : List Attack
   abilities : List Ability
+  statics : List Static := []
   deriving DecidableEq
 
 /-- The empty grant: a Tool whose effect the model does not express, or that has none. -/
-def ToolGrant.none : ToolGrant := ⟨.any, [], []⟩
+def ToolGrant.none : ToolGrant := ⟨.any, [], [], []⟩
 
 inductive Card where
   | pokemon (p : PokemonCard)
@@ -943,9 +1020,11 @@ inductive Card where
   /-- an Item, Supporter or (milestone M5) Stadium card. For an Item or a Supporter, `effect` is
   what it does when played (`Move.item`, `Move.supporter`); for a Stadium it is what "Once during
   each player's turn, that player may …" lets the player to move do while the Stadium is in play
-  (`Move.stadiumUse`), and `skip` for a Stadium whose text the model does not express (static
-  effects; Known gaps) -/
-  | trainer (name : String) (kind : TrainerKind) (effect : Effect)
+  (`Move.stadiumUse`), and `skip` for a Stadium with no such effect. `statics` (milestone M6) is
+  a Stadium's static text, in force while it is in play (`Pokemon/Static.lean`); an Item or a
+  Supporter is never in play, and its `statics` are never read (`[]`, the default, is what
+  `Move.item` and `Move.supporter` play) -/
+  | trainer (name : String) (kind : TrainerKind) (effect : Effect) (statics : List Static := [])
   /-- a Pokémon Tool card (milestone M5), attached to a Pokémon by `Move.tool` and `Move.toolBench`,
   with what it gives that Pokémon (`ToolGrant`) -/
   | tool (name : String) (grant : ToolGrant)
@@ -973,13 +1052,13 @@ def Filter.eval : Filter → Card → Bool
   | .stage s, .pokemon p => decide (p.stage = s)
   | .ptype t, .pokemon p => decide (p.type = t)
   | .named n, .pokemon p => decide (p.name = n)
-  | .named n, .trainer m _ _ => decide (m = n)
+  | .named n, .trainer m _ _ _ => decide (m = n)
   | .named n, .tool m _ => decide (m = n)
   | .hpLe n, .pokemon p => decide (p.hp ≤ n)
   | .noRuleBox, .pokemon p => decide (p.ruleBox = .none)
-  | .trainer, .trainer _ _ _ => true
+  | .trainer, .trainer _ _ _ _ => true
   | .trainer, .tool _ _ => true
-  | .kind k, .trainer _ k' _ => decide (k' = k)
+  | .kind k, .trainer _ k' _ _ => decide (k' = k)
   | .tool, .tool _ _ => true
   | .energy, .energy _ => true
   | .energyOf t, .energy e => decide (e.type = t)
@@ -1021,19 +1100,21 @@ theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
   | _ => nomatch h
 
 /-- **A Stadium or Tool that the model plays with no effect** (milestone M5): a Stadium whose
-effect is `skip`, or a Tool that gives nothing. Such a card occupies the Stadium slot or a
-Pokémon's Tool place and does nothing. An importer writes these terms for Stadiums and Tools whose
-printed text is static or triggered (not in the model), so `Card.inert` tells "playable, effect not
-modelled" (an under-model of the printed card) from "playable, effect expressed" (a Stadium with an
-activated effect, a Tool that gives an attack or an Ability). -/
+effect is `skip` and that has no static effect, or a Tool that gives nothing (no attack, no
+Ability, no static effect). Such a card occupies the Stadium slot or a Pokémon's Tool place and
+does nothing. An importer writes these terms for Stadiums and Tools whose printed text the model
+does not express (triggered text, and static text outside the language of `Static`), so
+`Card.inert` tells "playable, effect not modelled" (an under-model of the printed card) from
+"playable, effect expressed" (a Stadium with an activated or, since milestone M6, a static effect;
+a Tool that gives an attack, an Ability or a static effect). -/
 def Card.inert : Card → Bool
-  | .trainer _ .stadium e => e == .skip
-  | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty
+  | .trainer _ .stadium e ss => e == .skip && ss.isEmpty
+  | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty && gr.statics.isEmpty
   | _ => false
 
 /-- Is the card a Stadium? (milestone M5) -/
 def Card.isStadium : Card → Bool
-  | .trainer _ .stadium _ => true
+  | .trainer _ .stadium _ _ => true
   | _ => false
 
 /-- Is the card a Pokémon Tool? (milestone M5) -/
@@ -1105,7 +1186,7 @@ def abilitiesTame : List Ability → Bool
 def Card.tmax : Card → Nat
   | .pokemon p => max (attacksTmax p.attacks) (abilitiesTmax p.abilities)
   | .energy _ => 0
-  | .trainer _ _ e => e.tmax
+  | .trainer _ _ e _ => e.tmax
   | .tool _ gr => max (attacksTmax gr.attacks) (abilitiesTmax gr.abilities)
 
 /-- The script of an attack is tame when its effect is: the base damage adds no reduction and
@@ -1126,7 +1207,7 @@ theorem Attack.script_tmax (atk : Attack) : atk.script.tmax = atk.effect.tmax :=
 def Card.tame : Card → Bool
   | .pokemon p => attacksTame p.attacks && abilitiesTame p.abilities
   | .energy _ => true
-  | .trainer _ _ e => e.tame
+  | .trainer _ _ e _ => e.tame
   | .tool _ gr => attacksTame gr.attacks && abilitiesTame gr.abilities
 
 end Pokemon

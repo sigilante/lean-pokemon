@@ -2,6 +2,7 @@ import Pokemon.AuditCmd
 import Pokemon.Card
 import Pokemon.ListPerm
 import Pokemon.State
+import Pokemon.Static
 import Pokemon.Effect
 import Pokemon.Rules
 import Pokemon.Zone

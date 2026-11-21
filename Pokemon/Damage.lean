@@ -957,21 +957,6 @@ theorem Resolve.clamp_sim {k : Nat} {g₁ g₁' : GameState} (h : Resolve g₁ g
 
 /-! ## Bounds from the cards -/
 
-/-- The largest printed HP among the Pokémon cards in a list (0 if there are none). -/
-def maxHp : List Card → Nat
-  | [] => 0
-  | .pokemon p :: cs => max p.hp (maxHp cs)
-  | _ :: cs => maxHp cs
-
-theorem hp_le_maxHp {p : PokemonCard} : ∀ {cs : List Card}, Card.pokemon p ∈ cs → p.hp ≤ maxHp cs
-  | [], h => nomatch h
-  | c :: cs, h => by
-      cases h with
-      | head => simp only [maxHp]; omega
-      | tail _ h =>
-          have := hp_le_maxHp h
-          cases c <;> simp only [maxHp] <;> omega
-
 /-- The largest Resistance printed on a Pokémon card of a list. -/
 def maxResist : List Card → Nat
   | [] => 0

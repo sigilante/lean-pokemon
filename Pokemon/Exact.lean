@@ -968,12 +968,12 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (ab.script_tmax_le _) hb)
         (hF.1.of_perm hp.perm) hcm (.inl hst₁)
       exact ⟨g₂', .onPlay hp' (hxt ▸ hm) hk hw hst₂ hcd' hr' hnd hbh, hc'⟩
-  | @stadium l₁ l₂ n e hh hs hn hbt hst hat =>
+  | @stadium l₁ l₂ n e ss hh hs hn hbt hst hat =>
       have hs' := hs₂ hst
       subst hg
       exact ⟨_, .stadium hh hs hn hbt hs' hat, by
         simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂]⟩
-  | @stadiumUse g' o n e hs hu hbt hst hat hr hnd hbh =>
+  | @stadiumUse g' o n e ss hs hu hbt hst hat hr hnd hbh =>
       have hs' := hs₂ hst
       have hb := hF.2 _ (GameState.mem_allCards_of_stadium hs)
       obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim hb hF.1

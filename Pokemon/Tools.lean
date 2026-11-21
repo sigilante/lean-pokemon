@@ -145,7 +145,7 @@ def hit : Attack := ⟨"Hit", [], 1, .skip, false⟩
 
 /-- A Tool that gives `hit` to a Pokémon named "Small" only (as Core Memory gives its attack to
 Mega Zygarde ex only). -/
-def memory : Card := .tool "Memory" ⟨.named "Small", [hit], []⟩
+def memory : Card := .tool "Memory" ⟨.named "Small", [hit], [], []⟩
 
 /-- The player to move has `small` Active with `memory` attached; the opponent has `mon`. -/
 def G (t : List Card) (top : PokemonCard) : GameState :=
