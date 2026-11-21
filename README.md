@@ -574,13 +574,17 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.f
 every game whose cards all come from the imported pool is `Faithful`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `Faithful.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,109 are imported (855 exactly, 254 with
-caveats) as 1,107 distinct terms, and 1,052 are refused, each with a reason
+damage reduction). Of the pool's 2,161 cards, 1,125 are imported (855 exactly, 270 with
+caveats) as 1,123 distinct terms, and 1,036 are refused, each with a reason
 (`tools/importer/out/coverage.md`). Since importer version 0.3.0 activated ("once during your
 turn", "as often as you like") and on-play Abilities are translated when every sentence has a
-rule, and since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
-the model's `Static`; passive and triggered Abilities, static text in other shapes, and the
-other forms the model lacks are refused with a reason. The tame-deck theorem `Reach.finite`
+rule, since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
+the model's `Static`, and since importer 0.6.0 (milestone M8b) triggered Abilities and Tool text
+of the two shapes `TrigEvent.damaged` and `TrigEvent.koByAttack` whose effect is in the trigger
+fragment (16 cards; `Standard.trigDamaged`, `Standard.trigKO`; `Standard.triggers_fire`: every
+imported trigger fires wherever its place allows, with an effect satisfying `Effect.trigOk`);
+passive Abilities, triggered text of other shapes, static text in other shapes, and the other
+forms the model lacks are refused with a reason. The tame-deck theorem `Reach.finite`
 does not cover imported decks in general: `Standard.untame` lists the imported cards that are
 not tame (a `drain` attack or a stored damage reduction); its clause on static reductions holds
 for every game (`reduceLe_bound`), and `Standard.sReduce_le` bounds the static reduction in force. Regenerate with
