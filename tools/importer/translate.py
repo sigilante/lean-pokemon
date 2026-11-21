@@ -205,10 +205,37 @@ def parse_filter(np, ctx):
 KNOWN_NAMES = {}
 
 
+# Pokémon card names in the whole dataset, name -> set of stages ('Basic', 'Stage 1', 'Stage 2', ...).
+NAME_STAGES = {}
+
+
+def bench_filter_ok(f):
+    """`putBench` puts only a Basic Pokémon onto the Bench (`ZStep.putBench` requires `stage = .basic`,
+    Pokemon/Effect.lean), which is the general rule for a card effect that puts Pokémon onto the Bench
+    ("Put up to 3 Water Pokémon from your discard pile onto your Bench" benches Basic ones only). A
+    printed placement that names an Evolution card ("search your deck for a Silcoon and put it onto your
+    Bench", "up to 3 Lampent"; both Stage 1) overrides that rule, and is unreachable in the model
+    (forbids some), so it is refused: every name in the filter must be a Basic Pokémon in every printing
+    of the dataset (found in validation, importer v0.3.0)."""
+    def bad(g):
+        if g[0] == 'named':
+            return not (NAME_STAGES.get(g[1]) == {'Basic'} and KNOWN_NAMES.get(g[1]) == {'Pokémon'})
+        return any(bad(x) for x in g[1:] if isinstance(x, tuple) and x and isinstance(x[0], str) and x[0] in
+                   ('and', 'or', 'not', 'named'))
+    if bad(f):
+        raise Refuse('Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only)')
+
+
 def set_names(cards):
     KNOWN_NAMES.clear()
+    NAME_STAGES.clear()
     for c in cards:
         sub = c['_sub']
+        if c['supertype'] == 'Pokémon':
+            NAME_STAGES.setdefault(norm(c['name']), set()).update(
+                x for x in ('Basic', 'Stage 1', 'Stage 2', 'BREAK', 'LEGEND', 'Level-Up', 'VMAX', 'VSTAR', 'V-UNION')
+                if x in sub or (x == 'Basic' and not sub & {'Stage 1', 'Stage 2', 'BREAK', 'LEGEND', 'Level-Up',
+                                                            'VMAX', 'VSTAR', 'V-UNION'} and 'Basic' in sub))
         if c['supertype'] == 'Pokémon':
             k = 'Pokémon'
         elif c['supertype'] == 'Energy':
@@ -727,6 +754,7 @@ def _(m, ctx):
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
     cv = {'upTo0'} if upto and ctx['kind'] != 'attack' else set()
+    bench_filter_ok(f)
     return Eff(seq(*[('putBench', OWN, ('deck',), f)] * n), cv)
 
 
@@ -817,6 +845,7 @@ def _(m, ctx):
         cv.add('mayFail')
     elif ctx['kind'] != 'attack':
         cv.add('upTo0')
+    bench_filter_ok(f)
     return Eff(seq(*[('putBench', OWN, ('discard',), f)] * n), cv)
 
 

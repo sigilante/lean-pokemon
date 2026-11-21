@@ -11,34 +11,6 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part04
 open Pokemon
 
-/-- Bombirdier (sv9-101). Records: sv9-101. Caveats: benchMods. -/
-def sv9_101 : Card := .pokemon
-  { name := "Bombirdier", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Glide", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false },
-      { name := "Drop Shot", cost := [.darkness, .darkness, .colorless], damage := 0,
-        effect := .seq (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))) (.discardEnergy .own .active .energy .all),
-        gx := false }] }
-
-/-- Escavalier (sv9-102). Records: sv9-102. Caveats: perPokemon. -/
-def sv9_102 : Card := .pokemon
-  { name := "Escavalier", stage := .stage1, evolvesFrom := some "Karrablast",
-    hp := 12, type := .metal, retreat := 2, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Pierce", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false },
-      { name := "Iron Buster", cost := [.metal, .colorless], damage := 12,
-        effect := .linger .own .after (.lock .attack),
-        gx := false }] }
-
 /-- N's Klink (sv9-103). Records: sv9-103. -/
 def sv9_103 : Card := .pokemon
   { name := "N's Klink", stage := .basic, evolvesFrom := none,
@@ -1872,10 +1844,33 @@ def rsv10pt5_68 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Patrat (rsv10pt5-72). Records: rsv10pt5-72, rsv10pt5-152. -/
+def rsv10pt5_72 : Card := .pokemon
+  { name := "Patrat", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Procurement", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand (.kind .item) (.upTo 1)) .shuffle,
+        gx := false },
+      { name := "Gnaw", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Lillipup (rsv10pt5-74). Records: rsv10pt5-74, rsv10pt5-154. -/
+def rsv10pt5_74 : Card := .pokemon
+  { name := "Lillipup", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Play Rough", cost := [.colorless], damage := 0,
+        effect := .choice (.damage (.const 3)) (.damage (.const 1)),
+        gx := false }] }
+
 /-- The cards of this part. -/
 def cards : List Card := [
-  sv9_101,
-  sv9_102,
   sv9_103,
   sv9_104,
   sv9_105,
@@ -2023,7 +2018,9 @@ def cards : List Card := [
   rsv10pt5_63,
   rsv10pt5_65,
   rsv10pt5_66,
-  rsv10pt5_68]
+  rsv10pt5_68,
+  rsv10pt5_72,
+  rsv10pt5_74]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

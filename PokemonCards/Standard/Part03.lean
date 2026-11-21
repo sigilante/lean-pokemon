@@ -11,20 +11,6 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part03
 open Pokemon
 
-/-- Cryogonal (sv8-47). Records: sv8-47. -/
-def sv8_47 : Card := .pokemon
-  { name := "Cryogonal", stage := .basic, evolvesFrom := none,
-    hp := 9, type := .water, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Call Sign", cost := [.water], damage := 0,
-        effect := .seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle,
-        gx := false },
-      { name := "Ice Beam", cost := [.water], damage := 3,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false }] }
-
 /-- Quaxly (sv8-50). Records: sv8-50. -/
 def sv8_50 : Card := .pokemon
   { name := "Quaxly", stage := .basic, evolvesFrom := none,
@@ -679,20 +665,6 @@ def sv8_157 : Card := .pokemon
     attacks := [
       { name := "Play Rough", cost := [.colorless], damage := 0,
         effect := .choice (.damage (.const 2)) (.damage (.const 1)),
-        gx := false }] }
-
-/-- Maushold (sv8-158). Records: sv8-158. -/
-def sv8_158 : Card := .pokemon
-  { name := "Maushold", stage := .stage1, evolvesFrom := some "Tandemaus",
-    hp := 8, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Familial March", cost := [.colorless], damage := 0,
-        effect := .seq (.seq (.putBench .own .deck (.or (.named "Maushold") (.named "Maushold ex"))) (.putBench .own .deck (.or (.named "Maushold") (.named "Maushold ex")))) .shuffle,
-        gx := false },
-      { name := "Incessant Incisors", cost := [.colorless], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 3)) (.choice (.damage (.const 6)) (.choice (.damage (.const 9)) (.damage (.const 12))))),
         gx := false }] }
 
 /-- Cyclizar ex (sv8-159). Records: sv8-159, sv8-228. Caveats: benchMods. -/
@@ -1838,9 +1810,36 @@ def sv9_100 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Bombirdier (sv9-101). Records: sv9-101. Caveats: benchMods. -/
+def sv9_101 : Card := .pokemon
+  { name := "Bombirdier", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .darkness, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Glide", cost := [.colorless], damage := 2,
+        effect := .skip,
+        gx := false },
+      { name := "Drop Shot", cost := [.darkness, .darkness, .colorless], damage := 0,
+        effect := .seq (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))) (.discardEnergy .own .active .energy .all),
+        gx := false }] }
+
+/-- Escavalier (sv9-102). Records: sv9-102. Caveats: perPokemon. -/
+def sv9_102 : Card := .pokemon
+  { name := "Escavalier", stage := .stage1, evolvesFrom := some "Karrablast",
+    hp := 12, type := .metal, retreat := 2, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pierce", cost := [.colorless], damage := 2,
+        effect := .skip,
+        gx := false },
+      { name := "Iron Buster", cost := [.metal, .colorless], damage := 12,
+        effect := .linger .own .after (.lock .attack),
+        gx := false }] }
+
 /-- The cards of this part. -/
 def cards : List Card := [
-  sv8_47,
   sv8_50,
   sv8_51,
   sv8_52,
@@ -1893,7 +1892,6 @@ def cards : List Card := [
   sv8_154,
   sv8_155,
   sv8_157,
-  sv8_158,
   sv8_159,
   sv8_170,
   sv8_178,
@@ -1989,7 +1987,9 @@ def cards : List Card := [
   sv9_93,
   sv9_94,
   sv9_97,
-  sv9_100]
+  sv9_100,
+  sv9_101,
+  sv9_102]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

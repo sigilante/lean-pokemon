@@ -4,16 +4,16 @@ Pool: 3402 records, 2161 cards (S9 identities: 2164), 8 Lean files.
 
 | kind | cards | imported exactly | with caveats | not imported |
 |---|---|---|---|---|
-| Pokémon | 1881 | 803 (42.7%) | 213 (11.3%) | 865 (46.0%) |
+| Pokémon | 1881 | 798 (42.4%) | 213 (11.3%) | 870 (46.3%) |
 | Item | 86 | 10 (11.6%) | 13 (15.1%) | 63 (73.3%) |
 | Supporter | 83 | 6 (7.2%) | 7 (8.4%) | 70 (84.3%) |
 | Pokémon Tool | 44 | 0 (0.0%) | 0 (0.0%) | 44 (100.0%) |
 | Stadium | 36 | 0 (0.0%) | 0 (0.0%) | 36 (100.0%) |
 | Basic Energy | 9 | 9 (100.0%) | 0 (0.0%) | 0 (0.0%) |
 | Special Energy | 22 | 0 (0.0%) | 0 (0.0%) | 22 (100.0%) |
-| **all** | **2161** | **828 (38.3%)** | **233 (10.8%)** | **1100 (50.9%)** |
+| **all** | **2161** | **823 (38.1%)** | **233 (10.8%)** | **1105 (51.1%)** |
 
-By records: imported exactly 1255, with caveats 320, not imported 1827 (of 3402).
+By records: imported exactly 1249, with caveats 320, not imported 1833 (of 3402).
 
 Caveats (cards may carry several), with their direction: does the term allow outcomes the printed card does not (allows more), forbid outcomes it allows (forbids some), or both? A card imported with caveats is in general neither an over- nor an under-approximation of its printed card, so the imported pool must not be used for "no deck can ..." arguments without checking the caveat.
 
@@ -34,11 +34,11 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `benchMods` | both | 41 | attack damage to Benched Pokémon takes no bonus, reduction or prevention in the model (Known gaps, milestone M3) |
 | `poisonStrength` | both | 1 | a stronger Poison ('N damage counters instead of 1') is written as Poison plus poisonUp (N-1); the Known gaps list numbered Poison variants as absent |
 
-Blocking mechanisms of the 1100 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
+Blocking mechanisms of the 1105 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
 
 | mechanism | blocks alone | blocks (any) |
 |---|---|---|
-| other | 83 | 226 |
+| other | 88 | 231 |
 | static or passive Ability | 83 | 118 |
 | triggered Ability (Knock Out, damage, Checkup, opponent's action, move between spots) | 51 | 63 |
 | history (this turn, last turn, Knock Outs) | 46 | 84 |
@@ -73,12 +73,12 @@ Blocking mechanisms of the 1100 cards not imported (keyword classification of ea
 | Ability with a first-turn rule ("once during your first turn", "can't use … during your first turn") | 1 | 2 |
 | Trainer played as a Pokémon | 0 | 7 |
 
-Pokémon with an Ability (315 cards): imported exactly 17, imported with caveats 32, not imported 266. Not imported, by the first reason the Ability was refused (or "translated; card blocked elsewhere"):
+Pokémon with an Ability (315 cards): imported exactly 15, imported with caveats 32, not imported 268. Not imported, by the first reason the Ability was refused (or "translated; card blocked elsewhere"):
 
 | status or reason | cards |
 |---|---|
 | imported with caveats | 32 |
-| imported exactly | 17 |
+| imported exactly | 15 |
 | Ability: static or passive | 113 |
 | Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots) | 63 |
 | Ability translated; card blocked elsewhere | 35 |
@@ -90,13 +90,14 @@ Pokémon with an Ability (315 cards): imported exactly 17, imported with caveats
 | Ability: condition on this Pokémon, which may be on the Bench | 4 |
 | Ability: condition on the history of the turn (this turn, last turn) | 3 |
 | Ability: returns its Pokémon from play | 3 |
+| Ability effect: Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only) | 2 |
 | Ability: used from the hand | 2 |
 | Ability effect: card kind with no filter | 1 |
 | Ability: cost not expressible | 1 |
 | Ability: first-turn limit | 1 |
 | Ability: once during your first turn | 1 |
 
-Imported Abilities by use limit: onPlay-bench 2, onPlay-evolve 9, once 34, unlimited 4.
+Imported Abilities by use limit: onPlay-bench 2, onPlay-evolve 7, once 34, unlimited 4.
 
 Cards whose Ability says "You can't use more than 1 … Ability each turn" (6): Fezandipiti ex (sv6pt5-38), Pecharunt ex (sv6pt5-39), Fan Rotom (sv7-118), Lunatone (me1-74), Mega Kangaskhan ex (me1-104), Meowth ex (me3-62). Imported with the caveat `onePerName` (allows more): Mega Kangaskhan ex (me1-104).
 

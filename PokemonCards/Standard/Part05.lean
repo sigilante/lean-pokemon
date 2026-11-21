@@ -11,31 +11,6 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part05
 open Pokemon
 
-/-- Patrat (rsv10pt5-72). Records: rsv10pt5-72, rsv10pt5-152. -/
-def rsv10pt5_72 : Card := .pokemon
-  { name := "Patrat", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Procurement", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand (.kind .item) (.upTo 1)) .shuffle,
-        gx := false },
-      { name := "Gnaw", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Lillipup (rsv10pt5-74). Records: rsv10pt5-74, rsv10pt5-154. -/
-def rsv10pt5_74 : Card := .pokemon
-  { name := "Lillipup", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Play Rough", cost := [.colorless], damage := 0,
-        effect := .choice (.damage (.const 3)) (.damage (.const 1)),
-        gx := false }] }
-
 /-- Herdier (rsv10pt5-75). Records: rsv10pt5-75, rsv10pt5-155. -/
 def rsv10pt5_75 : Card := .pokemon
   { name := "Herdier", stage := .stage1, evolvesFrom := some "Lillipup",
@@ -836,20 +811,6 @@ def me1_16 : Card := .pokemon
     attacks := [
       { name := "Scratch", cost := [.colorless], damage := 2,
         effect := .skip,
-        gx := false }] }
-
-/-- Ninjask (me1-17). Records: me1-17, me1-137. -/
-def me1_17 : Card := .pokemon
-  { name := "Ninjask", stage := .stage1, evolvesFrom := some "Nincada",
-    hp := 8, type := .grass, retreat := 0, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Cast-Off Shell", use := .onPlay .evolve,
-        spot := none, cond := none,
-        effect := .fx (.seq (.putBench .own .deck (.named "Shedinja")) .shuffle) }],
-    attacks := [
-      { name := "U-turn", cost := [.grass, .colorless], damage := 9,
-        effect := .switch .own,
         gx := false }] }
 
 /-- Vulpix (me1-19). Records: me1-19, me1-138. -/
@@ -1824,10 +1785,44 @@ def me2_45 : Card := .pokemon
         effect := .ite (.countGe (.prizes .opp) 4) (.damage (.const 5)) (.damage (.const 14)),
         gx := false }] }
 
+/-- Bramblin (me2-46). Records: me2-46. -/
+def me2_46 : Card := .pokemon
+  { name := "Bramblin", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Sneaky Placement", cost := [.psychic], damage := 0,
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 1) (.benchCounters .opp 1)) (.counters 1),
+        gx := false }] }
+
+/-- Brambleghast (me2-47). Records: me2-47. -/
+def me2_47 : Card := .pokemon
+  { name := "Brambleghast", stage := .stage1, evolvesFrom := some "Bramblin",
+    hp := 10, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Prison Panic", use := .onPlay .evolve,
+        spot := none, cond := none,
+        effect := .fx (.inflict .confused) }],
+    attacks := [
+      { name := "Psychic Sphere", cost := [.psychic, .colorless, .colorless], damage := 8,
+        effect := .skip,
+        gx := false }] }
+
+/-- Gligar (me2-49). Records: me2-49. -/
+def me2_49 : Card := .pokemon
+  { name := "Gligar", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Poison Jab", cost := [.fighting], damage := 1,
+        effect := .inflict .poisoned,
+        gx := false }] }
+
 /-- The cards of this part. -/
 def cards : List Card := [
-  rsv10pt5_72,
-  rsv10pt5_74,
   rsv10pt5_75,
   rsv10pt5_81,
   rsv10pt5_82,
@@ -1893,7 +1888,6 @@ def cards : List Card := [
   me1_13,
   me1_14,
   me1_16,
-  me1_17,
   me1_19,
   me1_21,
   me1_22,
@@ -1975,7 +1969,10 @@ def cards : List Card := [
   me2_42,
   me2_43,
   me2_44,
-  me2_45]
+  me2_45,
+  me2_46,
+  me2_47,
+  me2_49]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

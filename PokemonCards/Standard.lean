@@ -19,7 +19,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1061 of the pool's 2161 cards). -/
+/-- Every imported card (1056 of the pool's 2161 cards). -/
 def all : List Card :=
   Part01.cards ++
   Part02.cards ++
@@ -283,6 +283,7 @@ def notImported : List (String × String × String) := [
   ("sv7-49", "Lanturn", "unhandled sentence: Put 8 damage counters instead of 3 on that Pokémon for this Special Condition."),
   ("sv7-50", "Joltik", "card kind with no filter: Basic Grass Energy cards and up to 2 Basic Lightning Energy: Search your deck for up to 2 Basic Grass Energy cards and up to 2 Basic Lightning Energy cards and attach them to your Pokémon in any way you like."),
   ("sv7-51", "Galvantula ex", "condition not expressible: your opponent's Active Pokémon is a Pokémon ex or Pokémon V: If your opponent's Active Pokémon is a Pokémon ex or Pokémon V, this attack does 110 more damage."),
+  ("sv7-52", "Charjabug", "Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only): Search your deck for up to 3 Charjabug and put them onto your Bench."),
   ("sv7-53", "Vikavolt", "unhandled sentence: Switch this Pokémon with 1 of your Benched Lightning Pokémon."),
   ("sv7-54", "Togedemaru", "condition not expressible: you have exactly 1 Prize card remaining: If you have exactly 1 Prize card remaining, your opponent's Active Pokémon is now Paralyzed."),
   ("sv7-58", "Slowking", "unhandled sentence: Discard the top card of your deck, and if that card is a Pokémon that doesn't have a Rule Box, choose 1 of its attacks and use it as this attack."),
@@ -398,6 +399,7 @@ def notImported : List (String × String × String) := [
   ("sv8-151", "Bouffalant", "unhandled sentence: During your opponent's next turn, if this Pokémon is damaged by an attack (even if this Pokémon is Knocked Out), put 6 damage counters on the Attacking Pokémon."),
   ("sv8-153", "Braviary", "unhandled sentence: This attack does 40 damage to the new Active Pokémon."),
   ("sv8-156", "Oranguru", "unhandled sentence: Until the end of your next turn, the Defending Pokémon's Weakness is now Colorless."),
+  ("sv8-158", "Maushold", "Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only): Search your deck for up to 2 in any combination of Maushold and Maushold ex and put them onto your Bench."),
   ("sv8-160", "Flamigo ex", "condition not expressible: this Pokémon and your opponent's Active Pokémon have the same amount of Energy attached: If this Pokémon and your opponent's Active Pokémon have the same amount of Energy attached, this attack does 100 more damage."),
   ("sv8-161", "Terapagos", "unhandled sentence: Search your deck for up to 3 Basic Energy cards of different types and attach them to your Tera Pokémon in any way you like."),
   ("sv8-162", "Amulet of Hope", "Pokémon Tool"),
@@ -703,6 +705,7 @@ def notImported : List (String × String × String) := [
   ("me1-11", "Shuckle", "Ability: condition on this Pokémon, which may be on the Bench: this Pokémon has any Grass Energy attached: Once during your turn, if this Pokémon has any Grass Energy attached, you may use this Ability. Heal 30 damage from 1 of your Pokémon."),
   ("me1-12", "Celebi", "card kind with no filter: Stadium: Search your deck for up to 3 in any combination of Grass Pokémon and Stadium cards, reveal them, and put them into your hand."),
   ("me1-15", "Shiftry", "unhandled sentence: Choose 1 of your opponent's Pokémon."),
+  ("me1-17", "Ninjask", "Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only): Search your deck for a Shedinja and put it onto your Bench."),
   ("me1-18", "Dhelmise", "condition not expressible: you have a Stadium in play: If you have a Stadium in play, this attack does 50 more damage."),
   ("me1-20", "Ninetales", "unhandled sentence: Discard the top card of your deck, and if that card is a Supporter card, use the effect of that card as the effect of this attack."),
   ("me1-24", "Pyroar", "Ability: static or passive: As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do 30 less damage (before applying Weakness and Resistance)."),
@@ -813,6 +816,7 @@ def notImported : List (String × String × String) := [
   ("me2pt5-6", "Erika's Victreebel", "count not expressible: of your Erika's Pokémon in play: This attack does 40 damage for each of your Erika's Pokémon in play."),
   ("me2pt5-7", "Erika's Tangela", "card kind with no filter: Erika's Pokémon: Search your deck for an Erika's Pokémon, reveal it, and put it into your hand."),
   ("me2pt5-8", "Chikorita", "unhandled sentence: During your opponent's next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance)."),
+  ("me2pt5-12", "Silcoon", "Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only): Search your deck for a Silcoon or a Cascoon and put it onto your Bench."),
   ("me2pt5-13", "Beautifly", "unhandled sentence: Your opponent reveals their hand, and this attack does 80 damage for each Energy card you find there."),
   ("me2pt5-15", "Dustox", "unhandled sentence: Put an Energy attached to your opponent's Active Pokémon into their hand."),
   ("me2pt5-22", "Mega Charizard Y ex", "unhandled sentence: Discard 3 Energy from this Pokémon, and this attack does 280 damage to 1 of your opponent's Pokémon."),
@@ -992,6 +996,7 @@ def notImported : List (String × String × String) := [
   ("me5-33", "Shuppet", "Ability: static or passive: Prevent all effects of your opponent's Pokémon's attacks and Abilities done to this Pokémon. (Damage is not an effect.)"),
   ("me5-34", "Banette", "Ability: static or passive: Prevent all effects of your opponent's Pokémon's attacks and Abilities done to this Pokémon. (Damage is not an effect.)"),
   ("me5-35", "Spiritomb", "card kind with no filter: Pokémon that have the Hide 'n' Sneak Ability: If you have 13 or more Pokémon that have the Hide 'n' Sneak Ability in your discard pile, choose 2 of your opponent's Pokémon and quadruple the number of damage counters on each of them."),
+  ("me5-37", "Lampent", "Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only): Search your deck for up to 3 Lampent and put them onto your Bench."),
   ("me5-38", "Mega Chandelure ex", "Ability: static or passive: Your opponent's Active Pokémon's Retreat Cost is Colorless more."),
   ("me5-39", "Dhelmise", "card kind with no filter: Pokémon that have the Hide 'n' Sneak Ability: If you have 4 or more Pokémon that have the Hide 'n' Sneak Ability in your discard pile, this attack does 140 more damage."),
   ("me5-40", "Marshadow", "count not expressible: Colorless in your opponent's Active Pokémon's Retreat Cost: This attack does 30 damage for each Colorless in your opponent's Active Pokémon's Retreat Cost."),
@@ -1134,13 +1139,13 @@ def notImported : List (String × String × String) := [
   ("me6-133", "Growing Grass Energy", "Special Energy"),
   ("me6-134", "Nitro Fire Energy", "Special Energy")]
 
-/-- **The count.** `all` has 1061 entries. -/
-theorem all_length : all.length = 1061 := by decide +kernel
+/-- **The count.** `all` has 1056 entries. -/
+theorem all_length : all.length = 1056 := by decide +kernel
 
-/-- `notImported` has 1100 entries. -/
-theorem notImported_length : notImported.length = 1100 := by decide +kernel
+/-- `notImported` has 1105 entries. -/
+theorem notImported_length : notImported.length = 1105 := by decide +kernel
 
-/-- Arithmetic on the two lengths, and nothing more: 1061 + 1100 = 2161. That the two lists partition the
+/-- Arithmetic on the two lengths, and nothing more: 1056 + 1105 = 2161. That the two lists partition the
 pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file) and by an
 external check script; the pool itself is not a Lean object. -/
@@ -1234,7 +1239,7 @@ theorem cross_6_8 : crossOk Part06.cards Part08.cards = true := by decide +kerne
 /-- No card of part 7 is the same term as a card of part 8. -/
 theorem cross_7_8 : crossOk Part07.cards Part08.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1061 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1056 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=

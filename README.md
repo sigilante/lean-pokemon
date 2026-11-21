@@ -418,7 +418,10 @@ today's Standard pool (survey S9's pool B: regulation marks H, I, J plus Basic E
 `Card` terms, conservatively, and writes them to `PokemonCards/Standard/Part*.lean` with
 per-card checks, plus `PokemonCards/Standard.lean` (the count of imported cards, the named
 list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.faithful`:
-every game whose cards all come from the imported pool is `Faithful`). Regenerate with
+every game whose cards all come from the imported pool is `Faithful`, all four clauses).
+Since importer version 0.3.0 activated ("once during your turn", "as often as you like") and
+on-play Abilities are translated when every sentence has a rule; static, passive and triggered
+Abilities, and the other forms the model lacks, are refused with a reason. Regenerate with
 `python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
 memory and diffs); build with `lake build PokemonCards`, which runs its own axiom gate
 (`PokemonCards/Audit.lean`). These are facts about the generated terms; whether a term says

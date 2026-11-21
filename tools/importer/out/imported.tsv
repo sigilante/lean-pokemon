@@ -229,7 +229,6 @@ sv7-43	Chewtle	Pokémon	imported exactly		sv7-43	sv7_43
 sv7-46	Electabuzz	Pokémon	imported exactly		sv7-46	sv7_46
 sv7-47	Electivire	Pokémon	imported exactly		sv7-47	sv7_47
 sv7-48	Chinchou	Pokémon	imported exactly		sv7-48	sv7_48
-sv7-52	Charjabug	Pokémon	imported exactly		sv7-52	sv7_52
 sv7-55	Zeraora	Pokémon	imported exactly		sv7-55 sv7-151	sv7_55
 sv7-56	Pawmi	Pokémon	imported with caveats	benchMods	sv7-56	sv7_56
 sv7-57	Slowpoke	Pokémon	imported exactly		sv7-57	sv7_57
@@ -352,7 +351,6 @@ sv8-152	Rufflet	Pokémon	imported exactly		sv8-152	sv8_152
 sv8-154	Helioptile	Pokémon	imported with caveats	recoil	sv8-154	sv8_154
 sv8-155	Heliolisk	Pokémon	imported exactly		sv8-155	sv8_155
 sv8-157	Tandemaus	Pokémon	imported exactly		sv8-157	sv8_157
-sv8-158	Maushold	Pokémon	imported exactly		sv8-158	sv8_158
 sv8-159	Cyclizar ex	Pokémon	imported with caveats	benchMods	sv8-159 sv8-228	sv8_159
 sv8-170	Cyrano	Supporter	imported with caveats	upTo0	sv8-170 sv8-230	sv8_170
 sv8-178	Jasmine's Gaze	Supporter	imported with caveats	benchMods	sv8-178 sv8-233 sv8-245	sv8_178
@@ -666,7 +664,6 @@ me1-9	Bayleef	Pokémon	imported exactly		me1-9	me1_9
 me1-13	Seedot	Pokémon	imported exactly		me1-13	me1_13
 me1-14	Nuzleaf	Pokémon	imported exactly		me1-14	me1_14
 me1-16	Nincada	Pokémon	imported exactly		me1-16	me1_16
-me1-17	Ninjask	Pokémon	imported exactly		me1-17 me1-137	me1_17
 me1-19	Vulpix	Pokémon	imported exactly		me1-19 me1-138	me1_19
 me1-21	Numel	Pokémon	imported exactly		me1-21	me1_21
 me1-22	Mega Camerupt ex	Pokémon	imported exactly		me1-22 me1-156	me1_22
@@ -778,7 +775,6 @@ me2pt5-5	Erika's Weepinbell	Pokémon	imported with caveats	perPokemon	me2pt5-5	m
 me2pt5-9	Bayleef	Pokémon	imported exactly		me2pt5-9	me2pt5_9
 me2pt5-10	Mega Meganium ex	Pokémon	imported exactly		me2pt5-10 me2pt5-272	me2pt5_10
 me2pt5-11	Wurmple	Pokémon	imported exactly		me2pt5-11	me2pt5_11
-me2pt5-12	Silcoon	Pokémon	imported exactly		me2pt5-12	me2pt5_12
 me2pt5-14	Cascoon	Pokémon	imported exactly		me2pt5-14	me2pt5_14
 me2pt5-20	Charmander	Pokémon	imported exactly		me2pt5-20	me2pt5_20
 me2pt5-21	Charmeleon	Pokémon	imported exactly		me2pt5-21	me2pt5_21
@@ -925,7 +921,6 @@ me5-25	Charjabug	Pokémon	imported exactly		me5-25	me5_25
 me5-27	Mega Zeraora ex	Pokémon	imported exactly		me5-27 me5-98 me5-114	me5_27
 me5-30	Slowbro	Pokémon	imported exactly		me5-30 me5-90	me5_30
 me5-36	Litwick	Pokémon	imported exactly		me5-36	me5_36
-me5-37	Lampent	Pokémon	imported exactly		me5-37	me5_37
 me5-43	Primeape	Pokémon	imported exactly		me5-43	me5_43
 me5-44	Cranidos	Pokémon	imported exactly		me5-44	me5_44
 me5-45	Rampardos ex	Pokémon	imported with caveats	noopUse,perPokemon	me5-45 me5-100	me5_45

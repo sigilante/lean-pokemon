@@ -11,42 +11,6 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part06
 open Pokemon
 
-/-- Bramblin (me2-46). Records: me2-46. -/
-def me2_46 : Card := .pokemon
-  { name := "Bramblin", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Sneaky Placement", cost := [.psychic], damage := 0,
-        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 1) (.benchCounters .opp 1)) (.counters 1),
-        gx := false }] }
-
-/-- Brambleghast (me2-47). Records: me2-47. -/
-def me2_47 : Card := .pokemon
-  { name := "Brambleghast", stage := .stage1, evolvesFrom := some "Bramblin",
-    hp := 10, type := .psychic, retreat := 2, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Prison Panic", use := .onPlay .evolve,
-        spot := none, cond := none,
-        effect := .fx (.inflict .confused) }],
-    attacks := [
-      { name := "Psychic Sphere", cost := [.psychic, .colorless, .colorless], damage := 8,
-        effect := .skip,
-        gx := false }] }
-
-/-- Gligar (me2-49). Records: me2-49. -/
-def me2_49 : Card := .pokemon
-  { name := "Gligar", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Poison Jab", cost := [.fighting], damage := 1,
-        effect := .inflict .poisoned,
-        gx := false }] }
-
 /-- Gliscor (me2-50). Records: me2-50. Caveats: perPokemon. -/
 def me2_50 : Card := .pokemon
   { name := "Gliscor", stage := .stage1, evolvesFrom := some "Gligar",
@@ -350,20 +314,6 @@ def me2pt5_11 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Bug Bite", cost := [.grass], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Silcoon (me2pt5-12). Records: me2pt5-12. -/
-def me2pt5_12 : Card := .pokemon
-  { name := "Silcoon", stage := .stage1, evolvesFrom := some "Wurmple",
-    hp := 9, type := .grass, retreat := 3, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Multiplying Cocoon", use := .onPlay .evolve,
-        spot := none, cond := none,
-        effect := .fx (.seq (.putBench .own .deck (.or (.named "Silcoon") (.named "Cascoon"))) .shuffle) }],
-    attacks := [
-      { name := "Tackle", cost := [.grass], damage := 3,
         effect := .skip,
         gx := false }] }
 
@@ -1796,11 +1746,58 @@ def me4_46 : Card := .pokemon
         effect := .damage (.many (.const 3)),
         gx := false }] }
 
+/-- Mega Gallade ex (me4-48). Records: me4-48. -/
+def me4_48 : Card := .pokemon
+  { name := "Mega Gallade ex", stage := .stage2, evolvesFrom := some "Kirlia",
+    hp := 35, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .megaEx, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gale Slash", cost := [.fighting], damage := 0,
+        effect := .ite (.atLeast .own 1) (.damage (.const 5)) (.damage (.const 20)),
+        gx := false },
+      { name := "Marvelous Edge", cost := [.fighting, .fighting, .colorless], damage := 24,
+        effect := .skip,
+        gx := false }] }
+
+/-- Zubat (me4-49). Records: me4-49. -/
+def me4_49 : Card := .pokemon
+  { name := "Zubat", stage := .basic, evolvesFrom := none,
+    hp := 4, type := .darkness, retreat := 0, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Supersonic", cost := [.darkness], damage := 0,
+        effect := .inflict .confused,
+        gx := false }] }
+
+/-- Stunky (me4-53). Records: me4-53. -/
+def me4_53 : Card := .pokemon
+  { name := "Stunky", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Scratch", cost := [.darkness], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Skuntank (me4-54). Records: me4-54. -/
+def me4_54 : Card := .pokemon
+  { name := "Skuntank", stage := .stage1, evolvesFrom := some "Stunky",
+    hp := 11, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Rear Kick", cost := [.darkness], damage := 4,
+        effect := .skip,
+        gx := false },
+      { name := "Smash Turn", cost := [.darkness, .darkness, .colorless], damage := 10,
+        effect := .switch .own,
+        gx := false }] }
+
 /-- The cards of this part. -/
 def cards : List Card := [
-  me2_46,
-  me2_47,
-  me2_49,
   me2_50,
   me2_51,
   me2_52,
@@ -1827,7 +1824,6 @@ def cards : List Card := [
   me2pt5_9,
   me2pt5_10,
   me2pt5_11,
-  me2pt5_12,
   me2pt5_14,
   me2pt5_20,
   me2pt5_21,
@@ -1947,7 +1943,11 @@ def cards : List Card := [
   me4_42,
   me4_44,
   me4_45,
-  me4_46]
+  me4_46,
+  me4_48,
+  me4_49,
+  me4_53,
+  me4_54]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

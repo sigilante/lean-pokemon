@@ -985,17 +985,6 @@ def sv7_48 : Card := .pokemon
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 2)) (.damage (.const 4))),
         gx := false }] }
 
-/-- Charjabug (sv7-52). Records: sv7-52. -/
-def sv7_52 : Card := .pokemon
-  { name := "Charjabug", stage := .stage1, evolvesFrom := some "Grubbin",
-    hp := 8, type := .lightning, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Parallel Placement", cost := [.lightning], damage := 0,
-        effect := .seq (.seq (.putBench .own .deck (.named "Charjabug")) (.seq (.putBench .own .deck (.named "Charjabug")) (.putBench .own .deck (.named "Charjabug")))) .shuffle,
-        gx := false }] }
-
 /-- Zeraora (sv7-55). Records: sv7-55, sv7-151. -/
 def sv7_55 : Card := .pokemon
   { name := "Zeraora", stage := .basic, evolvesFrom := none,
@@ -1842,6 +1831,20 @@ def sv8_46 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Cryogonal (sv8-47). Records: sv8-47. -/
+def sv8_47 : Card := .pokemon
+  { name := "Cryogonal", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .water, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Call Sign", cost := [.water], damage := 0,
+        effect := .seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle,
+        gx := false },
+      { name := "Ice Beam", cost := [.water], damage := 3,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false }] }
+
 /-- The cards of this part. -/
 def cards : List Card := [
   sv6_86,
@@ -1924,7 +1927,6 @@ def cards : List Card := [
   sv7_46,
   sv7_47,
   sv7_48,
-  sv7_52,
   sv7_55,
   sv7_56,
   sv7_57,
@@ -1993,7 +1995,8 @@ def cards : List Card := [
   sv8_41,
   sv8_43,
   sv8_44,
-  sv8_46]
+  sv8_46,
+  sv8_47]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
