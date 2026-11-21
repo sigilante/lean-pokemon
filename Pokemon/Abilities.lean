@@ -30,7 +30,9 @@ are not shown to differ in play.
 
 Survey S10 found no Standard Ability with either shape: the seven "as often as you like" Abilities
 of today's Standard move or attach Energy, or move a damage counter, and write no modifier and
-recycle nothing (see the README for the list).
+recycle nothing (the list is in survey S10: Mega Venusaur ex, Team Rocket's Orbeetle,
+Bellibolt, Azumarill, Emboar, Oricorio, Dewgong). For decks with no Abilities at all, see
+`Pokemon/NoAbilities.lean`.
 -/
 
 namespace Pokemon.Abilities
@@ -468,7 +470,10 @@ theorem orbeetle_loop :
 /-- Feraligatr sv5-41, Torrential Heart: "Once during your turn, you may put 5 damage counters on
 this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your
 opponent's Active Pokémon (before applying Weakness and Resistance)." The bonus is the player's
-(the model's modifiers are per player, milestone M7), a superset. -/
+(the model's modifiers are per player, milestone M7). This is a departure, not a superset: the
+bonus applies to whichever of the player's Pokémon attacks (after a retreat the printed card
+gives the new attacker no bonus, the model does; two uses on two Feraligatr add up on one
+attacker; a replacement inherits it). -/
 def torrentialHeart : Ability :=
   ⟨"Torrential Heart", .once, none, none,
     .seq (.self (.counters 5)) (.fx (.linger .own .now (.bonus 12)))⟩

@@ -25,4 +25,5 @@ import Pokemon.Calc
 import Pokemon.Bench
 import Pokemon.Recycle
 import Pokemon.Abilities
+import Pokemon.NoAbilities
 import Pokemon.Audit

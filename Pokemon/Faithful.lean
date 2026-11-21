@@ -31,7 +31,8 @@ permutes cards, so it holds all game):
   either"); in the model's vocabulary (no Stadium play, no return from play) clause 3 (a) is P
   for Trainer effects, quantified over the cards of both decks together, extended to
   "as often as you like" Abilities but not to once-per-turn or on-play ones, which P covers and
-  clause 4 bounds instead; clause 3 (b), which P lacks, is vacuous for every deck with no
+  which the potential `abPot` bounds per turn instead (clause 4 only forbids their rest-of-game
+  writes); clause 3 (b), which P lacks, is vacuous for every deck with no
   rest-of-game Trainer writer (all of today's Standard, survey S9 N3).
 * `AbilitySafe` (clause 4, milestone M8a): no "as often as you like" Ability writes a damage bonus
   or reduction, and no Ability writes a rest-of-game one. Decidable; every deck without Abilities
