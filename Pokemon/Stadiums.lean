@@ -29,8 +29,12 @@ it recycles), and the per-turn count of `Faithful.TInv` covers it. Across turns 
 
 As for `Recycle.recycling_breaks_bound`, the negative result is about representation: nothing
 reads the stored bonus (no attack is made), so the unboundedly many states are not shown to
-differ in play. No Standard Stadium writes a damage bonus or reduction at all (survey S9); the
-three whose effect the model expresses (Academy at Night, Levincia, Prism Tower) move cards.
+differ in play. No Standard Stadium's activated ("Once during each player's turn") effect writes
+a lingering damage bonus or reduction (survey S9); the three whose activated effect the model
+expresses (Academy at Night, Levincia, Prism Tower) move cards. Static Stadium text that changes
+damage (Postwick sv9-154: "do 30 more damage"; Full Metal Lab sv5-148: "take 30 less damage";
+the reduction or prevention of Battle Cage, Granite Cave and Neutralization Zone) is not modelled (Known gaps in
+`Pokemon/Rules.lean`): such a Stadium is played as an inert card.
 -/
 
 namespace Pokemon.Stadiums

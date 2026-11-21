@@ -4,16 +4,20 @@ import Pokemon.Faithful
 # The two sides together: faithful decks are finite, the two-counter decks are not faithful
 
 `Pokemon/Faithful.lean` proves finiteness up to the exact-store clamp for decks satisfying
-`GameState.Faithful`, which has three clauses: `LoopFree` (no damage bonus or reduction under
-`iter`), `GXOnly` (rest-of-game bonuses and reductions only in GX attacks) and, since milestone MV,
-`RecycleSafe` (no recycling of modifier writers within a turn, none of rest-of-game writers),
-and, since milestone M8a, `AbilitySafe` (no "as often as you like" Ability writes a damage bonus or
-reduction, no Ability a rest-of-game one).
+`GameState.Faithful`, which has five clauses: `LoopFree` (no damage bonus or reduction under
+`iter`), `GXOnly` (rest-of-game bonuses and reductions only in GX attacks), since milestone MV
+`RecycleSafe` (no free recycler, an Item or Supporter effect or an "as often as you like" Ability,
+returns an Item modifier writer; no effect returns an Item or Supporter rest-of-game writer),
+since milestone M8a `AbilitySafe` (no "as often as you like" Ability writes a damage bonus or
+reduction, no Ability a rest-of-game one), and since milestone M5 `StadiumSafe` (no Stadium's
+effect writes a rest-of-game bonus or reduction).
 `Pokemon/Counter.lean` proves that the generalised model simulates every two-counter machine.
 This file shows that clause 2 cannot be dropped from the finiteness theorem: the two-counter
 starts satisfy clauses 1, 3 and 4 (they recycle nothing and have no Abilities), violate clause 2 (when the machine's first
 instruction is not `halt`), and simulate every two-counter machine. (That clause 3 cannot be
-dropped either is `Recycle.recycling_breaks_bound`.) It is a sharpness result for clause 2, not a
+dropped either is `Recycle.recycling_breaks_bound`; clause 1,
+`LoopFreeNeeded.iter_writer_breaks_bound`; clause 4, `Abilities.unlimited_writer_breaks_bound`;
+clause 5, `Stadiums.stadium_writer_breaks_bound`.) It is a sharpness result for clause 2, not a
 classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
 that violate only clause 2 (the two-counter starts) are universal; nothing is proved here about
 other non-faithful decks, and some of them are finite (for instance tame decks that violate

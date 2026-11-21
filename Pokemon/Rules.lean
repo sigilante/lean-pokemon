@@ -177,13 +177,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
   `Test.atLeast` and `Test.exactly`; the proportional write `scale`), their Special
   Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); the
-  only read of a Benched Pokémon's damage is the truncated subtraction of `benchHeal`
-  (milestone M3); since milestone MV amounts and tests also read counts (`Count`: the cards that
+  reads of a Benched Pokémon's damage are the truncated subtraction of `benchHeal`
+  (milestone M3) and, since milestone M8a, `moveCounter` (`CMove`: a counter moves off a Pokémon
+  only if it has one, and with "without Knocking it Out" onto one only if its damage stays below
+  HP), both on the player's own Pokémon; since milestone MV amounts and tests also read counts (`Count`: the cards that
   pass a filter in a player's hand, deck or discard pile; a player's Prize cards left; a player's
   Benched Pokémon whose card passes a filter; the Energy passing a filter attached to a player's
   Active Pokémon or to all of their Pokémon in play; `Amt.count`, `Test.countGe`), none of which
   reads damage, so both clamps keep them exact (`Count.val_clampAt`, `Count.val_xclampAt`);
-  there are no reads of the damage on Benched Pokémon, of Poison strength, of HP ("if it has full
+  there are no other reads of the damage on Benched Pokémon (no tests or counts of it), none of
+  Poison strength, of HP ("if it has full
   HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history ("if you
   played a Supporter this turn"); a count test is made, like every test, while the player has an
   Active Pokémon; `scale` writes only to the
@@ -228,16 +231,37 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `iter` (`LoopFree`) and rest-of-game bonuses and reductions only in GX attacks (`GXOnly`;
   `Faithful.reach_boundedStores`). Faithful decks may use damage reduction, `drain`, and
   carried bonuses and reductions in attacks and Trainers. Since milestone MV cards leave the discard
-  pile (recycling), and `Faithful` has a third clause, `RecycleSafe`: no Trainer effect can return
-  a non-Supporter modifier writer from a discard pile, and no effect a rest-of-game writer; the
-  bound is then per turn (each non-Supporter writer played at most once a turn, one Supporter, one
+  pile (recycling), and `Faithful` has a third clause, `RecycleSafe`, in its present form (after
+  milestones M8a and M5): (a) no free recycler (an Item or Supporter effect, or an "as often as you
+  like" Ability of a Pokémon or given by a Tool, `Card.freeRec`; not an attack, a once-per-turn or
+  on-play Ability, or a Stadium's effect) can return an Item card that writes a bonus or reduction
+  (`Card.wAmt`) from a discard pile, and (b) no effect at all can return an Item or Supporter card
+  that writes a rest-of-game one (`Card.alAmt`); the
+  bound is then per turn (each Item writer played at most once a turn, one Supporter, one
   attack; carried amounts expire within three turns). Without clause 3 the stores are unbounded
   (`Recycle.recycling_breaks_bound`: two Items that return each other and an Iron Defender-like
   Item); "attack twice" or extra turns would break the bound too. Since milestone M8a clause 3
   (a) also covers "as often as you like" Abilities, and a fourth clause, `AbilitySafe`, says that
   no such Ability writes a bonus or reduction and no Ability a rest-of-game one; once-per-turn and
   on-play Abilities may write and recycle, and their uses in one turn are bounded by a potential
-  of the player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`). The
+  of the player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`). Since
+  milestone M5 a fifth clause, `StadiumSafe`, says that no Stadium's effect writes a rest-of-game
+  bonus or reduction; a Stadium's once-per-turn effect may otherwise write and recycle, and is paid
+  per use through `Card.stQ`, with at most two uses a turn (`GameState.stPot`), in a Stadium term
+  of the bound. Each of the five clauses has a negative theorem: without it the stores are
+  unbounded (clause 1: `LoopFreeNeeded.iter_writer_breaks_bound`; 2: below; 3:
+  `Recycle.recycling_breaks_bound`; 4: `Abilities.unlimited_writer_breaks_bound`; 5:
+  `Stadiums.stadium_writer_breaks_bound`). What `Faithful.xfinite` covers is the model: for a
+  deck containing a card whose static or triggered text is not modelled (the Stadium and Tool
+  item below, static and triggered Abilities), it is a theorem about the inert card the model
+  plays, not the printed one. The omission that most directly makes the model's finiteness easier
+  than the real game's is HP modifiers (Hero's Cape, Cynthia's Power Weight, Ancient Booster Energy
+  Capsule, Gravity Mountain and others below): the exact-store clamp caps damage at printed HP, and
+  `Settled` forces a Knock Out at printed HP, so the real states in which a Pokémon survives with
+  damage between its printed and its modified HP do not exist in the model. The other static
+  omissions are milder: static damage bonuses and reductions, Bench-size and cost changes are
+  constants of a card, not stored amounts; Ability and Tool locks only remove behaviour; triggered
+  Tools add behaviour. The
   rest-of-game
   modifiers of non-GX attacks give two unbounded counters with an exact zero test, and the model
   simulates every two-counter machine (`Counter.universal`; this rests on the
@@ -391,7 +415,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`ToolGrant`, for a holder passing a filter: `InPlay.attacks`, `InPlay.abilities`); a Tool's
   once-per-turn Ability shares the Pokémon's one use flag (`InPlay.used`), so a Pokémon with an
   Ability of its own and one from a Tool uses only one of them in a turn (fewer outcomes than the
-  rulebook). Effects discard a Stadium in play (`Effect.discardStadium`) and the Tools of a
+  rulebook). For such a holder `Faithful.xfinite` is therefore a theorem about a game with fewer
+  outcomes than the printed one; the store bound is not proved for a model with one use flag per
+  Ability. Effects discard a Stadium in play (`Effect.discardStadium`) and the Tools of a
   Pokémon (`Effect.discardTools`). Not modelled: the end-of-turn discard of Technical Machine:
   Fluorite sv8-188 ("discard it at the end of your turn"; the model keeps it attached), Tools
   attached to the opponent's Pokémon, more than one Tool on a Pokémon (Rotom ex me2-29 and others
@@ -403,7 +429,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Tool with such text is still playable, as a card with no effect (`Card.inert`: a Stadium whose
   effect is `skip`, a Tool with an empty grant): it occupies the slot or the Tool place and does
   nothing, which under-models the printed card (it removes the printed outcomes the text adds and
-  keeps the ones it forbids). Absent kinds, for a later milestone (derived HP, per-Pokémon and
+  keeps the ones it forbids). `Faithful.xfinite` for a deck containing such a card is a theorem
+  about the inert card, not the printed one; of the kinds below, HP changes make the model's
+  finiteness most directly easier than the real game's (see the finiteness paragraph above:
+  damage is capped, and Knock Outs taken, at printed HP). Absent kinds, for a later milestone (derived HP, per-Pokémon and
   static modifiers, triggers): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively
   Stadium; Tools 3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage
   bonuses (Stadium 1, Postwick; Tools 8: Binding Mochi, Brave Bangle ×2, Future Booster Energy
@@ -459,9 +488,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
   (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
-  sv9-85 attaches Spiky Energy). The finiteness results cover Abilities: `Reach.finite` with
-  tame, low-constant Ability effects, `Faithful.xfinite` under clause 4 (`AbilitySafe`) with
-  clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
+  sv9-85 attaches Spiky Energy). The finiteness results cover activated and on-play Abilities:
+  `Reach.finite` with tame, low-constant Ability effects, `Faithful.xfinite` under clause 4
+  (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and

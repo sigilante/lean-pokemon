@@ -11,8 +11,8 @@ Effects read the state through the two Active Pokémon: a test (`ite`) on the da
 Special Conditions, the markers or the type of either one; `scale`, which places counters in
 proportion to the damage on either one; and the amount of the damage step (`Amt.per`), which
 reads the damage on either one. Since milestone M3 effects also place damage counters on Benched
-Pokémon (`benchCounters`, `spreadCounters`) and heal one (`benchHeal`, the one read of a Benched
-Pokémon's damage, by truncated subtraction). The damage step also reads the two Active Pokémon's types,
+Pokémon (`benchCounters`, `spreadCounters`) and heal one (`benchHeal`, which reads a Benched
+Pokémon's damage by truncated subtraction; since milestone M8a `moveCounter` reads it too). The damage step also reads the two Active Pokémon's types,
 Weakness and Resistance, and both players' modifiers (`GameState.dealt`). Inside one `Run` nothing is Knocked Out, so damage may exceed HP and
 these reads see the excess. `Run` is the semantics of an attack's effect, where the rulebook
 checks for Knock Outs only at the end of the attack. The effect of an Item or Supporter card is

@@ -226,7 +226,8 @@ theorem unlimited_recycler_breaks_bound :
 
 /-- **A once-per-turn recycler of a modifier writer is faithful** (milestone M8a): the deck of
 `unlimited_recycler_breaks_bound` with the Ability limited to "once during your turn" satisfies
-all four clauses, so `Faithful.xfinite` applies to it. -/
+all five clauses (milestone M5 added clause 5, which it satisfies: it has no Stadium), so
+`Faithful.xfinite` applies to it. -/
 theorem once_recycler_faithful : (kgs .once [ironDefender] [] 0 false).Faithful :=
   ⟨by unfold GameState.LoopFree; rw [kgs_allCards]; decide, kgs_gxOnly _,
     by unfold GameState.RecycleSafe; rw [kgs_allCards]; decide,

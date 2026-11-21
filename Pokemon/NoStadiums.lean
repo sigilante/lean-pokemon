@@ -12,6 +12,11 @@ of milestone M8a word for word (`RecycleSafeM8a`, its definitions copied from mi
 Stadium term is 0, and the hypothesis `StadiumQuiet` that `reach_boundedStores_noRecycle` gained
 holds. Tools change nothing here: a Tool's grant enters the clauses only through `Card.attacks` and
 `Card.abilities`, and a Tool with an empty grant (`ToolGrant.none`) adds no attack and no Ability.
+One qualification to "word for word": `RecycleSafeM8a` and the definitions it uses have `.tool`
+cases (a Tool card writes nothing when played, and its free recyclers are the "as often as you
+like" Abilities it gives), which milestone M8a could not have had, since the card kind `.tool` is
+new in milestone M5. So clause 3 without Stadiums is the clause of milestone M8a word for word for
+decks with no Tool cards, and its natural extension to Tool cards otherwise.
 -/
 
 namespace Pokemon
@@ -105,7 +110,8 @@ theorem GameState.NoStadiums.recycleSafe_iff {g : GameState} (h : g.NoStadiums) 
       exact h2 x hx f hf y hy hfy
 
 /-- **Without Stadiums, `Faithful` is the four-clause condition of milestone M8a**, its clause 3
-word for word. -/
+word for word for decks with no Tool cards (`RecycleSafeM8a` has `.tool` cases, for a card kind
+that milestone M8a did not have; with Tool cards it is that clause's natural extension). -/
 theorem GameState.NoStadiums.faithful_iff {g : GameState} (h : g.NoStadiums) :
     g.Faithful ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafeM8a ∧ g.AbilitySafe :=
   ⟨fun ⟨a, b, c, d, _⟩ => ⟨a, b, h.recycleSafe_iff.1 c, d⟩,
