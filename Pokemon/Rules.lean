@@ -154,12 +154,14 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   each player has their own Stadium slot;
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them only from the player's own Active Pokémon (`cure`); the variants with a number
-  ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; poisoning a
-  Pokémon that is already Poisoned keeps its accumulated Poison strength (`poisonUp`), whereas
-  the rulebook says a new Poison replaces the old one (so the strength would return to that of
-  the new Poison);
-  Croagunk's cumulative increase is modelled as a number on the Pokémon (`poisonUp`) that
-  lasts until Poison ends, not as a lingering effect; a Confused Pokémon whose flip is tails
+  ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; a new Poison
+  replaces the old one, as the rulebook says (2023 p. 16, 2024 the same), so poisoning a
+  Pokémon that is already Poisoned resets its Poison strength (`poisonUp`) to 0
+  (`InPlay.inflict`); Croagunk's cumulative increase is modelled as a number on the Pokémon
+  (`poisonUp`) that belongs to the Poisoned Condition: it lasts until Poison ends or is
+  replaced, and stacks across uses of the attack, which raises an existing Poison and does not
+  re-Poison (that the increase ends when a later attack re-Poisons the Pokémon is the model's
+  reading of "replaces"; no ruling on it was found); a Confused Pokémon whose flip is tails
   uses up the turn's attack, and its attack must be one it could otherwise use;
 * Pokémon Checkup (`InPlay.checkup`) covers the five Special Conditions and the Char counter
   only: no Ability,

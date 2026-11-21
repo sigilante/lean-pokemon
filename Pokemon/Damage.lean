@@ -261,7 +261,7 @@ theorem InPlay.Agree.upd {c : Cap} {q p : InPlay} (h : Agree c q p) :
     cases k <;>
       exact ⟨h.top, h.under, h.energy, h.tools, by first | rfl | exact h.rot,
         by first | rfl | exact h.poisoned, by first | rfl | exact h.burned, h.fresh, h.marks,
-        hd, h.poisonUp⟩
+        hd, by first | exact h.poisonUp | simp only [InPlay.inflict, Nat.zero_min]⟩
 
 /-- Agreement survives a change of markers. -/
 theorem InPlay.Agree.setMarks {c : Cap} {q p : InPlay} (h : Agree c q p) (f : Marks → Marks) :

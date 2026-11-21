@@ -80,7 +80,8 @@ structure InPlay where
   poisoned : Bool
   burned : Bool
   /-- extra damage counters Poison places at each Checkup, beyond the ordinary one; raised by
-  `Effect.poisonUp`, cleared with the Poisoned condition. Not bounded by any rule. -/
+  `Effect.poisonUp`, cleared with the Poisoned condition and reset to 0 by a new Poison
+  (`InPlay.inflict`). Not bounded by any rule. -/
   poisonUp : Nat
   /-- put into play or evolved this turn -/
   fresh : Bool
@@ -109,10 +110,14 @@ def setMarks (f : Marks → Marks) (p : InPlay) : InPlay := { p with marks := f 
 /-- The Pokémon's type: the one its Coloring counter set, or else its top card's. -/
 def type (p : InPlay) : EType := p.marks.coloring.getD p.top.type
 
-/-- Apply a Special Condition. A new Asleep, Confused or Paralyzed replaces the old one.
-Poisoning an already Poisoned Pokémon keeps its `poisonUp`. -/
+/-- Apply a Special Condition. A new Asleep, Confused or Paralyzed replaces the old one. A new
+Poison replaces the old one: "A Pokémon cannot have two Poison markers; if an attack gives it
+another Poison marker, the new Poisoned Condition simply replaces the old one" (rulebook 2023,
+p. 16; the same in the 2024 rulebook, survey S8 G7), so poisoning resets the Poison strength
+`poisonUp` to that of a plain Poison (0 extra counters). Burn has the same rule; a Burn carries
+no strength here, so re-burning changes nothing. -/
 def inflict : Condition → InPlay → InPlay
-  | .poisoned, p => { p with poisoned := true }
+  | .poisoned, p => { p with poisoned := true, poisonUp := 0 }
   | .burned, p => { p with burned := true }
   | .asleep, p => { p with rot := .asleep }
   | .confused, p => { p with rot := .confused }

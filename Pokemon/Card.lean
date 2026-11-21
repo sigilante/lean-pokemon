@@ -99,7 +99,9 @@ inductive Effect where
   | inflict (c : Condition)
   /-- if the opponent's Active Pokémon is Poisoned, it takes `n` more damage counters from
   Poison at every Pokémon Checkup; repeated uses add up (Croagunk STS 58, *Poison Up*: "This
-  effect can be applied more than once") -/
+  effect can be applied more than once"). It does not Poison: it raises the strength of the
+  Poison already there, which lasts until Poison ends or a new Poison replaces it
+  (`InPlay.inflict` resets it) -/
   | poisonUp (n : Nat)
   /-- the player's Active Pokémon recovers from all Special Conditions (Full Heal) -/
   | cure
