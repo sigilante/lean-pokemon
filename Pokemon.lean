@@ -17,4 +17,5 @@ import Pokemon.Counter
 import Pokemon.Exact
 import Pokemon.Bounded
 import Pokemon.Faithful
+import Pokemon.Dichotomy
 import Pokemon.Audit

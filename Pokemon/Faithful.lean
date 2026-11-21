@@ -46,6 +46,9 @@ every reachable state, with `storeBound g₀ = storeTotal g₀ + cardsAmt C + 3 
   lie in one finite list, and the kernel of `xclamp` is a two-way bisimulation along reachable
   states. No tameness: damage reduction (Iron Defender), `drain`, carried bonuses and
   reductions, and rest-of-game modifiers from GX attacks are all allowed.
+* `Pokemon/Dichotomy.lean`: the two-counter starts of `Pokemon/Counter.lean` satisfy clause 1
+  and violate clause 2 (`Faithful.counter_loopFree`, `Faithful.counter_not_gxOnly`), and
+  `Faithful.dichotomy` states both sides together.
 
 **Rule change** (in `Pokemon/Rules.lean` and `Pokemon/Card.lean`): `Attack` has a new field
 `gx`; `Move.attack` requires `atk.gx = true → g.cur.gxUsed = false` and sets the attacker's

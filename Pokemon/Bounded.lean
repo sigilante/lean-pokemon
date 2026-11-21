@@ -20,6 +20,11 @@ of a state, not of the proof, and proves finiteness under it.
   nothing about where it goes then.
 
 Nothing here bounds the stores: whether play keeps them bounded depends on the deck.
+`Pokemon/Faithful.lean` gives a deck condition under which every reachable state satisfies
+`BoundedStores` at a bound computed from the start (`Faithful.reach_boundedStores`), and
+`Pokemon/Dichotomy.lean` shows that the bound cannot be dropped: for the two-counter start
+`Counter.start Counter.countUp 0 0` the `xclamp`s of the reachable states lie in no finite list
+(`Faithful.xclamp_not_finite`).
 -/
 
 namespace Pokemon

@@ -18,6 +18,7 @@ import Pokemon.Counter
 import Pokemon.Exact
 import Pokemon.Bounded
 import Pokemon.Faithful
+import Pokemon.Dichotomy
 
 /-! Axiom audit. `#audit_namespace` checks every theorem declared in the `Pokemon` modules
 (private and generated ones included) and fails the build unless each depends only on
