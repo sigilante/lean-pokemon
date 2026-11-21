@@ -63,17 +63,18 @@ theorem flag_exact (ops : List CountOp) (n : Nat) :
 theorem _root_.Pokemon.Move.evolve_marks {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
     {a : InPlay} (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (ha : g.cur.active = some a)
     (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false) (hf : g.firstTurn = false)
-    (hbt : g.between = false) (hst : Settled g) :
+    (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
     ∃ g' a', Move g g' ∧ g'.cur.active = some a' ∧ a'.top = p ∧ a'.marks = a.marks :=
-  ⟨_, _, .evolve hh ha he hfr hf hbt hst, rfl, rfl, rfl⟩
+  ⟨_, _, .evolve hh ha he hfr hf hbt hst hat, rfl, rfl, rfl⟩
 
 /-- Retreating keeps the markers of the Pokémon that goes to the Bench. -/
 theorem _root_.Pokemon.Move.retreat_marks {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay}
     {paid rest : List Card} (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
     (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
     (hp : paid.length = a.top.retreat) (hs : a.rot.canAct = true) (hbt : g.between = false)
-    (hst : Settled g) (hl : g.cur.mods.live.noRetreat = false) :
+    (hst : Settled g) (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
     ∃ g' a', Move g g' ∧ a' ∈ g'.cur.bench ∧ a'.top = a.top ∧ a'.marks = a.marks :=
-  ⟨_, _, .retreat ha hb hr he hp hs hbt hst hl, List.mem_append_right _ (.head _), rfl, rfl⟩
+  ⟨_, _, .retreat ha hb hr he hp hs hbt hst hl hat, List.mem_append_right _ (.head _), rfl,
+    rfl⟩
 
 end Pokemon.Markers

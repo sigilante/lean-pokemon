@@ -13,6 +13,14 @@ phase only Knock Outs, promotions, and the draw that starts the turn proper (`st
 without a player's action; the Knock Outs it causes are therefore taken before anything else
 can happen, as the rulebook requires.
 
+An attack ends the turn: "Once you attack, your turn is over" (rulebook 2023 p. 13; "3) Attack.
+Then, end your turn.", p. 9). `attack` and `attackConfused` (a Confused Pokémon's failed
+attempt, which is still the turn's attack) set `GameState.attacked`, and every action of the
+turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `attack`,
+`attackConfused`) requires `attacked = false`; so after an attack only its Knock Outs (and
+promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
+does not attack ends the turn by `endTurn` at any point of the turn proper.
+
 Knock Out timing. The rulebook checks for Knock Outs at the end of every attack, at the end of
 every Pokémon Checkup, and at once whenever damage reaches HP at any other time. The model
 follows it in two ways. Between moves: every move that is not part of resolving a Knock Out
@@ -147,8 +155,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`attackConfused`) only under the same condition, and a failed attempt (tails) does not use it
   up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
   ruling, and the model takes the answer "no"; VSTAR Powers are absent (`vstarUsed` is unused);
-* an attack does not end the turn, but at most one attack is made per turn (`attacked`, reset
-  only by `endTurn`); the first player may play a Supporter on the first turn;
+* the first player may play a Supporter on the first turn;
   each player has their own Stadium slot;
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them only from the player's own Active Pokémon (`cure`); the variants with a number
@@ -160,7 +167,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   replaced, and stacks across uses of the attack, which raises an existing Poison and does not
   re-Poison (that the increase ends when a later attack re-Poisons the Pokémon is the model's
   reading of "replaces"; no ruling on it was found); a Confused Pokémon whose flip is tails
-  uses up the turn's attack, and its attack must be one it could otherwise use;
+  ends the turn as an attack does (the rulebook: "the attack doesn't happen", p. 16; that the
+  failed attempt still ends the turn is the model's reading of the attack steps, p. 20, in
+  which the Confusion check is step C of using the attack), and its attack must be one it could
+  otherwise use;
 * Pokémon Checkup (`InPlay.checkup`) covers the five Special Conditions and the Char counter
   only: no Ability,
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
@@ -296,14 +306,15 @@ inductive Move : GameState → GameState → Prop where
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
       (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂)
       (hs : p.stage = .basic) (hhp : 0 < p.hp)
-      (hb : g.cur.bench.length < benchLimit) (hbt : g.between = false) (hst : Settled g) :
+      (hb : g.cur.bench.length < benchLimit) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, bench := g.cur.bench ++ [InPlay.ofBasic p] } }
   /-- attach one Energy card from hand to the Active Pokémon, once per turn -/
   | attach {g : GameState} {l₁ l₂ : List Card} {t : EType} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
       (hf : g.cur.energyAttached = false) (ha : g.cur.active = some a)
-      (hbt : g.between = false) (hst : Settled g) :
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, energyAttached := true,
         active := some { a with energy := Card.energy t :: a.energy } } }
@@ -311,7 +322,8 @@ inductive Move : GameState → GameState → Prop where
   | evolve {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (ha : g.cur.active = some a)
       (he : p.evolvesFrom = some a.top.name) (hfr : a.fresh = false)
-      (hf : g.firstTurn = false) (hbt : g.between = false) (hst : Settled g) :
+      (hf : g.firstTurn = false) (hbt : g.between = false) (hst : Settled g)
+      (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂,
         active := some { a with
@@ -323,7 +335,7 @@ inductive Move : GameState → GameState → Prop where
       (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
       (hp : paid.length = a.top.retreat)
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
-      (hl : g.cur.mods.live.noRetreat = false) :
+      (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         active := some q,
         bench := b₁ ++ { a with
@@ -336,7 +348,7 @@ inductive Move : GameState → GameState → Prop where
       (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
-      (hl : g.cur.mods.live.noItem = false) :
+      (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false) :
       Move g g'
   /-- play a Supporter card, once per turn; its effect resolves as an Item's does (`TRun`) -/
   | supporter {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
@@ -344,10 +356,12 @@ inductive Move : GameState → GameState → Prop where
       (hs : g.cur.supporterPlayed = false) (hbt : g.between = false) (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
-        discard := Card.trainer n .supporter e :: g.cur.discard } } g') :
+        discard := Card.trainer n .supporter e :: g.cur.discard } } g')
+      (hat : g.attacked = false) :
       Move g g'
   /-- attack: do the base damage (with the lingering modifiers, `Effect.damage`), then resolve
-  the attack's effect. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
+  the attack's effect. The attack ends the turn (`attacked`): afterwards only Knock Outs and
+  `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
   its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
   using it records that (`PlayerState.gxUsed`). -/
@@ -361,7 +375,7 @@ inductive Move : GameState → GameState → Prop where
       (hgx : atk.gx = true → g.cur.gxUsed = false) :
       Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
-  happen, and the attacker gets 3 damage counters. As for `attack`, a GX attack can be tried
+  happen, and the attacker gets 3 damage counters; this still ends the turn (`attacked`). As for `attack`, a GX attack can be tried
   only by a player who has not used one in this game; the failed attempt does not use it up
   (an unverified ruling; see the Known gaps). -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}

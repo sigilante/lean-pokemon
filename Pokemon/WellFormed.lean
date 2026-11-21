@@ -177,7 +177,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         exact ⟨hhp, rfl, rfl, rfl, rfl⟩
   | attach hh hf ha => exact hw
   | evolve hh ha he hfr hf => exact hw
-  | retreat ha hb hr he hp hs hbt hst hl =>
+  | retreat ha hb hr he hp hs hbt hst hl hat =>
       rename_i a q b₁ b₂ _ _
       have hk : a.damage < a.top.hp := hst.1 a (Or.inl ha)
       refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩

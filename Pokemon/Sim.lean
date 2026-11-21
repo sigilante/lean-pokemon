@@ -503,40 +503,40 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
   obtain ⟨c₂, a₂, m₁, m₂, hg, hc₂, ha₂, hm₁, hm₂⟩ := GameState.clamp_inv hc
   have hfl := Store.flags_of_cap hm₁
   cases h with
-  | playBasic hh hs hhp hb hbt hst =>
+  | playBasic hh hs hhp hb hbt hst hat =>
       have hs' := hs₂ hst
       subst hg
-      exact ⟨_, .playBasic hh hs hhp hb hbt hs', by
+      exact ⟨_, .playBasic hh hs hhp hb hbt hs' hat, by
         simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂]⟩
-  | @attach l₁ l₂ t a hh hf ha hbt hst =>
+  | @attach l₁ l₂ t a hh hf ha hbt hst hat =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have key := hq.clamp_map (c' := .hp) (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
         (fun x => { x with energy := Card.energy t :: x.energy }) (fun _ => rfl) rfl rfl
-      exact ⟨_, .attach hh hf rfl hbt hs', by
+      exact ⟨_, .attach hh hf rfl hbt hs' hat, by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂, key]⟩
-  | @evolve l₁ l₂ p a hh ha he hfr hf hbt hst =>
+  | @evolve l₁ l₂ p a hh ha he hfr hf hbt hst hat =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
-      refine ⟨_, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt hs', ?_⟩
+      refine ⟨_, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt hs' hat, ?_⟩
       rw [e]
       simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂]
-  | @retreat a q' b₁ b₂ paid rest ha hb hr he hp hs hbt hst hl =>
+  | @retreat a q' b₁ b₂ paid rest ha hb hr he hp hs hbt hst hl hat =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1 a (Or.inl ha)))
       refine ⟨_, .retreat rfl hb hr (hq.energy.trans he) (by rw [hq.top]; exact hp)
-        (by rw [hq.rot]; exact hs) hbt hs' (by rw [hfl.2.2.1]; exact hl), ?_⟩
+        (by rw [hq.rot]; exact hs) hbt hs' (by rw [hfl.2.2.1]; exact hl) hat, ?_⟩
       rw [e]
       simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂]
-  | @item g' l₁ l₂ n e hh hbt hst hr hl =>
+  | @item g' l₁ l₂ n e hh hbt hst hr hl hat =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.trainer hh
       have hp : ({ g₁ with cur := { g₁.cur with
@@ -548,8 +548,8 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂])
         (.inl hst)
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
-        (by subst hg; rw [hfl.2.2.2]; exact hl), hc'⟩
-  | @supporter g' l₁ l₂ n e hh hs hbt hst hr =>
+        (by subst hg; rw [hfl.2.2.2]; exact hl) (by subst hg; exact hat), hc'⟩
+  | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.trainer hh
       have hp : ({ g₁ with cur := { g₁.cur with
@@ -563,7 +563,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂])
         (.inl hst)
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
-        (by subst hg; exact hbt) hs' hr', hc'⟩
+        (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat), hc'⟩
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.attack ha hm
