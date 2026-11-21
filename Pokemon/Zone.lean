@@ -181,7 +181,7 @@ theorem ZStep.count {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (x : Ca
   | @moveBB w f s q q' b₁ b₂ c₁ c₂ e₁ e₂ y hb he hx hc =>
       have h4 := congrArg (fun b => List.count x (benchCardList b)) hc
       simp only [count_benchCardList_append, benchCardList, List.count_append,
-        InPlay.count_cardList, InPlay.addEnergy, List.count_cons] at h4
+        InPlay.count_cardList, List.count_cons] at h4
       simp only [PlayerState.allCards, List.count_append, hb, count_benchCardList_append,
         benchCardList, InPlay.count_cardList, InPlay.addEnergy, he, List.count_cons]
       omega

@@ -398,7 +398,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   search may take fewer cards than it could, which "up to" already allows); the model resolves a
   played Item or Supporter with the card already in the discard pile (the rulebook: "follow the
   instructions on the card and then discard it", 2023 glossary), so a card can recycle itself in
-  the model; clause 3 of `Faithful` constrains that case like any other. Inside an attack nothing
+  the model; clause 3 of `Faithful` constrains that case like any other. For the same reason a
+  count of the discard pile read by that Trainer's own effect includes the card itself. Inside an attack nothing
   after a `switch .own` may attach Energy to, discard Energy from or move Energy off the player's
   Active Pokémon (`Effect.ownFree`), and the attacker at a damage step is the same Pokémon (top
   card and the cards under it) as when the attack began, its attached Energy possibly changed

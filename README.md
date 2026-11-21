@@ -201,8 +201,12 @@ every `k ≥ 2`). Expiry follows the turn structure:
 each kind of modifier is in effect. Printed rest-of-game bonuses and reductions come only from
 once-per-game attacks (survey S7), and same-turn ones are bounded by copies of their cards times
 printed constants provided no recycling replays them within a turn; since milestone MV this is
-clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the deck that survey S10 found
-today's Standard decks to satisfy (a reading of the card pool, not a theorem). A reduction carried into the opponent's turn does exist on a printed Item (Iron
+clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the two decks together. Survey
+S10 found no Trainer card in today's Standard pool whose discard-pile filter admits a
+non-Supporter modifier writer, and no rest-of-game Trainer writer there, so the model's
+encodings of those Trainers and attacks satisfy clause 3 for every pairing of decks (a reading
+of the card pool, not a theorem; Abilities, Stadium effects and returns from play are outside
+the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
 Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
 damage…"), so printed decks are not all tame. The model over-approximates modifiers on purpose;
 `Reach.finite` covers only the tame decks, and `Faithful.xfinite` (next paragraph) covers decks
@@ -263,7 +267,10 @@ finiteness; the deck condition `Faithful` buys it back:
   your discard pile into your hand"), which returns Iron Defender and Item B, play Iron Defender,
   play Item B (the same text), which returns Iron Defender and Item A. Each recycler returns the
   other, never itself, and each round costs no card. Survey S10 found no Standard card with this
-  shape;
+  shape. Like `xclamp_not_finite`, this is a statement about representation: in the witness
+  nothing ever reads the stored reduction (no attack is made), so the unboundedly many states
+  are not shown to differ in play. Whether unrestricted recycling could simulate a counter
+  machine is open, and nothing here claims either way;
 * **the rule change**: `Attack` has a field `gx`, and `Move.attack` lets a player use a GX
   attack only if they have not used one in the game, and records it (`PlayerState.gxUsed`,
   unused before); `Move.attackConfused` (a Confused Pokémon's failed attempt) has the same
