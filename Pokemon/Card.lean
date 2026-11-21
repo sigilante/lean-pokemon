@@ -534,7 +534,9 @@ def Test.onOwn : Test → Bool
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
-`selfDamage`, `healAll`, `scale .own`, `switch .own`, no test on the player's own Active Pokémon,
+`selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
+moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
+milestone MV), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/

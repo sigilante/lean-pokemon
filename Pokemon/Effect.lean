@@ -18,6 +18,11 @@ these reads see the excess. `Run` is the semantics of an attack's effect, where 
 checks for Knock Outs only at the end of the attack. The effect of an Item or Supporter card is
 resolved by `TRun` (in `Pokemon.Rules`), which uses `Run` for one primitive step at a time and
 takes every Knock Out at once after each step.
+
+Since milestone MV effects also move cards between a player's zones (`Run.zone`, with the
+semantics `ZStep` on one player's state): search, draw, mill, discard from the hand, recycling
+from the discard pile, attaching Energy from a zone, putting a Basic Pokémon onto the Bench, and
+discarding or moving attached Energy; and amounts and tests read counts (`Count.val`).
 -/
 
 namespace Pokemon

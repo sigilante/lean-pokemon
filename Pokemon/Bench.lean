@@ -594,7 +594,8 @@ theorem Run.cardList_of_switchesOwn {e : Effect} {g g' : GameState} (h : Run e g
   | _ => rfl
 
 /-- **The attacker stays the attacker.** In a `switchSafe` effect, every damage step is reached
-with the same cards in the player's Active Spot as at the start: the Pokémon whose type the
+with the same Pokémon (top card and the cards under it) in the player's Active Spot as at the
+start (since milestone MV its attached Energy may have changed): the Pokémon whose type the
 damage step reads for Weakness and Resistance (`GameState.weak`, `GameState.resist`) is the one
 that was Active when the effect began (its type can differ only by a Coloring counter). -/
 theorem HitAt.attacker {e : Effect} {g h : GameState} (hh : HitAt e g h)
@@ -627,7 +628,10 @@ theorem HitAt.attacker {e : Effect} {g h : GameState} (hh : HitAt e g h)
 
 /-- **The attacker at the damage step is the Pokémon that declared the attack.** For a
 well-formed attack (`Attack.wf`, a premise of `Move.attack`) used by the Active Pokémon `a`,
-every damage step of its script is reached with `a`'s cards in the Active Spot. -/
+every damage step of its script is reached with `a`'s Pokémon cards (top card and the cards under
+it) in the Active Spot. Milestone MV weakened the statement from `a`'s whole card list: an
+attack may attach Energy to its user before its damage step ("Attach a Basic Energy card from your
+discard pile to this Pokémon"), which changes the card list but not the Pokémon. -/
 theorem Attack.attacker_at_hit {atk : Attack} {g h : GameState} {a : InPlay}
     (hw : atk.wf = true) (ha : g.cur.active = some a) (hh : HitAt atk.script g h) :
     h.cur.active.map InPlay.pokemonCards = some a.pokemonCards := by

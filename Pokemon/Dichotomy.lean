@@ -4,18 +4,22 @@ import Pokemon.Faithful
 # The two sides together: faithful decks are finite, the two-counter decks are not faithful
 
 `Pokemon/Faithful.lean` proves finiteness up to the exact-store clamp for decks satisfying
-`GameState.Faithful`, which has two clauses: `LoopFree` (no damage bonus or reduction under
-`iter`) and `GXOnly` (rest-of-game bonuses and reductions only in GX attacks).
+`GameState.Faithful`, which has three clauses: `LoopFree` (no damage bonus or reduction under
+`iter`), `GXOnly` (rest-of-game bonuses and reductions only in GX attacks) and, since milestone MV,
+`RecycleSafe` (no recycling of modifier writers within a turn, none of rest-of-game writers).
 `Pokemon/Counter.lean` proves that the generalised model simulates every two-counter machine.
 This file shows that clause 2 cannot be dropped from the finiteness theorem: the two-counter
-starts satisfy clause 1, violate clause 2 (when the machine's first instruction is not `halt`),
-and simulate every two-counter machine. It is a sharpness result for clause 2, not a
+starts satisfy clauses 1 and 3 (they recycle nothing), violate clause 2 (when the machine's first
+instruction is not `halt`), and simulate every two-counter machine. (That clause 3 cannot be
+dropped either is `Recycle.recycling_breaks_bound`.) It is a sharpness result for clause 2, not a
 classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
 that violate only clause 2 (the two-counter starts) are universal; nothing is proved here about
 other non-faithful decks, and some of them are finite (for instance tame decks that violate
 clause 2, covered by `Reach.finite`).
 
 * `Faithful.counter_loopFree`: every two-counter start `Counter.start M a b` satisfies clause 1.
+* `Faithful.counter_recycleSafe` (milestone MV): it satisfies clause 3 (`counter_noRecycle`: no
+  effect of its cards moves a card out of a discard pile).
 * `Faithful.counter_not_gxOnly`: it violates clause 2 whenever the machine's initial
   instruction is not `halt`: the Clock's or the Tape's attack, neither a GX attack, writes a
   rest-of-game damage bonus or reduction (an increment writes a reduction, a decrement a bonus;
@@ -224,12 +228,13 @@ non-faithful decks.
    not used: `Faithful.xfinite` holds from any start; the premise is kept so the statement is
    unchanged) (clause 1,
    `LoopFree`: no damage bonus or reduction under `iter`; clause 2, `GXOnly`: rest-of-game
-   bonuses and reductions only in GX attacks, which are once per player per game), the
+   bonuses and reductions only in GX attacks, which are once per player per game; clause 3,
+   `RecycleSafe`, since milestone MV), the
    `xclamp`s of the reachable states lie in one finite list and the kernel of `xclamp` is a
    two-way bisimulation along reachable states.
 2. *Universal side.* For every two-counter machine `M` whose initial instruction is not `halt`
-   and all inputs `a`, `b`, the start `Counter.start M a b` is well formed, satisfies clause 1,
-   violates clause 2, and reaches a halt-marked state exactly when `M` halts from `(0, a, b)`.
+   and all inputs `a`, `b`, the start `Counter.start M a b` is well formed, satisfies clauses 1
+   and 3 (clause 3 added by milestone MV), violates clause 2, and reaches a halt-marked state exactly when `M` halts from `(0, a, b)`.
 3. *The bound is needed.* For `Counter.start Counter.countUp 0 0` the `xclamp`s of the
    reachable states lie in no finite list.
 
