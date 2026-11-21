@@ -13,8 +13,12 @@ The clamp is now needed even at turn boundaries. Inside one effect (a statement 
 not `Reach`), `poisonUp_unbounded` raises the Poison strength of a Poisoned opposing Active
 Pokémon without bound, and no Knock Out check resets it, since it causes no damage until
 Checkup. The previous version of this file proved `Reach.finite_damageBounded` (the reachable
-states with no pending Knock Out, unclamped, lie in a finite list); it is not restated here,
-because stacking Poison breaks its proof, and no `Reach`-level counterexample is formalized.
+states with no pending Knock Out, unclamped, lie in a finite list), before stacking Poison was
+added. In the current model that statement is false: `Pokemon/Infinite.lean` gives a
+well-formed start with no pending Knock Out from which one Item reaches a state with no pending
+Knock Out at every Poison strength `n` (`Infinite.not_finite_damageBounded`,
+`Reach.infinite_damageBounded`), so the unclamped reachable state space is infinite
+(`Infinite.not_finite`).
 
 The list `states g₀.allCards` is a crude over-approximation, built from: lists of length at
 most `N` over the starting cards (`N` = the number of cards in the game), the Pokémon cards

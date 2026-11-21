@@ -47,6 +47,14 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   current rule (2 counters, then heads cures); Paralysis ends at the Checkup after its
   owner's turn, which is exact here because only the opponent's Pokémon can be Paralyzed;
   coin flips are nondeterministic choices, so the model is silent about probability;
+* `poisonUp n` is a general effect primitive, usable in any effect and inside `iter`, whereas
+  the printed card (Croagunk) raises Poison strength once per use of its attack; the model
+  over-approximates it, and one Item can raise Poison strength without bound
+  (`Infinite.not_finite_damageBounded`);
+* effects cannot damage the player's own Pokémon (`counters` targets the opponent's Active
+  only): apart from Checkup, Confusion is the only damage the player's own Active Pokémon
+  takes, and the bound on it during a turn (`Reach.activeLe`) depends on this;
+* `heal` removes damage from the player's own Active Pokémon only, not from the Bench;
 * Stadium and Tool cards occupy state but have no move; Abilities are absent;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
@@ -58,8 +66,8 @@ namespace Pokemon
 
 /-- No Knock Out is pending: every Pokémon in play has fewer damage counters than its HP.
 `endTurn`, `startTurn` and `deckOut` require it. It is NOT an invariant of all reachable states
-(`counters_unbounded` mid-turn; `Move.endTurn_pending_ko` right after Checkup); it holds when
-the turn proper begins (`Move.damageBounded_of_startTurn`). -/
+(`counters_unbounded` mid-turn; `Infinite.endTurn_pending_ko_reachable` right after Checkup);
+it holds when the turn proper begins (`Move.damageBounded_of_startTurn`). -/
 def DamageBounded (g : GameState) : Prop :=
   ∀ p : InPlay,
     (g.cur.active = some p ∨ p ∈ g.cur.bench ∨ g.opp.active = some p ∨ p ∈ g.opp.bench) →

@@ -10,6 +10,8 @@ winner, and that every Benched Pokémon is below its HP and has no Special Condi
 * `Move.progress`, `Reach.progress`: from a well-formed state with no winner some move is
   legal. In particular a pending Knock Out can always be taken: the player who takes the Prize
   has one, and the Pokémon that must be promoted afterwards is on the Bench or the game is won.
+* `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`: with no winner and a pending Knock
+  Out (as after Checkup), a move that Knocks Out an Active Pokémon and takes a Prize is legal.
 -/
 
 namespace Pokemon
@@ -155,5 +157,57 @@ has a legal move. -/
 theorem Reach.progress {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g)
     (hn : g.winner = none) : ∃ g', Move g g' :=
   Move.progress (h.wellFormed h₀) hn
+
+/-- An Active spot is empty, holds a Pokémon below its HP, or holds one at or above its HP. -/
+theorem active_split (o : Option InPlay) :
+    (∃ a, o = some a ∧ a.top.hp ≤ a.damage) ∨ ∀ a, o = some a → a.damage < a.top.hp := by
+  cases o with
+  | none => exact .inr fun _ h => by cases h
+  | some a =>
+      rcases Nat.lt_or_ge a.damage a.top.hp with h | h
+      · exact .inr fun a' h' => by cases h'; exact h
+      · exact .inl ⟨a, rfl, h⟩
+
+/-- **A pending Knock Out can be taken.** In a well-formed state with no winner and a pending
+Knock Out (for instance between turns, after Checkup), some move Knocks Out an Active
+Pokémon: it takes one Prize card. -/
+theorem Move.knockOut_of_pending {g : GameState} (hw : WellFormed g) (hn : g.winner = none)
+    (hk : ¬ DamageBounded g) :
+    ∃ g', Move g g' ∧
+      g'.cur.prizes.length + g'.opp.prizes.length + 1 =
+        g.cur.prizes.length + g.opp.prizes.length := by
+  have hopp : ∀ a, g.opp.active = some a → a.top.hp ≤ a.damage → ∃ g', Move g g' ∧
+      g'.cur.prizes.length + g'.opp.prizes.length + 1 =
+        g.cur.prizes.length + g.opp.prizes.length := by
+    intro a ho hka
+    match hp : g.cur.prizes with
+    | [] => exact absurd hp (hw.1 hn).1
+    | c :: ps => exact ⟨_, .knockOut ho hka hp, by simp; omega⟩
+  have hcur : ∀ b, g.cur.active = some b → b.top.hp ≤ b.damage → ∃ g', Move g g' ∧
+      g'.cur.prizes.length + g'.opp.prizes.length + 1 =
+        g.cur.prizes.length + g.opp.prizes.length := by
+    intro b hc hkb
+    match hp : g.opp.prizes with
+    | [] => exact absurd hp (hw.1 hn).2
+    | c :: ps => exact ⟨_, .knockOutOwn hc hkb hp, by simp; omega⟩
+  rcases active_split g.opp.active with ⟨a, ho, hka⟩ | hoa
+  · exact hopp a ho hka
+  rcases active_split g.cur.active with ⟨b, hc, hkb⟩ | hca
+  · exact hcur b hc hkb
+  refine absurd (fun p hp => ?_) hk
+  rcases hp with hp | hp | hp | hp
+  · exact hca p hp
+  · exact (hw.2.1 p hp).1
+  · exact hoa p hp
+  · exact (hw.2.2 p hp).1
+
+/-- **A pending Knock Out can be taken**, for play: from a well-formed start, every reachable
+state with no winner and a pending Knock Out has a move that Knocks Out an Active Pokémon. -/
+theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g)
+    (hn : g.winner = none) (hk : ¬ DamageBounded g) :
+    ∃ g', Move g g' ∧
+      g'.cur.prizes.length + g'.opp.prizes.length + 1 =
+        g.cur.prizes.length + g.opp.prizes.length :=
+  Move.knockOut_of_pending (h.wellFormed h₀) hn hk
 
 end Pokemon

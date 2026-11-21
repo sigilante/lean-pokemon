@@ -7,4 +7,5 @@ import Pokemon.Conservation
 import Pokemon.WellFormed
 import Pokemon.Damage
 import Pokemon.Finite
+import Pokemon.Infinite
 import Pokemon.Audit
