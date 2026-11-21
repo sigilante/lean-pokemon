@@ -16,4 +16,5 @@ import Pokemon.Lingering
 import Pokemon.Counter
 import Pokemon.Exact
 import Pokemon.Bounded
+import Pokemon.Faithful
 import Pokemon.Audit
