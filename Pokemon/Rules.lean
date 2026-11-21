@@ -46,8 +46,8 @@ follows the latest source; for the rules below the three agree except where note
 * First-turn bans (2023 pp. 11–13; 2024 the same, S8 B4, B8, B14): no attack and no Supporter
   for the starting player on the first turn of the game, no evolving on either player's own
   first turn. Card text that lifts them is absent from the model.
-* Damage calculation stops at base damage 0 (2023 p. 20; 2024 the same, S8 F2). The model
-  applies the rule to each `damage` primitive, not to the attack's total (see the gaps).
+* Damage calculation stops at base damage 0 (2023 p. 20; 2024 the same, S8 F2). Since milestone
+  M4 the stop is applied once per attack, to the base damage as the attack's text computes it.
 * A new Poison replaces the old one (2023 p. 16; 2024 the same, S8 G7). That Croagunk's
   stacked increase ends with the replaced Poison is the model's reading; no ruling was found.
 * Nine Basic Energy types (2023 glossary p. 39; S8 D1); `BasicEnergy`.
@@ -58,10 +58,46 @@ follows the latest source; for the rules below the three agree except where note
 * Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
   model's rule comes from another source (gaps).
 
+Sources of the damage and Energy rules (milestone M4; the 2023 and 2024 rulebooks agree word for
+word on the damage steps, survey S9 against S8 F2; S8 records no later change to these rules).
+* Typed attack costs (2023 p. 13, Quaxwell: "the ◉ means you need to have 1 ◉ Energy attached.
+  However, the ✱ means that any type of Energy can be used"; S8 D2): `Pays`, a matching of cost
+  symbols to units of attached Energy. A Retreat Cost is paid by discarding "1 Energy from your
+  Active Pokémon for each ✱ listed in its Retreat Cost" (p. 12); with Basic Energy only, one
+  Energy card is one unit, as `retreat` counts.
+* Weakness and Resistance (2023 p. 14: "If the attack does damage, your opponent's Active
+  Pokémon takes more damage if it has Weakness to the attacker's type. It takes less damage from
+  a Pokémon if it has Resistance to that Pokémon's type", and "Don't apply Weakness and
+  Resistance for Benched Pokémon!"; S8 E1): `PokemonCard.weakness` (×2), `resistance` (−N).
+  Attack damage reaches only the opponent's Active Pokémon in the model, so the Bench rule holds
+  trivially. The attacker's type is `InPlay.type` (a Coloring counter changes it).
+* The damage calculation (2023 p. 20, steps 1–6, quoted in `dealtBy`; S8 F2): one calculation
+  per attack (`Effect.oneHit`, required by `Move.attack` through `Attack.wf`), on the base damage
+  as the text computes it (`Amt`), then the attacker's bonus, Weakness, Resistance, the
+  defender's reduction and prevention, each subtraction stopping at 0.
+* Attack damage only from attacks (2023 p. 20, step 1: "If an attack tells you to put damage
+  counters on a Pokémon, you have no more calculations to do because damage counters aren't
+  affected by Weakness, Resistance, or any other effects"): Item and Supporter effects have no
+  damage step (`Move.item`, `Move.supporter` require `Effect.hitFree`); their damage is written
+  as damage counters (`counters`, `selfDamage`). A printed Trainer card whose text says "does
+  damage", if there is one, would lose any modifier the rulebook applies to it; no search for
+  such cards was made.
+
 Known gaps (each is a place where this model is simpler than the rulebook):
 * setup, mulligans and the opening coin flip are not modelled; start from a set-up state;
 * Energy is attached to, and evolution applied to, the Active Pokémon only;
-* attack costs are checked by Energy count, not type; Weakness and Resistance are absent;
+* attack costs are typed (milestone M4; rulebook 2023 p. 13): each typed symbol is paid by a
+  unit of attached Energy of that type and each Colorless symbol by any unit, every unit paying
+  one symbol (`Pays`, decided by `payable`); only Basic Energy exists, one unit of its type
+  (`Card.provides`); Special Energy (several units, or units of several types), cost changes
+  ("this attack costs ✱ less") and Energy that provides nothing in some states are absent. A
+  Retreat Cost is still paid by discarding that many Energy cards, which with Basic Energy only
+  is the rulebook's rule;
+* Weakness is ×2 to one type and Resistance −N to one type, as printed today (S9: every Standard
+  Weakness is ×2; Resistance −30, once −20). Absent: "+10" to "+40" Weakness on older cards,
+  two Weaknesses or two Resistances on one card (dual-type Pokémon, S8 C6; a Pokémon has one
+  type here), and effects that change or ignore Weakness or Resistance (S8 E2); Weakness and
+  Resistance never apply to the Bench, which attack damage does not reach in this model;
 * Knock Outs are separate moves, forced by `Settled` (above) before any other move; they are
   taken one at a time, in either order when several are pending, so when both players take
   their last Prize from the same attack or Checkup the first Knock Out taken decides the game
@@ -120,8 +156,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   cards in hand, deck, discard pile or Prizes, on Poison strength, on HP ("if it has full HP",
   "remaining HP"), or on the lingering modifiers in effect; `scale` writes only to the
   opponent's Active Pokémon (Lunala cel25-15 doubles the damage on each of the opponent's
-  Pokémon, Bench included); "damage" in printed text, which Weakness and Resistance would
-  modify, is modelled as damage counters, as for base damage;
+  Pokémon, Bench included); the damage step's amount (`Amt`) reads the damage on either
+  Active Pokémon (`Amt.per`); the damage step itself reads the Weakness and Resistance of the
+  opponent's Active Pokémon and the type of the player's;
 * lingering modifiers (`Store`, `Effect.linger`): each player has a damage bonus for their
   attacks, a damage reduction and a damage prevention for attacks against their Pokémon, and
   locks on attacking, retreating and playing Items, for this turn, the next turn, the turn
@@ -134,23 +171,18 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Modifiers belong to a player, not to one Pokémon: "this Pokémon takes 30 less damage during
   your opponent's next turn" protects whichever Pokémon that player has Active, and does not
   end when the Pokémon leaves the Active Spot or follow it to the Bench. Damage done by an
-  attack (`Effect.damage n`, used for base damage) is nothing if `n = 0` (the rulebook's "Stop
-  if the base damage is 0", 2023 p. 20, 2024 the same), and otherwise `n + bonus - reduction`,
-  or nothing under prevention; Weakness and Resistance are absent, so the order "bonus, then
-  Weakness and Resistance, then reduction" collapses to this; `counters` (damage counters, not
-  damage) is not modified, as in the rulebook. The rulebook computes one damage per attack;
-  the model applies the modifiers to each `damage` primitive of the attack, so an effect with
-  several `damage` steps (written for "flip N coins, 20 damage for each heads", say) adds the
-  bonus once per step and stops at 0 per step rather than once for the attack's total. The
-  two differ in both directions, so the model can lose printed outcomes as well as add some:
-  the bonus counts once per step (more damage), and each step's reduction is cut off at 0
-  separately (two `damage 2` steps against a reduction of 3 do 0 in total, where one
-  calculation with base 4 does 1). `damage`
-  and `drain` are also usable in Trainer effects, where the printed game has no attack damage
-  (an over-approximation). Absent: threshold
+  attack is computed once per attack, by the rulebook's steps (`dealtBy`, 2023 p. 20): nothing
+  if the base damage `n` is 0; otherwise `n` plus the attacker's bonus (step 2), doubled under
+  Weakness (step 3), less Resistance (step 4), less the defender's reduction (step 5), each
+  subtraction stopping at 0, or nothing under prevention; `counters` (damage counters, not
+  damage) is not modified, as in the rulebook. The bonus is placed at step 2 and the reduction
+  at step 5, which is what printed modifiers say ("… more damage … (before applying Weakness
+  and Resistance)", "… less damage … (after applying Weakness and Resistance)", survey S9);
+  modifiers that name the other step are not expressible. Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
-  Stadiums, Abilities or Energy attachment, cost changes, Weakness and type changes, "attack
-  twice" and "take another turn", and "that much more damage" (damage taken last turn).
+  Stadiums, Abilities or Energy attachment, cost changes, effects that change Weakness,
+  Resistance or type (other than the Coloring counter), "attack twice" and "take another turn",
+  and "that much more damage" (damage taken last turn).
   Finiteness is proved for two classes of decks. *Tame decks* (`Reach.finite`): the clamp
   `GameState.clamp k`, which caps every bonus and reduction, is a bisimulation when no card adds
   a damage reduction or uses `drain` and no reduction is in effect at the start
@@ -178,16 +210,27 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   finite up to the exact-store clamp, nor up to any equivalence fine enough to recover the
   machine's configuration, a statement about representation, not play
   (`Faithful.xclamp_not_finite`, `Counter.not_finite_up_to`);
-* an attack places its base damage before its effect resolves (`Move.attack`), so an effect
-  that reads damage sees the base damage already placed; a printed bonus computed from the
-  damage before the attack ("20 damage plus 10 more for each damage counter on the Defending
-  Pokémon", Jynx base1-31) is written with base damage 0 and the damage in the effect
-  (`seq (scale opp 1) (damage 2)`, so that the damage bonus applies to its 20 damage, as the
-  stop at base damage 0 requires of a printed base of 20; `counters 2` would take no bonus);
-  the rulebook computes an attack's damage and then places it all at once. This encoding is
-  not only a choice of order: the part placed by `scale` takes neither bonus nor reduction
-  (with a reduction of 3 and 3 damage counters on the target the model places 3, where one
-  calculation gives (2 + 3) - 3 = 2), so it changes the damage done;
+* an attack's damage (milestone M4): an attack with a printed base damage and no damage text
+  does that damage and then its effect (`Attack.script`); an attack whose text computes or
+  conditions its damage has base damage field 0 and one damage step in its effect
+  (`damage a`, `drain a`; at most one on each line of resolution, `Effect.oneHit`), whose
+  amount `a` is evaluated once when the step is reached ("20 damage plus 10 more for each
+  damage counter on the Defending Pokémon", Jynx base1-31, is `damage (add (const 2) (per opp
+  1))`; with a reduction of 3 and 3 counters on the target it does (2 + 3) - 3 = 2,
+  `Calc.dealtBy_jynx`). Effects before the damage step are the rulebook's "effects that happen
+  before damage" (step F); effects after it see the damage placed. The amount language (`Amt`:
+  constants, a multiple of the damage counters on either Active Pokémon, sums, truncated
+  differences, and the sum of any number of copies, for "flip until tails") has no tests of its
+  own: a damage that depends on a test, a coin flip or a choice is written with the damage step
+  inside the branches of `ite` or `choice`, which also lets the same flip decide the damage and
+  another effect. Not expressible: damage counts other than damage counters on the Active
+  Pokémon (Energy, Benched Pokémon, cards in hand or discard pile), and two damage calculations
+  in one attack (an attack that also damages a Benched Pokémon; the Bench is absent anyway).
+  Generality lost
+  against the earlier model: an attack can no longer make several damage steps (an `iter` of
+  `damage`, which applied the modifiers per step and is not the rulebook's calculation), and
+  Item and Supporter effects can no longer do attack damage (their printed counterparts place
+  counters);
 * `ite`, `scale`, `selfDamage` and `healAll` are general primitives, usable in any effect,
   any number of times and inside `iter`, whereas printed cards use them once, in fixed forms;
   the model over-approximates the printed texts;
@@ -236,8 +279,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   an empty Prize list) a pending Knock Out may be impossible to take; nor are they required to
   be consistent in their turn flags (`firstTurn` with `curIsFirst` and `hadTurn`; `attacked`
   with `between`): from a start with `firstTurn` true and the player's `hadTurn` already true,
-  that player could evolve on the game's first turn. No theorem needs consistency, and every
-  witness start is consistent;
+  that player could evolve on the game's first turn. Consistency is `GameState.FlagsOk`
+  (`Pokemon/Turn.lean`); play preserves it (`Reach.flagsOk`), and the first-turn bans are
+  theorems under it (`Move.firstTurn_no_attack`, `GameState.FlagsOk.firstTurn_no_evolve`);
 * first-turn rules are the rulebook's (2023 pp. 11–13; S8 records no later change): the
   starting player cannot attack or play a Supporter on the first turn of the game
   (`firstTurn`), and neither player can evolve on their own first turn (`hadTurn`); card text
@@ -398,39 +442,43 @@ inductive Move : GameState → GameState → Prop where
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } }
   /-- play an Item card: it goes to the discard pile and its effect resolves, with Knock Outs
-  taken at once in mid-effect (`TRun`); not while an Item lock is in effect -/
+  taken at once in mid-effect (`TRun`); not while an Item lock is in effect. Its effect has no
+  attack damage step (`Effect.hitFree`): Trainer cards place damage counters -/
   | item {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
       (hh : g.cur.hand = l₁ ++ Card.trainer n .item e :: l₂) (hbt : g.between = false)
       (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
-      (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false) :
+      (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false)
+      (hnd : e.hitFree = true) :
       Move g g'
   /-- play a Supporter card, once per turn, and not on the first turn of the game ("The player
   who goes first cannot play a Supporter card on their first turn", rulebook 2023 p. 12); its
-  effect resolves as an Item's does (`TRun`) -/
+  effect resolves as an Item's does (`TRun`), and has no attack damage step -/
   | supporter {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
       (hh : g.cur.hand = l₁ ++ Card.trainer n .supporter e :: l₂)
       (hs : g.cur.supporterPlayed = false) (hbt : g.between = false) (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
-      (hat : g.attacked = false) (hf : g.firstTurn = false) :
+      (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true) :
       Move g g'
-  /-- attack: do the base damage (with the lingering modifiers, `Effect.damage`), then resolve
-  the attack's effect. The attack ends the turn (`attacked`): afterwards only Knock Outs and
+  /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
+  (`Attack.script`: the printed base damage then the effect, or the effect with its own damage
+  step), making the rulebook's damage calculation at most once (`Attack.wf`, `Effect.oneHit`;
+  `dealtBy`). The attack ends the turn (`attacked`): afterwards only Knock Outs and
   `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
   its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
   using it records that (`PlayerState.gxUsed`). -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
-      (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot.canAct = true)
+      (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g)
-      (hr : Run (.seq (.damage atk.damage) atk.effect) g g')
+      (hr : Run atk.script g g')
       (hl : g.cur.mods.live.noAttack = false)
-      (hgx : atk.gx = true → g.cur.gxUsed = false) :
+      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) :
       Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
   happen, and the attacker gets 3 damage counters; this still ends the turn (`attacked`). As for `attack`, a GX attack can be tried
@@ -438,10 +486,10 @@ inductive Move : GameState → GameState → Prop where
   (an unverified ruling; see the Known gaps). -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
-      (hc : atk.cost.length ≤ a.energy.length) (hs : a.rot = .confused)
+      (hc : Pays atk.cost a.units) (hs : a.rot = .confused)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g) (hl : g.cur.mods.live.noAttack = false)
-      (hgx : atk.gx = true → g.cur.gxUsed = false) :
+      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) :
       Move g { g with
         cur := { g.cur with active := some { a with damage := a.damage + 3 } },
         attacked := true }

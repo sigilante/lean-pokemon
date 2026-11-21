@@ -17,9 +17,8 @@ type; placed on any Pokémon in play, removed from all of a player's Pokémon, C
 Active Pokémon at Checkup), lingering modifiers (per player, for this turn, the next turn, the
 turn after, or the rest of the game, shifted at the end of every turn: a damage bonus, a damage
 reduction, damage prevention, and locks on attacking, retreating and playing Items; bonuses and
-reductions add up without limit; attack damage is done by `damage`, which applies them unless
-the base damage is 0, when the rulebook stops the calculation and the attack does no damage,
-and `drain` heals by the damage done), and effects that read the state: a test on either
+reductions add up without limit, and enter the damage calculation described below), and effects
+that read the state: a test on either
 Active Pokémon (at least `n` damage counters, exactly `n`, a Special Condition, a marker, a
 type), placing `k`
 counters on the opponent's Active Pokémon for each damage counter on either Active Pokémon
@@ -31,9 +30,19 @@ failed Confused attempt, ends the turn, so only its Knock Outs and the end of th
 (`Move.after_attack`); the starting player cannot attack or play a Supporter on the first turn
 of the game, and neither player can evolve on their own first turn (`PlayerState.hadTurn`) or
 evolve a Pokémon put into play or evolved that turn (these bans assume a start state whose
-turn flags are consistent, which the model does not require); one Energy attachment, one Supporter and
+turn flags are consistent, `GameState.FlagsOk`, which the model does not require of a start
+state but which play preserves, `Reach.flagsOk`; the bans on the first turn of the game are theorems under it (the second player's
+evolution ban on their own first turn is a premise of the move, not a theorem),
+`Move.firstTurn_no_attack` and the like; after an attack a move either takes Knock Outs or
+gives exactly the state that ending the turn gives, `Move.after_attack_passTurn`); one Energy attachment, one Supporter and
 one retreat per turn; a new Poison replaces the old one, resetting its strength; Basic Energy
-cards of the nine Basic types; one Stadium slot shared by both players (state only: no move
+cards of the nine Basic types; typed attack costs, each typed symbol paid by Energy of its type
+and each Colorless symbol by any Energy (`Pays`, a matching, decided by `payable`);
+Weakness ×2 and Resistance −N on the Defending (Active) Pokémon; and the rulebook's damage
+calculation, made once per attack (`dealtBy`: stop at base damage 0, the attacker's bonus,
+Weakness, Resistance, the defender's reduction or prevention; an attack has at most one damage
+step, whose amount its text may compute from the damage on either Active Pokémon, `Amt`, and
+Item and Supporter effects have none); one Stadium slot shared by both players (state only: no move
 plays a Stadium yet); the Knock Out timing: once a move
 leaves a Pokémon at or above its HP, it must be Knocked Out and replaced before any other
 move (`Settled`); inside an attack's effect damage may exceed HP and be read, and the Knock
@@ -71,8 +80,9 @@ rulebook, the later sources and the model differ, are listed at the top of
   an Active Pokémon at or above its HP except by Knocking it Out (`Move.pending_untouched`);
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at the Pokémon's HP the
   damage and the Poison strength on both Active Pokémon, and cap every damage bonus and
-  reduction at `bound` (a constant computed from the cards: more than every printed HP and every
-  test constant). From a well-formed start whose cards are *tame* (no damage reduction, no
+  reduction at `2 · bound` (`bound` is a constant computed from the cards: more than every
+  printed HP, every Resistance and every test constant; the factor 2 absorbs Resistance, which is
+  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From a well-formed start whose cards are *tame* (no damage reduction, no
   `drain`) and with no reduction in effect (`GameState.Fit` at `bound`, which
   `GameState.fit_bound` gives), the clamps of all reachable states lie in one finite list, and
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
@@ -108,10 +118,11 @@ rulebook, the later sources and the model differ, are listed at the top of
   `ite`, `healAll`, `selfDamage`, `counters`, `mark` and `handToBottom` as general primitives
   combined in one attack. It does not rely on an attack not ending the turn (each player
   attacks once and the turn ends; re-checked under the rule that an attack ends the turn), on a
-  bonus being added to base damage 0 (both attacks have base damage 0, which does no damage
-  under the rulebook's stop at base 0; the zero test is `damage 1`), on attack costs
-  being counted rather than typed (costs are empty), on modifiers being per player rather than
-  per Pokémon (one Pokémon each, no Bench), or on the absence of Weakness and Resistance.
+  bonus being added to base damage 0 (the zero test is the damage step `damage (const 1)`, with
+  base damage 1), on attack costs being counted rather than typed (costs are typed and empty),
+  on modifiers being per player rather than per Pokémon (one Pokémon each, no Bench), or on the
+  absence of Weakness and Resistance (the Clock and the Tape have neither, and each attack makes
+  the damage calculation at most once; re-checked under milestone M4).
   Separately, `Counter.not_finite_up_to` shows that for one witness deck the reachable states
   are not finite up to any equivalence fine enough to recover the encoded configuration. That
   is a statement about how states are represented, not about play: its machine never reads its
@@ -129,8 +140,12 @@ is exact for them because the cards only place one, remove all, and test for any
 Lingering modifiers change the statements: the clamp takes a cap `k`, and the bisimulation needs
 a hypothesis on the deck (tameness, `GameState.Fit`). An unbounded damage bonus can be capped because it is read only through
 the damage it adds to the opponent's Active Pokémon, which is read only by tests against card
-constants and by the Knock Out test at HP; a bonus of `bound` or more acts as `bound` does. A
-damage reduction breaks this: damage done by base damage `n ≥ 1` is `n + bonus - reduction`,
+constants and by the Knock Out test at HP; a bonus of `2 · bound` or more acts as `2 · bound`
+does (Weakness doubles the base damage plus bonus, which only raises it; Resistance, at most
+`bound`, is what the factor 2 absorbs: with the stores capped at `bound` itself, a bonus of
+`bound` and one of `bound + 1` against Resistance 3 do different damage below the cap,
+`Calc.cap_at_k_fails`). A damage reduction breaks this: damage done by base damage `n ≥ 1` is
+`n + bonus - reduction` without Weakness or Resistance,
 and a bonus above any cap matters when an equally large reduction offsets it
 (`Lingering.reduce_breaks_clamp`, for every cap `k ≥ 3`; its witness attack has base damage 1,
 since base damage 0 does no damage). So does `drain` after in-attack
@@ -150,14 +165,15 @@ with reductions such as Iron Defender's.
 Exact stores. Both clamp counterexamples reach two states whose stores differ only above the
 cap. The clamp `GameState.xclamp` (`Pokemon/Exact.lean`) caps damage and Poison strength on both
 Active Pokémon at HP and keeps both stores exact, so those states are not identified. Every
-reader of the stores sees equal values in two states with equal `xclamp`: `damage` and `drain`
-compute the same `dealtBy` (and `drain` heals the attacker, whose damage is kept exact inside
-an attack, by that amount), locks and prevention are flags in the stores, and `endTurn` shifts
-equal stores; damage is read by tests against constants below `bound`, by `scale`, by Checkup
-only in states with no pending Knock Out, and by the Knock Out test at HP. The cap on the
-opponent's damage inside an attack must exceed every test constant and be at least every HP, as
-before; damage done needs no cap, however large in either direction, since it is computed from
-equal stores. What the exact clamp gives up is boundedness of the stores, and with it
+reader of the stores sees equal values in two states with equal `xclamp`: the damage step
+computes the same `dealtBy` (the same amount, Weakness, Resistance and stores; `drain` heals the
+attacker by that amount), locks and prevention are flags in the stores, and `endTurn` shifts
+equal stores; damage is read by tests, by `scale`, by the damage step's amount, by Checkup only
+in states with no pending Knock Out, and by the Knock Out test at HP. Inside an attack damage is
+kept exact on both Active Pokémon (every attack starts with no pending Knock Out, where `xclamp`
+determines the damage; before milestone M4 the opponent's was capped, which a damage step that
+reads it and `drain` that writes the amount to the attacker would break); damage done needs no
+cap, however large in either direction, since it is computed from equal values. What the exact clamp gives up is boundedness of the stores, and with it
 finiteness; the deck condition `Faithful` buys it back:
 
 * **exact-store bisimulation, every deck** (`Move.xclamp_sim`, `Reach.xclamp_bisim`,

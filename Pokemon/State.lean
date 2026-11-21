@@ -106,6 +106,10 @@ def ofBasic (p : PokemonCard) : InPlay :=
 
 def unfresh (p : InPlay) : InPlay := { p with fresh := false }
 
+/-- The units of Energy attached to this Pokémon (`Card.provides`), which pay attack costs
+(`Pays`). -/
+def units (p : InPlay) : List (List EType) := p.energy.flatMap Card.provides
+
 /-- Change the markers. -/
 def setMarks (f : Marks → Marks) (p : InPlay) : InPlay := { p with marks := f p.marks }
 
@@ -309,7 +313,8 @@ structure GameState where
   bans on attacking and on Supporters, which apply to the starting player's first turn only
   (rulebook 2023 pp. 12–13). The per-player first turn is `PlayerState.hadTurn`; in play from
   the start of a game the two agree (`firstTurn` holds exactly when the player to move went
-  first and has not had a turn), but start states are not required to be consistent. -/
+  first and has not had a turn), but start states are not required to be consistent
+(`GameState.FlagsOk`, preserved by play: `Reach.flagsOk`). -/
   firstTurn : Bool
   /-- has the player to move attacked this turn? -/
   attacked : Bool
@@ -329,19 +334,58 @@ def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
 
-/-- The damage an attack of base `n` does to the opponent's Active Pokémon, in the rulebook's
-order of damage calculation (rulebook 2023 p. 20, 2024 the same, survey S8 F2): if the base
-damage is 0 the calculation stops and the attack does no damage ("Stop if the base damage is 0
-(or if the attack does not do any damage at all)"), whatever the bonuses; otherwise nothing if
-the opponent has damage prevention in effect, and else `n` plus the player's damage bonus
-minus the opponent's damage reduction (at least 0: "If the damage is 0 or less, don't put on
-any damage counters"). Weakness and Resistance (steps 3 and 4) are absent, so the attacker's
-modifiers (step 2) and the defender's (step 5) are applied together. -/
-def dealtBy (n : Nat) (own opp : Store) : Nat :=
-  if n = 0 then 0 else if opp.live.prevent then 0 else (n + own.live.bonus) - opp.live.reduce
+/-- **The damage calculation** (rulebook 2023 p. 20, "Figuring out how many damage counters to
+place"; the same in the 2024 rulebook, survey S8 F2), for an attack whose base damage is `n`
+counters, against a Defending Pokémon that is weak to the attacker (`weak`) and has Resistance
+`resist` to it:
 
-@[inherit_doc dealtBy]
-def GameState.dealt (n : Nat) (g : GameState) : Nat := dealtBy n g.cur.mods g.opp.mods
+1. "Start with the base damage printed to the right of the attack. If an ×, –, or + is printed
+   next to it, the attack text will tell you how much damage to do." That is `n` (`Amt`).
+2. "Figure out damage effects on your Active Pokémon based on Trainer cards or any other
+   relevant effects. … Stop if the base damage is 0 (or if the attack does not do any damage at
+   all). Otherwise, keep going." If `n = 0` the result is 0; otherwise the attacker's damage
+   bonus is added.
+3. "Increase the damage by the amount next to your opponent's Active Pokémon's Weakness, if it
+   has Weakness to your Active Pokémon's type." Weakness ×2 doubles.
+4. "Reduce the damage by the amount next to your opponent's Active Pokémon's Resistance, if it
+   has Resistance to your Active Pokémon's type."
+5. "Figure out damage effects of Trainer or Energy cards, or other effects on your opponent's
+   Active Pokémon." The defender's damage reduction is subtracted; damage prevention makes it 0.
+6. "For each 10 damage of the final attack, put 1 damage counter on the affected Pokémon. If
+   the damage is 0 or less, don't put on any damage counters!" Amounts are in counters, and
+   subtraction stops at 0.
+
+Units: one counter is 10 damage, so Resistance −30 is 3. Prevention ("prevent all damage done
+to this Pokémon by attacks") is read in step 5, as an effect on the Defending Pokémon. Step 2's
+stop is applied to the base damage as the text computes it (`n`), so an attack whose text gives
+0 ("10× the number of heads", no heads) also stops. Truncation: steps 4 and 5 each stop at 0, so
+a Resistance larger than the damage leaves nothing for step 5 to remove. The rulebook does not
+say whether a negative intermediate damage carries over; with only subtractions after step 4 the
+result is 0 either way. -/
+def dealtBy (n : Nat) (weak : Bool) (resist : Nat) (own opp : Store) : Nat :=
+  if n = 0 then 0 else if opp.live.prevent then 0 else
+    ((if weak then 2 * (n + own.live.bonus) else n + own.live.bonus) - resist) - opp.live.reduce
+
+/-- Is the opponent's Active Pokémon weak to the type of the player's Active Pokémon (its type
+as `InPlay.type` gives it, Coloring counter included)? False if either Spot is empty. -/
+def GameState.weak (g : GameState) : Bool :=
+  match g.cur.active, g.opp.active with
+  | some a, some d => d.top.weakTo a.type
+  | _, _ => false
+
+/-- The Resistance of the opponent's Active Pokémon to the type of the player's Active Pokémon,
+in counters (0 if either Spot is empty). -/
+def GameState.resist (g : GameState) : Nat :=
+  match g.cur.active, g.opp.active with
+  | some a, some d => d.top.resistTo a.type
+  | _, _ => 0
+
+/-- The damage an attack with base damage `n` does to the opponent's Active Pokémon in state
+`g`: `dealtBy` with the Active Pokémon's Weakness and Resistance and both players' modifiers
+in effect. Weakness and Resistance apply to the Active Pokémon only ("Don't apply Weakness and
+Resistance for Benched Pokémon!", p. 14), which is the only Pokémon attack damage reaches here. -/
+def GameState.dealt (n : Nat) (g : GameState) : Nat :=
+  dealtBy n g.weak g.resist g.cur.mods g.opp.mods
 
 /-- The player to move (`own`) or the opponent (`opp`). -/
 def GameState.side : Whose → GameState → PlayerState

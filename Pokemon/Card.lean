@@ -35,6 +35,130 @@ def BasicEnergy.type : BasicEnergy → EType
   | .metal => .metal
   | .fairy => .fairy
 
+/-! ## Energy and attack costs -/
+
+/-- Can a unit of Energy that counts as any of the types `u` pay the cost symbol `s`? A
+Colorless symbol is paid by any Energy; a typed symbol only by Energy of that type: "the ◉ means
+you need to have 1 ◉ Energy attached. However, the ✱ means that any type of Energy can be used"
+(rulebook 2023, p. 13, Quaxwell's Spiral Kick). -/
+def EType.paidBy (s : EType) (u : List EType) : Bool :=
+  decide (s = .colorless) || decide (s ∈ u)
+
+/-- `Pays cost units`: the symbols of an attack cost can be paid by distinct units of the
+attached Energy, a typed symbol by a unit of that type and a Colorless symbol by any unit
+(`EType.paidBy`). Each unit is listed by the types it counts as (`Card.provides`); with Basic
+Energy only, every unit is one type. This is a matching problem, not a count: `[fire, fire]` is
+not paid by one Fire and one Water Energy, although two Energy are attached. -/
+inductive Pays : List EType → List (List EType) → Prop where
+  | nil (us : List (List EType)) : Pays [] us
+  | cons {s : EType} {cs : List EType} {u : List EType} {us₁ us₂ : List (List EType)}
+      (hu : s.paidBy u = true) (h : Pays cs (us₁ ++ us₂)) : Pays (s :: cs) (us₁ ++ u :: us₂)
+
+/-- Every way to take one element out of a list: the element and the rest, in order. -/
+def pick {α : Type} : List α → List (α × List α)
+  | [] => []
+  | x :: xs => (x, xs) :: (pick xs).map fun yr => (yr.1, x :: yr.2)
+
+theorem mem_pick {α : Type} {y : α} {r : List α} : ∀ {l : List α},
+    (y, r) ∈ pick l ↔ ∃ l₁ l₂, l = l₁ ++ y :: l₂ ∧ r = l₁ ++ l₂
+  | [] => by simp [pick]
+  | x :: xs => by
+      simp only [pick, List.mem_cons, Prod.mk.injEq, List.mem_map]
+      constructor
+      · intro h
+        rcases h with ⟨h1, h2⟩ | ⟨⟨y', r'⟩, hm, he⟩
+        · exact ⟨[], xs, by rw [h1]; rfl, h2⟩
+        · obtain ⟨h1, h2⟩ := he
+          subst h1; subst h2
+          obtain ⟨l₁, l₂, h3, h4⟩ := (mem_pick (l := xs)).1 hm
+          subst h3; subst h4
+          exact ⟨x :: l₁, l₂, rfl, rfl⟩
+      · intro h
+        obtain ⟨l₁, l₂, he, hr⟩ := h
+        subst hr
+        cases l₁ with
+        | nil =>
+            simp only [List.nil_append, List.cons.injEq] at he
+            obtain ⟨h1, h2⟩ := he
+            subst h1; subst h2
+            exact .inl ⟨rfl, rfl⟩
+        | cons z l₁ =>
+            simp only [List.cons_append, List.cons.injEq] at he
+            obtain ⟨h1, h2⟩ := he
+            subst h1; subst h2
+            exact .inr ⟨(y, l₁ ++ l₂), (mem_pick (l := l₁ ++ y :: l₂)).2 ⟨l₁, l₂, rfl, rfl⟩,
+              rfl, rfl⟩
+
+/-- A decision procedure for `Pays`: try every unit for the first symbol (`payable_iff`). -/
+def payable : List EType → List (List EType) → Bool
+  | [], _ => true
+  | s :: cs, us => (pick us).any fun ur => s.paidBy ur.1 && payable cs ur.2
+
+theorem payable_iff : ∀ {cs : List EType} {us : List (List EType)},
+    payable cs us = true ↔ Pays cs us
+  | [], us => by simp only [payable, true_iff]; exact .nil us
+  | s :: cs, us => by
+      simp only [payable, List.any_eq_true, Bool.and_eq_true]
+      constructor
+      · rintro ⟨⟨u, r⟩, hm, hu, hr⟩
+        obtain ⟨l₁, l₂, rfl, rfl⟩ := mem_pick.1 hm
+        exact .cons hu (payable_iff.1 hr)
+      · intro h
+        cases h with
+        | @cons _ _ u us₁ us₂ hu h =>
+            exact ⟨(u, us₁ ++ us₂), mem_pick.2 ⟨us₁, us₂, rfl, rfl⟩, hu, payable_iff.2 h⟩
+
+instance (cs : List EType) (us : List (List EType)) : Decidable (Pays cs us) :=
+  decidable_of_iff _ payable_iff
+
+/-- A cost can be paid only if at least as many units are attached: typed costs are stricter
+than the count of Energy the model checked before. -/
+theorem Pays.length_le {cs : List EType} {us : List (List EType)} (h : Pays cs us) :
+    cs.length ≤ us.length := by
+  induction h with
+  | nil => exact Nat.zero_le _
+  | cons _ _ ih => simp only [List.length_cons, List.length_append] at ih ⊢; omega
+
+/-- More Energy never hurts: a cost paid by `us` is paid by `u :: us`. -/
+theorem Pays.cons_unit {cs : List EType} {us : List (List EType)} (h : Pays cs us)
+    (u : List EType) : Pays cs (u :: us) := by
+  induction h with
+  | nil => exact .nil _
+  | @cons s cs u' us₁ us₂ hu _ ih => exact .cons (us₁ := u :: us₁) hu ih
+
+/-- A cost of Colorless symbols only is paid exactly when enough units are attached: for such
+costs the typed rule and the old count agree. -/
+theorem Pays.colorless_iff {cs : List EType} {us : List (List EType)}
+    (hc : ∀ s ∈ cs, s = .colorless) : Pays cs us ↔ cs.length ≤ us.length := by
+  refine ⟨Pays.length_le, fun hl => ?_⟩
+  induction cs generalizing us with
+  | nil => exact .nil _
+  | cons s cs ih =>
+      cases us with
+      | nil => simp at hl
+      | cons u us =>
+          have hs := hc s (.head _)
+          have := ih (fun t ht => hc t (.tail _ ht)) (us := us)
+            (by simp only [List.length_cons] at hl; omega)
+          exact .cons (us₁ := []) (by simp [EType.paidBy, hs]) this
+
+/-- A typed symbol needs a unit of its type. -/
+theorem Pays.typed {s : EType} {cs : List EType} {us : List (List EType)}
+    (h : Pays (s :: cs) us) (hs : s ≠ .colorless) : ∃ u ∈ us, s ∈ u := by
+  cases h with
+  | @cons _ _ u us₁ us₂ hu _ =>
+      refine ⟨u, List.mem_append_right _ (.head _), ?_⟩
+      simpa [EType.paidBy, hs] using hu
+
+/-- Two Energy are not enough for `[fire, fire]` if one is Water. -/
+theorem pays_fire_fire : ¬ Pays [.fire, .fire] [[.fire], [.water]] := by decide
+
+/-- Quaxwell's Spiral Kick (◉✱✱, rulebook 2023 p. 13) is paid by a Water, a Fire and a Grass
+Energy, but not by three Fire Energy. -/
+theorem pays_spiral_kick :
+    Pays [.water, .colorless, .colorless] [[.fire], [.water], [.grass]] ∧
+      ¬ Pays [.water, .colorless, .colorless] [[.fire], [.fire], [.fire]] := by decide
+
 inductive Stage where
   | basic | stage1 | stage2
   deriving DecidableEq
@@ -103,6 +227,25 @@ inductive Test where
   | isType (w : Whose) (t : EType)
   deriving DecidableEq
 
+/-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
+as the attack text will tell you" when "an ×, –, or + is printed next to it" (rulebook 2023
+p. 20, step 1), before any modifier. It is evaluated once, when the attack's damage is placed
+(`Amt.Val`, `Effect.damage`). -/
+inductive Amt where
+  /-- a printed number -/
+  | const (n : Nat)
+  /-- `k` for each damage counter on the `w` Active Pokémon ("20 damage plus 10 more for each
+  damage counter on your opponent's Active Pokémon" is `add (const 2) (per opp 1)`, Jynx
+  base1-31) -/
+  | per (w : Whose) (k : Nat)
+  | add (a b : Amt)
+  /-- `a` less `b`, at least 0 ("10 less damage for each damage counter on this Pokémon") -/
+  | sub (a b : Amt)
+  /-- the sum of any number of values of `a`: "Flip a coin until you get tails. This attack does
+  30 damage for each heads" is `many (const 3)` -/
+  | many (a : Amt)
+  deriving DecidableEq
+
 /-- Primitive card effects. `choice` covers both coin flips and player decisions;
 `iter` covers "flip until tails" and "as often as you like". -/
 inductive Effect where
@@ -150,16 +293,17 @@ inductive Effect where
   | color (w : Whose) (t : EType)
   /-- the `w` player gets the lingering modifier `m` for the turns `s` -/
   | linger (w : Whose) (s : Slot) (m : Mod)
-  /-- the attack does `n` damage to the opponent's Active Pokémon, `n` being its base damage as
-  printed or as the attack's text computes it: nothing if `n = 0` (the rulebook's "Stop if the
-  base damage is 0"), else `n` plus the player's damage bonus, minus the opponent's damage
-  reduction, or nothing if the opponent has damage prevention (`GameState.dealt`, `dealtBy`).
-  `Move.attack` does the printed base damage (`Attack.damage`) this way; an effect may do more
-  `damage` (an attack whose text sets or adds to its damage) -/
-  | damage (n : Nat)
-  /-- as `damage n`, and heal the player's Active Pokémon by the damage done ("heal from this
+  /-- the attack's damage step: evaluate the amount `a` to a base damage `n` (`Amt.Val`) and do
+  the damage the rulebook's calculation gives (`dealtBy`, rulebook 2023 p. 20: stop at base 0;
+  the attacker's bonus; Weakness; Resistance; the defender's reduction and prevention) to the
+  opponent's Active Pokémon. An attack has at most one damage step on each line of resolution
+  (`Effect.oneHit`, required by `Move.attack`), so the calculation is made once per attack, and
+  Item and Supporter effects have none (`Effect.hitFree`, required by `Move.item` and
+  `Move.supporter`): printed Trainer cards place damage counters, not attack damage -/
+  | damage (a : Amt)
+  /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
   Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
-  | drain (n : Nat)
+  | drain (a : Amt)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -167,15 +311,85 @@ inductive Effect where
 
 structure Attack where
   name : String
+  /-- the Energy symbols of the cost, paid by matching (`Pays`) -/
   cost : List EType
-  /-- base damage, in counters (0 for an attack printed with no damage, or whose damage the
-  text computes; that damage is then an `Effect.damage` in the effect) -/
+  /-- the printed base damage, in counters, when the text does not change it; 0 for an attack
+  printed with no damage, or whose damage the text computes, which then places it with a
+  damage step (`Effect.damage`, `Effect.drain`) in its effect (`Attack.script`) -/
   damage : Nat
   effect : Effect
   /-- a GX attack: each player can use at most one GX attack in a game (`PlayerState.gxUsed`;
   "You can't use more than 1 GX attack in a game") -/
   gx : Bool
   deriving DecidableEq
+
+/-- No damage step (`damage` or `drain`) anywhere in the effect. -/
+def Effect.hitFree : Effect → Bool
+  | .damage _ => false
+  | .drain _ => false
+  | .ite _ a b => a.hitFree && b.hitFree
+  | .seq a b => a.hitFree && b.hitFree
+  | .choice a b => a.hitFree && b.hitFree
+  | .iter a => a.hitFree
+  | _ => true
+
+/-- At most one damage step on each line of resolution: the branches of `ite` and `choice` may
+each have one, a `seq` may have one in either part but not both, and nothing under `iter` may
+have one. So resolving the effect makes the damage calculation at most once. -/
+def Effect.oneHit : Effect → Bool
+  | .ite _ a b => a.oneHit && b.oneHit
+  | .seq a b => (a.oneHit && b.hitFree) || (a.hitFree && b.oneHit)
+  | .choice a b => a.oneHit && b.oneHit
+  | .iter a => a.hitFree
+  | _ => true
+
+/-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
+damage, then place damage counters, and then do all other effects"). An attack with printed base
+damage `n ≠ 0` and no damage step in its text does its damage first, then its effect. An attack
+with base damage 0 resolves its effect, which places its damage, if any, with its own damage
+step: this is how an attack writes damage computed by its text ("×", "+", "–"), damage that
+depends on a coin flip or a choice made in the same effect, or effects before the damage. -/
+def Attack.script (atk : Attack) : Effect :=
+  if atk.damage = 0 then atk.effect else .seq (.damage (.const atk.damage)) atk.effect
+
+/-- A well-formed attack: at most one damage step on each line of resolution, and none in the
+text when a printed base damage is done first. `Move.attack` requires it. -/
+def Attack.wf (atk : Attack) : Bool :=
+  atk.effect.oneHit && (decide (atk.damage = 0) || atk.effect.hitFree)
+
+theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneHit = true
+  | .damage _, h => by simp [Effect.hitFree] at h
+  | .drain _, h => by simp [Effect.hitFree] at h
+  | .ite _ a b, h => by
+      simp only [Effect.hitFree, Bool.and_eq_true] at h
+      simp only [Effect.oneHit, oneHit_of_hitFree h.1, oneHit_of_hitFree h.2, Bool.and_self]
+  | .seq a b, h => by
+      simp only [Effect.hitFree, Bool.and_eq_true] at h
+      simp only [Effect.oneHit, oneHit_of_hitFree h.1, h.2, oneHit_of_hitFree h.2, h.1,
+        Bool.and_self, Bool.or_self]
+  | .choice a b, h => by
+      simp only [Effect.hitFree, Bool.and_eq_true] at h
+      simp only [Effect.oneHit, oneHit_of_hitFree h.1, oneHit_of_hitFree h.2, Bool.and_self]
+  | .iter a, h => by simpa only [Effect.hitFree, Effect.oneHit] using h
+  | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
+  | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
+  | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
+  | .linger _ _ _, _ => rfl
+
+theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
+    (Effect.seq a b).oneHit = true := by
+  simp only [Effect.oneHit, ha, hb, Bool.and_self, Bool.or_true]
+
+/-- **One damage calculation per attack**: the script of a well-formed attack has at most one
+damage step on each line of resolution. -/
+theorem Attack.script_oneHit {atk : Attack} (h : atk.wf = true) : atk.script.oneHit = true := by
+  simp only [Attack.wf, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] at h
+  unfold Attack.script
+  split
+  · exact h.1
+  · rcases h.2 with h0 | hf
+    · contradiction
+    · simp only [Effect.oneHit, Effect.hitFree, hf, Bool.and_self, Bool.true_or]
 
 structure PokemonCard where
   name : String
@@ -187,7 +401,37 @@ structure PokemonCard where
   attacks : List Attack
   /-- retreat cost, in Energy cards -/
   retreat : Nat
+  /-- Weakness, as printed today: attacks from Pokémon of this type do double damage to it
+  ("Spriggatito's Weakness of ×2 to ◉ Pokémon makes that 10 ×2 = 20 damage", rulebook 2023
+  p. 14; ×2 on every Standard Pokémon with a Weakness, survey S9). Older forms are out of scope:
+  "+10" to "+40" Weakness (1,119 older card records in the data), and two Weaknesses on one card (38 records). -/
+  weakness : Option EType
+  /-- Resistance: attacks from Pokémon of the type do this much less damage, in counters (−30
+  is 3, −20 is 2; "It takes less damage from a Pokémon if it has Resistance to that Pokémon's
+  type", p. 14). Two Resistances on one card (54 older records) are out of scope. -/
+  resistance : Option (EType × Nat)
   deriving DecidableEq
+
+/-- Is this Pokémon weak to Pokémon of type `t`? -/
+def PokemonCard.weakTo (d : PokemonCard) (t : EType) : Bool := decide (d.weakness = some t)
+
+/-- The Resistance this Pokémon has to Pokémon of type `t`, in counters (0 if none). -/
+def PokemonCard.resistTo (d : PokemonCard) (t : EType) : Nat :=
+  match d.resistance with
+  | some (u, r) => if u = t then r else 0
+  | none => 0
+
+/-- The printed Resistance amount, whatever the type (0 if none). -/
+def PokemonCard.resistAmt (d : PokemonCard) : Nat :=
+  match d.resistance with
+  | some (_, r) => r
+  | none => 0
+
+theorem PokemonCard.resistTo_le (d : PokemonCard) (t : EType) : d.resistTo t ≤ d.resistAmt := by
+  unfold resistTo resistAmt
+  split
+  · split <;> omega
+  · exact Nat.le_refl _
 
 inductive TrainerKind where
   | item | supporter | stadium | tool
@@ -199,6 +443,15 @@ inductive Card where
   | energy (t : BasicEnergy)
   | trainer (name : String) (kind : TrainerKind) (effect : Effect)
   deriving DecidableEq
+
+/-- The Energy a card attached to a Pokémon provides, one entry per unit, each entry the types
+that unit counts as. A Basic Energy card provides one unit of its type. Special Energy cards
+(several units, as "provides 2 Colorless Energy", or one unit of several types, as "provides
+every type of Energy but only 1 Energy at a time") are not in the model; each would be one more
+clause here, and `Pays` already matches units of several types. Other cards provide nothing. -/
+def Card.provides : Card → List (List EType)
+  | .energy t => [[t.type]]
+  | _ => []
 
 /-- The constant a test compares damage with (0 for the tests that do not read damage). -/
 def Test.bound : Test → Nat
@@ -238,6 +491,21 @@ def Card.tmax : Card → Nat
   | .pokemon p => attacksTmax p.attacks
   | .energy _ => 0
   | .trainer _ _ e => e.tmax
+
+/-- The script of an attack is tame when its effect is: the base damage adds no reduction and
+no `drain`. -/
+theorem Attack.script_tame (atk : Attack) : atk.script.tame = atk.effect.tame := by
+  unfold Attack.script
+  split
+  · rfl
+  · simp only [Effect.tame, Bool.true_and]
+
+/-- The script of an attack has the test constants of its effect. -/
+theorem Attack.script_tmax (atk : Attack) : atk.script.tmax = atk.effect.tmax := by
+  unfold Attack.script
+  split
+  · rfl
+  · simp only [Effect.tmax, Nat.zero_max]
 
 def Card.tame : Card → Bool
   | .pokemon p => attacksTame p.attacks
