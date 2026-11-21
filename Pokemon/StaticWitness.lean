@@ -36,8 +36,10 @@ changes the outcome, in both directions:
 
 * `promotion_rescues`: a Pokémon the rulebook Knocks Out survives in the model (it is promoted while
   its own Knock Out is pending, and its HP rises in the Active Spot);
-* `double_knockOut_lost`: a double Knock Out the rulebook takes is not taken in the model
-  (whichever Knock Out comes first raises the other Pokémon's HP above its damage).
+* `double_knockOut_lost`: a double Knock Out the rulebook takes is not taken in the model in
+  either order of the two Knock Outs (whichever comes first raises the other Pokémon's HP above
+  its damage). The theorem is about those two orders; that no other move is legal in that state
+  holds by inspection of `Move` (every other move needs `Settled`) and is not proved.
 -/
 
 namespace Pokemon.StaticWitness
@@ -268,8 +270,9 @@ theorem energy_raises_hp :
 
 /-- **The same counters without the attachment Knock it Out**, the companion of `energy_raises_hp`:
 the same Item from `eg0`, attaching nothing (`ZStep.attachNone`), leaves the Pokémon at HP 5 with 5
-counters; the Knock Out is taken in mid-effect (`TRun`), the opponent takes a Prize card, and the
-player, with no Pokémon left in play, loses. -/
+counters; the Knock Out is taken in mid-effect (`TRun`). The theorem states that the player's
+Active Spot is then empty, the Pokémon is in the discard pile and the game has a winner; that
+the winner is the opponent is read off the witness, not stated. -/
 theorem energy_raises_hp_none :
     ∃ g, Move eg0 g ∧ g.cur.active = none ∧ Card.pokemon bulky ∈ g.cur.discard ∧
       g.winner ≠ none :=
