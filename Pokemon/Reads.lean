@@ -11,7 +11,8 @@ damage step, `Amt.per`), and can damage or heal the player's own Active Pokémon
 `heal`, `healAll`, `drain`). Since milestone M3 it also places damage counters and attack damage
 on Benched Pokémon of either player (`benchCounters`, `spreadCounters`, `benchDamage`,
 `spreadDamage`), heals one of the player's own Benched Pokémon (`benchHeal`, whose truncated
-subtraction is the only read of a Benched Pokémon's damage), and switches either player's Active
+subtraction reads a Benched Pokémon's damage; since milestone M8a `moveCounter`, among the
+player's own Pokémon, reads it too), and switches either player's Active
 Pokémon with a Benched one (`switch`), which brings a Benched Pokémon's damage within reach of
 the readers of the Active Pokémon. Inside an attack's effect
 (`Run`) nothing is Knocked Out, so these reads see damage above HP. Inside an Item or Supporter
@@ -68,6 +69,10 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
   | retreat _ _ _ _ _ _ _ hst => exact bounded hst.1 _ _
   | item _ _ hst _ => exact bounded hst.1 _ _
   | supporter _ _ _ hst _ => exact bounded hst.1 _ _
+  | stadium _ _ _ _ hst => exact bounded hst.1 _ _
+  | stadiumUse _ _ _ hst => exact bounded hst.1 _ _
+  | tool _ _ _ _ hst => exact bounded hst.1 _ _
+  | toolBench _ _ _ _ hst => exact bounded hst.1 _ _
   | ability _ _ _ _ _ _ _ hst _ => exact bounded hst.1 _ _
   | onPlay hp => exact bounded hp.settled.1 _ _
   | attack _ _ _ _ _ _ _ hst _ => exact bounded hst.1 _ _
@@ -94,7 +99,7 @@ open Infinite
 two cards in the deck. -/
 def rs (d : Nat) : GameState :=
   ⟨side [] [] (InPlay.ofBasic mon), side [] [] { InPlay.ofBasic mon with damage := d },
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 /-- If the opponent's Active Pokémon has at least 6 damage counters, do nothing; else draw. -/
 def probe : Effect := .ite (.atLeast .opp 6) .skip .draw
@@ -103,7 +108,7 @@ def probe : Effect := .ite (.atLeast .opp 6) .skip .draw
 def drawn : GameState :=
   ⟨⟨[.energy .grass], [.energy .grass], [], [.energy .fire], [], some (InPlay.ofBasic mon), [],
     false, false, false, false, false, Store.empty, true⟩,
-    side [] [] { InPlay.ofBasic mon with damage := 5 }, true, false, false, false, none, none⟩
+    side [] [] { InPlay.ofBasic mon with damage := 5 }, true, false, false, false, none, none, false, false⟩
 
 theorem rs_clamp (k : Nat) : (rs 5).clamp k = (rs 6).clamp k := rfl
 
@@ -139,12 +144,12 @@ def hurter : PokemonCard :=
 
 def start2 : GameState :=
   ⟨side [] [] (InPlay.ofBasic hurter), side [] [] (InPlay.ofBasic mon),
-    true, false, false, false, none, none⟩
+    true, false, false, false, none, none, false, false⟩
 
 def after2 : GameState :=
   ⟨side [] [] { InPlay.ofBasic hurter with damage := 9 },
     side [] [] { InPlay.ofBasic mon with damage := 0 + 0 },
-    true, false, true, false, none, none⟩
+    true, false, true, false, none, none, false, false⟩
 
 theorem start2_damageBounded : DamageBounded start2 := by
   intro p hp

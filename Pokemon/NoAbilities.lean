@@ -11,40 +11,49 @@ the results for such decks are visibly as strong as they were.
 
 namespace Pokemon
 
-/-- No Pokémon card of the game has an Ability. -/
+/-- No card of the game has an Ability, and (milestone M5) no Tool of the game gives one
+(`Card.abilities`). -/
 def GameState.NoAbilities (g : GameState) : Prop :=
-  ∀ p : PokemonCard, Card.pokemon p ∈ g.allCards → p.abilities = []
+  ∀ x ∈ g.allCards, x.abilities = []
 
 /-- Without Abilities, `AbilityQuiet` holds. -/
 theorem GameState.NoAbilities.quiet {g : GameState} (h : g.NoAbilities) : g.AbilityQuiet := by
-  intro p hp ab hab; rw [h p hp] at hab; nomatch hab
+  intro p hp ab hab
+  have e : p.abilities = [] := h _ hp
+  rw [e] at hab; nomatch hab
 
 /-- Without Abilities, clause 4 of `Faithful` (`AbilitySafe`) holds. -/
 theorem GameState.NoAbilities.safe {g : GameState} (h : g.NoAbilities) : g.AbilitySafe := by
   intro x hx
   cases x with
-  | pokemon p => simp [Card.abilitySafe, h p hx]
+  | pokemon p =>
+      have e : p.abilities = [] := h _ hx
+      simp [Card.abilitySafe, e]
+  | tool n gr =>
+      have e : gr.abilities = [] := h _ hx
+      simp [Card.abilitySafe, e]
   | _ => rfl
 
 /-- Without Abilities, the Ability weight of a list of cards is 0. -/
-theorem cardsAbQ_zero (P : Nat) : ∀ C : List Card,
-    (∀ p : PokemonCard, Card.pokemon p ∈ C → p.abilities = []) → cardsAbQ P C = 0
+theorem cardsAbQ_zero (P : Nat) : ∀ C : List Card, (∀ x ∈ C, x.abilities = []) → cardsAbQ P C = 0
   | [], _ => rfl
   | c :: cs, h => by
-      have ih := cardsAbQ_zero P cs (fun p hp => h p (.tail _ hp))
-      cases c with
-      | pokemon p => simp [cardsAbQ, Card.abQ, h p (.head _), abilitiesQ, ih]
-      | _ => simp [cardsAbQ, Card.abQ, ih]
+      have ih := cardsAbQ_zero P cs (fun x hx => h x (.tail _ hx))
+      simp [cardsAbQ, Card.abQ, h c (.head _), abilitiesQ, ih]
 
-/-- Without Abilities, the store bound is the bound of the model before Abilities. -/
+/-- Without Abilities, the Ability term of the store bound vanishes: what is left is the bound of
+the model before Abilities (milestone MV) and, since milestone M5, the Stadium term, which is 0
+for a deck without Stadium cards (`GameState.NoStadiums.storeBound_noAbilities`). -/
 theorem GameState.NoAbilities.storeBound {g : GameState} (h : g.NoAbilities) :
     Faithful.storeBound g =
-      g.storeTotal + 6 * cardsAmt g.allCards + 3 * cardsAtkAmt g.allCards := by
+      g.storeTotal + 6 * cardsAmt g.allCards + 6 * cardsStQ (cardsAmt g.allCards) g.allCards +
+        3 * cardsAtkAmt g.allCards := by
   simp [Faithful.storeBound, cardsAbQ_zero _ _ h]
 
-/-- Without Abilities, `Faithful` is its first three clauses. -/
+/-- Without Abilities, `Faithful` is its clauses other than clause 4 (milestone M5 added clause 5,
+`StadiumSafe`; before it this lemma read "its first three clauses"). -/
 theorem GameState.NoAbilities.faithful_iff {g : GameState} (h : g.NoAbilities) :
-    g.Faithful ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe :=
-  ⟨fun ⟨a, b, c, _⟩ => ⟨a, b, c⟩, fun ⟨a, b, c⟩ => ⟨a, b, c, h.safe⟩⟩
+    g.Faithful ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe ∧ g.StadiumSafe :=
+  ⟨fun ⟨a, b, c, _, d⟩ => ⟨a, b, c, d⟩, fun ⟨a, b, c, d⟩ => ⟨a, b, c, h.safe, d⟩⟩
 
 end Pokemon

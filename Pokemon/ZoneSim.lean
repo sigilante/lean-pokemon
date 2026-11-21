@@ -140,5 +140,22 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
         ⟨ha.deck, ha.hand, ha.discard, ha.active, ?_⟩⟩
       simp only [List.map_append, List.map_cons, g1, g3, InPlay.clamp_of_agree (hq'.addEnergy _)]
   | moveNone w f s => exact ⟨s₂, .moveNone w f s₂, ha⟩
+  | @toolsActive w s a hac =>
+      have hm := ha.active
+      rw [hac] at hm
+      obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
+      refine ⟨_, .toolsActive ha₂,
+        ⟨ha.deck, ha.hand, by simp only [ha.discard, hag.tools], ?_, ha.bench⟩⟩
+      simp only [Option.map_some, InPlay.clamp_of_agree (hag.setTools [])]
+  | @toolsBench w s p b₁ b₂ hb =>
+      obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
+      have hp := InPlay.agree_of_clamp h2
+      refine ⟨_, .toolsBench hb₂,
+        ⟨ha.deck, ha.hand, by simp only [ha.discard, hp.tools], ha.active, ?_⟩⟩
+      simp only [List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hp.setTools [])]
+  | toolsNone hb =>
+      have hm := ha.bench
+      rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
+      exact ⟨s₂, .toolsNone hm, ha⟩
 
 end Pokemon

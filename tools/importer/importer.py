@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -43,8 +43,14 @@ MECHS = [
      r'^Ability: (?:once during your first turn|first-turn limit)'),
     ('Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms)',
      r'^Ability: (?!returns|condition on the history)|^Ability$|^Ancient Trait$'),
-    ('Pokémon Tool (card or text)', r'^Pokémon Tool$|Pokémon Tool|\bTools?\b'),
-    ('Stadium (card or text)', r'^Stadium$|Stadium'),
+    ('Pokémon Tool card: static or triggered text (the model would play it inert; refused)',
+     r'^Pokémon Tool: (?:static|triggered)'),
+    ('Stadium card: static or triggered text (the model would play it inert; refused)', r'^Stadium: (?:static|triggered|text of several)'),
+    ('Stadium card: activated effect the model cannot express', r'^Stadium: activated'),
+    ('Pokémon Tool card: other (attack grant not expressible, end-of-turn discard, Mega rule, unclassified record)',
+     r'^Pokémon Tool: '),
+    ('Pokémon Tool in other card text', r'Pokémon Tool|\bTools?\b'),
+    ('Stadium in other card text', r'Stadium'),
     ('Special Energy (card or text)', r'^Special Energy$|Special Energy'),
     ('Trainer played as a Pokémon', r'^Trainer played as a Pokémon$'),
     ('first-turn rules in text', r'first turn|go first|go second'),
@@ -166,6 +172,9 @@ def run(data, out, survey=None):
         src.append('def cards : List Card := [\n  ' + ',\n  '.join(emit.ident(recs[0]) for recs, _ in chunk) + ']\n')
         src.append('/-- Every card of this part passes the per-card checks (`Card.importOk`). -/')
         src.append('theorem cards_ok : cards.all Card.importOk = true := by decide +kernel\n')
+        src.append('/-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a\n'
+                   'Tool that gives nothing). -/')
+        src.append('theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel\n')
         src.append('/-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/')
         src.append('theorem cards_nodup : nodupFp cards = true := by decide +kernel\n')
         src.append('end PokemonCards.Standard.' + pn + '\n')
@@ -201,6 +210,16 @@ def run(data, out, survey=None):
            '/-- Every imported card passes the per-card checks. -/',
            'theorem all_ok : all.all Card.importOk = true := by\n  simp only [all, List.all_append, '
            + ', '.join(pn + '.cards_ok' for pn in part_names) + ', Bool.and_self]\n',
+           '/-- **No imported card is inert.** No imported Stadium or Tool is a card the model plays with no\n'
+           'effect (`Card.inert`): every imported Stadium has an effect the model expresses, every imported Tool\n'
+           'gives an attack or an Ability. (Static and triggered Stadium and Tool text, which the model would\n'
+           'play as inert, is refused by the importer.) -/',
+           'theorem notInert : ∀ c ∈ all, c.inert = false := by\n'
+           '  have h : all.all (fun c => !c.inert) = true := by\n'
+           '    simp only [all, List.all_append, '
+           + ', '.join(pn + '.cards_notInert' for pn in part_names) + ', Bool.and_self]\n'
+           '  intro c hc\n'
+           '  simpa using List.all_eq_true.1 h c hc\n',
            ] + [
            '/-- No card of part %d is the same term as a card of part %d. -/\n'
            'theorem cross_%d_%d : crossOk %s.cards %s.cards = true := by decide +kernel\n'
@@ -219,30 +238,44 @@ def run(data, out, survey=None):
            '/-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/',
            'theorem lingerers : (all.filter Card.lingers).map Card.label = ' + T.lean([recs[0]['name'] for recs, _ in lingerers])
            + ' := by decide +kernel\n',
-           '/-- The imported Trainers that are not Supporters and write a bonus or reduction (`Card.wAmt`), the\n'
-           'cards clause 3 (a) of `Faithful` forbids Trainers to recycle, by name. -/',
+           '/-- The imported Items that write a bonus or reduction (`Card.wAmt`), the cards clause 3 (a) of\n'
+           '`Faithful` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/',
            'theorem nonSupporterWriters : (all.filter fun c => c.wAmt != 0).map Card.label = '
            + T.lean([t[1] for t in [r['term'] for _, r in imported] if w_amt(t)]) + ' := by decide +kernel\n',
-           '/-- The imported Trainers that write a rest-of-game bonus or reduction (`Card.alAmt`), by name. -/',
+           '/-- The imported Items and Supporters that write a rest-of-game bonus or reduction (`Card.alAmt`), by\n'
+           'name. -/',
            'theorem restOfGameWriters : (all.filter fun c => c.alAmt != 0).map Card.label = '
            + T.lean([t[1] for t in [r['term'] for _, r in imported] if al_amt(t)]) + ' := by decide +kernel\n',
-           '/-- The imported Pokémon whose Ability writes a lingering damage bonus or reduction, by name. -/',
+           '/-- The imported cards with (or, a Tool, giving) an Ability that writes a lingering damage bonus or\n'
+           'reduction, by name. -/',
            'theorem abilityWriters : (all.filter Card.abilityWrites).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if ability_writes(r['term'], T.writes)]) + ' := by decide +kernel\n',
-           '/-- The imported Pokémon whose Ability writes any lingering modifier, by name. -/',
+           '/-- The imported cards with (or giving) an Ability that writes any lingering modifier, by name. -/',
            'theorem abilityLingerers : (all.filter Card.abilityLingers).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if ability_writes(r['term'], T.lingers)]) + ' := by decide +kernel\n',
-           '/-- The imported Pokémon with an "as often as you like" Ability (`AbilityUse.unlimited`), by name. -/',
+           '/-- The imported cards with (or giving) an "as often as you like" Ability (`AbilityUse.unlimited`), by\n'
+           'name. -/',
            'theorem unlimitedAbilities : (all.filter Card.hasUnlimited).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if has_unlimited(r['term'])]) + ' := by decide +kernel\n',
-           '/-- The imported Pokémon with an Ability that can return a card from a discard pile, by name. -/',
+           '/-- The imported cards with (or giving) an Ability that can return a card from a discard pile, by\n'
+           'name. -/',
            'theorem abilityRecyclers : (all.filter Card.abilityRecycles).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if ability_recycles(r['term'])]) + ' := by decide +kernel\n',
            '/-- The imported cards whose effects a player can resolve again and again in one turn and that can\n'
-           'return a card from a discard pile (`Card.freeRec`: Trainers and "as often as you like" Abilities), by\n'
-           'name: the recyclers clause 3 (a) of `Faithful` constrains. -/',
+           'return a card from a discard pile (`Card.freeRec`: Items, Supporters and "as often as you like"\n'
+           'Abilities; not Stadiums, whose uses are bounded per turn), by name: the recyclers clause 3 (a) of\n'
+           '`Faithful` constrains. -/',
            'theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if free_rec(r['term'])]) + ' := by decide +kernel\n',
+           '/-- The imported Stadiums and Pokémon Tools, by name (milestone M5; none is `Card.inert`, `notInert`). -/',
+           'theorem stadiumsAndTools : (all.filter fun c => c.isStadium || c.isTool).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if r['term'][0] == 'tool'
+                     or (r['term'][0] == 'trainer' and r['term'][2] == ('stadium',))]) + ' := by decide +kernel\n',
+           '/-- The imported Stadiums whose effect can return a card from a discard pile (`Card.allRec`; not\n'
+           'free recyclers, `Card.freeRec`, since their uses are bounded per turn), by name. -/',
+           'theorem stadiumRecyclers : (all.filter fun c => c.isStadium && !c.allRec.isEmpty).map Card.label = '
+           + T.lean([recs[0]['name'] for recs, r in imported if r['term'][0] == 'trainer'
+                     and r['term'][2] == ('stadium',) and T.rec_filters(r['term'][3])]) + ' := by decide +kernel\n',
            '/-- Clause 3 of `Faithful` over the whole imported pool, decided. -/',
            'theorem recSafe : recSafeB all = ' + ('true' if not rs_pairs else 'false') + ' := by decide +kernel\n',
            ]
@@ -255,8 +288,11 @@ def run(data, out, survey=None):
                 '/-- Clause 4 (`AbilitySafe`) for every game whose cards are all imported cards. -/',
                 'theorem abilitySafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.AbilitySafe :=\n'
                 '  fun x hx => abilitySafe_of all_ok x (hg x hx)\n',
-                '/-- **Every game whose cards are all imported cards is `Faithful`** (`LoopFree`, `GXOnly`,\n'
-                '`RecycleSafe` and `AbilitySafe`), so `Faithful.xfinite` applies to it. -/',
+                '/-- Clause 5 (`StadiumSafe`) for every game whose cards are all imported cards. -/',
+                'theorem stadiumSafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.StadiumSafe :=\n'
+                '  fun x hx => stadiumSafe_of all_ok x (hg x hx)\n',
+                '/-- **Every game whose cards are all imported cards is `Faithful`** (all five clauses: `LoopFree`,\n'
+                '`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `Faithful.xfinite` applies to it. -/',
                 'theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=\n'
                 '  faithful_of all_ok recSafe g hg\n',
                 '/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged. -/',
@@ -266,25 +302,29 @@ def run(data, out, survey=None):
                 '        (∀ g₁\', Move g₁ g₁\' → ∃ g₂\', Move g₂ g₂\' ∧ g₁\'.xclamp = g₂\'.xclamp) ∧\n'
                 '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧ g₂\'.xclamp = g₁\'.xclamp) :=\n'
                 '  Faithful.xfinite (faithful g₀ hg)\n']
-    src += ['/-- Every imported attack is well formed (`Attack.wf`, required by `Move.attack`). -/',
-            'theorem attacks_wf : ∀ c ∈ all, ∀ p, c = .pokemon p → ∀ a ∈ p.attacks, a.wf = true :=\n'
+    src += ['/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by\n'
+            '`Move.attack`). -/',
+            'theorem attacks_wf : ∀ c ∈ all, ∀ a ∈ c.attacks, a.wf = true :=\n'
             '  attacks_wf_of all_ok\n',
-            '/-- Every imported Trainer effect is `hitFree` and `benchHitFree` (required by `Move.item` and\n'
-            '`Move.supporter`). -/',
+            '/-- Every imported Trainer effect is `hitFree` and `benchHitFree` (required by `Move.item`,\n'
+            '`Move.supporter` and, for a Stadium\'s effect, `Move.stadiumUse`). -/',
             'theorem trainers_hitFree : ∀ c ∈ all, ∀ n k e, c = .trainer n k e →\n'
             '    e.hitFree = true ∧ e.benchHitFree = true :=\n  trainers_of all_ok\n',
-            '/-- Every script of every imported Ability has no attack damage step and no attack damage to the\n'
-            'Bench (premises of `Move.ability` and `Move.onPlay`). -/',
-            'theorem abilities_hitFree : ∀ p, Card.pokemon p ∈ all → ∀ ab ∈ p.abilities, ∀ e ∈ ab.scripts,\n'
+            '/-- Every script of every Ability an imported card has or (a Tool) gives has no attack damage step\n'
+            'and no attack damage to the Bench (premises of `Move.ability` and `Move.onPlay`). -/',
+            'theorem abilities_hitFree : ∀ c ∈ all, ∀ ab ∈ c.abilities, ∀ e ∈ ab.scripts,\n'
             '    e.hitFree = true ∧ e.benchHitFree = true :=\n  abilities_of all_ok\n',
             '/-- Every imported card satisfies clause 4 of `Faithful` (`Card.abilitySafe`): no imported "as often\n'
             'as you like" Ability writes a damage bonus or reduction, and no imported Ability a rest-of-game one. -/',
             'theorem abilitySafe : ∀ c ∈ all, c.abilitySafe = true := abilitySafe_of all_ok\n',
             '/-- Every imported card satisfies clause 1 of `Faithful` (`Card.loopFree`, Ability scripts included). -/',
             'theorem loopFree : ∀ c ∈ all, c.loopFree = true := loopFree_of all_ok\n',
-            '/-- `GXOnly` over the imported pool: no imported attack that is not a GX attack writes a\n'
-            'rest-of-game bonus or reduction (no imported attack is a GX attack). -/',
-            'theorem gxOnly : ∀ p, Card.pokemon p ∈ all → ∀ atk ∈ p.attacks, atk.gx = false →\n'
+            '/-- Every imported card satisfies clause 5 of `Faithful` (`Card.stadiumSafe`): no imported Stadium\'s\n'
+            'effect writes a rest-of-game bonus or reduction. -/',
+            'theorem stadiumSafe : ∀ c ∈ all, c.stadiumSafe = true := stadiumSafe_of all_ok\n',
+            '/-- `GXOnly` over the imported pool: no attack an imported card has or gives that is not a GX attack\n'
+            'writes a rest-of-game bonus or reduction (no imported attack is a GX attack). -/',
+            'theorem gxOnly : ∀ c ∈ all, ∀ atk ∈ c.attacks, atk.gx = false →\n'
             '    atk.effect.amtAt .always = 0 :=\n  gxOnly_of all_ok\n',
             'end PokemonCards.Standard\n']
     files['PokemonCards/Standard.lean'] = '\n'.join(src)
@@ -362,31 +402,76 @@ def ability_section(results):
     return L
 
 
+def stadium_tool_section(results):
+    """Stadiums and Tools (milestone M5): the imported ones with their terms, the refused ones by
+    reason (the reason with its quoted text dropped)."""
+    L = []
+    for kind in ('Stadium', 'Pokémon Tool'):
+        rs = [(recs, r) for recs, r in results if kind_of(recs[0]) == kind]
+        imp = [(recs, r) for recs, r in rs if r['ok']]
+        L.append('%s cards (%d): imported %d, refused %d.' % (kind, len(rs), len(imp), len(rs) - len(imp)))
+        L.append('')
+        for recs, r in imp:
+            L.append('- imported: %s (%s)%s: `%s`' % (recs[0]['name'], ', '.join(x['id'] for x in recs),
+                                                      ' [caveats: ' + ', '.join(sorted(r['caveats'])) + ']' if r['caveats'] else '',
+                                                      ' '.join(emit.card_src(r['term']).split())))
+        L.append('')
+        c = collections.Counter()
+        for recs, r in rs:
+            if not r['ok']:
+                a = r['blockers'][0][0]
+                a = re.sub(r'^(Stadium: activated effect not expressible): .*$', r'\1', a)
+                c[a] += 1
+        L.append('| refused by reason | cards |')
+        L.append('|---|---|')
+        for k, v in sorted(c.items(), key=lambda kv: (-kv[1], kv[0])):
+            L.append('| %s | %d |' % (k, v))
+        L.append('')
+    return L
+
+
 def first_reason(r):
     a, b = r['blockers'][0]
     return a + (': ' + b if b and a != 'unhandled sentence' else (': ' + b if b else ''))
 
 
-def card_effects(term):
-    """Every effect of the card: attacks, the scripts of its Abilities, or a Trainer's effect."""
+def card_attacks(term):
+    """`Card.attacks`: a Pokémon card's attacks, or the attacks a Tool gives."""
     if term[0] == 'pokemon':
-        return ([a['effect'] for a in term[1]['attacks']]
-                + [e for ab in term[1]['abilities'] for e in T.ability_scripts(ab)])
-    if term[0] == 'trainer':
-        return [term[3]]
+        return term[1]['attacks']
+    if term[0] == 'tool':
+        return term[2]['attacks']
     return []
 
 
+def card_abilities(term):
+    """`Card.abilities`: a Pokémon card's Abilities, or the Abilities a Tool gives."""
+    if term[0] == 'pokemon':
+        return term[1]['abilities']
+    if term[0] == 'tool':
+        return term[2]['abilities']
+    return []
+
+
+def card_effects(term):
+    """Every effect of the card: the attacks and the scripts of the Abilities it has or gives, or a
+    Trainer's effect (an Item's or Supporter's, or a Stadium's)."""
+    if term[0] == 'trainer':
+        return [term[3]]
+    return ([a['effect'] for a in card_attacks(term)]
+            + [e for ab in card_abilities(term) for e in T.ability_scripts(ab)])
+
+
 def ability_writes(term, pred):
-    return term[0] == 'pokemon' and any(pred(e) for ab in term[1]['abilities'] for e in T.ability_scripts(ab))
+    return any(pred(e) for ab in card_abilities(term) for e in T.ability_scripts(ab))
 
 
 def has_unlimited(term):
-    return term[0] == 'pokemon' and any(ab['use'] == ('unlimited',) for ab in term[1]['abilities'])
+    return any(ab['use'] == ('unlimited',) for ab in card_abilities(term))
 
 
 def ability_recycles(term):
-    return term[0] == 'pokemon' and any(T.rec_filters(e) for ab in term[1]['abilities'] for e in T.ability_scripts(ab))
+    return any(T.rec_filters(e) for ab in card_abilities(term) for e in T.ability_scripts(ab))
 
 
 def term_writes(term):
@@ -398,25 +483,26 @@ def term_lingers(term):
 
 
 def w_amt(term):
-    if term[0] == 'trainer':
-        e = term[3]
-        return 0 if term[2] == ('supporter',) else sum(T.amt_at(s, e) for s in ('now', 'next', 'after', 'always'))
+    """`Card.wAmt`: what an Item writes when played (0 for a Supporter and, since M5, a Stadium)."""
+    if term[0] == 'trainer' and term[2] == ('item',):
+        return T.amt(term[3])
     return 0
 
 
 def al_amt(term):
-    return T.amt_at('always', term[3]) if term[0] == 'trainer' else 0
+    """`Card.alAmt`: the rest-of-game amount an Item or Supporter writes (0 for a Stadium)."""
+    if term[0] == 'trainer' and term[2] != ('stadium',):
+        return T.amt_at('always', term[3])
+    return 0
 
 
 def free_rec(term):
-    """`Card.freeRec`: the recycling filters of a Trainer's effect and of a Pokémon's "as often as you
-    like" Abilities."""
+    """`Card.freeRec`: the recycling filters of an Item's or Supporter's effect (not a Stadium's,
+    since M5) and of the "as often as you like" Abilities a card has or gives."""
     if term[0] == 'trainer':
-        return T.rec_filters(term[3])
-    if term[0] == 'pokemon':
-        return [f for ab in term[1]['abilities'] if ab['use'] == ('unlimited',)
-                for e in T.ability_scripts(ab) for f in T.rec_filters(e)]
-    return []
+        return [] if term[2] == ('stadium',) else T.rec_filters(term[3])
+    return [f for ab in card_abilities(term) if ab['use'] == ('unlimited',)
+            for e in T.ability_scripts(ab) for f in T.rec_filters(e)]
 
 
 def recycle_pairs(terms):
@@ -542,13 +628,14 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
         L.append('| %s | %d | %d |' % (m, alone[m], anyc[m]))
     L.append('')
     L += ability_section(results)
+    L += stadium_tool_section(results)
     # unhandled templates
     sc = collections.Counter()
     exs = {}
     for recs, r in results:
         if r['ok']:
             continue
-        if any(a in CARD_LEVEL for a, _ in r['blockers']):
+        if any(a in CARD_LEVEL or a.startswith(('Pokémon Tool:', 'Stadium:')) for a, _ in r['blockers']):
             continue
         for a, b in r['blockers']:
             if a == 'unhandled sentence' or b:
@@ -579,8 +666,8 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
             len(rec), ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in rec)))
         L.append('')
         terms_ = [r['term'] for _, r in results if r['ok']]
-        L.append('Writers that clause 3 constrains: non-Supporter Trainers writing a bonus or reduction: %s; '
-                 'Trainers writing a rest-of-game bonus or reduction: %s.' % (
+        L.append('Writers that clause 3 constrains: Items writing a bonus or reduction (`Card.wAmt`): %s; '
+                 'Items or Supporters writing a rest-of-game bonus or reduction (`Card.alAmt`): %s.' % (
                      [t[1] for t in terms_ if w_amt(t)] or 'none', [t[1] for t in terms_ if al_amt(t)] or 'none'))
     return '\n'.join(L)
 

@@ -82,6 +82,10 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
       rw [hc] at h1
       exact benched_update rfl h1 ((h1 q' (mem rfl)).of_eq rfl rfl rfl rfl)
   | moveNone => exact hb
+  | toolsActive => exact hb
+  | @toolsBench w s p b₁ b₂ hb' =>
+      exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
+  | toolsNone => exact hb
 
 /-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
 theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
@@ -431,6 +435,12 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
   | item hh hbt hst hr => exact hr.wellFormed hw
   | supporter hh hs hbt hst hr => exact hr.wellFormed hw
+  | stadiumUse _ _ _ _ _ hr => exact hr.wellFormed hw
+  | stadium => exact hw
+  | tool => exact hw
+  | @toolBench l₁ l₂ n gr q b₁ b₂ hh hb =>
+      exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 q (hb ▸ List.mem_append_right _
+        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.wellFormed (hu.wellFormed hw)
   | onPlay hp _ _ _ _ _ hr => exact hr.wellFormed (hp.wellFormed hw)
   | attack ha hm hc hs hn hf hbt hst hr => exact WellFormed.of_frame hw hr.frame

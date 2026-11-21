@@ -57,6 +57,9 @@ CAVEATS = {
                    "Pokémon to your Active Pokémon') is a move between any two of the player's Pokémon (moveEnergy)",
     'onePerName': "'You can't use more than 1 X Ability each turn' is not modelled: the use flag is per Pokémon, so "
                   "each of several Pokémon with that Ability can use it in the same turn",
+    'toolAbilityFlag': "an Ability a Pokémon Tool gives shares the use flag of the Pokémon it is attached to (`InPlay.used`), "
+                       "so a Pokémon with an Ability of its own and one from a Tool uses only one of them in a turn "
+                       "(Known gaps, M5)",
 }
 
 
@@ -82,6 +85,7 @@ CAVEAT_DIRECTION = {
     'selfBench': 'allows more',
     'moveAnyPair': 'allows more',
     'onePerName': 'allows more',     # more uses per turn; still bounded by the model's potential (abPot)
+    'toolAbilityFlag': 'forbids some',  # fewer Ability uses per turn than the rulebook allows
 }
 
 
@@ -175,6 +179,11 @@ def parse_filter(np, ctx):
         return ('kind', ('supporter',))
     if s == 'Trainer':
         return ('trainer',)
+    if s == 'Pokémon Tool':
+        # milestone M5: `Filter.tool` (`Card.tool`); not an Item (a Tool is its own Trainer kind)
+        return ('tool',)
+    if s == 'Stadium':
+        return ('kind', ('stadium',))
     if s in ('Energy', 'Basic Energy'):
         # With Basic Energy only in the model (Special Energy cards are not imported), "an Energy
         # card" and "a Basic Energy card" are the same filter (`Filter.energy`, Pokemon/Card.lean).
@@ -190,10 +199,11 @@ def parse_filter(np, ctx):
     if s in ('SELF', ctx.get('name')):
         return ('named', ctx['name'])
     if s in KNOWN_NAMES:
-        # a card name ("Shedinja", "Arven's Sandwich"): `Filter.named`, exact for Pokémon, Items and
-        # Supporters; names of kinds the model lacks are refused with that kind as the reason
+        # a card name ("Shedinja", "Arven's Sandwich"): `Filter.named`, exact for Pokémon, Items,
+        # Supporters and (milestone M5) Stadiums and Tools; names of kinds the model lacks are refused
+        # with that kind as the reason
         kinds = KNOWN_NAMES[s]
-        bad = sorted(kinds & {'Pokémon Tool', 'Stadium', 'Special Energy', 'Trainer (other)'})
+        bad = sorted(kinds & {'Special Energy', 'Trainer (other)'})
         if bad:
             raise Refuse('card named in text is a ' + ' / '.join(bad) + ': ' + s)
         return ('named', s)
@@ -416,9 +426,10 @@ def branch(tests, neg, a, b):
 # ------------------------------------------------------------------ items produced by sentences
 
 class Eff:
-    """A plain effect, resolved after the damage step in printed order."""
-    def __init__(self, e, cavs=()):
-        self.e, self.cavs = e, set(cavs)
+    """A plain effect, resolved after the damage step in printed order, or (`pre`, "Before doing
+    damage, …") before it."""
+    def __init__(self, e, cavs=(), pre=False):
+        self.e, self.cavs, self.pre = e, set(cavs), pre
 
 
 class Dmg:
@@ -1107,6 +1118,33 @@ def _(m, ctx):
     return Eff(('linger', OWN, ('now',), ('bonus', counters(m.group(1)))), {'perPokemon'})
 
 
+# ------------------------------------------------------------------ Stadiums and Tools (milestone M5)
+
+@rule('discard-stadium', r'Discard a Stadium in play\.', 'B', 'discardStadium')
+def _(m, ctx):
+    # `Effect.discardStadium`: the Stadium in play, whoever's, to its owner's discard pile; nothing if
+    # none is in play (an attack does what it can; a Trainer could then be played to no effect)
+    return Eff(('discardStadium',), noop(ctx))
+
+
+@rule('may-discard-stadium', r'You may discard a Stadium in play\.', 'B', 'choice discardStadium skip')
+def _(m, ctx):
+    return Eff(choice(('discardStadium',), SKIP))
+
+
+@rule('pre-discard-tools-opp-active', r"Before doing damage, discard all Pokémon Tools from your opponent's Active Pokémon\.",
+      'A', 'discardTools opp active, before the damage step')
+def _(m, ctx):
+    # `Effect.discardTools .opp .active`: every Tool of the opponent's Active Pokémon, to the
+    # opponent's discard pile (the owner's); resolved before the damage step
+    return Eff(('discardTools', OPP, ('active',)), pre=True)
+
+
+@rule('hand-to-deck-top', r'Put a card from your hand on top of your deck\.', 'T', 'move own hand top any (exactly 1)')
+def _(m, ctx):
+    return Eff(('move', OWN, ('hand',), ('top',), ('any',), ('exactly', 1)))
+
+
 # ------------------------------------------------------------------ the parser
 
 def split_sentences(t):
@@ -1486,9 +1524,13 @@ def build_attack(base, suffix, items, cost):
     drain = False
     dmg_idx = None
     post = []          # (index, effect)
+    pre = []           # effects printed "Before doing damage", resolved before the damage step
     wraps = []         # (index, wrap)
     for idx, it in items:
-        if isinstance(it, Eff):
+        if isinstance(it, Eff) and it.pre:
+            cavs |= it.cavs
+            pre.append(it.e)
+        elif isinstance(it, Eff):
             cavs |= it.cavs
             post.append((idx, it.e))
         elif isinstance(it, Dmg):
@@ -1585,6 +1627,13 @@ def build_attack(base, suffix, items, cost):
     else:
         damage = 0
         eff = seq(to_effect(tree, drain) if tree is not None else SKIP, *effs)
+    if pre:
+        # the printed order: these effects, then the damage step (`Attack.script` puts the printed base
+        # damage first, so it becomes an explicit damage step after them)
+        if damage:
+            eff, damage = seq(*pre, ('damage', ('const', damage)), eff), 0
+        else:
+            eff = seq(*pre, eff)
     for _, w in wraps:
         if w[0] == 'wrapFlip':
             if damage:
@@ -1652,10 +1701,8 @@ def translate_trainer(c, res):
     sub = c['_sub']
     B = res['blockers']
     name = c['name']
-    if 'Pokémon Tool' in sub:
-        B.append(('Pokémon Tool', ''))
-    if 'Stadium' in sub:
-        B.append(('Stadium', ''))
+    if 'Pokémon Tool' in sub or 'Stadium' in sub:
+        return translate_tool_stadium(c, res)
     if c.get('hp') or any('Play this card as if it were' in norm(r) for r in c.get('rules') or []):
         B.append(('Trainer played as a Pokémon', ''))
     if c.get('abilities'):
@@ -1706,6 +1753,227 @@ def translate_trainer(c, res):
     res['caveats'].discard('_needsPoison')
     res['term'] = term
     res['ok'] = True
+    return res
+
+
+# ------------------------------------------------------------------ Stadiums and Tools (milestone M5)
+#
+# The model plays every Stadium and Tool, and one whose effect it does not express is a card with no
+# effect (`Card.inert`: a Stadium whose effect is `skip`, a Tool that gives nothing). Such a term says
+# less than its printed card, so it is never written: a Stadium is imported only if its whole text is
+# an activated once-per-turn effect ("Once during each player's turn, that player may …") that
+# translates by the rules for Trainers, and a Tool only if its whole text gives attacks that translate
+# by the rules for attacks. Everything else is refused with a reason that starts with 'Stadium: ' or
+# 'Pokémon Tool: ' and names the kind of text.
+
+# The printed reminders of the play rules, which `Move.stadium`, `Move.tool` and `Move.toolBench`
+# express (one Stadium per turn, not one of the same name, the old one discarded; any number of Tools,
+# one per Pokémon, staying attached).
+STADIUM_REMINDERS = (
+    'You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if '
+    'another Stadium comes into play. A Stadium with the same name can\'t be played.',
+    # the same reminder with "into" for "next to" (records of sv5, sv6 and sv8); the same rule
+    'You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if '
+    'another Stadium comes into play. A Stadium with the same name can\'t be played.',
+)
+TOOL_REMINDERS = (
+    'You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 '
+    'Pokémon Tool to each Pokémon, and it stays attached.',
+    "Attach a Pokémon Tool to 1 of your Pokémon that doesn't already have a Pokémon Tool attached.",
+)
+
+# Static and triggered text, by kind (first match wins; the kinds of the model's Known gaps).
+STATIC_KINDS = [
+    ('Bench size', r'on their Bench'),
+    ('Ability lock', r'have no Abilities'),
+    ('Tool lock', r'Pokémon Tools attached .* have no effect'),
+    ('Pokémon Checkup', r'Pokémon Checkup'),
+    ('triggered (Knock Out, damage, end of turn, Bench placement, healing)',
+     r'Knocked Out|is damaged by|[Ww]henever|[Aa]t the end of your turn|takes \d+ or more damage'),
+    ('HP', r'[+-]\d+ HP'),
+    ('damage bonus', r'more damage(?! counters)'),
+    ('damage reduction or prevention', r'less damage|[Pp]revent all damage'),
+    ('Retreat Cost', r'Retreat Cost'),
+    ('attack cost', r'cost Colorless|costs \d+ Energy'),
+    ('Special Conditions', r'Special Condition|Confused'),
+    ('evolution timing', r'evolve'),
+    ('coin re-flip', r'coin flips'),
+]
+
+
+def static_kind(text):
+    for k, rx in STATIC_KINDS:
+        if re.search(rx, text):
+            return k
+    return None
+
+
+def translate_tool_stadium(c, res):
+    sub = c['_sub']
+    B = res['blockers']
+    name = c['name']
+    tool = 'Pokémon Tool' in sub
+    head = 'Pokémon Tool: ' if tool else 'Stadium: '
+    if 'ACE SPEC' in sub:
+        res['caveats'].add('aceSpec')
+    lines = [norm(r) for r in c.get('rules') or []]
+    text = [r for r in lines if r not in ACE_LINES and r not in (TOOL_REMINDERS if tool else STADIUM_REMINDERS)]
+    joined = ' '.join(text)
+    if 'Pokémon Tool' in sub and 'Stadium' in sub:
+        B.append(('Pokémon Tool and Stadium both', ''))
+        return res
+    if c.get('abilities'):
+        B.append((head + 'gives an Ability (no rule; none in the pool)', joined))
+        return res
+    if tool:
+        return translate_tool(c, res, text, joined)
+    return translate_stadium(c, res, text, joined)
+
+
+GRANT_RE = re.compile(r'^The (.+?) this card is attached to can use the attack on this card\.$')
+GRANT_REMINDER = '(You still need the necessary Energy to use this attack.)'
+
+
+def translate_tool(c, res, text, joined):
+    """A Tool is imported only if its whole text gives its printed attack to a holder the model can
+    name (`ToolGrant`: holder filter, attacks, no Abilities)."""
+    B = res['blockers']
+    sub = c['_sub']
+    sents = [x for r in text for x in split_sentences(r)]
+    grants = [x for x in sents if GRANT_RE.match(x)]
+    if not sents:
+        B.append(('Pokémon Tool: no text', ''))
+        return res
+    if not grants:
+        k = static_kind(joined)
+        if k is not None:
+            B.append(('Pokémon Tool: ' + ('triggered' if k.startswith('triggered') else 'static (' + k + ')'), joined))
+        elif 'this card is attached to' not in joined:
+            B.append(('Pokémon Tool: record text names no holder (an Item-like text; unclassified record)', joined))
+        else:
+            B.append(('Pokémon Tool: static or triggered text of no listed kind', joined))
+        return res
+    rest = [x for x in sents if not GRANT_RE.match(x) and x != GRANT_REMINDER]
+    if rest:
+        r_ = ' '.join(rest)
+        why = ('end-of-turn discard' if re.search(r'at the end of your turn', r_) else
+               'the Mega Evolution ex rule printed on a Tool' if 'Mega Evolution' in r_ else static_kind(r_))
+        B.append(('Pokémon Tool: text besides the attack grant' + (' (' + why + ')' if why else ''), ' '.join(rest)))
+        return res
+    other = sub - {'Pokémon Tool', 'ACE SPEC'}
+    if other:
+        B.append(('Pokémon Tool: subtype not modelled on a Tool: ' + ','.join(sorted(other)), joined))
+        return res
+    if len(grants) != 1 or len(c.get('attacks') or []) != 1:
+        B.append(('Pokémon Tool: the grant does not name exactly one printed attack', joined))
+        return res
+    m = GRANT_RE.match(grants[0])
+    ctx = {'kind': 'trainer', 'name': c['name'], 'base': None, 'cost': None}
+    try:
+        holder = parse_filter(m.group(1), ctx)
+    except Refuse as r:
+        B.append(('Pokémon Tool: holder not expressible: ' + r.reason, grants[0]))
+        return res
+    if not filter_names_pokemon(holder):
+        B.append(('Pokémon Tool: holder filter admits cards other than Pokémon', grants[0]))
+        return res
+    res['used'].append(('tool-grant-attack', grants[0]))
+    attacks = []
+    for a in c['attacks']:
+        at = translate_attack(c, a, res)
+        if at is not None:
+            attacks.append(at)
+    if B:
+        return res
+    res['term'] = ('tool', c['name'], {'holder': holder, 'attacks': attacks, 'abilities': []})
+    res['ok'] = True
+    return res
+
+
+def filter_names_pokemon(f):
+    """The holder of a grant is a Pokémon in play: the filter is 'Pokémon', or names Pokémon only."""
+    if f == ('pokemon',):
+        return True
+    if f[0] == 'named':
+        return KNOWN_NAMES.get(f[1]) == {'Pokémon'}
+    if f[0] == 'and':
+        return filter_names_pokemon(f[1]) or filter_names_pokemon(f[2])
+    return False
+
+
+STADIUM_USE = re.compile(r"^Once during each player's turn, that player may (.+)$")
+
+
+def third_to_second(t):
+    """'that player' / 'they' / 'their' (the player using the Stadium, `.own` in `Move.stadiumUse`) to
+    the second person of the Trainer rules."""
+    t = re.sub(r'\bthat player shuffles their deck\b', 'shuffle your deck', t)
+    t = re.sub(r'\bthat player\b', 'you', t)
+    t = re.sub(r'\bthey\b', 'you', t)
+    t = re.sub(r'\btheir\b', 'your', t)
+    return t
+
+
+def translate_stadium(c, res, text, joined):
+    """A Stadium is imported only if its whole text is "Once during each player's turn, that player may
+    X", X translating by the rules for Trainers (`.own` is the player who uses it)."""
+    B = res['blockers']
+    name = c['name']
+    if len(text) != 1:
+        k = static_kind(joined)
+        B.append(('Stadium: ' + ('static (' + k + ')' if k else 'text of several paragraphs, not one activated effect'),
+                  joined))
+        return res
+    t = text[0]
+    if t.startswith("Once during each player's turn"):
+        m = STADIUM_USE.match(t)
+        if not m:
+            why = ('a condition on the history of the turn' if re.search(r'this turn', t)
+                   else 'opening not recognised')
+            B.append(('Stadium: activated effect not expressible: ' + why, t))
+            return res
+        body = third_to_second(m.group(1))
+        ctx = {'kind': 'trainer', 'name': name, 'base': None, 'cost': None}
+        cost = None
+        sents = split_sentences(cap(body))
+        mc = re.match(r'^(.+) in order to (.+)$', sents[0]) if sents else None
+        if mc:
+            try:
+                cost = ab_cost(cap(mc.group(1)), ctx)
+            except Refuse as r:
+                B.append(('Stadium: activated effect not expressible: ' + r.reason.replace('Ability: ', ''), t))
+                return res
+            sents = [cap(mc.group(2))] + sents[1:]
+        p = Parser(ctx).run(sents)
+        res['used'] += [('stadium-use', t)] + p.used
+        if p.blockers:
+            # the reasons quote the text as read in the second person; the sentence is the printed one
+            B += [('Stadium: activated effect not expressible: ' + a, t) for a, _ in p.blockers]
+            return res
+        effs = []
+        for _, it in p.items:
+            if not isinstance(it, Eff) or it.pre:
+                B.append(('Stadium: activated effect not expressible: not a plain effect', t))
+                return res
+            res['caveats'] |= it.cavs
+            effs.append(it.e)
+        e = seq(*([cost] if cost else []), *effs)
+        if e == SKIP or not (T.hit_free(e) and T.bench_hit_free(e)):
+            B.append(('Stadium: activated effect not expressible: empty or with attack damage', t))
+            return res
+        if T.amt_at('always', e):
+            B.append(('Stadium: effect writes a rest-of-game modifier (StadiumSafe)', t))
+            return res
+        if counters_then_more(e):
+            res['caveats'].add('koBetweenSteps')
+        res['caveats'].discard('_needsPoison')
+        res['term'] = ('trainer', name, ('stadium',), e)
+        res['ok'] = True
+        return res
+    k = static_kind(t)
+    if k is None and re.search(r'can put this card into play only if', t):
+        k = 'play condition'
+    B.append(('Stadium: ' + ('triggered' if k and k.startswith('triggered') else 'static (' + (k or 'other') + ')'), t))
     return res
 
 

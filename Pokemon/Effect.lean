@@ -11,8 +11,8 @@ Effects read the state through the two Active Pokémon: a test (`ite`) on the da
 Special Conditions, the markers or the type of either one; `scale`, which places counters in
 proportion to the damage on either one; and the amount of the damage step (`Amt.per`), which
 reads the damage on either one. Since milestone M3 effects also place damage counters on Benched
-Pokémon (`benchCounters`, `spreadCounters`) and heal one (`benchHeal`, the one read of a Benched
-Pokémon's damage, by truncated subtraction). The damage step also reads the two Active Pokémon's types,
+Pokémon (`benchCounters`, `spreadCounters`) and heal one (`benchHeal`, which reads a Benched
+Pokémon's damage by truncated subtraction; since milestone M8a `moveCounter` reads it too). The damage step also reads the two Active Pokémon's types,
 Weakness and Resistance, and both players' modifiers (`GameState.dealt`). Inside one `Run` nothing is Knocked Out, so damage may exceed HP and
 these reads see the excess. `Run` is the semantics of an attack's effect, where the rulebook
 checks for Knock Outs only at the end of the attack. The effect of an Item or Supporter card is
@@ -176,6 +176,7 @@ def Effect.zSide : Effect → Option Whose
   | .putBench w _ _ => some w
   | .discardEnergy w _ _ _ => some w
   | .moveEnergy w _ => some w
+  | .discardTools w _ => some w
   | _ => none
 
 /-- `s` with the five zones (deck, hand, discard pile, Active Spot, Bench) of `z`; every other
@@ -246,6 +247,17 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       (hx : f.eval x = true) (hc : b₁ ++ { q with energy := e₁ ++ e₂ } :: b₂ = c₁ ++ q' :: c₂) :
       ZStep (.moveEnergy w f) s { s with bench := c₁ ++ q'.addEnergy x :: c₂ }
   | moveNone (w : Whose) (f : Filter) (s : PlayerState) : ZStep (.moveEnergy w f) s s
+  /-- discard the Tools of the Active Pokémon (milestone M5) -/
+  | toolsActive {w : Whose} {s : PlayerState} {a : InPlay} (ha : s.active = some a) :
+      ZStep (.discardTools w .active) s
+        { s with active := some { a with tools := [] }, discard := a.tools ++ s.discard }
+  /-- discard the Tools of one Benched Pokémon -/
+  | toolsBench {w : Whose} {s : PlayerState} {p : InPlay} {b₁ b₂ : List InPlay}
+      (hb : s.bench = b₁ ++ p :: b₂) :
+      ZStep (.discardTools w .bench) s
+        { s with bench := b₁ ++ { p with tools := [] } :: b₂, discard := p.tools ++ s.discard }
+  | toolsNone {w : Whose} {s : PlayerState} (hb : s.bench = []) :
+      ZStep (.discardTools w .bench) s s
 
 /-- `CMove f noKO a b a' b'` (milestone M8a): one damage counter moves from one of the player's
 Pokémon in play (Active Pokémon `a`, Bench `b`) whose card passes `f` to another of them, giving
@@ -378,6 +390,12 @@ inductive Run : Effect → GameState → GameState → Prop where
   | moveCounter {g : GameState} {f : Filter} {noKO : Bool} {a' : Option InPlay}
       {b' : List InPlay} (h : CMove f noKO g.cur.active g.cur.bench a' b') :
       Run (.moveCounter f noKO) g { g with cur := { g.cur with active := a', bench := b' } }
+  /-- discard the Stadium in play to its owner's discard pile (milestone M5) -/
+  | discardStadium (g : GameState) :
+      Run .discardStadium g { g with
+        cur := { g.cur with discard := stadiumTo g.curIsFirst g.stadium ++ g.cur.discard },
+        opp := { g.opp with discard := stadiumTo (!g.curIsFirst) g.stadium ++ g.opp.discard },
+        stadium := none }
   | seq {a b : Effect} {g₁ g₂ g₃ : GameState} :
       Run a g₁ g₂ → Run b g₂ g₃ → Run (.seq a b) g₁ g₃
   | choiceL {a b : Effect} {g g' : GameState} : Run a g g' → Run (.choice a b) g g'

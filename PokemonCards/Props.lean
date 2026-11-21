@@ -6,20 +6,24 @@ import Pokemon.Faithful
 Hand-written (not generated). The importer (`tools/importer/`) writes printed Standard cards as
 terms of the model's `Card` type in `PokemonCards/Standard/Part*.lean`. This file gives the
 decidable checks those files prove of every card, and the lemmas that turn them into the
-statements the model's theorems use.
+statements the model's theorems use. Every check is stated with the model's own predicates
+(`Card.attacks` and `Card.abilities`, which since milestone M5 include what a Pokémon Tool gives;
+`Card.loopFree`, `Card.abilitySafe`, `Card.stadiumSafe`, `Card.freeRec`, `Card.allRec`,
+`Card.wAmt`, `Card.alAmt`); nothing here redefines a clause.
 
-* `Card.importOk`: every attack is well formed (`Attack.wf`, a premise of `Move.attack`); a
-  Trainer's effect is `hitFree` and `benchHitFree` (premises of `Move.item` and `Move.supporter`);
-  every script of every Ability is `hitFree` and `benchHitFree` (premises of `Move.ability` and
-  `Move.onPlay`); the card satisfies clause 1 of `Faithful` (`Card.loopFree`, Ability scripts
-  included); its attacks satisfy the per-card part of clause 2 (`GXOnly`: an attack that is not a
-  GX attack writes no rest-of-game bonus or reduction); and it satisfies clause 4
-  (`Card.abilitySafe`: no "as often as you like" Ability writes a bonus or reduction, and no Ability
-  a rest-of-game one).
+* `Card.importOk`: every attack the card has or gives is well formed (`Attack.wf`, a premise of
+  `Move.attack`); a Trainer's effect (an Item's or Supporter's, or since milestone M5 a Stadium's)
+  is `hitFree` and `benchHitFree` (premises of `Move.item`, `Move.supporter` and
+  `Move.stadiumUse`); every script of every Ability the card has or gives is `hitFree` and
+  `benchHitFree` (premises of `Move.ability` and `Move.onPlay`); the card satisfies clause 1 of
+  `Faithful` (`Card.loopFree`), the per-card part of clause 2 (`GXOnly`: an attack that is not a
+  GX attack writes no rest-of-game bonus or reduction), clause 4 (`Card.abilitySafe`) and clause 5
+  (`Card.stadiumSafe`: a Stadium's effect writes no rest-of-game bonus or reduction).
 * `recSafeB C`: clause 3 of `Faithful` (`RecycleSafe`) for every game whose cards all come from `C`,
   as one Boolean over the recycling filters of `C` (`Card.freeRec`, which counts "as often as you
-  like" Abilities with Trainers, and `Card.allRec`) and the modifier writers of `C`.
-* `faithful_of`: from both, every game whose cards all come from `C` is `Faithful` (all four
+  like" Abilities with Items and Supporters and, since milestone M5, not Stadiums, whose uses are
+  bounded per turn; and `Card.allRec`) and the modifier writers of `C`.
+* `faithful_of`: from both, every game whose cards all come from `C` is `Faithful` (all five
   clauses), so `Faithful.xfinite` applies to it.
 * `nodupFp`: a check that a list of cards has no two equal terms, cheap enough for the kernel on
   the whole imported list (`nodup_of_nodupFp`).
@@ -30,31 +34,28 @@ importer's claim, checked by eye in survey S11, not by Lean.
 
 namespace Pokemon
 
-/-- Every attack of the card is well formed (`Attack.wf`). -/
-def Card.attacksWf : Card → Bool
-  | .pokemon p => p.attacks.all Attack.wf
-  | _ => true
+/-- Every attack the card has or (a Tool, milestone M5) gives is well formed (`Attack.wf`). -/
+def Card.attacksWf (c : Card) : Bool := c.attacks.all Attack.wf
 
-/-- A Trainer's effect has no attack damage step and no attack damage to the Bench. -/
+/-- A Trainer's effect (an Item's or a Supporter's when played, a Stadium's when used) has no
+attack damage step and no attack damage to the Bench. -/
 def Card.trainerOk : Card → Bool
   | .trainer _ _ e => e.hitFree && e.benchHitFree
   | _ => true
 
-/-- The per-card part of `GXOnly`: an attack that is not a GX attack writes no rest-of-game damage
-bonus or reduction. -/
-def Card.gxOk : Card → Bool
-  | .pokemon p => p.attacks.all fun a => a.gx || a.effect.amtAt .always == 0
-  | _ => true
+/-- The per-card part of `GXOnly`: an attack the card has or gives that is not a GX attack writes no
+rest-of-game damage bonus or reduction. -/
+def Card.gxOk (c : Card) : Bool := c.attacks.all fun a => a.gx || a.effect.amtAt .always == 0
 
-/-- Every script of every Ability of the card has no attack damage step and no attack damage to the
-Bench (`Move.ability` and `Move.onPlay` require both of the script they resolve). -/
-def Card.abilitiesOk : Card → Bool
-  | .pokemon p => p.abilities.all fun ab => ab.scripts.all fun e => e.hitFree && e.benchHitFree
-  | _ => true
+/-- Every script of every Ability the card has or gives has no attack damage step and no attack
+damage to the Bench (`Move.ability` and `Move.onPlay` require both of the script they resolve). -/
+def Card.abilitiesOk (c : Card) : Bool :=
+  c.abilities.all fun ab => ab.scripts.all fun e => e.hitFree && e.benchHitFree
 
 /-- The per-card checks every imported card passes. -/
 def Card.importOk (c : Card) : Bool :=
-  c.attacksWf && c.trainerOk && c.abilitiesOk && c.loopFree && c.gxOk && c.abilitySafe
+  c.attacksWf && c.trainerOk && c.abilitiesOk && c.loopFree && c.gxOk && c.abilitySafe &&
+    c.stadiumSafe
 
 /-- Any lingering modifier (bonus, reduction, prevention or lock) anywhere in the effect. -/
 def Effect.lingers : Effect → Bool
@@ -65,46 +66,43 @@ def Effect.lingers : Effect → Bool
   | .iter a => a.lingers
   | _ => false
 
-/-- The card writes a lingering damage bonus or reduction (`Effect.writes`) in an attack, in an
-Ability (any of its scripts) or as a Trainer. -/
-def Card.writesAmt : Card → Bool
-  | .pokemon p => (p.attacks.any fun a => a.effect.writes) ||
-      p.abilities.any fun ab => ab.scripts.any Effect.writes
-  | .trainer _ _ e => e.writes
-  | .energy _ => false
+/-- A Trainer card's effect (an Item's or Supporter's when played, a Stadium's when used), `skip`
+for other cards. -/
+def Card.trainerEffect : Card → Effect
+  | .trainer _ _ e => e
+  | _ => .skip
 
-/-- The card writes any lingering modifier (in an attack, an Ability or as a Trainer). -/
-def Card.lingers : Card → Bool
-  | .pokemon p => (p.attacks.any fun a => a.effect.lingers) ||
-      p.abilities.any fun ab => ab.scripts.any Effect.lingers
-  | .trainer _ _ e => e.lingers
-  | .energy _ => false
+/-- The card writes a lingering damage bonus or reduction (`Effect.writes`) in an attack or an
+Ability it has or gives (any script), or as a Trainer. -/
+def Card.writesAmt (c : Card) : Bool :=
+  (c.attacks.any fun a => a.effect.writes) || (c.abilities.any fun ab => ab.scripts.any Effect.writes) ||
+    c.trainerEffect.writes
 
-/-- An Ability of the card writes a lingering damage bonus or reduction (in any of its scripts). -/
-def Card.abilityWrites : Card → Bool
-  | .pokemon p => p.abilities.any fun ab => ab.scripts.any Effect.writes
-  | _ => false
+/-- The card writes any lingering modifier (in an attack or Ability it has or gives, or as a
+Trainer). -/
+def Card.lingers (c : Card) : Bool :=
+  (c.attacks.any fun a => a.effect.lingers) || (c.abilities.any fun ab => ab.scripts.any Effect.lingers) ||
+    c.trainerEffect.lingers
 
-/-- An Ability of the card writes any lingering modifier (in any of its scripts). -/
-def Card.abilityLingers : Card → Bool
-  | .pokemon p => p.abilities.any fun ab => ab.scripts.any Effect.lingers
-  | _ => false
+/-- An Ability the card has or gives writes a lingering damage bonus or reduction (in any script). -/
+def Card.abilityWrites (c : Card) : Bool := c.abilities.any fun ab => ab.scripts.any Effect.writes
 
-/-- The card has an "as often as you like" Ability. -/
-def Card.hasUnlimited : Card → Bool
-  | .pokemon p => p.abilities.any fun ab => ab.use == .unlimited
-  | _ => false
+/-- An Ability the card has or gives writes any lingering modifier (in any of its scripts). -/
+def Card.abilityLingers (c : Card) : Bool := c.abilities.any fun ab => ab.scripts.any Effect.lingers
 
-/-- The card has an Ability that can return a card from a discard pile (`Effect.recFilters` of one
-of its scripts). -/
-def Card.abilityRecycles : Card → Bool
-  | .pokemon p => p.abilities.any fun ab => ab.scripts.any fun e => !e.recFilters.isEmpty
-  | _ => false
+/-- The card has or gives an "as often as you like" Ability. -/
+def Card.hasUnlimited (c : Card) : Bool := c.abilities.any fun ab => ab.use == .unlimited
+
+/-- The card has or gives an Ability that can return a card from a discard pile
+(`Effect.recFilters` of one of its scripts). -/
+def Card.abilityRecycles (c : Card) : Bool :=
+  c.abilities.any fun ab => ab.scripts.any fun e => !e.recFilters.isEmpty
 
 /-- The printed name (Basic Energy cards are labelled by kind only). -/
 def Card.label : Card → String
   | .pokemon p => p.name
   | .trainer n _ _ => n
+  | .tool n _ => n
   | .energy _ => "Basic Energy"
 
 end Pokemon
@@ -113,11 +111,12 @@ namespace PokemonCards
 
 open Pokemon
 
-/-- Clause 3 of `Faithful` for the pool `C`, decidable by evaluation: no recycling filter of a
-Trainer or of an "as often as you like" Ability of `C` (`Card.freeRec`) admits a card of `C` that is
-a non-Supporter writer of a bonus or reduction (`Card.wAmt`), and no recycling filter of any effect
-of `C`, attacks and Abilities included (`Card.allRec`), admits a card of `C` that writes a
-rest-of-game bonus or reduction (`Card.alAmt`). -/
+/-- Clause 3 of `Faithful` for the pool `C`, decidable by evaluation: no recycling filter of an Item
+or Supporter or of an "as often as you like" Ability of `C` (`Card.freeRec`; since milestone M5 a
+Stadium's effect is not a free recycler) admits a card of `C` that is an Item writing a bonus or
+reduction (`Card.wAmt`), and no recycling filter of any effect of `C`, attacks, Abilities and
+Stadium effects included (`Card.allRec`), admits a card of `C` that writes a rest-of-game bonus or
+reduction when played (`Card.alAmt`). -/
 def recSafeB (C : List Card) : Bool :=
   ((C.flatMap Card.freeRec).all fun f => (C.filter fun y => y.wAmt != 0).all fun y => !f.eval y) &&
   ((C.flatMap Card.allRec).all fun f => (C.filter fun y => y.alAmt != 0).all fun y => !f.eval y)
@@ -147,17 +146,17 @@ theorem recycleSafe_of {C : List Card} (h : recSafeB C = true) (g : GameState)
       exact absurd this (by decide)
 
 theorem importOk_parts {c : Card} (h : c.importOk = true) :
-    c.attacksWf = true ∧ c.trainerOk = true ∧ c.loopFree = true ∧ c.gxOk = true ∧
-      c.abilitiesOk = true ∧ c.abilitySafe = true := by
+    c.attacksWf = true ∧ c.trainerOk = true ∧ c.abilitiesOk = true ∧ c.loopFree = true ∧
+      c.gxOk = true ∧ c.abilitySafe = true ∧ c.stadiumSafe = true := by
   simp only [Card.importOk, Bool.and_eq_true] at h
-  exact ⟨h.1.1.1.1.1, h.1.1.1.1.2, h.1.1.2, h.1.2, h.1.1.1.2, h.2⟩
+  obtain ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩ := h
+  exact ⟨h1, h2, h3, h4, h5, h6, h7⟩
 
+/-- Every attack a card of a checked pool has or (a Tool) gives is well formed (`Attack.wf`, a
+premise of `Move.attack` and `Move.attackConfused`). -/
 theorem attacks_wf_of {C : List Card} (h : C.all Card.importOk = true) :
-    ∀ c ∈ C, ∀ p, c = .pokemon p → ∀ a ∈ p.attacks, a.wf = true := by
-  intro c hc p hp a ha
-  have := (importOk_parts (List.all_eq_true.1 h c hc)).1
-  subst hp
-  exact List.all_eq_true.1 this a ha
+    ∀ c ∈ C, ∀ a ∈ c.attacks, a.wf = true :=
+  fun c hc a ha => List.all_eq_true.1 (importOk_parts (List.all_eq_true.1 h c hc)).1 a ha
 
 theorem trainers_of {C : List Card} (h : C.all Card.importOk = true) :
     ∀ c ∈ C, ∀ n k e, c = .trainer n k e → e.hitFree = true ∧ e.benchHitFree = true := by
@@ -168,12 +167,14 @@ theorem trainers_of {C : List Card} (h : C.all Card.importOk = true) :
 
 theorem loopFree_of {C : List Card} (h : C.all Card.importOk = true) :
     ∀ c ∈ C, c.loopFree = true :=
-  fun c hc => (importOk_parts (List.all_eq_true.1 h c hc)).2.2.1
+  fun c hc => (importOk_parts (List.all_eq_true.1 h c hc)).2.2.2.1
 
+/-- The per-card part of clause 2 for every card of a checked pool, over the attacks each card has
+or (a Tool) gives (`Card.attacks`, as `GameState.GXOnly` reads them). -/
 theorem gxOnly_of {C : List Card} (h : C.all Card.importOk = true) :
-    ∀ p, Card.pokemon p ∈ C → ∀ atk ∈ p.attacks, atk.gx = false → atk.effect.amtAt .always = 0 := by
-  intro p hp atk ha hgx
-  have := (importOk_parts (List.all_eq_true.1 h _ hp)).2.2.2.1
+    ∀ c ∈ C, ∀ atk ∈ c.attacks, atk.gx = false → atk.effect.amtAt .always = 0 := by
+  intro c hc atk ha hgx
+  have := (importOk_parts (List.all_eq_true.1 h c hc)).2.2.2.2.1
   have h2 := List.all_eq_true.1 this atk ha
   rw [hgx, Bool.false_or] at h2
   exact Nat.eq_of_beq_eq_true h2
@@ -181,15 +182,20 @@ theorem gxOnly_of {C : List Card} (h : C.all Card.importOk = true) :
 /-- Clause 4 for every card of a checked pool. -/
 theorem abilitySafe_of {C : List Card} (h : C.all Card.importOk = true) :
     ∀ c ∈ C, c.abilitySafe = true :=
-  fun c hc => (importOk_parts (List.all_eq_true.1 h c hc)).2.2.2.2.2
+  fun c hc => (importOk_parts (List.all_eq_true.1 h c hc)).2.2.2.2.2.1
 
-/-- Every script of every Ability of a card of a checked pool has no attack damage, on the Active
-Pokémon or the Bench (the premises `hnd` and `hbh` of `Move.ability` and `Move.onPlay`). -/
+/-- Clause 5 for every card of a checked pool. -/
+theorem stadiumSafe_of {C : List Card} (h : C.all Card.importOk = true) :
+    ∀ c ∈ C, c.stadiumSafe = true :=
+  fun c hc => (importOk_parts (List.all_eq_true.1 h c hc)).2.2.2.2.2.2
+
+/-- Every script of every Ability a card of a checked pool has or (a Tool) gives has no attack
+damage, on the Active Pokémon or the Bench (the premises `hnd` and `hbh` of `Move.ability` and
+`Move.onPlay`). -/
 theorem abilities_of {C : List Card} (h : C.all Card.importOk = true) :
-    ∀ p, Card.pokemon p ∈ C → ∀ ab ∈ p.abilities, ∀ e ∈ ab.scripts,
-      e.hitFree = true ∧ e.benchHitFree = true := by
-  intro p hp ab hab e he
-  have := (importOk_parts (List.all_eq_true.1 h _ hp)).2.2.2.2.1
+    ∀ c ∈ C, ∀ ab ∈ c.abilities, ∀ e ∈ ab.scripts, e.hitFree = true ∧ e.benchHitFree = true := by
+  intro c hc ab hab e he
+  have := (importOk_parts (List.all_eq_true.1 h c hc)).2.2.1
   have h2 := List.all_eq_true.1 (List.all_eq_true.1 this ab hab) e he
   simpa only [Bool.and_eq_true] using h2
 
@@ -214,6 +220,7 @@ def cardFp : Card → Nat
         (match p.weakness with | some t => etypeIdx t + 1 | none => 0))) * 3
   | .energy _ => 1
   | .trainer _ _ _ => 2
+  | .tool _ _ => 4
 
 /-- No card of `l₁` is the same term as a card of `l₂`. -/
 def crossOk (l₁ l₂ : List Card) : Bool :=
@@ -266,12 +273,13 @@ theorem nodup_of_nodupFp {l : List Card} (h : nodupFp l = true) : l.Nodup := by
 
 /-- **Faithful decks from a checked pool.** If every card of `C` passes `Card.importOk` and
 `recSafeB C` holds, every game whose cards all come from `C` is `Faithful`: `LoopFree`, `GXOnly`,
-`RecycleSafe` and `AbilitySafe`. -/
+`RecycleSafe`, `AbilitySafe` and `StadiumSafe`. -/
 theorem faithful_of {C : List Card} (h : C.all Card.importOk = true) (hr : recSafeB C = true)
     (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ C) : g.Faithful :=
   ⟨fun x hx => loopFree_of h x (hg x hx),
-   fun p hp atk ha hgx => gxOnly_of h p (hg _ hp) atk ha hgx,
+   fun c hc atk ha hgx => gxOnly_of h c (hg c hc) atk ha hgx,
    recycleSafe_of hr g hg,
-   fun x hx => abilitySafe_of h x (hg x hx)⟩
+   fun x hx => abilitySafe_of h x (hg x hx),
+   fun x hx => stadiumSafe_of h x (hg x hx)⟩
 
 end PokemonCards

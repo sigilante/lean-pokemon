@@ -1,4 +1,4 @@
-import Pokemon.Rules
+import Pokemon.Conservation
 
 /-!
 # The generalised model simulates a two-counter machine
@@ -1041,6 +1041,16 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @zone e w g s' hw hz => cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl⟩
 
+/-- No card of the game is a Stadium or a Tool (milestone M5). The two-counter starts have
+neither, and play permutes the cards, so this holds in every state reached from them; it dismisses
+the Stadium and Tool moves and keeps the Clock's and the Tape's attacks and Abilities their own. -/
+def NoTS (g : GameState) : Prop := ∀ c ∈ g.allCards, c.isStadium = false ∧ c.isTool = false
+
+theorem NoTS.tools {g : GameState} (h : NoTS g) {p : InPlay} (hp : g.cur.active = some p) :
+    ∀ c ∈ p.tools, c.isTool = false := fun c hc =>
+  (h c (GameState.mem_allCards_of_cur_active hp
+    (.tail _ (List.mem_append_right _ hc)))).2
+
 theorem Shape.damageBounded {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) : DamageBounded g := by
   obtain ⟨p, hp, ht, -, -, -, hd, -⟩ := hs.cur.active
@@ -1099,7 +1109,7 @@ deck out), or swaps it (end of turn). No other move is legal: hands hold only En
 are empty, nothing is Confused, and no Pokémon is at its HP. -/
 theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape kc ko g)
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hcc : kc.marks.char = false)
-    (hoc : ko.marks.char = false) (hab : kc.top.abilities = []) :
+    (hoc : ko.marks.char = false) (hab : kc.top.abilities = []) (hts : NoTS g) :
     Shape kc.weak ko.weak g' ∨ Shape ko.weak kc.weak g' ∨
       ∃ atk g'', atk ∈ kc.top.attacks ∧ Run atk.script g g'' ∧
         g' = { g'' with
@@ -1124,16 +1134,25 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | retreat ha hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | item hh => exact (not_mem_hand hC hh rfl).elim
   | supporter hh => exact (not_mem_hand hC hh rfl).elim
+  | stadium hh => exact (not_mem_hand hC hh rfl).elim
+  | stadiumUse hs =>
+      have := (hts _ (GameState.mem_allCards_of_stadium hs)).1
+      cases this
+  | tool hh => exact (not_mem_hand hC hh rfl).elim
+  | toolBench hh => exact (not_mem_hand hC hh rfl).elim
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
       exact (not_mem_hand hC hh rfl).elim
   | @ability _ _ x _ ab hu hm' =>
       cases hu with
-      | active ha => rw [hp] at ha; cases ha; rw [h1, hab] at hm'; cases hm'
+      | active ha =>
+          rw [hp] at ha; cases ha
+          rw [(InPlay.attacks_of_noTool (hts.tools hp)).2, h1, hab] at hm'; cases hm'
       | bench hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | @attack g'' a atk ha hm' _ _ _ _ _ _ hr _ _ =>
       rw [hp] at ha; cases ha
-      exact .inr (.inr ⟨atk, g'', h1 ▸ hm', hr, rfl⟩)
+      exact .inr (.inr ⟨atk, g'', by rw [← h1, ← (InPlay.attacks_of_noTool (hts.tools hp)).1]; exact hm',
+        hr, rfl⟩)
   | attackConfused ha _ _ hs' => rw [hp] at ha; cases ha; rw [h2] at hs'; cases hs'
   | knockOut ha hk =>
       rw [hp'] at ha; cases ha; rw [h5', h1'] at hk; exact absurd hk (Nat.not_le.2 ho)
@@ -1185,7 +1204,7 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
   obtain ⟨p, hp, h1, h2, -⟩ := hs.cur.active
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs
   have hfl := Run.flags hr
-  refine ⟨_, .attack hp (h1 ▸ hatk) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
+  refine ⟨_, .attack hp (List.mem_append_left _ (h1 ▸ hatk)) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
     hbt (hs.settled hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw,
     ⟨(hsh _ hr).cur.setGx _, (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
@@ -1252,6 +1271,8 @@ def start (M : Machine) (a b : Nat) : GameState where
   between := false
   winner := none
   stadium := none
+  stadiumPlayed := false
+  stadiumUsed := false
 
 /-- **The encoding of a configuration** `c` at the start of the first player's main phase
 (after the draw, before attacking): the abstract state has configuration `c`, the Tape is
@@ -1365,12 +1386,12 @@ state that is `Good` and whose configuration the machine reaches, with either pl
 def Inv (M : Machine) (c₀ : Config) (g : GameState) : Prop :=
   ∃ s, Good M s ∧ M.Reaches c₀ s.cfg ∧
     (Shape (pkA M s false false) (pkB M s false false) g ∨
-      Shape (pkB M s false false) (pkA M s false false) g)
+      Shape (pkB M s false false) (pkA M s false false) g) ∧ NoTS g
 
-theorem Encodes.inv {M : Machine} {c : Config} {g : GameState} (he : Encodes M c g) :
-    Inv M c g := by
+theorem Encodes.inv {M : Machine} {c : Config} {g : GameState} (he : Encodes M c g)
+    (hns : NoTS g) : Inv M c g := by
   obtain ⟨s, rfl, hg, -, -, hsh, -⟩ := he
-  exact ⟨s, hg, .refl, .inl ⟨hsh.cur.weak, hsh.opp.weak⟩⟩
+  exact ⟨s, hg, .refl, .inl ⟨hsh.cur.weak, hsh.opp.weak⟩, hns⟩
 
 theorem reaches_of_spec {M : Machine} {c₀ : Config} {s t : Abs} (hr : M.Reaches c₀ s.cfg)
     (h : t.cfg = s.cfg ∨ M.Step s.cfg t.cfg) : M.Reaches c₀ t.cfg := by
@@ -1382,23 +1403,25 @@ theorem reaches_of_spec {M : Machine} {c₀ : Config} {s t : Abs} (hr : M.Reache
 machine (or do nothing), and every other legal move leaves the abstract state unchanged. -/
 theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g')
     (hi : Inv M c₀ g) : Inv M c₀ g' := by
-  obtain ⟨s, hg, hr, hs | hs⟩ := hi
-  · rcases move_shape hm hs (hg.hpA _ _) (hg.hpB _ _) (mkOf_char _) rfl rfl with h | h | ⟨atk, g'', ha, hr', rfl⟩
-    · exact ⟨s, hg, hr, .inl h⟩
-    · exact ⟨s, hg, hr, .inr h⟩
+  obtain ⟨s, hg, hr, hs | hs, hns⟩ := hi
+  · have hns' : NoTS g' := fun c hc => hns c (hm.perm.mem_iff.1 hc)
+    rcases move_shape hm hs (hg.hpA _ _) (hg.hpB _ _) (mkOf_char _) rfl rfl hns with h | h | ⟨atk, g'', ha, hr', rfl⟩
+    · exact ⟨s, hg, hr, .inl h, hns'⟩
+    · exact ⟨s, hg, hr, .inr h, hns'⟩
     · simp only [pkA, clock, List.mem_singleton] at ha
       subst ha
       have h := (Does.attackA hg false false false false g hs).2 g'' hr'
       exact ⟨_, (tickS_spec hg).1, reaches_of_spec hr (tickS_spec hg).2,
-        .inl ⟨h.cur.setGx _, h.opp⟩⟩
-  · rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) rfl with h | h | ⟨atk, g'', ha, hr', rfl⟩
-    · exact ⟨s, hg, hr, .inr h⟩
-    · exact ⟨s, hg, hr, .inl h⟩
+        .inl ⟨h.cur.setGx _, h.opp⟩, hns'⟩
+  · have hns' : NoTS g' := fun c hc => hns c (hm.perm.mem_iff.1 hc)
+    rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) rfl hns with h | h | ⟨atk, g'', ha, hr', rfl⟩
+    · exact ⟨s, hg, hr, .inr h, hns'⟩
+    · exact ⟨s, hg, hr, .inl h, hns'⟩
     · simp only [pkB, tape, List.mem_singleton] at ha
       subst ha
       have h := (Does.attackB hg false false false false g hs).2 g'' hr'
       exact ⟨_, (tockS_spec hg).1, reaches_of_spec hr (tockS_spec hg).2,
-        .inr ⟨h.cur.setGx _, h.opp⟩⟩
+        .inr ⟨h.cur.setGx _, h.opp⟩, hns'⟩
 
 theorem reach_inv {M : Machine} {c₀ : Config} {g₀ g : GameState} (h₀ : Inv M c₀ g₀)
     (h : Reach g₀ g) : Inv M c₀ g := by
@@ -1409,7 +1432,7 @@ theorem reach_inv {M : Machine} {c₀ : Config} {g₀ g : GameState} (h₀ : Inv
 /-- In a state satisfying the invariant, the halt mark means the machine halts. -/
 theorem Inv.halts {M : Machine} {c₀ : Config} {g : GameState} (hi : Inv M c₀ g)
     (hm : HaltMarked g) : M.Halts c₀ := by
-  obtain ⟨s, ⟨-, -, -, hh⟩, hr, hs⟩ := hi
+  obtain ⟨s, ⟨-, -, -, hh⟩, hr, hs, -⟩ := hi
   obtain ⟨p, hp, hi⟩ := hm
   refine ⟨s.cfg, hr, hh ?_⟩
   have key : ∀ (kA kB : Pk), kA.marks = mkOf s.halted → kB.marks = Marks.empty →
@@ -1432,11 +1455,18 @@ theorem Inv.halts {M : Machine} {c₀ : Config} {g : GameState} (hi : Inv M c₀
     · rfl
   exact key (pkA M s false false) (pkB M s false false) rfl rfl hs
 
+theorem start_noTS (M : Machine) (a b : Nat) : NoTS (start M a b) := by
+  intro c hc
+  simp only [start, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
+    InPlay.cardList, onPlay, stadiumCardList, List.append_nil, List.nil_append, List.cons_append,
+    List.mem_cons, List.not_mem_nil, or_false] at hc
+  rcases hc with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl⟩
+
 /-- **Soundness.** A state with the halt mark is reachable from `start M a b` only if the
 machine halts from `init a b`. Every line of play is covered, whatever either player does. -/
 theorem halts_of_haltMarked {M : Machine} {a b : Nat} {g : GameState}
     (h : Reach (start M a b) g) (hm : HaltMarked g) : M.Halts (Machine.init a b) :=
-  (reach_inv (start_encodes M a b).inv h).halts hm
+  (reach_inv ((start_encodes M a b).inv (start_noTS M a b)) h).halts hm
 
 /-- **Completeness.** If the machine halts from `init a b`, a state with the halt mark is
 reachable from `start M a b`. -/

@@ -107,7 +107,7 @@ def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
 
 /-- The player to move has `a` and the store `s`; the opponent has `b` and the store `t`. -/
 def st (hand discard : List Card) (a b : InPlay) (s t : Store) : GameState :=
-  ⟨side hand discard a s, side [] [] b t, true, false, false, false, none, none⟩
+  ⟨side hand discard a s, side [] [] b t, true, false, false, false, none, none, false, false⟩
 
 theorem settled_st (hand discard : List Card) (a b : InPlay) (s t : Store)
     (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp) :
@@ -228,12 +228,16 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | retreat ha hb => simp [red, st, side] at hb
   | item hh => simp [red, st, side] at hh
   | supporter hh => simp [red, st, side] at hh
+  | stadium hh => simp [red, st, side] at hh
+  | stadiumUse hs => simp [red, st, side] at hs
+  | tool hh => simp [red, st, side] at hh
+  | toolBench hh => simp [red, st, side] at hh
   | ability hu hm =>
       cases hu with
       | active ha =>
           simp only [red, st, side, Option.some.injEq] at ha
           subst ha
-          simp [InPlay.ofBasic, hitter, mon] at hm
+          simp [InPlay.abilities, InPlay.ofBasic, hitter, mon] at hm
       | bench hb => simp [red, st, side] at hb
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
@@ -241,7 +245,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
-      simp only [InPlay.ofBasic, hitter, mon, List.mem_singleton] at hm
+      simp only [InPlay.attacks, InPlay.ofBasic, hitter, mon, List.flatMap_nil, List.append_nil,
+        List.mem_singleton] at hm
       subst hm
       change Run (.seq (.damage (.const 1)) .skip) _ _ at hr
       cases hr with
@@ -381,12 +386,16 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | retreat ha hb => simp [dr, st, side] at hb
   | item hh => simp [dr, st, side] at hh
   | supporter hh => simp [dr, st, side] at hh
+  | stadium hh => simp [dr, st, side] at hh
+  | stadiumUse hs => simp [dr, st, side] at hs
+  | tool hh => simp [dr, st, side] at hh
+  | toolBench hh => simp [dr, st, side] at hh
   | ability hu hm =>
       cases hu with
       | active ha =>
           simp only [dr, st, side, Option.some.injEq] at ha
           subst ha
-          simp [InPlay.ofBasic, drainer, mon] at hm
+          simp [InPlay.abilities, InPlay.ofBasic, drainer, mon] at hm
       | bench hb => simp [dr, st, side] at hb
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
@@ -394,7 +403,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha
-      simp only [InPlay.ofBasic, drainer, mon, List.mem_singleton] at hm
+      simp only [InPlay.attacks, InPlay.ofBasic, drainer, mon, List.flatMap_nil, List.append_nil,
+        List.mem_singleton] at hm
       subst hm
       change Run (.seq (.selfDamage (2 * k + 3)) (.drain (.const 1))) _ _ at hr
       cases hr with

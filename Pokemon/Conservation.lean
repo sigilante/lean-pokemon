@@ -122,6 +122,15 @@ theorem CMove.cardLists {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' 
       simp only [benchCardList_append, benchCardList, InPlay.cardList] at e
       simp only [benchCardList_append, benchCardList, InPlay.cardList, InPlay.addDamage, ← e]
 
+/-- The Stadium slot's card goes to one of the two players: `stadiumTo` splits it by owner
+(milestone M5). -/
+theorem count_stadiumTo (b : Bool) (s : Option (Bool × Card)) (x : Card) :
+    List.count x (stadiumTo b s) + List.count x (stadiumTo (!b) s) =
+      List.count x (stadiumCardList s) := by
+  rcases s with _ | ⟨o, c⟩
+  · rfl
+  · cases o <;> cases b <;> simp [stadiumTo, stadiumCardList]
+
 /-- Resolving an effect permutes the cards in the game: no card is created, destroyed or
 changed. -/
 theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
@@ -197,6 +206,12 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
       | opp =>
           simp only [GameState.updSide, GameState.allCards]
           exact (hz.perm.append_left _).append_right _
+  | discardStadium g =>
+      refine ListPerm.perm_of_count fun x => ?_
+      have := count_stadiumTo g.curIsFirst g.stadium x
+      simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_nil,
+        stadiumCardList] at this ⊢
+      omega
   | seq _ _ ih₁ ih₂ => exact ih₂.trans ih₁
   | choiceL _ ih => exact ih
   | choiceR _ ih => exact ih
@@ -271,6 +286,15 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | supporter hh hs hbt hst hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
+  | @stadium l₁ l₂ n e hh =>
+      refine ListPerm.perm_of_count fun x => ?_
+      have := count_stadiumTo g.curIsFirst g.stadium x
+      simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,
+        List.count_nil, stadiumCardList, hh] at this ⊢
+      omega
+  | stadiumUse _ _ _ _ _ hr => exact hr.perm
+  | tool hh ha ht => perm_count [hh, ha, ht]
+  | toolBench hh hb ht => perm_count [hh, hb, ht]
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.perm.trans hu.perm
   | onPlay hp _ _ _ _ _ hr => exact hr.perm.trans hp.perm
   | attack ha hm hc hs hn hf hbt hst hr => exact hr.perm
@@ -369,6 +393,26 @@ theorem GameState.top_mem_cur_bench {g : GameState} {a : InPlay}
   have := mem_benchCardList (x := Card.pokemon a.top) (.head _) ha
   simp [GameState.allCards, PlayerState.allCards, this]
 
+/-- The cards of the player's Active Pokémon are in the game (milestone M5: its Tools give it
+attacks and Abilities). -/
+theorem GameState.mem_allCards_of_cur_active {g : GameState} {a : InPlay}
+    (ha : g.cur.active = some a) {c : Card} (hc : c ∈ a.cardList) : c ∈ g.allCards := by
+  simp [GameState.allCards, PlayerState.allCards, optCardList, ha, hc]
+
+theorem GameState.mem_allCards_of_cur_bench {g : GameState} {a : InPlay}
+    (ha : a ∈ g.cur.bench) {c : Card} (hc : c ∈ a.cardList) : c ∈ g.allCards := by
+  have := mem_benchCardList hc ha
+  simp [GameState.allCards, PlayerState.allCards, this]
+
+/-- The cards of the Pokémon that uses an Ability are in the game (milestone M5). -/
+theorem UseAt.card_mem {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
+    {c : Card} (hc : c ∈ x.cardList) : c ∈ g.allCards := by
+  cases h with
+  | active ha => exact GameState.mem_allCards_of_cur_active ha hc
+  | bench hb =>
+      exact GameState.mem_allCards_of_cur_bench (by rw [hb]; exact List.mem_append_right _ (.head _))
+        hc
+
 /-- The card of the Pokémon that uses an Ability is in the game (milestone M8a). -/
 theorem UseAt.top_mem {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁) :
     Card.pokemon x.top ∈ g.allCards := by
@@ -386,6 +430,11 @@ theorem GameState.top_mem_opp_bench {g : GameState} {a : InPlay}
     (ha : a ∈ g.opp.bench) : Card.pokemon a.top ∈ g.allCards := by
   have := mem_benchCardList (x := Card.pokemon a.top) (.head _) ha
   simp [GameState.allCards, PlayerState.allCards, this]
+
+/-- The card in the Stadium slot is in the game (milestone M5). -/
+theorem GameState.mem_allCards_of_stadium {g : GameState} {o : Bool} {x : Card}
+    (hs : g.stadium = some (o, x)) : x ∈ g.allCards := by
+  simp [GameState.allCards, stadiumCardList, hs]
 
 theorem GameState.mem_allCards_of_hand {g : GameState} {x : Card} (hx : x ∈ g.cur.hand) :
     x ∈ g.allCards := by

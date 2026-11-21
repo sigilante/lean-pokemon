@@ -17,7 +17,8 @@ An attack ends the turn: "Once you attack, your turn is over" (rulebook 2023 p. 
 Then, end your turn.", p. 9). `attack` and `attackConfused` (a Confused Pokémon's failed
 attempt, which is still the turn's attack) set `GameState.attacked`, and every action of the
 turn proper (`playBasic`, `attach`, `evolve`, `retreat`, `item`, `supporter`, `attack`,
-`attackConfused`, and since milestone M8a `ability` and `onPlay`) requires `attacked = false`; so after an attack only its Knock Outs (and
+`attackConfused`, since milestone M8a `ability` and `onPlay`, and since milestone M5 `stadium`,
+`stadiumUse`, `tool` and `toolBench`) requires `attacked = false`; so after an attack only its Knock Outs (and
 promotions, or a loss) and `endTurn` are legal, and `endTurn` resets the flag. A player who
 does not attack ends the turn by `endTurn` at any point of the turn proper.
 
@@ -52,8 +53,15 @@ follows the latest source; for the rules below the three agree except where note
 * A new Poison replaces the old one (2023 p. 16; 2024 the same, S8 G7). That Croagunk's
   stacked increase ends with the replaced Poison is the model's reading; no ruling was found.
 * Nine Basic Energy types (2023 glossary p. 39; S8 D1); `BasicEnergy`.
-* One Stadium in play at a time (2023 p. 12; 2024 the same, S8 B9): one shared slot, state
-  only.
+* Stadiums (2023 p. 12; 2024 the same, S8 B9): one shared slot; one Stadium played per turn; not
+  one with the name of the Stadium in play; the replaced Stadium goes to its owner's discard pile;
+  "Once during each player's turn" effects usable by whoever is taking their turn (milestone M5).
+* Pokémon Tools (2023 glossary p. 40, "Each Pokémon can have only 1 Pokémon Tool attached at a
+  time"; p. 9, "as many Item and Pokémon Tool cards as you like"): milestone M5. Technical
+  Machines (glossary p. 41: an Item "you can attach to your Pokémon"; "remain attached unless the
+  card text says otherwise") are, in today's Standard, one Tool (Technical Machine: Fluorite
+  sv8-188) whose text says "discard it at the end of your turn" (survey S9 C10); the model has no
+  end-of-turn discard.
 * Simultaneous wins: the 2023 rulebook has Sudden Death (p. 21); the 2026 post replaced it with
   tiebreaker games (S8 J4, unverified against a rulebook); the model has neither (gaps).
 * Knock Outs at times other than after an attack or Checkup: in neither English rulebook; the
@@ -169,13 +177,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
   `Test.atLeast` and `Test.exactly`; the proportional write `scale`), their Special
   Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); the
-  only read of a Benched Pokémon's damage is the truncated subtraction of `benchHeal`
-  (milestone M3); since milestone MV amounts and tests also read counts (`Count`: the cards that
+  reads of a Benched Pokémon's damage are the truncated subtraction of `benchHeal`
+  (milestone M3) and, since milestone M8a, `moveCounter` (`CMove`: a counter moves off a Pokémon
+  only if it has one, and with "without Knocking it Out" onto one only if its damage stays below
+  HP), both on the player's own Pokémon; since milestone MV amounts and tests also read counts (`Count`: the cards that
   pass a filter in a player's hand, deck or discard pile; a player's Prize cards left; a player's
   Benched Pokémon whose card passes a filter; the Energy passing a filter attached to a player's
   Active Pokémon or to all of their Pokémon in play; `Amt.count`, `Test.countGe`), none of which
   reads damage, so both clamps keep them exact (`Count.val_clampAt`, `Count.val_xclampAt`);
-  there are no reads of the damage on Benched Pokémon, of Poison strength, of HP ("if it has full
+  there are no other reads of the damage on Benched Pokémon (no tests or counts of it), none of
+  Poison strength, of HP ("if it has full
   HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history ("if you
   played a Supporter this turn"); a count test is made, like every test, while the player has an
   Active Pokémon; `scale` writes only to the
@@ -220,16 +231,37 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `iter` (`LoopFree`) and rest-of-game bonuses and reductions only in GX attacks (`GXOnly`;
   `Faithful.reach_boundedStores`). Faithful decks may use damage reduction, `drain`, and
   carried bonuses and reductions in attacks and Trainers. Since milestone MV cards leave the discard
-  pile (recycling), and `Faithful` has a third clause, `RecycleSafe`: no Trainer effect can return
-  a non-Supporter modifier writer from a discard pile, and no effect a rest-of-game writer; the
-  bound is then per turn (each non-Supporter writer played at most once a turn, one Supporter, one
+  pile (recycling), and `Faithful` has a third clause, `RecycleSafe`, in its present form (after
+  milestones M8a and M5): (a) no free recycler (an Item or Supporter effect, or an "as often as you
+  like" Ability of a Pokémon or given by a Tool, `Card.freeRec`; not an attack, a once-per-turn or
+  on-play Ability, or a Stadium's effect) can return an Item card that writes a bonus or reduction
+  (`Card.wAmt`) from a discard pile, and (b) no effect at all can return an Item or Supporter card
+  that writes a rest-of-game one (`Card.alAmt`); the
+  bound is then per turn (each Item writer played at most once a turn, one Supporter, one
   attack; carried amounts expire within three turns). Without clause 3 the stores are unbounded
   (`Recycle.recycling_breaks_bound`: two Items that return each other and an Iron Defender-like
   Item); "attack twice" or extra turns would break the bound too. Since milestone M8a clause 3
   (a) also covers "as often as you like" Abilities, and a fourth clause, `AbilitySafe`, says that
   no such Ability writes a bonus or reduction and no Ability a rest-of-game one; once-per-turn and
   on-play Abilities may write and recycle, and their uses in one turn are bounded by a potential
-  of the player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`). The
+  of the player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`). Since
+  milestone M5 a fifth clause, `StadiumSafe`, says that no Stadium's effect writes a rest-of-game
+  bonus or reduction; a Stadium's once-per-turn effect may otherwise write and recycle, and is paid
+  per use through `Card.stQ`, with at most two uses a turn (`GameState.stPot`), in a Stadium term
+  of the bound. Each of the five clauses has a negative theorem: without it the stores are
+  unbounded (clause 1: `LoopFreeNeeded.iter_writer_breaks_bound`; 2: below; 3:
+  `Recycle.recycling_breaks_bound`; 4: `Abilities.unlimited_writer_breaks_bound`; 5:
+  `Stadiums.stadium_writer_breaks_bound`). What `Faithful.xfinite` covers is the model: for a
+  deck containing a card whose static or triggered text is not modelled (the Stadium and Tool
+  item below, static and triggered Abilities), it is a theorem about the inert card the model
+  plays, not the printed one. The omission that most directly makes the model's finiteness easier
+  than the real game's is HP modifiers (Hero's Cape, Cynthia's Power Weight, Ancient Booster Energy
+  Capsule, Gravity Mountain and others below): the exact-store clamp caps damage at printed HP, and
+  `Settled` forces a Knock Out at printed HP, so the real states in which a Pokémon survives with
+  damage between its printed and its modified HP do not exist in the model. The other static
+  omissions are milder: static damage bonuses and reductions, Bench-size and cost changes are
+  constants of a card, not stored amounts; Ability and Tool locks only remove behaviour; triggered
+  Tools add behaviour. The
   rest-of-game
   modifiers of non-GX attacks give two unbounded counters with an exact zero test, and the model
   simulates every two-counter machine (`Counter.universal`; this rests on the
@@ -372,12 +404,64 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   attack;
 * Bench size is the constant `benchLimit = 5` ("Each player may have up to 5 Pokémon on the
   Bench at any one time", rulebook 2023 p. 7); cards that change it (Sky Field, Area Zero
-  Underdepths, S8 L2) wait for the Stadium milestone (M5);
-* Stadium and Tool cards occupy state but have no move (survey S8 B9, B10: milestone M5): the
-  Stadium slot is one slot shared by both players (`GameState.stadium`, with the card's owner),
-  as the rulebook has it, but it only holds a card of the start state; so the rules that come
-  with playing a Stadium (one per turn, no Stadium of the same name, the old one discarded) and
-  Tools (one per Pokémon) have nothing to act on yet;
+  Underdepths, S8 L2) are static Stadium effects, not modelled (next item but one);
+* Stadium and Tool cards (milestone M5; survey S8 B9, B10): a Stadium is played from the hand
+  into the one slot both players share (`Move.stadium`: one per turn, `GameState.stadiumPlayed`;
+  not while a Stadium of the same name is in play; the Stadium it replaces goes to its owner's
+  discard pile), and a Tool is attached from the hand to a Pokémon with no Tool (`Move.tool`,
+  `Move.toolBench`; any number per turn; it stays attached and leaves play with the Pokémon).
+  A Stadium's "Once during each player's turn, that player may …" effect is used by
+  `Move.stadiumUse`. A Tool may give the Pokémon it is attached to attacks and activated Abilities
+  (`ToolGrant`, for a holder passing a filter: `InPlay.attacks`, `InPlay.abilities`); a Tool's
+  once-per-turn Ability shares the Pokémon's one use flag (`InPlay.used`), so a Pokémon with an
+  Ability of its own and one from a Tool uses only one of them in a turn (fewer outcomes than the
+  rulebook). For such a holder `Faithful.xfinite` is therefore a theorem about a game with fewer
+  outcomes than the printed one; the store bound is not proved for a model with one use flag per
+  Ability. Effects discard a Stadium in play (`Effect.discardStadium`) and the Tools of a
+  Pokémon (`Effect.discardTools`). Not modelled: the end-of-turn discard of Technical Machine:
+  Fluorite sv8-188 ("discard it at the end of your turn"; the model keeps it attached), Tools
+  attached to the opponent's Pokémon, more than one Tool on a Pokémon (Rotom ex me2-29 and others
+  that raise the limit, S8 B10), and every static and triggered Stadium and Tool effect (next
+  item): a Stadium whose effect is `skip` and a Tool with an empty grant (`ToolGrant.none`)
+  occupy their place and do nothing, which under-models a printed card with such text;
+* static and triggered Stadium and Tool effects (after milestone M5; counts are distinct Standard
+  records, regulation marks H–J, read from the card data: 37 Stadiums, 45 Tools). A Stadium or
+  Tool with such text is still playable, as a card with no effect (`Card.inert`: a Stadium whose
+  effect is `skip`, a Tool with an empty grant): it occupies the slot or the Tool place and does
+  nothing, which under-models the printed card (it removes the printed outcomes the text adds and
+  keeps the ones it forbids). `Faithful.xfinite` for a deck containing such a card is a theorem
+  about the inert card, not the printed one; of the kinds below, HP changes make the model's
+  finiteness most directly easier than the real game's (see the finiteness paragraph above:
+  damage is capped, and Knock Outs taken, at printed HP). Absent kinds, for a later milestone (derived HP, per-Pokémon and
+  static modifiers, triggers): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively
+  Stadium; Tools 3: Ancient Booster Energy Capsule, Cynthia's Power Weight, Hero's Cape); damage
+  bonuses (Stadium 1, Postwick; Tools 8: Binding Mochi, Brave Bangle ×2, Future Booster Energy
+  Capsule, Hop's Choice Band, Light Ball, Maximum Belt ×2); damage reduction or prevention
+  (Stadiums 4: Battle Cage, Full Metal Lab, Granite Cave, Neutralization Zone; Tools 3: Custom Vest,
+  Sacred Charm, Thick Scale); Retreat Cost changes (Stadiums 2: N's Castle, Paradise Resort;
+  Tools 5: Air Balloon ×2, Gravity Gemstone, Rescue Board ×2, and Future Booster Energy Capsule);
+  attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
+  Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no
+  Abilities": Stadiums 2, Legendary Pyroduct, Team Rocket's Watchtower); Tool locks (Stadiums 2:
+  Jamming Tower ×2); Special Condition rules (Stadiums 3: Dizzying Valley, Festival Grounds ×2;
+  Ancient Booster Energy Capsule); evolution timing (Stadium 1, Forest of Vitality); Checkup
+  (Stadium 1, Perilous Jungle); and triggered effects (Stadiums 3: Legendary Summit, Legendary
+  Trench, Risky Ruins; Tools 18: "If the Pokémon this card is attached to is Knocked Out / is
+  damaged by an attack / at the end of your turn …": Adversity Policy, Amulet of Hope, the six
+  type Berries, Deluxe Bomb, Handheld Fan, Heavy Baton, Lillie's Pearl, Lucky Helmet, Powerglass,
+  Punk Helmet, Survival Brace, Team Rocket's Hypnotizer, Tremendous Bomb). Activated effects the
+  model cannot express exactly: Stadiums 9 (Lumiose City ends the turn; Surfing Beach ×2 and
+  Spikemuth Gym need a filter on the Bench or a name prefix; Fossil Quarry benches Items; Grand Tree
+  evolves by effect; Mystery Garden draws to a count of Pokémon in play; Community Center and Team
+  Rocket's Factory read the turn's history), Tools 2 granting attacks (Technical Machine: Fluorite,
+  "heal all damage from each of your Tera Pokémon" and its end-of-turn discard; Mega Rayquaza Cap,
+  an attachment per capped Pokémon). Backtrack Badge (re-flip coins) changes nothing in a model in
+  which flips are nondeterministic choices. Expressed with effect: Stadiums 3 (Academy at Night,
+  Levincia, Prism Tower) and Tool 1 (Core Memory, whose attack goes to a holder named "Mega
+  Zygarde ex"). Adventure Lantern me6-90's record carries only an Item-like text and is left
+  unclassified. A Stadium's play condition ("only if you discard a Prism Tower in play", Ange
+  Floette) and "This card can't be put into your hand or deck from the discard pile"
+  (Neutralization Zone) are not modelled either;
 * Abilities (milestone M8a): a Pokémon card has a list of Abilities (`PokemonCard.abilities`;
   every Standard Pokémon has at most one, survey S9), each with a use limit, a place, an optional
   printed condition and an effect (`Ability`). Activated Abilities, "once during your turn" (per
@@ -404,9 +488,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
   (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
-  sv9-85 attaches Spiky Energy). The finiteness results cover Abilities: `Reach.finite` with
-  tame, low-constant Ability effects, `Faithful.xfinite` under clause 4 (`AbilitySafe`) with
-  clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
+  sv9-85 attaches Spiky Energy). The finiteness results cover activated and on-play Abilities:
+  `Reach.finite` with tame, low-constant Ability effects, `Faithful.xfinite` under clause 4
+  (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), but from other starts (e.g. no winner and
@@ -765,7 +849,62 @@ inductive Move : GameState → GameState → Prop where
       (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :
       Move g g'
-  /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, Active or
+  /-- play a Stadium card (milestone M5): "You can play only one Stadium card each turn", "You
+  can't play a Stadium card if a Stadium with the same name is already in play", "Only one Stadium
+  can be in play at a time—if a new one comes into play, discard the old one and end its effects",
+  and "it stays in play" (rulebook 2023 p. 12). The Stadium goes to the shared slot with its owner
+  (the player to move); the one it replaces, if any, goes to its owner's discard pile, whoever
+  that is (`stadiumTo`). Played during the turn proper, before attacking, with no Knock Out
+  pending, like an Item; an Item lock does not stop it (a Stadium is not an Item). Playing it
+  resolves nothing: its effect is used by `Move.stadiumUse`, and the new Stadium has not been
+  used this turn (`stadiumUsed := false`) -/
+  | stadium {g : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
+      (hh : g.cur.hand = l₁ ++ Card.trainer n .stadium e :: l₂)
+      (hs : g.stadiumPlayed = false) (hn : g.stadiumNamed n = false)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with
+        cur := { g.cur with
+          hand := l₁ ++ l₂, discard := stadiumTo g.curIsFirst g.stadium ++ g.cur.discard },
+        opp := { g.opp with discard := stadiumTo (!g.curIsFirst) g.stadium ++ g.opp.discard },
+        stadium := some (g.curIsFirst, Card.trainer n .stadium e),
+        stadiumPlayed := true, stadiumUsed := false }
+  /-- attach a Pokémon Tool from the hand to the player's Active Pokémon (milestone M5), which must
+  have no Tool attached ("Each Pokémon can have only 1 Pokémon Tool attached at a time", rulebook
+  2023 glossary p. 40; printed on the cards: "You may attach any number of Pokémon Tools to your
+  Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays
+  attached"). Any number per turn; during the turn proper, before attacking, with no Knock Out
+  pending; an Item lock does not stop it. The Tool stays attached through evolution and retreat
+  and goes to the discard pile with the Pokémon (`InPlay.cardList`) -/
+  | tool {g : GameState} {l₁ l₂ : List Card} {n : String} {gr : ToolGrant} {a : InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.tool n gr :: l₂) (ha : g.cur.active = some a)
+      (ht : a.tools = []) (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂, active := some { a with tools := [Card.tool n gr] } } }
+  /-- attach a Pokémon Tool from the hand to one of the player's Benched Pokémon that has no Tool
+  attached (milestone M5), as `tool` -/
+  | toolBench {g : GameState} {l₁ l₂ : List Card} {n : String} {gr : ToolGrant} {q : InPlay}
+      {b₁ b₂ : List InPlay}
+      (hh : g.cur.hand = l₁ ++ Card.tool n gr :: l₂) (hb : g.cur.bench = b₁ ++ q :: b₂)
+      (ht : q.tools = []) (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      Move g { g with cur := { g.cur with
+        hand := l₁ ++ l₂, bench := b₁ ++ { q with tools := [Card.tool n gr] } :: b₂ } }
+  /-- use the effect of the Stadium in play (milestone M5): "Once during each player's turn, that
+  player may …" (Academy at Night sv6pt5-54, Levincia sv10-244, Prism Tower me4-80). Whoever owns
+  the Stadium, the player to move may use it once in their turn (`GameState.stadiumUsed`, cleared
+  at the end of the turn and when a new Stadium is played); its effect (`Card.trainer`'s `effect`)
+  acts for that player (`.own` is the player to move) and resolves as a Trainer card's does
+  (`TRun`, Knock Outs taken after each step), during the turn proper, before attacking, with no
+  Knock Out pending, and with no attack damage step. A use spends no allowance of the turn. So at
+  most two Stadium effects are used in one turn: the Stadium in play, and the one Stadium the
+  player may play after using it -/
+  | stadiumUse {g g' : GameState} {o : Bool} {n : String} {e : Effect}
+      (hs : g.stadium = some (o, Card.trainer n .stadium e)) (hu : g.stadiumUsed = false)
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+      (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
+      (hbh : e.benchHitFree = true) :
+      Move g g'
+  /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, its own or
+  (milestone M5) one an attached Tool gives it (`InPlay.abilities`), Active or
   Benched as the Ability allows (`Ability.spotOk`), during the turn proper and before attacking
   (rulebook 2023 p. 9: "2) … F. Use Abilities (as many as you want). 3) Attack. Then, end your
   turn."; p. 12: "Many of them can be used before you attack", "You can use Abilities from both
@@ -777,7 +916,7 @@ inductive Move : GameState → GameState → Prop where
   taken after each step) and, like a Trainer card's, has no attack damage. Using an Ability spends no allowance of the turn: not the Supporter, the
   Energy attachment or the retreat. -/
   | ability {g g₁ g' : GameState} {x : InPlay} {sp : Spot} {ab : Ability}
-      (hu : UseAt g x sp g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use.activated = true)
+      (hu : UseAt g x sp g₁) (hm : ab ∈ x.abilities) (hk : ab.use.activated = true)
       (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun (ab.script (some sp)) g₁ g') (hnd : (ab.script (some sp)).hitFree = true)
@@ -799,7 +938,8 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun (ab.script none) g₁ g') (hnd : (ab.script none).hitFree = true)
       (hbh : (ab.script none).benchHitFree = true) :
       Move g g'
-  /-- attack: the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
+  /-- attack with one of the Active Pokémon's attacks, its own or (milestone M5) one an attached
+  Tool gives it (`InPlay.attacks`): the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script
   (`Attack.script`: the printed base damage then the effect, or the effect with its own damage
   step), making the rulebook's damage calculation at most once (`Attack.wf`, `Effect.oneHit`;
   `dealtBy`), with nothing after a switch of the attacker that acts on the player's Active
@@ -809,7 +949,7 @@ inductive Move : GameState → GameState → Prop where
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
   using it records that (`PlayerState.gxUsed`). -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
-      (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
+      (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g)
@@ -822,7 +962,7 @@ inductive Move : GameState → GameState → Prop where
   only by a player who has not used one in this game; the failed attempt does not use it up
   (an unverified ruling; see the Known gaps). -/
   | attackConfused {g : GameState} {a : InPlay} {atk : Attack}
-      (ha : g.cur.active = some a) (hm : atk ∈ a.top.attacks)
+      (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot = .confused)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g) (hl : g.cur.mods.live.noAttack = false)
@@ -899,7 +1039,8 @@ inductive Move : GameState → GameState → Prop where
             active := some (b.unfresh.checkup true fb sb cb), bench := bc,
             mods := g.cur.mods.shift, hadTurn := true },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
-          between := true, winner := g.winner, stadium := g.stadium }
+          between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
+          stadiumUsed := false }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken
   and both Active Spots are filled -/
   | startTurn {g : GameState} {a b : InPlay} {c : Card} {d : List Card}

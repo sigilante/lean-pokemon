@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 8 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.3.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.4.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -391,6 +391,20 @@ def sv5_16 : Card := .pokemon
         gx := false },
       { name := "Leaf Litter Tackle", cost := [.grass, .colorless, .colorless], damage := 4,
         effect := .ite (.countGe (.energy .own (.energyOf .grass)) 1) (.discardEnergy .own .active (.energyOf .grass) (.exactly 1)) .skip,
+        gx := false }] }
+
+/-- Sawsbuck (sv5-17). Records: sv5-17, sv5-166. -/
+def sv5_17 : Card := .pokemon
+  { name := "Sawsbuck", stage := .stage1, evolvesFrom := some "Deerling",
+    hp := 13, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Changing Seasons", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.seq (.move .own .deck .hand (.kind .stadium) (.upTo 1)) .shuffle) }],
+    attacks := [
+      { name := "Superpowered Horns", cost := [.grass, .colorless, .colorless], damage := 11,
+        effect := .skip,
         gx := false }] }
 
 /-- Grubbin (sv5-18). Records: sv5-18. -/
@@ -1528,6 +1542,20 @@ def sv6_42 : Card := .pokemon
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 3)) (.damage (.const 6))),
         gx := false }] }
 
+/-- Seaking (sv6-45). Records: sv6-45. -/
+def sv6_45 : Card := .pokemon
+  { name := "Seaking", stage := .stage1, evolvesFrom := some "Goldeen",
+    hp := 9, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Peck Off", cost := [.water], damage := 0,
+        effect := .seq (.discardTools .opp .active) (.damage (.const 5)),
+        gx := false },
+      { name := "Horn Drill", cost := [.colorless, .colorless, .colorless], damage := 9,
+        effect := .skip,
+        gx := false }] }
+
 /-- Corphish (sv6-47). Records: sv6-47. -/
 def sv6_47 : Card := .pokemon
   { name := "Corphish", stage := .basic, evolvesFrom := none,
@@ -1795,28 +1823,6 @@ def sv6_78 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Kadabra (sv6-81). Records: sv6-81. -/
-def sv6_81 : Card := .pokemon
-  { name := "Kadabra", stage := .stage1, evolvesFrom := some "Abra",
-    hp := 8, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Psychic", cost := [.psychic], damage := 0,
-        effect := .damage (.add (.const 1) (.count (.energy .opp .energy) 3)),
-        gx := false }] }
-
-/-- Girafarig (sv6-83). Records: sv6-83. Caveats: benchMods. -/
-def sv6_83 : Card := .pokemon
-  { name := "Girafarig", stage := .basic, evolvesFrom := none,
-    hp := 10, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Dual Headbutt", cost := [.colorless], damage := 3,
-        effect := .benchDamage .own 1,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1856,6 +1862,7 @@ def cards : List Card := [
   sv5_11,
   sv5_14,
   sv5_16,
+  sv5_17,
   sv5_18,
   sv5_19,
   sv5_20,
@@ -1946,6 +1953,7 @@ def cards : List Card := [
   sv6_38,
   sv6_41,
   sv6_42,
+  sv6_45,
   sv6_47,
   sv6_48,
   sv6_49,
@@ -1966,12 +1974,14 @@ def cards : List Card := [
   sv6_74,
   sv6_75,
   sv6_76,
-  sv6_78,
-  sv6_81,
-  sv6_83]
+  sv6_78]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
+
+/-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a
+Tool that gives nothing). -/
+theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel
 
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
 theorem cards_nodup : nodupFp cards = true := by decide +kernel

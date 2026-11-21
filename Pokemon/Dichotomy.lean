@@ -4,16 +4,20 @@ import Pokemon.Faithful
 # The two sides together: faithful decks are finite, the two-counter decks are not faithful
 
 `Pokemon/Faithful.lean` proves finiteness up to the exact-store clamp for decks satisfying
-`GameState.Faithful`, which has three clauses: `LoopFree` (no damage bonus or reduction under
-`iter`), `GXOnly` (rest-of-game bonuses and reductions only in GX attacks) and, since milestone MV,
-`RecycleSafe` (no recycling of modifier writers within a turn, none of rest-of-game writers),
-and, since milestone M8a, `AbilitySafe` (no "as often as you like" Ability writes a damage bonus or
-reduction, no Ability a rest-of-game one).
+`GameState.Faithful`, which has five clauses: `LoopFree` (no damage bonus or reduction under
+`iter`), `GXOnly` (rest-of-game bonuses and reductions only in GX attacks), since milestone MV
+`RecycleSafe` (no free recycler, an Item or Supporter effect or an "as often as you like" Ability,
+returns an Item modifier writer; no effect returns an Item or Supporter rest-of-game writer),
+since milestone M8a `AbilitySafe` (no "as often as you like" Ability writes a damage bonus or
+reduction, no Ability a rest-of-game one), and since milestone M5 `StadiumSafe` (no Stadium's
+effect writes a rest-of-game bonus or reduction).
 `Pokemon/Counter.lean` proves that the generalised model simulates every two-counter machine.
 This file shows that clause 2 cannot be dropped from the finiteness theorem: the two-counter
 starts satisfy clauses 1, 3 and 4 (they recycle nothing and have no Abilities), violate clause 2 (when the machine's first
 instruction is not `halt`), and simulate every two-counter machine. (That clause 3 cannot be
-dropped either is `Recycle.recycling_breaks_bound`.) It is a sharpness result for clause 2, not a
+dropped either is `Recycle.recycling_breaks_bound`; clause 1,
+`LoopFreeNeeded.iter_writer_breaks_bound`; clause 4, `Abilities.unlimited_writer_breaks_bound`;
+clause 5, `Stadiums.stadium_writer_breaks_bound`.) It is a sharpness result for clause 2, not a
 classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
 that violate only clause 2 (the two-counter starts) are universal; nothing is proved here about
 other non-faithful decks, and some of them are finite (for instance tame decks that violate
@@ -23,6 +27,7 @@ clause 2, covered by `Reach.finite`).
 * `Faithful.counter_recycleSafe` (milestone MV): it satisfies clause 3 (`counter_noRecycle`: no
   effect of its cards moves a card out of a discard pile).
 * `Faithful.counter_abilitySafe` (milestone M8a): it satisfies clause 4 (no Abilities).
+* `Faithful.counter_stadiumSafe` (milestone M5): it satisfies clause 5 (no Stadium).
 * `Faithful.counter_not_gxOnly`: it violates clause 2 whenever the machine's initial
   instruction is not `halt`: the Clock's or the Tape's attack, neither a GX attack, writes a
   rest-of-game damage bonus or reduction (an increment writes a reduction, a decrement a bonus;
@@ -153,6 +158,13 @@ theorem counter_abilitySafe (M : Machine) (a b : Nat) : (start M a b).AbilitySaf
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
 
+/-- **The two-counter decks satisfy clause 5** (milestone M5): they have no Stadium cards. -/
+theorem counter_stadiumSafe (M : Machine) (a b : Nat) : (start M a b).StadiumSafe := by
+  intro x hx
+  rw [start_allCards] at hx
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
+
 /-- **The two-counter decks violate clause 2** when the machine's initial instruction is not
 `halt`: the Clock's attack (`atkA`) or the Tape's (`atkB`), neither a GX attack, writes a
 rest-of-game damage bonus or reduction. -/
@@ -160,9 +172,9 @@ theorem counter_not_gxOnly (M : Machine) (a b : Nat) (h : M.instr 0 ≠ .halt) :
     ¬ (start M a b).GXOnly := by
   intro hG
   have hA : (effA M).amtAt .always = 0 :=
-    hG (clock M) (by rw [start_allCards]; simp) (atkA M) (.head _) rfl
+    hG (.pokemon (clock M)) (by rw [start_allCards]; simp) (atkA M) (.head _) rfl
   have hB : (effB M).amtAt .always = 0 :=
-    hG (tape M) (by rw [start_allCards]; simp) (atkB M) (.head _) rfl
+    hG (.pokemon (tape M)) (by rw [start_allCards]; simp) (atkB M) (.head _) rfl
   have h0 : 0 ∈ List.range (V M) := List.mem_range.2 (Machine.span_pos M)
   have lA : (stepAOf (W M) (M.instr 0)).amtAt .always ≤ (effA M).amtAt .always := by
     have := amtAt_sel (s := .always) (w := .own) (f := fun q => stepAOf (W M) (M.instr q)) h0
@@ -239,14 +251,15 @@ non-faithful decks.
    unchanged) (clause 1,
    `LoopFree`: no damage bonus or reduction under `iter`; clause 2, `GXOnly`: rest-of-game
    bonuses and reductions only in GX attacks, which are once per player per game; clause 3,
-   `RecycleSafe`, since milestone MV; clause 4, `AbilitySafe`, since milestone M8a), the
+   `RecycleSafe`, since milestone MV; clause 4, `AbilitySafe`, since milestone M8a; clause 5,
+   `StadiumSafe`, since milestone M5), the
    `xclamp`s of the reachable states lie in one finite list and the kernel of `xclamp` is a
    two-way bisimulation along reachable states.
 2. *Universal side.* For every two-counter machine `M` whose initial instruction is not `halt`
    and all inputs `a`, `b`, the start `Counter.start M a b` is well formed, satisfies clauses 1,
-   3 and 4 (clause 3 added by milestone MV, clause 4 by milestone M8a: its Pokémon have no
-   Abilities), violates clause 2, and reaches a halt-marked state exactly when `M` halts from
-   `(0, a, b)`.
+   3, 4 and 5 (clause 3 added by milestone MV, clause 4 by milestone M8a: its Pokémon have no
+   Abilities; clause 5 by milestone M5: it has no Stadium), violates clause 2, and reaches a
+   halt-marked state exactly when `M` halts from `(0, a, b)`.
 3. *The bound is needed.* For `Counter.start Counter.countUp 0 0` the `xclamp`s of the
    reachable states lie in no finite list.
 
@@ -260,12 +273,12 @@ theorem dichotomy :
         (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧ g₂'.xclamp = g₁'.xclamp)) ∧
     (∀ (M : Machine) (a b : Nat), M.instr 0 ≠ .halt →
       WellFormed (start M a b) ∧ (start M a b).LoopFree ∧ (start M a b).RecycleSafe ∧
-        (start M a b).AbilitySafe ∧ ¬ (start M a b).GXOnly ∧
+        (start M a b).AbilitySafe ∧ (start M a b).StadiumSafe ∧ ¬ (start M a b).GXOnly ∧
       ((∃ g, Reach (start M a b) g ∧ HaltMarked g) ↔ M.Halts (Machine.init a b))) ∧
     ¬ ∃ L : List GameState, ∀ g, Reach (start countUp 0 0) g → g.xclamp ∈ L :=
   ⟨fun _ _ hF => xfinite hF,
     fun M a b h => ⟨start_wellFormed M a b, counter_loopFree M a b, counter_recycleSafe M a b,
-      counter_abilitySafe M a b, counter_not_gxOnly M a b h,
+      counter_abilitySafe M a b, counter_stadiumSafe M a b, counter_not_gxOnly M a b h,
       (universal M a b).2.2.2⟩,
     xclamp_not_finite⟩
 

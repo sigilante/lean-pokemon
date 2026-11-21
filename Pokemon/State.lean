@@ -104,6 +104,59 @@ def cards (p : InPlay) : Nat := 1 + p.under.length + p.energy.length + p.tools.l
 /-- The physical cards making up this Pokémon, as they go to the discard pile. -/
 def cardList (p : InPlay) : List Card := Card.pokemon p.top :: (p.under ++ p.energy ++ p.tools)
 
+/-- The attacks this Pokémon can use (milestone M5): its top card's, and those its Tools give it
+(`Card.grantAttacks`: "The Pokémon this card is attached to can use the attack on this card"). -/
+def attacks (p : InPlay) : List Attack := p.top.attacks ++ p.tools.flatMap (Card.grantAttacks p.top)
+
+/-- The Abilities this Pokémon has (milestone M5): its top card's, and those its Tools give it
+(`Card.grantAbilities`). -/
+def abilities (p : InPlay) : List Ability :=
+  p.top.abilities ++ p.tools.flatMap (Card.grantAbilities p.top)
+
+/-- An attack this Pokémon can use is on one of its cards: the top card, or an attached Tool. -/
+theorem attack_mem {p : InPlay} {atk : Attack} (h : atk ∈ p.attacks) :
+    ∃ c ∈ p.cardList, atk ∈ c.attacks := by
+  rcases List.mem_append.1 h with h | h
+  · exact ⟨.pokemon p.top, .head _, h⟩
+  · obtain ⟨c, hc, hm⟩ := List.mem_flatMap.1 h
+    exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.grantAttacks_sub hm⟩
+
+/-- An Ability this Pokémon has is on one of its cards: the top card, or an attached Tool. -/
+theorem ability_mem {p : InPlay} {ab : Ability} (h : ab ∈ p.abilities) :
+    ∃ c ∈ p.cardList, ab ∈ c.abilities := by
+  rcases List.mem_append.1 h with h | h
+  · exact ⟨.pokemon p.top, .head _, h⟩
+  · obtain ⟨c, hc, hm⟩ := List.mem_flatMap.1 h
+    exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.grantAbilities_sub hm⟩
+
+/-- A Pokémon with no Tool attached has its top card's attacks and Abilities. -/
+theorem attacks_of_noTool {p : InPlay} (h : ∀ c ∈ p.tools, c.isTool = false) :
+    p.attacks = p.top.attacks ∧ p.abilities = p.top.abilities := by
+  have e1 : ∀ l : List Card, (∀ c ∈ l, c.isTool = false) →
+      l.flatMap (Card.grantAttacks p.top) = [] := by
+    intro l hl
+    induction l with
+    | nil => rfl
+    | cons c cs ih =>
+        have hc := hl c (.head _)
+        rw [List.flatMap_cons, ih (fun x hx => hl x (.tail _ hx)), List.append_nil]
+        cases c with
+        | tool n gr => cases hc
+        | _ => rfl
+  have e2 : ∀ l : List Card, (∀ c ∈ l, c.isTool = false) →
+      l.flatMap (Card.grantAbilities p.top) = [] := by
+    intro l hl
+    induction l with
+    | nil => rfl
+    | cons c cs ih =>
+        have hc := hl c (.head _)
+        rw [List.flatMap_cons, ih (fun x hx => hl x (.tail _ hx)), List.append_nil]
+        cases c with
+        | tool n gr => cases hc
+        | _ => rfl
+  exact ⟨by simp only [attacks, e1 _ h, List.append_nil],
+    by simp only [abilities, e2 _ h, List.append_nil]⟩
+
 /-- A Basic Pokémon just put into play. -/
 def ofBasic (p : PokemonCard) : InPlay :=
   { top := p, under := [], energy := [], tools := [], damage := 0,
@@ -207,6 +260,12 @@ def benchCardList : List InPlay → List Card
 def stadiumCardList : Option (Bool × Card) → List Card
   | none => []
   | some (_, c) => [c]
+
+/-- The card in the Stadium slot if its owner is `me` (milestone M5): what goes to that player's
+discard pile when the Stadium leaves play. -/
+def stadiumTo (me : Bool) : Option (Bool × Card) → List Card
+  | none => []
+  | some (o, c) => if o = me then [c] else []
 
 /-- The lingering modifiers on one player for one turn (or for the rest of the game). -/
 structure Mods where
@@ -341,9 +400,16 @@ structure GameState where
   winner : Option Bool
   /-- the Stadium in play, if any, with its owner (`true`: the player who went first). There is
   one Stadium slot for both players: "Only one Stadium can be in play at a time" (rulebook 2023
-  p. 12). No move plays a Stadium yet (survey S8 B9, milestone M5), so the slot only holds a
-  card of the start state. -/
+  p. 12). `Move.stadium` (milestone M5) puts a Stadium from the hand here, and the Stadium it
+  replaces goes to its owner's discard pile. -/
   stadium : Option (Bool × Card)
+  /-- has the player to move played a Stadium this turn? (milestone M5: "You can play only one
+  Stadium card each turn", rulebook 2023 p. 12); set by `Move.stadium`, cleared by `Move.endTurn` -/
+  stadiumPlayed : Bool
+  /-- has the player to move used the effect of the Stadium in play this turn? (milestone M5: "Once
+  during each player's turn, that player may …"); set by `Move.stadiumUse`, cleared by
+  `Move.endTurn` and by `Move.stadium` (a Stadium newly put into play has not been used) -/
+  stadiumUsed : Bool
 
 /-- The Active Pokémon of the player to move (`own`) or of the opponent (`opp`). -/
 def GameState.activeOf : Whose → GameState → Option InPlay
@@ -422,6 +488,13 @@ def GameState.allCards (g : GameState) : List Card :=
   g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium
 
 def benchLimit : Nat := 5
+
+/-- Is a Stadium with the name `n` in play? (milestone M5: "You can't play a Stadium card if a
+Stadium with the same name is already in play", rulebook 2023 p. 12) -/
+def GameState.stadiumNamed (n : String) (g : GameState) : Bool :=
+  match g.stadium with
+  | none => false
+  | some (_, c) => (Filter.named n).eval c
 
 /-- The cards of a pile. -/
 def Pile.get : Pile → PlayerState → List Card
