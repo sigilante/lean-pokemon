@@ -733,6 +733,32 @@ theorem GameState.winner_of_clamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.cl
     g₂.winner = g₁.winner :=
   (congrArg GameState.winner h).symm
 
+/-- **Char counters on agreeing Benches.** If two Benches agree exactly (equal damage), every
+outcome of the Char flips on the first is matched by one on the second. -/
+theorem BenchChar.sim {b b' : List InPlay} (h : BenchChar b b') :
+    ∀ {e : List InPlay}, e.map (InPlay.clampWith .exact) = b.map (InPlay.clampWith .exact) →
+      ∃ e', BenchChar e e' ∧
+        e'.map (InPlay.clampWith .exact) = b'.map (InPlay.clampWith .exact) := by
+  induction h with
+  | nil =>
+      intro e he
+      rw [List.map_nil, List.map_eq_nil_iff] at he
+      subst he
+      exact ⟨[], .nil, rfl⟩
+  | @cons p p' b b' hs _ ih =>
+      intro e he
+      cases e with
+      | nil => simp at he
+      | cons x xs =>
+          simp only [List.map_cons, List.cons.injEq] at he
+          obtain ⟨xs', hxs, exs⟩ := ih he.2
+          have hx := InPlay.agree_of_clamp he.1
+          cases hs with
+          | keep => exact ⟨x :: xs', .cons (.keep x) hxs, by simp only [List.map_cons, he.1, exs]⟩
+          | burn hc =>
+              refine ⟨x.addDamage 2 :: xs', .cons (.burn (by rw [hx.marks]; exact hc)) hxs, ?_⟩
+              simp only [List.map_cons, exs, InPlay.addDamage, InPlay.clamp_of_agree (hx.upd.2.1 2)]
+
 /-- Agreeing Benches are made of the same cards. -/
 theorem benchCardList_of_map {c : Cap} : ∀ {b e : List InPlay},
     e.map (InPlay.clampWith c) = b.map (InPlay.clampWith c) → benchCardList e = benchCardList b
@@ -926,7 +952,7 @@ theorem Move.endTurn_pending_ko :
     · cases hp
     · cases hp; decide
     · cases hp
-  refine ⟨cxState, _, .endTurn false false false false false false rfl rfl hk rfl, hk,
+  refine ⟨cxState, _, .endTurn false false false false false false rfl rfl hk rfl .nil .nil, hk,
     by decide, ?_⟩
   intro hk'
   have := hk' _ (Or.inl rfl)

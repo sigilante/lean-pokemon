@@ -70,25 +70,32 @@ theorem dealtBy_zero (weak : Bool) (resist : Nat) (own opp : Store) :
 theorem GameState.dealt_zero (g : GameState) : g.dealt 0 = 0 := rfl
 
 /-- The state `Move.endTurn` produces from `g`, with Checkup coin flips `fa sa ca` for the
-opponent's Active Pokémon `a` and `fb sb cb` for the player's own `b`. -/
-def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (g : GameState) : GameState :=
+opponent's Active Pokémon `a` and `fb sb cb` for the player's own `b`, and the Benches after
+their Char counters, `bo` (the opponent's) and `bc` (the player's). -/
+def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List InPlay)
+    (g : GameState) : GameState :=
   { cur := { g.opp with
-      active := some (a.checkup false fa sa ca),
+      active := some (a.checkup false fa sa ca), bench := bo,
       energyAttached := false, supporterPlayed := false, retreated := false,
       mods := g.opp.mods.shift },
     opp := { g.cur.unfresh with
-      active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift,
-      hadTurn := true },
+      active := some (b.unfresh.checkup true fb sb cb), bench := bc,
+      mods := g.cur.mods.shift, hadTurn := true },
     curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
     between := true, winner := g.winner, stadium := g.stadium }
 
 /-- **An attack ends the turn, exactly.** After an attack (or a failed Confused attempt), a move
 is a Knock Out move, or it ends the turn: both Active Pokémon are present, no Knock Out is
-pending, and the result is `GameState.passTurn` for some Checkup coin flips. -/
+pending, and the result is `GameState.passTurn` for some Checkup coin flips and Char flips on
+the Benches. (Milestone M3 added the Benches' Char flips `bo`, `bc` to the statement; with no
+Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is, `bo = g.opp.bench`,
+which is the old statement.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
-    KOMove g g' ∨ ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool), g.opp.active = some a ∧
-      g.cur.active = some b ∧ DamageBounded g ∧ g' = g.passTurn fa sa ca fb sb cb a b := by
+    KOMove g g' ∨ ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),
+      g.opp.active = some a ∧ g.cur.active = some b ∧ DamageBounded g ∧
+      BenchChar g.opp.bench bo ∧ BenchChar (g.cur.bench.map InPlay.unfresh) bc ∧
+      g' = g.passTurn fa sa ca fb sb cb a b bo bc := by
   cases hm with
   | playBasic _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | attach _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
@@ -108,7 +115,8 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | noPokemonOwn h₁ h₂ => exact .inl (.noPokemonOwn h₁ h₂)
   | knockOutBench h₁ h₂ h₃ => exact .inl (.knockOutBench h₁ h₂ h₃)
   | knockOutBenchOwn h₁ h₂ h₃ => exact .inl (.knockOutBenchOwn h₁ h₂ h₃)
-  | endTurn fa sa ca fb sb cb ha' hb' hk => exact .inr ⟨_, _, fa, sa, ca, fb, sb, cb, ha', hb', hk, rfl⟩
+  | endTurn fa sa ca fb sb cb ha' hb' hk _ hco hcc =>
+      exact .inr ⟨_, _, fa, sa, ca, fb, sb, cb, _, _, ha', hb', hk, hco, hcc, rfl⟩
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
 

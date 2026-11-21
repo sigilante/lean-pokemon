@@ -863,7 +863,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append,
           h1, h3, hq.cardList, PlayerState.takePrizes, PlayerState.prizesOut]
         rfl⟩
-  | endTurn fa sa ca fb sb cb ha hb hk hbt =>
+  | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       have hk' := hk₂ hk
       subst hg
       rw [ha] at ha₂
@@ -873,10 +873,15 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       have h1 := hqa.checkup (hqa.damage_eq_of_lt (hk _ (Or.inr (Or.inr (Or.inl ha))))) false
         fa sa ca
       have h2 := hqb.upd.2.2.2.2.2.checkup (hqb.damage_eq_of_lt (hk _ (Or.inl hb))) true fb sb cb
-      refine ⟨_, .endTurn fa sa ca fb sb cb rfl rfl hk' hbt, ?_⟩
+      have ee₂ := bench_exact_of_hp he₂ fun p hp => hk p (Or.inr (Or.inr (Or.inr hp)))
+      have ee₁ := bench_map_comm (InPlay.clampWith_unfresh _)
+        (bench_exact_of_hp he₁ fun p hp => hk p (Or.inr (Or.inl hp)))
+      obtain ⟨bo', hbo, ebo⟩ := hco.sim ee₂
+      obtain ⟨bc', hbc, ebc⟩ := hcc.sim ee₁
+      refine ⟨_, .endTurn fa sa ca fb sb cb rfl rfl hk' hbt hbo hbc, ?_⟩
       simp only [GameState.xclamp, GameState.xclampAt, PlayerState.unfresh, Option.map_some, hb,
-        InPlay.clamp_of_agree h1, InPlay.clamp_of_agree h2, he₂,
-        bench_map_comm (InPlay.clampWith_unfresh _) he₁]
+        InPlay.clamp_of_agree h1, InPlay.clamp_of_agree h2, bench_recap (c := .hp) ebo,
+        bench_recap (c := .hp) ebc]
   | startTurn hbt ha hb hk hd =>
       have hk' := hk₂ hk
       subst hg

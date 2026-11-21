@@ -139,7 +139,8 @@ theorem endTurn_pending_ko_reachable :
       ∃ g g', Reach g₀ g ∧ DamageBounded g ∧ g.between = false ∧ Move g g' ∧
         g'.curIsFirst ≠ g.curIsFirst ∧ g'.between = true ∧ ¬ DamageBounded g' := by
   refine ⟨start, start_wellFormed, start_damageBounded, st 5, _, reach_st 5,
-    st_damageBounded 5, rfl, .endTurn false false false false false false rfl rfl (st_damageBounded 5) rfl,
+    st_damageBounded 5, rfl, .endTurn false false false false false false rfl rfl (st_damageBounded 5) rfl
+      .nil .nil,
     by decide, rfl, fun hk => ?_⟩
   have := hk _ (Or.inl rfl)
   exact absurd this (by decide)

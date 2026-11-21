@@ -1020,24 +1020,24 @@ theorem checkup_calm {p : InPlay} (hr : p.rot = .none) (hp : p.poisoned = false)
 theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
     (ha : s.active = some a) (hc : k.marks.char = false) (o f sp c : Bool) :
     Fits k { s with
-      active := some (a.checkup o f sp c), energyAttached := false,
+      active := some (a.checkup o f sp c), bench := [], energyAttached := false,
       supporterPlayed := false, retreated := false, mods := s.mods.shift } := by
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
   rw [ha] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm h2 h3 h4 (by rw [h6]; exact hc) o f sp c
-  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, h.bench, h.deck, h.hand,
+  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, rfl, h.deck, h.hand,
     by rw [h.mods]; rfl, h.stocked, h.held⟩
 
 theorem Fits.toOpp {k : Pk} {s : PlayerState} {b : InPlay} (h : Fits k s)
     (hb : s.active = some b) (hc : k.marks.char = false) (o f sp c : Bool) :
     Fits k { s.unfresh with
-      active := some (b.unfresh.checkup o f sp c), mods := s.mods.shift, hadTurn := true } := by
+      active := some (b.unfresh.checkup o f sp c), bench := [], mods := s.mods.shift,
+      hadTurn := true } := by
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
   rw [hb] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm (p := b.unfresh) h2 h3 h4 (by rw [← hc, ← h6]; rfl)
     o f sp c
-  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩,
-    by simp only [PlayerState.unfresh, h.bench, List.map_nil], h.deck, h.hand,
+  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, rfl, h.deck, h.hand,
     by rw [h.mods]; rfl, h.stocked, h.held⟩
 
 theorem not_mem_hand {k : Pk} {s : PlayerState} {l₁ l₂ : List Card} {c : Card} (h : Fits k s)
@@ -1089,7 +1089,11 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | noPokemonOwn ha => rw [hp] at ha; cases ha
   | knockOutBench hb => rw [hO.bench] at hb; exact absurd hb.symm (by simp)
   | knockOutBenchOwn hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
-  | endTurn fa sa ca fb sb cb ha hb =>
+  | endTurn fa sa ca fb sb cb ha hb _ _ hco hcc =>
+      rw [hO.bench] at hco
+      rw [hC.bench, List.map_nil] at hcc
+      cases hco
+      cases hcc
       exact .inr (.inl ⟨(hO.toCur ha hoc false fa sa ca).weak,
         (hC.toOpp hb hcc true fb sb cb).weak⟩)
   | @startTurn a b c d _ _ _ _ hd =>
@@ -1137,7 +1141,8 @@ theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)
       g'.firstTurn = false ∧ g'.winner = g.winner := by
   obtain ⟨p, hp, -⟩ := hs.cur.active
   obtain ⟨p', hp', -⟩ := hs.opp.active
-  exact ⟨_, .endTurn false false false false false false hp' hp (hs.damageBounded hc ho) hbt,
+  exact ⟨_, .endTurn false false false false false false hp' hp (hs.damageBounded hc ho) hbt
+      (by rw [hs.opp.bench]; exact .nil) (by rw [hs.cur.bench, List.map_nil]; exact .nil),
     ⟨hs.opp.toCur hp' hoc false false false false, hs.cur.toOpp hp hcc true false false false⟩,
     rfl, rfl, rfl, rfl⟩
 

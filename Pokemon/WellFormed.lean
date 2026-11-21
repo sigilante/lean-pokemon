@@ -100,6 +100,22 @@ theorem mem_append_cons_of_mem {α : Type} {x : α} {b₁ b₂ : List α} (y : �
   · exact List.mem_append_left _ h
   · exact List.mem_append_right _ (.tail _ h)
 
+/-- Char counters keep a Bench `Benched`: they change only damage. -/
+theorem BenchChar.benched {b b' : List InPlay} (h : BenchChar b b') (hb : ∀ p ∈ b, Benched p) :
+    ∀ p ∈ b', Benched p := by
+  induction h with
+  | nil => exact hb
+  | cons hs _ ih =>
+      intro p hp
+      cases hp with
+      | head =>
+          cases hs with
+          | keep => exact hb _ (.head _)
+          | burn =>
+              have h := hb _ (.head _)
+              exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+      | tail _ hp => exact ih (fun q hq => hb q (.tail _ hq)) p hp
+
 /-- Replacing one Benched Pokémon by a `Benched` one keeps the Bench `Benched`. -/
 theorem benched_update {b b₁ b₂ : List InPlay} {q x : InPlay} (hb : b = b₁ ++ q :: b₂)
     (hw : ∀ p ∈ b, Benched p) (hx : Benched x) : ∀ p ∈ b₁ ++ x :: b₂, Benched p := by
@@ -269,8 +285,9 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
       refine ⟨hw.1, fun p hp => hw.2.1 p ?_, hw.2.2⟩
       rw [hb]; exact mem_append_cons_of_mem _ hp
   | noPokemonOwn ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
-  | endTurn fa sa ca fb sb cb ha hb hk hbt =>
-      refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hw.2.2, fun p hp => ?_⟩
+  | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
+      refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2, hcc.benched ?_⟩
+      intro p hp
       obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
       exact hw.2.1 q hq
   | startTurn hbt ha hb hk hd => exact hw
@@ -429,7 +446,8 @@ theorem Move.progress {g : GameState} (hw : WellFormed g) (hn : g.winner = none)
   | some b =>
   rcases damageBounded_or_pending g with hk | hk
   · match hbt : g.between with
-    | false => exact ⟨_, .endTurn false false false false false false ho hc hk hbt⟩
+    | false => exact ⟨_, .endTurn false false false false false false ho hc hk hbt
+        (BenchChar.refl _) (BenchChar.refl _)⟩
     | true =>
         match hd : g.cur.deck with
         | [] => exact ⟨_, .deckOut hbt ho hc hk hd⟩

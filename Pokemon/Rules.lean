@@ -158,10 +158,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Pokémon (`Test.marked`, `Test.isType`); markers are general primitives, usable any number of
   times and inside `iter`. Markers stay through evolution, retreat and promotion and leave play
   with the Pokémon (text is silent except for Char, which stays while in play). Char puts 2
-  damage counters on tails at every Checkup, but only on an Active Pokémon: Checkup does not
-  reach the Bench, so a Char counter on a Benched Pokémon does nothing until it is Active again
-  (a restriction: the printed Char also damages a Benched Pokémon, which this model cannot Knock
-  Out). Absent: the readers of Imprison (Poké-Powers and Poké-Bodies; Abilities are absent),
+  damage counters on tails after every turn on its Pokémon, Active (`InPlay.checkup`) or, since
+  milestone M3, Benched (`BenchChar` in `Move.endTurn`, one flip per Pokémon); "A Char counter
+  requires your opponent to flip a coin after every turn. If tails, put 2 damage counters on the
+  Pokémon with that Char counter" (Quilava neo1-47) does not restrict it to the Active Spot. Absent: the readers of Imprison (Poké-Powers and Poké-Bodies; Abilities are absent),
   tests on Benched Pokémon's markers ("Choose 1 of your opponent's Pokémon that has any
   Shock-wave markers", "any Pokémon with a Lightning Rod marker"), Dark Ivysaur bp-6's
   transient markers allocated by the opponent, and the marker-like states of S7 §3.3 (Poison
@@ -273,7 +273,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   failed attempt still ends the turn is the model's reading of the attack steps, p. 20, in
   which the Confusion check is step C of using the attack), and its attack must be one it could
   otherwise use;
-* Pokémon Checkup (`InPlay.checkup`) covers the five Special Conditions and the Char counter
+* Pokémon Checkup (`InPlay.checkup`, and `BenchChar` on the Benches) covers the five Special
+  Conditions (Active Pokémon only, the only ones that can have them) and the Char counter
   only: no Ability,
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
   choice of order between Special Conditions and those effects does not arise); Burn uses the
@@ -448,6 +449,25 @@ inductive TRun : Effect → GameState → GameState → Prop where
   | iterCons {a : Effect} {g₁ g₂ g₃ : GameState} :
       TRun a g₁ g₂ → TRun (.iter a) g₂ g₃ → TRun (.iter a) g₁ g₃
 
+/-- Between turns, a Char counter on a Benched Pokémon: its owner flips a coin, and on tails the
+Pokémon gets 2 damage counters (Quilava neo1-47; the card text does not restrict the Char counter
+to the Active Spot, and since milestone M3 the model applies it on the Bench too, as Checkup
+applies it to the Active Pokémon, `InPlay.checkup`). `keep` is heads, or no Char counter. -/
+inductive CharStep : InPlay → InPlay → Prop where
+  | keep (p : InPlay) : CharStep p p
+  | burn {p : InPlay} (h : p.marks.char = true) : CharStep p (p.addDamage 2)
+
+/-- `CharStep` on every Pokémon of a Bench, each with its own coin flip. -/
+inductive BenchChar : List InPlay → List InPlay → Prop where
+  | nil : BenchChar [] []
+  | cons {p p' : InPlay} {b b' : List InPlay} :
+      CharStep p p' → BenchChar b b' → BenchChar (p :: b) (p' :: b')
+
+/-- Every Bench has a Char step: all coins heads. -/
+theorem BenchChar.refl : ∀ b : List InPlay, BenchChar b b
+  | [] => .nil
+  | p :: ps => .cons (.keep p) (BenchChar.refl ps)
+
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
@@ -621,21 +641,23 @@ inductive Move : GameState → GameState → Prop where
         opp := g.opp.takePrizes p.top.prizeCount,
         winner := if g.opp.prizesOut p.top.prizeCount then some (!g.curIsFirst) else g.winner }
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
-  (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own; the
-  lingering modifiers of this turn expire and the others move one turn closer (`Store.shift`);
-  then the opponent becomes the player to move, between turns. Requires both Active Pokémon
-  and no pending Knock Out anywhere. -/
-  | endTurn {g : GameState} {a b : InPlay} (fa sa ca fb sb cb : Bool)
+  (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
+  counters of both Benches, one coin flip per Pokémon (`BenchChar`: the opponent's Bench becomes
+  `bo`, the player's `bc`); the lingering modifiers of this turn expire and the others move one
+  turn closer (`Store.shift`); then the opponent becomes the player to move, between turns.
+  Requires both Active Pokémon and no pending Knock Out anywhere. -/
+  | endTurn {g : GameState} {a b : InPlay} {bo bc : List InPlay} (fa sa ca fb sb cb : Bool)
       (ha : g.opp.active = some a) (hb : g.cur.active = some b) (hk : DamageBounded g)
-      (hbt : g.between = false) :
+      (hbt : g.between = false) (hco : BenchChar g.opp.bench bo)
+      (hcc : BenchChar (g.cur.bench.map InPlay.unfresh) bc) :
       Move g
         { cur := { g.opp with
-            active := some (a.checkup false fa sa ca),
+            active := some (a.checkup false fa sa ca), bench := bo,
             energyAttached := false, supporterPlayed := false, retreated := false,
             mods := g.opp.mods.shift },
           opp := { g.cur.unfresh with
-            active := some (b.unfresh.checkup true fb sb cb), mods := g.cur.mods.shift,
-            hadTurn := true },
+            active := some (b.unfresh.checkup true fb sb cb), bench := bc,
+            mods := g.cur.mods.shift, hadTurn := true },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner, stadium := g.stadium }
   /-- begin the turn by drawing a card, once the Knock Outs from Checkup have all been taken

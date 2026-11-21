@@ -1,4 +1,5 @@
 import Pokemon.Trainer
+import Pokemon.Turn
 
 /-!
 # The Bench (milestone M3)
@@ -16,6 +17,8 @@ Knock Out wins.
   the Bench, and its Knock Out (the opponent takes a Prize card; nobody is promoted).
 * `doubleKO_reachable`: one step of an Item puts damage counters on each of the opponent's
   Benched Pokémon; two Knock Outs are pending at once, and both are taken before the next step.
+* `charBench_reachable`: a Char counter on a Benched Pokémon puts 2 damage counters on it
+  between turns (tails), which Knocks it Out on the Bench.
 -/
 
 namespace Pokemon.Bench
@@ -183,5 +186,51 @@ theorem doubleKO_reachable :
               (fun p hp => by cases hp))))))) rfl rfl rfl
   exact ⟨spreadStart, spreadStart_wellFormed, spreadStart_settled, _, hm,
     .step (.refl _) rfl hm, rfl, rfl, rfl, rfl⟩
+
+/-! ## A Char counter on the Bench -/
+
+/-- A Basic Pokémon with 20 HP. -/
+def tiny : PokemonCard := ⟨"Tiny", .basic, none, 2, .grass, [], 1, none, none, .none, false⟩
+
+/-- `tiny` on the Bench with a Char counter. -/
+def charred : InPlay := (InPlay.ofBasic tiny).setMarks (Marks.set .char true)
+
+/-- The player to move has `big` Active and `charred` on the Bench. -/
+def charStart : GameState :=
+  ⟨side [] [.energy .fire] (InPlay.ofBasic big) [charred],
+    side [] [.energy .fire] (InPlay.ofBasic big) [],
+    true, false, false, false, none, none⟩
+
+theorem charStart_wellFormed : WellFormed charStart := by
+  refine ⟨fun _ => ⟨by simp [charStart, Trainer.side], by simp [charStart, Trainer.side]⟩,
+    fun p hp => ?_, fun p hp => by cases hp⟩
+  simp only [charStart, Trainer.side, List.mem_singleton] at hp
+  subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- The board after the turn ends with tails for the Char counter. -/
+def charMid : GameState :=
+  charStart.passTurn false false false false false false (InPlay.ofBasic big) (InPlay.ofBasic big)
+    [] [charred.unfresh.addDamage 2]
+
+/-- **Witness: Char on the Bench.** Ending the turn with tails for the Char counter on the
+Benched `tiny` (20 HP) puts 2 damage counters on it; between turns its Knock Out is pending, and
+the new player to move Knocks it Out on the Bench. Before milestone M3 the Char counter acted only
+in the Active Spot. -/
+theorem charBench_reachable :
+    ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g₁ g₂, Move g₀ g₁ ∧ Move g₁ g₂ ∧ Reach g₀ g₂ ∧
+      ¬ DamageBounded g₁ ∧ g₂.opp.bench = [] ∧ Card.pokemon tiny ∈ g₂.opp.discard := by
+  have hs : Settled charStart :=
+    settled_of rfl rfl (by decide) (by decide)
+      (fun p hp => by simp only [charStart, Trainer.side, List.mem_singleton] at hp; subst hp; decide)
+      (fun p hp => by cases hp)
+  have h₁ : Move charStart charMid :=
+    .endTurn (bo := []) (bc := [charred.unfresh.addDamage 2]) false false false false false false
+      rfl rfl hs.1 rfl .nil (.cons (.burn rfl) .nil)
+  have h₂ : Move charMid _ :=
+    .knockOutBench (b₁ := []) (b₂ := []) (p := charred.unfresh.addDamage 2) rfl (by decide) rfl
+  refine ⟨charStart, charStart_wellFormed, hs, _, _, h₁, h₂, .step (.step (.refl _) rfl h₁) rfl h₂,
+    fun hk => ?_, rfl, .head _⟩
+  exact absurd (hk (charred.unfresh.addDamage 2) (Or.inr (Or.inr (Or.inr (.head _)))))
+    (by decide)
 
 end Pokemon.Bench

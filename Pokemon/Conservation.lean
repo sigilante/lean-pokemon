@@ -64,6 +64,16 @@ theorem benchCardList_append (a b : List InPlay) :
 @[simp] theorem InPlay.inflict_tools (c : Condition) (p : InPlay) :
     (p.inflict c).tools = p.tools := by cases c <;> rfl
 
+/-- Char counters on a Bench move no card. -/
+theorem BenchChar.cardList {b b' : List InPlay} (h : BenchChar b b') :
+    benchCardList b' = benchCardList b := by
+  induction h with
+  | nil => rfl
+  | cons hs _ ih =>
+      cases hs with
+      | keep => simp only [benchCardList, ih]
+      | burn => simp only [benchCardList, ih]; rfl
+
 /-- Taking Prize cards splits the Prize list into the cards taken and the cards left. -/
 theorem count_prizes (n : Nat) (l : List Card) (x : Card) :
     List.count x l = List.count x (l.take n) + List.count x (l.drop n) := by
@@ -202,9 +212,9 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
       perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.cur.prizes]
   | @knockOutBenchOwn p _ _ _ _ hb hk hp =>
       perm_count [hb, PlayerState.takePrizes, count_prizes p.top.prizeCount g.opp.prizes]
-  | endTurn fa sa ca fb sb cb ha hb hk hbt =>
-      simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh,
-        benchCardList_unfresh]
+  | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
+      simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh, hco.cardList,
+        hcc.cardList, benchCardList_unfresh]
       perm_count [ha, hb, InPlay.checkup, InPlay.unfresh]
   | startTurn hbt ha hb hk hd => perm_count [hd]
   | deckOut hbt ha hb hk hd => exact .refl _
