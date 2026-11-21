@@ -89,13 +89,13 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | attach hh hf ha => perm_count [hh, ha]
   | evolve hh ha he hfr hf => perm_count [hh, ha]
   | retreat ha hb hr he hp hk hs => perm_count [ha, hb, he]
-  | item hh hr =>
+  | item hh hbt hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
-  | supporter hh hs hr =>
+  | supporter hh hs hbt hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
-  | attack ha hm hc hs hn hf hr => exact hr.perm
+  | attack ha hm hc hs hn hf hbt hr => exact hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | knockOut ha hk hp => perm_count [ha, hp]
   | promote ha hb => perm_count [ha, hb]
@@ -103,11 +103,12 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | knockOutOwn ha hk hp => perm_count [ha, hp]
   | promoteOwn ha hb => perm_count [ha, hb]
   | noPokemonOwn ha hb => exact .refl _
-  | endTurn ha hb hk hd =>
+  | endTurn fa sa fb sb ha hb hk hbt =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh,
-        optCardList_unfresh, benchCardList_unfresh]
-      perm_count [hd]
-  | deckOut ha hb hk hd => exact .refl _
+        benchCardList_unfresh]
+      perm_count [ha, hb, InPlay.checkup, InPlay.unfresh]
+  | startTurn hbt ha hb hk hd => perm_count [hd]
+  | deckOut hbt ha hb hk hd => exact .refl _
 
 /-- Legal play permutes the cards in the game: every reachable state holds exactly the
 starting cards, each with its starting multiplicity. -/

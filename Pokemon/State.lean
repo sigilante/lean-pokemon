@@ -62,6 +62,20 @@ def inflict : Condition → InPlay → InPlay
   | .confused, p => { p with rot := .confused }
   | .paralyzed, p => { p with rot := .paralyzed }
 
+/-- Pokémon Checkup on one Active Pokémon (`S2`, `S4`: Poisoned, then Burned, then Asleep, then
+Paralyzed). Poison places `1 + poisonUp` damage counters. Burn places 2, then a coin flip
+(`burnHeads`) cures it on heads. Sleep is cured on heads (`sleepHeads`). Paralysis ends at the
+Checkup after its owner's turn (`ownersTurnEnded`). Knock Outs are checked afterwards, by the
+Knock Out moves; Confusion has no Checkup step. -/
+def checkup (ownersTurnEnded burnHeads sleepHeads : Bool) (p : InPlay) : InPlay :=
+  { p with
+    damage := p.damage + (if p.poisoned then 1 + p.poisonUp else 0) + (if p.burned then 2 else 0),
+    burned := p.burned && !burnHeads,
+    rot := match p.rot with
+      | .asleep => if sleepHeads then .none else .asleep
+      | .paralyzed => if ownersTurnEnded then .none else .paralyzed
+      | r => r }
+
 /-- Recover from all Special Conditions (also what moving to the Bench or evolving does). -/
 def cure (p : InPlay) : InPlay :=
   { p with rot := .none, poisoned := false, burned := false, poisonUp := 0 }
@@ -141,6 +155,9 @@ structure GameState where
   firstTurn : Bool
   /-- has the player to move attacked this turn? -/
   attacked : Bool
+  /-- between turns: Pokémon Checkup has been applied and its Knock Outs are being resolved;
+  the player to move has not yet drawn for the turn -/
+  between : Bool
   /-- `some b`: the game is over, won by the first player iff `b` -/
   winner : Option Bool
 

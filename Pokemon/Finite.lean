@@ -9,11 +9,12 @@ reachable states lie in one finite list. Since the kernel of `clamp` is a bisimu
 question about legal play that does not read the damage above HP on the opponent's Active
 Pokémon nor the Poison strength above HP on either Active Pokémon.
 
-Without the clamp the reachable states are not finite, even among states with no pending
-Knock Out: `poisonUp_unbounded` raises the Poison strength of a Poisoned opposing Active
-Pokémon without bound inside one effect, and nothing resets it. (The previous version of this
-file proved `Reach.finite_damageBounded`, finiteness of the reachable states with no pending
-Knock Out without any clamp; that statement does not survive stacking Poison.)
+The clamp is now needed even at turn boundaries. Inside one effect (a statement about `Run`,
+not `Reach`), `poisonUp_unbounded` raises the Poison strength of a Poisoned opposing Active
+Pokémon without bound, and no Knock Out check resets it, since it causes no damage until
+Checkup. The previous version of this file proved `Reach.finite_damageBounded` (the reachable
+states with no pending Knock Out, unclamped, lie in a finite list); it is not restated here,
+because stacking Poison breaks its proof, and no `Reach`-level counterexample is formalized.
 
 The list `states g₀.allCards` is a crude over-approximation, built from: lists of length at
 most `N` over the starting cards (`N` = the number of cards in the game), the Pokémon cards
@@ -189,17 +190,17 @@ whose Pokémon in play all have damage and Poison strength at most `bound C`. -/
 def states (C : List Card) : List GameState :=
   (players C).flatMap fun cur => (players C).flatMap fun opp =>
   bools.flatMap fun curIsFirst => bools.flatMap fun firstTurn =>
-  bools.flatMap fun attacked => winners.map fun winner =>
-  ⟨cur, opp, curIsFirst, firstTurn, attacked, winner⟩
+  bools.flatMap fun attacked => bools.flatMap fun between => winners.map fun winner =>
+  ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner⟩
 
 theorem mem_states {C : List Card} {g : GameState} (hp : g.allCards.Perm C)
     (hd : SideDamageLe (bound C) g.cur ∧ SideDamageLe (bound C) g.opp) : g ∈ states C := by
   have hw : Within C (g.cur.allCards ++ g.opp.allCards) := Within.of_perm hp
-  obtain ⟨cur, opp, curIsFirst, firstTurn, attacked, winner⟩ := g
+  obtain ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner⟩ := g
   simp only [states, List.mem_flatMap, List.mem_map]
   exact ⟨cur, mem_players hw.left hd.1, opp, mem_players hw.right hd.2,
     curIsFirst, mem_bools _, firstTurn, mem_bools _, attacked, mem_bools _,
-    winner, mem_winners _, rfl⟩
+    between, mem_bools _, winner, mem_winners _, rfl⟩
 
 end Enum
 
@@ -231,10 +232,15 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h₀ : 
   refine ⟨⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_cur_bench hp) (hW.2.1 p hp)⟩,
     ⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_opp_bench hp) (hW.2.2 p hp)⟩⟩
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
-    have h1 := (hJ q hq).1
     have h2 := hM _ (GameState.top_mem_cur_active hq)
-    simp only [InPlay.clampWith, Bool.false_eq_true, ite_false, bound]
-    exact ⟨by omega, by omega⟩
+    cases hb : g.between with
+    | false =>
+        have h1 := (hJ hb q hq).1
+        simp only [InPlay.clampWith, Bool.false_eq_true, ite_false, bound]
+        exact ⟨by omega, by omega⟩
+    | true =>
+        simp only [InPlay.clampWith, ite_true, bound]
+        exact ⟨by omega, by omega⟩
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
     have h2 := hM _ (GameState.top_mem_opp_active hq)
     simp only [InPlay.clampWith, ite_true, bound]

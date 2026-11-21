@@ -18,25 +18,27 @@ namespace Pokemon
 def Run.Frame (g g' : GameState) : Prop :=
   g'.cur.bench = g.cur.bench ∧ g'.opp.bench = g.opp.bench ∧
     g'.cur.prizes = g.cur.prizes ∧ g'.opp.prizes = g.opp.prizes ∧
-    g'.winner = g.winner ∧ g'.curIsFirst = g.curIsFirst
+    g'.winner = g.winner ∧ g'.curIsFirst = g.curIsFirst ∧ g'.between = g.between
 
 theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g g' := by
   induction h with
   | seq _ _ ih₁ ih₂ =>
-      obtain ⟨a1, a2, a3, a4, a5, a6⟩ := ih₁
-      obtain ⟨b1, b2, b3, b4, b5, b6⟩ := ih₂
-      exact ⟨b1.trans a1, b2.trans a2, b3.trans a3, b4.trans a4, b5.trans a5, b6.trans a6⟩
+      obtain ⟨a1, a2, a3, a4, a5, a6, a7⟩ := ih₁
+      obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := ih₂
+      exact ⟨b1.trans a1, b2.trans a2, b3.trans a3, b4.trans a4, b5.trans a5, b6.trans a6,
+        b7.trans a7⟩
   | choiceL _ ih => exact ih
   | choiceR _ ih => exact ih
   | iterCons _ _ ih₁ ih₂ =>
-      obtain ⟨a1, a2, a3, a4, a5, a6⟩ := ih₁
-      obtain ⟨b1, b2, b3, b4, b5, b6⟩ := ih₂
-      exact ⟨b1.trans a1, b2.trans a2, b3.trans a3, b4.trans a4, b5.trans a5, b6.trans a6⟩
-  | _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+      obtain ⟨a1, a2, a3, a4, a5, a6, a7⟩ := ih₁
+      obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := ih₂
+      exact ⟨b1.trans a1, b2.trans a2, b3.trans a3, b4.trans a4, b5.trans a5, b6.trans a6,
+        b7.trans a7⟩
+  | _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Frame g g') :
     WellFormed g' := by
-  obtain ⟨f1, f2, f3, f4, f5, _⟩ := hf
+  obtain ⟨f1, f2, f3, f4, f5, _, _⟩ := hf
   refine ⟨fun hn => ?_, ?_, ?_⟩
   · rw [f3, f4]; exact hw.1 (f5 ▸ hn)
   · rw [f1]; exact hw.2.1
@@ -69,9 +71,9 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         | head => exact ⟨hk, rfl, rfl, rfl, rfl⟩
         | tail _ hp =>
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
-  | item hh hr => exact WellFormed.of_frame hw hr.frame
-  | supporter hh hs hr => exact WellFormed.of_frame hw hr.frame
-  | attack ha hm hc hs hn hf hr => exact WellFormed.of_frame hw hr.frame
+  | item hh hbt hr => exact WellFormed.of_frame hw hr.frame
+  | supporter hh hs hbt hr => exact WellFormed.of_frame hw hr.frame
+  | attack ha hm hc hs hn hf hbt hr => exact WellFormed.of_frame hw hr.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | knockOut ha hk hp =>
       rename_i p c ps
@@ -97,11 +99,12 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
       refine ⟨hw.1, fun p hp => hw.2.1 p ?_, hw.2.2⟩
       rw [hb]; exact mem_append_cons_of_mem _ hp
   | noPokemonOwn ha hb => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
-  | endTurn ha hb hk hd =>
+  | endTurn fa sa fb sb ha hb hk hbt =>
       refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hw.2.2, fun p hp => ?_⟩
       obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
       exact hw.2.1 q hq
-  | deckOut ha hb hk hd => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
+  | startTurn hbt ha hb hk hd => exact hw
+  | deckOut hbt ha hb hk hd => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
 
 /-- Legal play from a well-formed state stays well formed. -/
 theorem Reach.wellFormed {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g) :
@@ -134,9 +137,12 @@ theorem Move.progress {g : GameState} (hw : WellFormed g) (hn : g.winner = none)
         · exact (hw.2.1 p hp).1
         · rw [ho] at hp; cases hp; exact hka
         · exact (hw.2.2 p hp).1
-      match hd : g.opp.deck with
-      | [] => exact ⟨_, .deckOut ho hc hk hd⟩
-      | c :: d => exact ⟨_, .endTurn ho hc hk hd⟩
+      match hbt : g.between with
+      | false => exact ⟨_, .endTurn false false false false ho hc hk hbt⟩
+      | true =>
+          match hd : g.cur.deck with
+          | [] => exact ⟨_, .deckOut hbt ho hc hk hd⟩
+          | c :: d => exact ⟨_, .startTurn hbt ho hc hk hd⟩
     · match hp : g.opp.prizes with
       | [] => exact absurd hp (hw.1 hn).2
       | c :: ps => exact ⟨_, .knockOutOwn hc hkb hp⟩
