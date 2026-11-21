@@ -70,8 +70,8 @@ theorem _root_.Pokemon.Move.retreat_marks {g : GameState} {a q : InPlay} {b₁ b
     {paid rest : List Card} (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
     (hr : g.cur.retreated = false) (he : a.energy = paid ++ rest)
     (hp : paid.length = a.top.retreat) (hs : a.rot.canAct = true) (hbt : g.between = false)
-    (hst : Settled g) :
+    (hst : Settled g) (hl : g.cur.mods.live.noRetreat = false) :
     ∃ g' a', Move g g' ∧ a' ∈ g'.cur.bench ∧ a'.top = a.top ∧ a'.marks = a.marks :=
-  ⟨_, _, .retreat ha hb hr he hp hs hbt hst, List.mem_append_right _ (.head _), rfl, rfl⟩
+  ⟨_, _, .retreat ha hb hr he hp hs hbt hst hl, List.mem_append_right _ (.head _), rfl, rfl⟩
 
 end Pokemon.Markers

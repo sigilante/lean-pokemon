@@ -1,12 +1,19 @@
-import Pokemon.Damage
+import Pokemon.Sim
 
 /-!
 # Finiteness
 
-`Reach.finite`: from a well-formed start state, the clamps of all reachable states lie in one
-finite list. Since the kernel of `clamp` is a bisimulation for moves (`Reach.clamp_sim`), the
-clamped game is a finite transition system that answers every question about legal play that
-does not read the damage above HP or the Poison strength above HP on either Active Pokémon.
+`Reach.finite`: from a well-formed start state, the clamps `clamp (bound g₀.allCards)` of all
+reachable states lie in one finite list. `bound C` is larger than every printed HP and every
+test constant in the cards `C`; the clamp caps damage and Poison strength on both Active Pokémon
+at HP and every damage bonus and reduction at `bound`. For a start whose cards are tame (no
+damage reduction, no `drain`) and with no reduction in effect, the kernel of this clamp is a
+bisimulation for moves (`Reach.clamp_sim` with `GameState.fit_bound`), so the clamped game is a
+finite transition system that answers every question about legal play that does not read the
+damage or Poison strength above HP on either Active Pokémon, or a damage bonus above `bound`.
+For other decks `Reach.finite` still holds but the clamp is not a bisimulation
+(`Lingering.reduce_breaks_clamp`, `Lingering.drain_breaks_clamp`), so it says nothing about
+play.
 
 This holds for the effect language with state-reading effects (`ite` on damage thresholds,
 exact damage and Special Conditions; `scale`; `selfDamage`; `healAll`), and for the
@@ -16,8 +23,9 @@ an attack's effect these reads see damage above HP, so the HP clamp is not a sim
 `Run` (`Reads.run_clamp_not_sim`); but no move other than a Knock Out starts from a state with
 a Pokémon at or above its HP (`Settled`), and from such a state equal clamps mean equal damage.
 Inside a Trainer effect every step starts `Settled`, so the clamp simulates it step by step
-(`TRun.clamp_sim`). So the cap does not need to be larger than HP, and no constant from the
-cards' tests enters it.
+(`TRun.clamp_sim`). The cap on damage stays at HP; the cap on the damage bonus must exceed the
+cards' test constants, since a bonus is read through the damage it adds inside an attack
+(`Run.cap_sim`).
 
 The clamp is needed even at turn boundaries. Inside one effect (a statement about `Run`,
 not `Reach`), `poisonUp_unbounded` raises the Poison strength of a Poisoned opposing Active
@@ -29,8 +37,8 @@ reachable state space is infinite (`Infinite.not_finite`).
 
 The list `states g₀.allCards` is a crude over-approximation, built from: lists of length at
 most `N` over the starting cards (`N` = the number of cards in the game), the Pokémon cards
-among them, damage and Poison strength up to `maxHp`, and the finitely many values of each
-flag. It is never computed; it witnesses finiteness only. The proof uses `Reach.perm` (cards
+among them, damage and Poison strength up to `bound`, the modifier stores with amounts up to
+`bound`, and the finitely many values of each flag and marker. It is never computed; it witnesses finiteness only. The proof uses `Reach.perm` (cards
 are only permuted) and `Reach.wellFormed` (Benched Pokémon are below HP and have no Special
 Condition); the clamp caps both Active Pokémon. Unlike the previous version, the start state
 need not be free of pending Knock Outs.
@@ -129,8 +137,41 @@ def cardLists (C : List Card) : List (List Card) := listsUpTo C C.length
 theorem mem_cardLists {C l : List Card} (h : Within C l) : l ∈ cardLists C :=
   mem_listsUpTo h.1 h.2
 
-/-- The bound used for damage and Poison strength: `maxHp C`. -/
-def bound (C : List Card) : Nat := maxHp C
+/-- The bound used for damage, Poison strength, damage bonuses and reductions: larger than every
+printed HP and every test constant in the cards of `C`. -/
+def bound (C : List Card) : Nat := maxHp C + cardsTmax C + 1
+
+/-- Every value of one turn's modifiers with amounts at most `M`. -/
+def modss (M : Nat) : List Mods :=
+  (List.range (M + 1)).flatMap fun b => (List.range (M + 1)).flatMap fun r =>
+  bools.flatMap fun p => bools.flatMap fun a => bools.flatMap fun t => bools.map fun i =>
+  ⟨b, r, p, a, t, i⟩
+
+/-- The amounts in one turn's modifiers are at most `M`. -/
+def ModsLe (M : Nat) (m : Mods) : Prop := m.bonus ≤ M ∧ m.reduce ≤ M
+
+theorem mem_modss {M : Nat} {m : Mods} (h : ModsLe M m) : m ∈ modss M := by
+  obtain ⟨b, r, p, a, t, i⟩ := m
+  simp only [modss, List.mem_flatMap, List.mem_map]
+  exact ⟨b, List.mem_range.2 (Nat.lt_succ_of_le h.1), r, List.mem_range.2 (Nat.lt_succ_of_le h.2),
+    p, mem_bools _, a, mem_bools _, t, mem_bools _, i, mem_bools _, rfl⟩
+
+/-- Every store with amounts at most `M`. -/
+def stores (M : Nat) : List Store :=
+  (modss M).flatMap fun a => (modss M).flatMap fun b => (modss M).flatMap fun c =>
+  (modss M).map fun d => ⟨a, b, c, d⟩
+
+def StoreLe (M : Nat) (t : Store) : Prop :=
+  ModsLe M t.now ∧ ModsLe M t.next ∧ ModsLe M t.after ∧ ModsLe M t.always
+
+theorem mem_stores {M : Nat} {t : Store} (h : StoreLe M t) : t ∈ stores M := by
+  obtain ⟨a, b, c, d⟩ := t
+  simp only [stores, List.mem_flatMap, List.mem_map]
+  exact ⟨a, mem_modss h.1, b, mem_modss h.2.1, c, mem_modss h.2.2.1, d, mem_modss h.2.2.2, rfl⟩
+
+theorem storeLe_cap (M : Nat) (t : Store) : StoreLe M (t.cap M) :=
+  ⟨⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩, ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩,
+    ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩, ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩⟩
 
 /-- A finite list containing every Pokémon in play made of cards from `C` with damage and
 Poison strength at most `bound C`. -/
@@ -175,10 +216,11 @@ theorem within_of_mem_bench {C : List Card} {b : List InPlay} {p : InPlay}
           have := ih (hw.right) hp
           omega
 
-/-- All Pokémon in play on one side have damage and Poison strength at most `M`. -/
+/-- All Pokémon in play on one side have damage and Poison strength at most `M`, and the
+side's damage bonuses and reductions are at most `M`. -/
 def SideDamageLe (M : Nat) (s : PlayerState) : Prop :=
   (∀ p, s.active = some p → p.damage ≤ M ∧ p.poisonUp ≤ M) ∧
-    ∀ p ∈ s.bench, p.damage ≤ M ∧ p.poisonUp ≤ M
+    (∀ p ∈ s.bench, p.damage ≤ M ∧ p.poisonUp ≤ M) ∧ StoreLe M s.mods
 
 def players (C : List Card) : List PlayerState :=
   (cardLists C).flatMap fun deck => (cardLists C).flatMap fun hand =>
@@ -186,14 +228,15 @@ def players (C : List Card) : List PlayerState :=
   (cardLists C).flatMap fun lost => (opts (inPlays C)).flatMap fun active =>
   (listsUpTo (inPlays C) C.length).flatMap fun bench => (opts C).flatMap fun stadium =>
   bools.flatMap fun energyAttached => bools.flatMap fun supporterPlayed =>
-  bools.flatMap fun retreated => bools.flatMap fun gxUsed => bools.map fun vstarUsed =>
+  bools.flatMap fun retreated => bools.flatMap fun gxUsed => bools.flatMap fun vstarUsed =>
+  (stores (bound C)).map fun mods =>
   ⟨deck, hand, discard, prizes, lost, active, bench, stadium, energyAttached, supporterPlayed,
-    retreated, gxUsed, vstarUsed⟩
+    retreated, gxUsed, vstarUsed, mods⟩
 
 theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     (hd : SideDamageLe (bound C) s) : s ∈ players C := by
   obtain ⟨deck, hand, discard, prizes, lost, active, bench, stadium, energyAttached,
-    supporterPlayed, retreated, gxUsed, vstarUsed⟩ := s
+    supporterPlayed, retreated, gxUsed, vstarUsed, mods⟩ := s
   simp only [PlayerState.allCards] at hw
   have hbench : Within C (benchCardList bench) := hw.left.right
   have hactive : Within C (optCardList active) := hw.left.left.right
@@ -205,12 +248,13 @@ theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     lost, mem_cardLists hw.left.left.left.right,
     active, ?_, bench, ?_, stadium, ?_, energyAttached, mem_bools _,
     supporterPlayed, mem_bools _, retreated, mem_bools _, gxUsed, mem_bools _,
-    vstarUsed, mem_bools _, rfl⟩
+    vstarUsed, mem_bools _, mods, mem_stores hd.2.2, rfl⟩
   · refine mem_opts fun p hp => ?_
     subst hp
     exact mem_inPlays hactive (hd.1 p rfl).1 (hd.1 p rfl).2
   · refine mem_listsUpTo (Nat.le_trans (length_le_benchCardList bench) hbench.1) ?_
-    exact fun p hp => mem_inPlays (within_of_mem_bench hbench hp) (hd.2 p hp).1 (hd.2 p hp).2
+    exact fun p hp => mem_inPlays (within_of_mem_bench hbench hp) (hd.2.1 p hp).1
+      (hd.2.1 p hp).2
   · refine mem_opts fun c hc => ?_
     subst hc
     exact hw.right.2 c (.head _)
@@ -236,11 +280,11 @@ end Enum
 
 open Enum
 
-theorem optCardList_clamp (c : Bool) (o : Option InPlay) :
+theorem optCardList_clamp (c : Cap) (o : Option InPlay) :
     optCardList (o.map (InPlay.clampWith c)) = optCardList o := by
   cases o <;> rfl
 
-theorem GameState.allCards_clamp (g : GameState) : g.clamp.allCards = g.allCards := by
+theorem GameState.allCards_clamp (k : Nat) (g : GameState) : (g.clamp k).allCards = g.allCards := by
   simp only [GameState.clamp, GameState.clampAt, GameState.allCards, PlayerState.allCards,
     optCardList_clamp]
 
@@ -248,7 +292,8 @@ theorem GameState.allCards_clamp (g : GameState) : g.clamp.allCards = g.allCards
 and Poison strength at most `bound g₀.allCards`: the clamp caps both Active Pokémon at their HP,
 and Benched Pokémon are below HP with no Poison strength (`Reach.wellFormed`). -/
 theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h : Reach g₀ g) :
-    SideDamageLe (bound g₀.allCards) g.clamp.cur ∧ SideDamageLe (bound g₀.allCards) g.clamp.opp := by
+    SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).cur ∧
+      SideDamageLe (bound g₀.allCards) (g.clamp (bound g₀.allCards)).opp := by
   have hW := h.wellFormed hw
   have hM : ∀ p, Card.pokemon p ∈ g.allCards → p.hp ≤ maxHp g₀.allCards :=
     fun p hp => hp_le_maxHp (h.perm.mem_iff.1 hp)
@@ -260,14 +305,16 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h : Rea
     have h2 := hb.2.2.2.2
     simp only [bound]; exact ⟨by omega, by omega⟩
   have hA : ∀ q : InPlay, Card.pokemon q.top ∈ g.allCards →
-      (q.clampWith true).damage ≤ bound g₀.allCards ∧
-        (q.clampWith true).poisonUp ≤ bound g₀.allCards := by
+      (q.clampWith .hp).damage ≤ bound g₀.allCards ∧
+        (q.clampWith .hp).poisonUp ≤ bound g₀.allCards := by
     intro q hq
     have := hM _ hq
-    simp only [InPlay.clampWith, ite_true, bound]
+    simp only [InPlay.clampWith, Cap.dmg, bound]
     exact ⟨by omega, by omega⟩
-  refine ⟨⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_cur_bench hp) (hW.2.1 p hp)⟩,
-    ⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_opp_bench hp) (hW.2.2 p hp)⟩⟩
+  refine ⟨⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_cur_bench hp) (hW.2.1 p hp),
+      storeLe_cap _ _⟩,
+    ⟨fun p hp => ?_, fun p hp => hB p (GameState.top_mem_opp_bench hp) (hW.2.2 p hp),
+      storeLe_cap _ _⟩⟩
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
     exact hA q (GameState.top_mem_cur_active hq)
   · obtain ⟨q, hq, rfl⟩ := Option.map_eq_some_iff.1 hp
@@ -276,8 +323,16 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (hw : WellFormed g₀) (h : Rea
 /-- **Finiteness.** From a well-formed start state, there is a finite list of states containing
 the clamp (`GameState.clamp`) of every reachable state. -/
 theorem Reach.finite {g₀ : GameState} (hw : WellFormed g₀) :
-    ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp ∈ L := by
+    ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L := by
   refine ⟨states g₀.allCards, fun g h => mem_states ?_ (h.clamp_bounded hw)⟩
   rw [GameState.allCards_clamp]; exact h.perm
+
+/-- A start state with tame cards (no damage reduction, no `drain`) and no damage reduction in
+effect is `Fit` at `bound`, so `Reach.clamp_sim` applies to the clamp of `Reach.finite`. -/
+theorem GameState.fit_bound {g₀ : GameState} (ht : ∀ x ∈ g₀.allCards, x.tame = true)
+    (hn : g₀.NoReduce) : g₀.Fit (bound g₀.allCards) := by
+  refine ⟨by simp only [bound]; omega, fun p hp => ?_, fun x hx => ⟨ht x hx, ?_⟩, hn⟩
+  · have := hp_le_maxHp hp; simp only [bound]; omega
+  · have := tmax_le_cardsTmax hx; simp only [bound]; omega
 
 end Pokemon

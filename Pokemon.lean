@@ -6,9 +6,11 @@ import Pokemon.Rules
 import Pokemon.Conservation
 import Pokemon.WellFormed
 import Pokemon.Damage
+import Pokemon.Sim
 import Pokemon.Finite
 import Pokemon.Infinite
 import Pokemon.Reads
 import Pokemon.Trainer
 import Pokemon.Markers
+import Pokemon.Lingering
 import Pokemon.Audit

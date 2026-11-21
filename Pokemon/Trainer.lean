@@ -139,7 +139,7 @@ def big : PokemonCard := ⟨"Big", .basic, none, 10, .grass, [], 1⟩
 /-- A player with the given hand, Prizes, Active Pokémon and Bench. -/
 def side (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerState :=
   ⟨[.energy .grass], hand, [], prizes, [], some a, bench, none, false, false, false, false,
-    false⟩
+    false, Store.empty⟩
 
 /-- A state is `Settled` if both Active Pokémon, and every Benched Pokémon, are below HP. -/
 theorem settled_of {g : GameState} {a b : InPlay} (hc : g.cur.active = some a)
@@ -185,9 +185,9 @@ pile with the Item, the opponent took a Prize card, `big` was promoted, and the 
 def after1 : GameState :=
   ⟨⟨[.energy .grass], [], [.pokemon mon, selfItem], [.energy .fire], [],
       some { InPlay.ofBasic big with damage := 0 - 5 }, [], none, false, false, false, false,
-      false⟩,
+      false, Store.empty⟩,
     ⟨[.energy .grass], [.energy .fire], [], [.energy .fire], [], some (InPlay.ofBasic big), [],
-      none, false, false, false, false, false⟩,
+      none, false, false, false, false, false, Store.empty⟩,
     true, false, false, false, none⟩
 
 theorem move_after1 : Move start1 after1 := by
@@ -195,7 +195,7 @@ theorem move_after1 : Move start1 after1 := by
     (.seq (.prim rfl rfl (.selfDamage 5 rfl)
       (.step rfl (.knockOutOwn rfl (by decide) rfl)
         (.step rfl (.promoteOwn (b₁ := []) rfl rfl) (.done (.inl ?_)))))
-      (.prim rfl rfl (.heal 5 rfl) (.done (.inl ?_))))
+      (.prim rfl rfl (.heal 5 rfl) (.done (.inl ?_)))) rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
@@ -243,10 +243,10 @@ player took a Prize card, the opponent promoted `big`, and the second round put 
 `big`. -/
 def after2 : GameState :=
   ⟨⟨[.energy .grass], [.energy .fire], [hitItem], [.energy .fire], [],
-      some (InPlay.ofBasic big), [], none, false, false, false, false, false⟩,
+      some (InPlay.ofBasic big), [], none, false, false, false, false, false, Store.empty⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [],
       some { InPlay.ofBasic big with damage := 0 + 5 }, [], none, false, false, false, false,
-      false⟩,
+      false, Store.empty⟩,
     true, false, false, false, none⟩
 
 theorem move_after2 : Move start2 after2 := by
@@ -254,7 +254,7 @@ theorem move_after2 : Move start2 after2 := by
     (.iterCons (.prim rfl rfl (.counters 5 rfl)
       (.step rfl (.knockOut rfl (by decide) rfl)
         (.step rfl (.promote (b₁ := []) rfl rfl) (.done (.inl ?_)))))
-      (.iterCons (.prim rfl rfl (.counters 5 rfl) (.done (.inl ?_))) (.iterNil _ _)))
+      (.iterCons (.prim rfl rfl (.counters 5 rfl) (.done (.inl ?_))) (.iterNil _ _))) rfl
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
       (fun p hp => by cases hp)
   · exact settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
@@ -299,15 +299,15 @@ theorem start3_settled : Settled start3 :=
 
 def after3 : GameState :=
   ⟨⟨[.energy .grass], [.energy .fire], [winItem], [], [], some (InPlay.ofBasic big),
-      [], none, false, false, false, false, false⟩,
+      [], none, false, false, false, false, false, Store.empty⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [], none, [InPlay.ofBasic big],
-      none, false, false, false, false, false⟩,
+      none, false, false, false, false, false, Store.empty⟩,
     true, false, false, false, some true⟩
 
 theorem move_after3 : Move start3 after3 :=
   .item (l₁ := []) (l₂ := []) (n := "Win") rfl rfl start3_settled
     (.seq (.prim rfl rfl (.counters 5 rfl) (.step rfl (.knockOut rfl (by decide) rfl)
-      (.done (.inr (by decide))))) (.stop (by decide)))
+      (.done (.inr (by decide))))) (.stop (by decide))) rfl
 
 /-- **Witness: the win condition fires inside an Item's effect.** From a well-formed, `Settled`
 start, `seq (counters 5) draw` Knocks Out the opponent's Active Pokémon in its first step, the

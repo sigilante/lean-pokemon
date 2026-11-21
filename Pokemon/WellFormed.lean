@@ -54,6 +54,7 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
         exact ⟨by simp [GameState.updSide, PlayerState.unmark, InPlay.unmarked, InPlay.setMarks],
           by simp [GameState.updSide, PlayerState.unmark, InPlay.unmarked, InPlay.setMarks],
           rfl, rfl, rfl, rfl, rfl⟩
+  | linger w s m g => cases w <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/
@@ -176,7 +177,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
         exact ⟨hhp, rfl, rfl, rfl, rfl⟩
   | attach hh hf ha => exact hw
   | evolve hh ha he hfr hf => exact hw
-  | retreat ha hb hr he hp hs hbt hst =>
+  | retreat ha hb hr he hp hs hbt hst hl =>
       rename_i a q b₁ b₂ _ _
       have hk : a.damage < a.top.hp := hst.1 a (Or.inl ha)
       refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩

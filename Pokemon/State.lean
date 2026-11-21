@@ -191,6 +191,64 @@ def stadiumCardList : Option Card → List Card
   | none => []
   | some c => [c]
 
+/-- The lingering modifiers on one player for one turn (or for the rest of the game). -/
+structure Mods where
+  bonus : Nat
+  reduce : Nat
+  prevent : Bool
+  noAttack : Bool
+  noRetreat : Bool
+  noItem : Bool
+  deriving DecidableEq
+
+namespace Mods
+
+def empty : Mods := ⟨0, 0, false, false, false, false⟩
+
+/-- Two sets of modifiers in effect together: amounts add, flags combine. -/
+def merge (a b : Mods) : Mods :=
+  ⟨a.bonus + b.bonus, a.reduce + b.reduce, a.prevent || b.prevent, a.noAttack || b.noAttack,
+    a.noRetreat || b.noRetreat, a.noItem || b.noItem⟩
+
+/-- Add one modifier. -/
+def addMod : Mod → Mods → Mods
+  | .bonus n, m => { m with bonus := m.bonus + n }
+  | .reduce n, m => { m with reduce := m.reduce + n }
+  | .prevent, m => { m with prevent := true }
+  | .lock .attack, m => { m with noAttack := true }
+  | .lock .retreat, m => { m with noRetreat := true }
+  | .lock .item, m => { m with noItem := true }
+
+end Mods
+
+/-- A player's lingering modifiers, by the turn in which they are in effect (`Slot`). -/
+structure Store where
+  now : Mods
+  next : Mods
+  after : Mods
+  always : Mods
+  deriving DecidableEq
+
+namespace Store
+
+def empty : Store := ⟨Mods.empty, Mods.empty, Mods.empty, Mods.empty⟩
+
+/-- Add the modifier `m` for the turns `s`. -/
+def add (s : Slot) (m : Mod) (t : Store) : Store :=
+  match s with
+  | .now => { t with now := t.now.addMod m }
+  | .next => { t with next := t.next.addMod m }
+  | .after => { t with after := t.after.addMod m }
+  | .always => { t with always := t.always.addMod m }
+
+/-- The modifiers in effect in the current turn. -/
+def live (t : Store) : Mods := t.now.merge t.always
+
+/-- The end of a turn: this turn's modifiers expire, and the others move one turn closer. -/
+def shift (t : Store) : Store := ⟨t.next, t.after, Mods.empty, t.always⟩
+
+end Store
+
 structure PlayerState where
   /-- head of the list is the top of the deck -/
   deck : List Card
@@ -208,6 +266,8 @@ structure PlayerState where
   /-- once-per-game flags (GX attack, VSTAR Power) -/
   gxUsed : Bool
   vstarUsed : Bool
+  /-- lingering modifiers on this player (`Store`); shifted at the end of every turn -/
+  mods : Store
 
 namespace PlayerState
 
@@ -248,6 +308,15 @@ structure GameState where
 def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
+
+/-- The damage an attack of base `n` does to the opponent's Active Pokémon: nothing if the
+opponent has damage prevention in effect; otherwise `n` plus the player's damage bonus minus the
+opponent's damage reduction (at least 0). Weakness and Resistance are absent. -/
+def dealtBy (n : Nat) (own opp : Store) : Nat :=
+  if opp.live.prevent then 0 else (n + own.live.bonus) - opp.live.reduce
+
+@[inherit_doc dealtBy]
+def GameState.dealt (n : Nat) (g : GameState) : Nat := dealtBy n g.cur.mods g.opp.mods
 
 /-- The player to move (`own`) or the opponent (`opp`). -/
 def GameState.side : Whose → GameState → PlayerState

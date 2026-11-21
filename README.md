@@ -9,7 +9,11 @@ primitive effects and four combinators (`ite`, `seq`, `choice`, `iter`), includi
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
-Active Pokémon at Checkup), and effects that read the state: a test on either
+Active Pokémon at Checkup), lingering modifiers (per player, for this turn, the next turn, the
+turn after, or the rest of the game, shifted at the end of every turn: a damage bonus, a damage
+reduction, damage prevention, and locks on attacking, retreating and playing Items; bonuses and
+reductions add up without limit; attack damage is done by `damage`, which applies them, and
+`drain` heals by the damage done), and effects that read the state: a test on either
 Active Pokémon (at least `n` damage counters, exactly `n`, a Special Condition, a marker, a
 type), placing `k`
 counters on the opponent's Active Pokémon for each damage counter on either Active Pokémon
@@ -47,23 +51,42 @@ Sleep, Paralysis, then Knock Outs). For that model it proves:
   Pokémon and takes a Prize card is legal (`Reach.knockOut_of_pending`); a move never changes
   an Active Pokémon at or above its HP except by Knocking it Out (`Move.pending_untouched`);
 * the reachable states are finite up to a clamp (`Reach.finite`, from a well-formed start):
-  cap at the Pokémon's HP the damage and the Poison strength on both Active Pokémon, and the
-  clamps of all reachable states lie in one finite list. The clamp is a bisimulation for moves
-  (`Move.clamp_sim`, `Reach.clamp_sim`), so these excesses cannot be observed by play. Both hold
-  with the Trainer timing above.
+  cap at the Pokémon's HP the damage and the Poison strength on both Active Pokémon, and cap
+  every damage bonus and reduction at `bound` (a constant computed from the cards: more than
+  every printed HP and every test constant); the clamps of all reachable states lie in one
+  finite list. For decks whose cards are *tame* (no damage reduction, no `drain`) and a start
+  with no reduction in effect, the clamp is a bisimulation for moves (`Move.clamp_sim`,
+  `Reach.clamp_sim`, under `GameState.Fit`, which `GameState.fit_bound` gives at `bound`), so
+  these excesses cannot be observed by play. Both hold with the Trainer timing above. For decks
+  that are not tame the clamp is not a bisimulation, for any cap (`Lingering.reduce_breaks_clamp`,
+  `Lingering.drain_breaks_clamp`), and whether their reachable states are finite up to some other
+  bisimulation is open.
 
 Markers do not change the statements: they are finitely many flags per Pokémon, not clamped, and
 enumerated by `Reach.finite`. Printed Imprison and Shock-wave markers are uncapped counts; a flag
 is exact for them because the cards only place one, remove all, and test for any
 (`Markers.flag_exact`), and this is a stated assumption about the card pool.
 
+Lingering modifiers change the statements: the clamp takes a cap `k`, and the bisimulation needs
+a hypothesis on the deck. An unbounded damage bonus can be capped because it is read only through
+the damage it adds to the opponent's Active Pokémon, which is read only by tests against card
+constants and by the Knock Out test at HP; a bonus of `bound` or more acts as `bound` does. A
+damage reduction breaks this: damage done is `n + bonus - reduction`, and a bonus above any cap
+matters when an equally large reduction offsets it. So does `drain` after in-attack
+self-damage, which reads the bonus exactly through the heal. Expiry follows the turn structure:
+`endTurn` shifts both stores, and `Store.add_now_shift` .. `Store.add_always_shift` state when
+each kind of modifier is in effect. Printed bonuses and reductions are bounded by copies of their
+cards times printed constants (survey S7), so the printed game does not reach the unbounded
+case; the model over-approximates them on purpose.
+
 Effects that read damage do not break finiteness, but they change why it holds. Inside an
 attack's effect the clamp is not a simulation: a test against 6 counters separates 5 from 6
 counters on a 5-HP Pokémon (`Reads.run_clamp_not_sim`). Attack effects are instead simulated
-with damage exact (`Run.exact_sim`), and every move that resolves an effect starts from a
-state with no Pokémon at or above its HP, where equal clamps mean equal damage. Inside a
-Trainer effect the clamp is a simulation (`TRun.clamp_sim`), since every step of it starts in
-such a state. The cap stays at HP; no larger cap computed from the cards is needed. The
+with the player's own damage exact and the opponent's capped at `bound` (`Run.cap_sim`), and
+every move that resolves an effect starts from a state with no Pokémon at or above its HP,
+where equal clamps mean equal damage. Inside a Trainer effect the clamp is a simulation
+(`TRun.clamp_sim`), since every step of it starts in such a state. The damage cap at move
+boundaries stays at HP. The
 earlier bound on the player's own Active Pokémon during a turn (at most `maxHp + 3` counters)
 is false once an attack's effect can damage it (`Reads.activeLe_false`) and is no longer used.
 
