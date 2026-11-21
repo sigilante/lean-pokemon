@@ -194,8 +194,11 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         hk'.gxCur.trans hu.flags.gxCur, hk'.gxOpp.trans hu.flags.gxOpp⟩ fun s => ?_
       have h1 := hsl s; have h2 := (ab.script (some sp)).amtAt_le_amt s; rw [hu.slotAmt] at h1
       omega
-  | @attack g'' a atk ha hm hc hs hn hf hbt hst hr hl hgx =>
+  | @attack g₀ a atk ha hm hc hs hn hf hbt hst hr hl hgx _ l g'' hd ht =>
       show Inv S A (atkRes atk g'')
+      have hkf := ht.keeps fun ab hab => by
+        obtain ⟨c, hc, hmc, -⟩ := GameState.optTrigs_card (hd.mem hab)
+        exact abilitiesRec_nil (hN _ (hr.perm.mem_iff.1 hc)) hmc (ab.script_mem _)
       obtain ⟨c, hcx, hmc⟩ := InPlay.attack_mem hm
       have hmem := GameState.mem_allCards_of_cur_active ha hcx
       have hlf : atk.effect.loopFree = true := Card.loopFree_attack (hL _ hmem) hmc
@@ -204,19 +207,20 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         have h2 := hA _ hmem
         simp only [Card.atkAmt] at h2
         omega
-      have hk := hr.keeps (by rw [Attack.script_recFilters]; exact attacksRec_nil (hN _ hmem) hmc)
+      have hk := (hr.keeps (by rw [Attack.script_recFilters]; exact attacksRec_nil (hN _ hmem) hmc)).trans
+        hkf
       have hsl := hr.slot_le (by rw [Attack.script_loopFree]; exact hlf)
       have hs' : ∀ s, (atkRes atk g'').slotAmt s ≤ g.slotAmt s + A := by
         intro s
         have h1 := hsl s
         have h2 := atk.effect.amtAt_le_amt s
         rw [Attack.script_amtAt] at h1
-        rw [atkRes_slotAmt]
+        rw [atkRes_slotAmt, ht.slotAmt]
         omega
       refine hi.attack hn rfl hs' ?_ hk.disc
       have hal := hsl .always
       rw [Attack.script_amtAt] at hal
-      rw [atkRes_slotAmt]
+      rw [atkRes_slotAmt, ht.slotAmt]
       cases hgv : atk.gx with
       | false =>
           have h0 := hG _ hmem atk hmc hgv
@@ -229,7 +233,11 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
           omega
   | attackConfused =>
       exact hi.frame (fun _ => Nat.le_refl _) (Nat.le_refl _) (atkT_le A g) (Nat.le_refl _)
-  | knockOuts h => exact hi.keeps h.keeps.1 fun s => Nat.le_of_eq (h.keeps.2 s)
+  | knockOuts h hl ht =>
+      have hkf := ht.keeps fun ab hab => by
+        obtain ⟨c, hc, hmc, -⟩ := GameState.batchTrigs_card (hl.mem_iff.1 hab)
+        exact abilitiesRec_nil (hN _ hc) hmc (ab.script_mem _)
+      exact hi.keeps (h.keeps.1.trans hkf) fun s => Nat.le_of_eq ((ht.slotAmt s).trans (h.keeps.2 s))
   | endTurn =>
       exact hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) rfl (Nat.add_comm _ _)
@@ -367,11 +375,12 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
   | onPlay hp _ _ _ _ _ hr =>
       have := hp.abPot
       exact Nat.le_trans (hr.abPot_le hw) (by omega)
-  | attack _ _ _ _ _ _ _ _ hr => exact hr.abPot_le
+  | attack _ _ _ _ _ _ _ _ hr _ _ _ _ ht => exact Nat.le_trans ht.abPot_le hr.abPot_le
   | @attackConfused a atk ha =>
       have e : ({ a with damage := a.damage + 3 } : InPlay).abW = a.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
-  | knockOuts h => exact h.abPot_le hw
+  | knockOuts h _ ht =>
+      exact Nat.le_trans ht.abPot_le (h.abPot_le (ht.zoneOnly.winner.symm.trans hw))
   | endTurn => simp at hc
   | startTurn => exact Nat.le_refl _
   | deckOut => exact Nat.le_refl _
@@ -417,10 +426,13 @@ theorem _root_.Pokemon.Move.stPot_le {g g' : GameState} (hm : Move g g')
   | onPlay hp _ _ _ _ _ hr =>
       exact Nat.le_of_eq ((GameState.stPot_congr hr.stFlags.1 hr.stFlags.2).trans
         (GameState.stPot_congr hp.stFlags.1 hp.stFlags.2))
-  | attack _ _ _ _ _ _ _ _ hr =>
-      exact Nat.le_of_eq (GameState.stPot_congr hr.stFlags.1 hr.stFlags.2)
+  | attack _ _ _ _ _ _ _ _ hr _ _ _ _ ht =>
+      exact Nat.le_of_eq (GameState.stPot_congr
+        (ht.zoneOnly.stadiumPlayed.trans hr.stFlags.1) (ht.zoneOnly.stadiumUsed.trans hr.stFlags.2))
   | endTurn => simp at hc
-  | knockOuts h => cases h <;> exact Nat.le_refl _
+  | knockOuts h _ ht =>
+      have e := GameState.stPot_congr ht.zoneOnly.stadiumPlayed ht.zoneOnly.stadiumUsed
+      cases h <;> exact Nat.le_of_eq e
   | _ => exact Nat.le_refl _
 
 /-- **The per-turn invariant.** The witnesses: `X₀`, `X₁`, `X₂` the amounts that Trainer cards,
@@ -456,10 +468,13 @@ theorem TInv.start (g : GameState) (A P Q K R : Nat) (hK : g.abPot ≤ K) :
     fun _ _ => by omega, ?_, ?_, ?_, ?_⟩ <;>
     simp only [GameState.storeTotal] <;> omega
 
-/-- A step that writes nothing and recycles no weighted card. -/
-theorem TInv.frame {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+/-- A step that writes nothing and recycles no weighted card. The weight of the discard piles
+is read only by the per-turn clause, before the turn's attack, so it need not be kept by a step
+that ends after the attack (milestone M8b: the `koByAttack` triggers). -/
+theorem TInv.frame' {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
     (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
-    (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s) (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt)
+    (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s)
+    (hW : g'.attacked = false → g.discW Card.wAmt ≤ g'.discW Card.wAmt)
     (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt) (ha : atkT A g ≤ atkT A g')
     (ht : g'.attacked = false → g'.winner = none → g.attacked = false ∧ supT P g ≤ supT P g' ∧
       g'.abPot ≤ g.abPot ∧ g'.stPot ≤ g.stPot)
@@ -472,9 +487,35 @@ theorem TInv.frame {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
     exact Nat.le_trans hp (hi.pot hg hn)
   · obtain ⟨hg, hsup, hp, hq⟩ := ht hf hw
     have := hi.turn hg hn
+    have := hW hf
     have := Nat.mul_le_mul_left Q hp
     have := Nat.mul_le_mul_left R hq
     omega
+
+/-- A step that writes nothing and recycles no weighted card. -/
+theorem TInv.frame {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
+    (hs : ∀ s, g'.slotAmt s ≤ g.slotAmt s) (hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt)
+    (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt) (ha : atkT A g ≤ atkT A g')
+    (ht : g'.attacked = false → g'.winner = none → g.attacked = false ∧ supT P g ≤ supT P g' ∧
+      g'.abPot ≤ g.abPot ∧ g'.stPot ≤ g.stPot)
+    (hx : gxT A g ≤ gxT A g') : TInv S A P Q K R g' X₀ X₁ X₂ D E :=
+  hi.frame' hn hs (fun _ => hW) hAl ha ht hx
+
+/-- A step that changes no flag, store or discard pile weight of interest; the weight of Item
+writers need only be kept when the step ends before the turn's attack (`TInv.frame'`). -/
+theorem TInv.same' {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
+    (hi : TInv S A P Q K R g X₀ X₁ X₂ D E) (hn : g.winner = none)
+    (hW : g'.attacked = false → g.discW Card.wAmt ≤ g'.discW Card.wAmt)
+    (hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt)
+    (ha : g'.attacked = g.attacked) (hsp : g'.cur.supporterPlayed = g.cur.supporterPlayed)
+    (hgc : g'.cur.gxUsed = g.cur.gxUsed) (hgo : g'.opp.gxUsed = g.opp.gxUsed)
+    (hs : ∀ s, g'.slotAmt s = g.slotAmt s) (hp : g'.winner = none → g'.abPot ≤ g.abPot)
+    (hq : g'.stPot ≤ g.stPot) :
+    TInv S A P Q K R g' X₀ X₁ X₂ D E :=
+  hi.frame' hn (fun s => Nat.le_of_eq (hs s)) hW hAl (Nat.le_of_eq (atkT_congr ha).symm)
+    (fun hf hw => ⟨ha ▸ hf, by simp only [supT, hsp]; exact Nat.le_refl _, hp hw, hq⟩)
+    (Nat.le_of_eq (gxT_congr hgc hgo).symm)
 
 /-- A step that changes no flag, store or discard pile weight of interest. -/
 theorem TInv.same {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState}
@@ -720,6 +761,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       cases hab : ab.use with
       | onPlay w => rw [hab] at hk; cases hk
       | static _ => rw [hab] at hk; cases hk
+      | triggered _ _ => rw [hab] at hk; cases hk
       | once =>
           have hu0 : x.used = false := hn hab
           have hpu := hu.abPot
@@ -789,8 +831,15 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
         (Nat.le_trans (Ability.q_script he) (hQ _ hxC ab hm))
         (fun f hf y hy hfy => hR.2 _ hxC f (Card.allRec_of_ability (c := .pokemon x.top) hm he hf)
           y hy hfy) hP⟩
-  | @attack g'' a atk ha hm hc hs hn hf hbt hst hr hl hgx =>
+  | @attack g₀ a atk ha hm hc hs hn hf hbt hst hr hl hgx _ l g'' hd ht =>
       show ∃ Y₀ Y₁ Y₂ E' F, TInv S A P Q K R (atkRes atk g'') Y₀ Y₁ Y₂ E' F
+      have hAlf : g₀.discW Card.alAmt ≤ g''.discW Card.alAmt :=
+        ht.disc_mono Card.alAmt_tw (C := g.allCards) (fun ab hab f hf y hy hfy => by
+          obtain ⟨c, hc, hmc, -⟩ := GameState.optTrigs_card (hd.mem hab)
+          exact hR.2 _ (hr.perm.mem_iff.1 hc) f
+            (Card.allRec_of_ability hmc (ab.script_mem _) hf) y hy hfy)
+          (fun y hy => hr.perm.mem_iff.1 hy)
+      have hfkt := ht.flags_keep
       obtain ⟨c, hcx, hmc⟩ := InPlay.attack_mem hm
       have hmem := GameState.mem_allCards_of_cur_active ha hcx
       have hlf : atk.effect.loopFree = true := Card.loopFree_attack (hL _ hmem) hmc
@@ -799,19 +848,19 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
         have h2 := hA _ hmem
         simp only [Card.atkAmt] at h2
         omega
-      have hfk := hr.flags_keep
+      have hfk := hr.flags_keep.trans hfkt
       have hAl : g.discW Card.alAmt ≤ (atkRes atk g'').discW Card.alAmt :=
-        hr.disc_mono Card.alAmt_tw (C := g.allCards)
+        Nat.le_trans (hr.disc_mono Card.alAmt_tw (C := g.allCards)
           (fun f hf y hy hfy => hR.2 _ hmem f
             (Card.allRec_of_attack hmc (by rw [Attack.script_recFilters] at hf; exact hf)) y hy hfy)
-          fun _ hy => hy
+          fun _ hy => hy) hAlf
       have hsl := hr.slot_le (by rw [Attack.script_loopFree]; exact hlf)
       have hs' : ∀ s, (atkRes atk g'').slotAmt s ≤ g.slotAmt s + A := by
         intro s
         have h1 := hsl s
         have h2 := atk.effect.amtAt_le_amt s
         rw [Attack.script_amtAt] at h1
-        rw [atkRes_slotAmt]
+        rw [atkRes_slotAmt, ht.slotAmt]
         omega
       have e0 : atkT A g = 0 := by simp only [atkT, hn]; rfl
       have e1 : atkT A (atkRes atk g'') = A := rfl
@@ -819,7 +868,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
           g.slotAmt .always + gxT A (atkRes atk g'') := by
         have hal := hsl .always
         rw [Attack.script_amtAt] at hal
-        rw [atkRes_slotAmt]
+        rw [atkRes_slotAmt, ht.slotAmt]
         cases hgv : atk.gx with
         | false =>
             have h0 := hG _ hmem atk hmc hgv
@@ -837,10 +886,24 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
   | attackConfused =>
       exact ⟨_, _, _, _, _, hi.frame hwn (fun _ => Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
         (atkT_le A g) (fun h _ => absurd h (by simp)) (Nat.le_refl _)⟩
-  | knockOuts h =>
-      have hf := h.flags_keep
-      exact ⟨_, _, _, _, _, hi.same hwn (KOBatch.disc_mono _ h) (KOBatch.disc_mono _ h) hf.attacked
-        h.sides.2.2.2.2.2.2.2.2.1 hf.gxCur hf.gxOpp h.keeps.2 (hpot h.same.1) (hstp h.same.1)⟩
+  | @knockOuts g₁ g' l h hl ht =>
+      have hf := h.flags_keep.trans ht.flags_keep
+      have z := ht.zoneOnly
+      have hC₁ : ∀ y ∈ g₁.allCards, y ∈ g.allCards := fun y hy => h.perm.mem_iff.1 hy
+      have hW : g'.attacked = false → g.discW Card.wAmt ≤ g'.discW Card.wAmt := fun hf' => by
+        have hga : g.attacked = false := hf.attacked.symm.trans hf'
+        have e := Move.eq_of_batchTrigs_nil hl ht (GameState.batchTrigs_of_not_attacked hga)
+        subst e
+        exact KOBatch.disc_mono _ h
+      have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt :=
+        Nat.le_trans (KOBatch.disc_mono _ h) (ht.disc_mono Card.alAmt_tw (C := g.allCards)
+          (fun ab hab f hf y hy hfy => by
+            obtain ⟨c, hc, hmc, -⟩ := GameState.batchTrigs_card (hl.mem_iff.1 hab)
+            exact hR.2 _ hc f (Card.allRec_of_ability hmc (ab.script_mem _) hf) y hy hfy) hC₁)
+      exact ⟨_, _, _, _, _, hi.same' hwn hW hAl hf.attacked
+        (z.cur_supporterPlayed.trans h.sides.2.2.2.2.2.2.2.2.1) hf.gxCur hf.gxOpp
+        (fun s => (ht.slotAmt s).trans (h.keeps.2 s)) (hpot (z.first.trans h.same.1))
+        (hstp (z.first.trans h.same.1))⟩
   | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨_, _, _, _, _, hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) (Nat.add_comm _ _) rfl (Nat.add_comm _ _) ?_⟩

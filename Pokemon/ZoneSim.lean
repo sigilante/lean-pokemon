@@ -158,4 +158,110 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
       rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
       exact ⟨s₂, .toolsNone hm, ha⟩
 
+/-! ## Triggers (milestone M8b)
+
+An effect of the trigger fragment (`Effect.trigOk`) reads no damage and only adds damage counters,
+so it is simulated under every clamp, whatever the caps on each player's Active and Benched
+Pokémon (`Run.trig_sim`); with the players exchanged the caps are exchanged
+(`GameState.swap_clampAt`), so a trigger resolution is simulated too (`Fire.clamp_sim`). -/
+
+theorem GameState.swap_clampAt (co cp cbo cbp : Cap) (k : Nat) (g : GameState) :
+    g.swap.clampAt co cp cbo cbp k = (g.clampAt cp co cbp cbo k).swap := rfl
+
+/-- **An effect of the trigger fragment is simulated under any clamp.** -/
+theorem Run.trig_sim {co cp cbo cbp : Cap} {k : Nat} {e : Effect} {g₁ g₁' : GameState}
+    (h : Run e g₁ g₁') : e.trigOk = true → ∀ {g₂ : GameState},
+      g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k →
+      ∃ g₂', Run e g₂ g₂' ∧ g₁'.clampAt co cp cbo cbp k = g₂'.clampAt co cp cbo cbp k := by
+  induction h with
+  | skip g => intro _ g₂ hc; exact ⟨g₂, .skip g₂, hc⟩
+  | draw h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      exact ⟨_, .draw h, by simp only [GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂]⟩
+  | drawEmpty h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      exact ⟨_, .drawEmpty h, hc⟩
+  | counters n h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      rw [h] at ha₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
+      exact ⟨_, .counters n rfl, by
+        simp only [GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
+          InPlay.clamp_of_agree (hq.upd.2.1 n), he₁, he₂]⟩
+  | inflict c h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      rw [h] at ha₂
+      obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
+      exact ⟨_, .inflict c rfl, by
+        simp only [GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
+          InPlay.clamp_of_agree (hq.upd.2.2.2.1 c), he₁, he₂]⟩
+  | shuffle h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      exact ⟨_, .shuffle h, by simp only [GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂]⟩
+  | @zone e w g s' hw hz =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.cur with active := c₂, bench := e₁, mods := m₁ })
+            ⟨rfl, rfl, rfl, hc₂, he₁⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.clampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, ha₂,
+              he₂, hm₁, hm₂]⟩
+      | opp =>
+          obtain ⟨s₂', hz₂, hag⟩ := hz.sim (s₂ := { g.opp with active := a₂, bench := e₂, mods := m₂ })
+            ⟨rfl, rfl, rfl, ha₂, he₂⟩
+          exact ⟨_, .zone hw hz₂, by
+            simp only [GameState.clampAt, GameState.updSide,
+              PlayerState.setZones, hag.deck, hag.hand, hag.discard, hag.active, hag.bench, hc₂,
+              he₁, hm₁, hm₂]⟩
+  | seq _ _ ih₁ ih₂ =>
+      intro hk g₂ hc
+      simp only [Effect.trigOk, Bool.and_eq_true] at hk
+      obtain ⟨g₂', r₁, hc'⟩ := ih₁ hk.1 hc
+      obtain ⟨g₂'', r₂, hc''⟩ := ih₂ hk.2 hc'
+      exact ⟨g₂'', .seq r₁ r₂, hc''⟩
+  | choiceL _ ih =>
+      intro hk g₂ hc
+      simp only [Effect.trigOk, Bool.and_eq_true] at hk
+      obtain ⟨g₂', r, hc'⟩ := ih hk.1 hc
+      exact ⟨g₂', .choiceL r, hc'⟩
+  | choiceR _ ih =>
+      intro hk g₂ hc
+      simp only [Effect.trigOk, Bool.and_eq_true] at hk
+      obtain ⟨g₂', r, hc'⟩ := ih hk.2 hc
+      exact ⟨g₂', .choiceR r, hc'⟩
+  | @touchActive e w f g p he h =>
+      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
+  | @touchBench e w f g q b₁ b₂ he h =>
+      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
+  | _ => intro hk; simp [Effect.trigOk] at hk
+
+/-- **A trigger resolution is simulated under any clamp** (milestone M8b). -/
+theorem Fire.clamp_sim {co cp cbo cbp : Cap} {k : Nat} {ev : TrigEvent} {l : List Ability}
+    {g₁ g₁' : GameState} (h : Fire ev l g₁ g₁') : ∀ {g₂ : GameState},
+      g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k →
+      ∃ g₂', Fire ev l g₂ g₂' ∧ g₁'.clampAt co cp cbo cbp k = g₂'.clampAt co cp cbo cbp k := by
+  induction h generalizing co cp cbo cbp with
+  | nil g => intro g₂ hc; exact ⟨g₂, .nil g₂, hc⟩
+  | @run ab l g g₁ g₂ hk hr _ ih =>
+      intro g₂' hc
+      have hs : g.swap.clampAt cp co cbp cbo k = g₂'.swap.clampAt cp co cbp cbo k := by
+        rw [GameState.swap_clampAt, GameState.swap_clampAt, hc]
+      obtain ⟨h₁, r, hc₁⟩ := hr.trig_sim hk hs
+      have hs' : g₁.swap.clampAt co cp cbo cbp k = h₁.swap.clampAt co cp cbo cbp k := by
+        rw [GameState.swap_clampAt, GameState.swap_clampAt, hc₁]
+      obtain ⟨h₂, ht, hc₂⟩ := ih hs'
+      exact ⟨h₂, .run hk r ht, hc₂⟩
+  | decline ho _ ih =>
+      intro g₂ hc
+      obtain ⟨h₂, ht, hc₂⟩ := ih hc
+      exact ⟨h₂, .decline ho ht, hc₂⟩
+
 end Pokemon

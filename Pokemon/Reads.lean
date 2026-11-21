@@ -72,15 +72,19 @@ Milestone batch-KO changed the conclusion. Before it, the Pokémon stayed as it 
 Spot or the Active Spot was left empty (the one-at-a-time Knock Out moves; the Pokémon stayed only
 while another Knock Out was taken first, and promotion was a later move). The batch step Knocks it
 Out in every case and may refill the Active Spot by a promotion in the same move, so the statement
-now says where the Pokémon goes and which move it is. Until this name was introduced the theorem was
+now says where the Pokémon goes and which move it is. Milestone M8b changed it again: the move is
+the batch step `g₁` followed by the `koByAttack` triggers it fires (`Fire`), and the discard pile
+named is the batch step's (a trigger may move cards out of it). Until this name was introduced the theorem was
 `Move.pending_untouched`, a name from before batch-KO that no longer fits; that name is kept as a
 deprecated alias. -/
 theorem Move.pending_knockedOut {g g' : GameState} {p : InPlay} (hm : Move g g') :
     (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage →
-        KOBatch g g' ∧ (∃ l, g'.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
+        ∃ g₁, KOBatch g g₁ ∧ (∃ l, g₁.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
+          (∃ ts, ts.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack ts g₁ g') ∧
           g'.curIsFirst = g.curIsFirst) ∧
       (g.opp.active = some p → g.hpOf .opp .active p ≤ p.damage →
-        KOBatch g g' ∧ (∃ l, g'.opp.discard = p.cardList ++ l ++ g.opp.discard) ∧
+        ∃ g₁, KOBatch g g₁ ∧ (∃ l, g₁.opp.discard = p.cardList ++ l ++ g.opp.discard) ∧
+          (∃ ts, ts.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack ts g₁ g') ∧
           g'.curIsFirst = g.curIsFirst) := by
   have bounded : DamageBounded g → ∀ X Y : Prop,
       (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage → X) ∧
@@ -107,9 +111,11 @@ theorem Move.pending_knockedOut {g g' : GameState} {p : InPlay} (hm : Move g g')
   | endTurn _ _ _ _ _ _ _ _ hk _ => exact bounded hk _ _
   | startTurn _ _ _ hk _ => exact bounded hk _ _
   | deckOut _ _ _ hk _ => exact bounded hk _ _
-  | knockOuts h =>
-      exact ⟨fun ha hk => ⟨h, h.active_out (w := .own) ha hk, h.same.1⟩,
-        fun ha hk => ⟨h, h.active_out (w := .opp) ha hk, h.same.1⟩⟩
+  | knockOuts h hl ht =>
+      exact ⟨fun ha hk => ⟨_, h, h.active_out (w := .own) ha hk, ⟨_, hl, ht⟩,
+          ht.zoneOnly.first.trans h.same.1⟩,
+        fun ha hk => ⟨_, h, h.active_out (w := .opp) ha hk, ⟨_, hl, ht⟩,
+          ht.zoneOnly.first.trans h.same.1⟩⟩
 
 /-- Deprecated name of `Move.pending_knockedOut` (same statement). The name dates from before
 milestone batch-KO, when the pending Active Pokémon could stay untouched by the move; it is now
@@ -117,10 +123,12 @@ Knocked Out, so the name no longer fits. -/
 @[deprecated Move.pending_knockedOut (since := "2026-11-22")]
 theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') :
     (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage →
-        KOBatch g g' ∧ (∃ l, g'.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
+        ∃ g₁, KOBatch g g₁ ∧ (∃ l, g₁.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
+          (∃ ts, ts.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack ts g₁ g') ∧
           g'.curIsFirst = g.curIsFirst) ∧
       (g.opp.active = some p → g.hpOf .opp .active p ≤ p.damage →
-        KOBatch g g' ∧ (∃ l, g'.opp.discard = p.cardList ++ l ++ g.opp.discard) ∧
+        ∃ g₁, KOBatch g g₁ ∧ (∃ l, g₁.opp.discard = p.cardList ++ l ++ g.opp.discard) ∧
+          (∃ ts, ts.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack ts g₁ g') ∧
           g'.curIsFirst = g.curIsFirst) :=
   Move.pending_knockedOut hm
 
@@ -209,7 +217,7 @@ theorem reach_after2 : Reach start2 after2 :=
   .step (.refl _) rfl (.attack (atk := ⟨"Hurt", [], 0, .selfDamage 9, false⟩) rfl (.head _)
     (.nil _) rfl rfl rfl rfl
     ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
-    (.selfDamage 9 rfl) rfl (fun h => absurd h (by decide)) rfl)
+    (.selfDamage 9 rfl) rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil (.selfDamage 9 rfl) rfl) (.nil _))
 
 /-- **The old bound on the player's own Active Pokémon is false.** From a well-formed start with
 no pending Knock Out, one attack whose effect damages the attacker reaches, during the turn, a

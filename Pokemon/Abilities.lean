@@ -10,11 +10,11 @@ inside one effect; it says nothing about repeating a whole move. This file prove
 condition is needed, and that the one chosen, clause 4 (`AbilitySafe`) with clause 3
 (`RecycleSafe`) extended to "as often as you like" Abilities, is not vacuous:
 
-* `unlimited_writer_breaks_bound`: a well-formed start satisfying clauses 1–3 and violating
+* `unlimited_writer_breaks_bound`: a well-formed start satisfying clauses 1–3 and 5 and violating
   clause 4, whose Pokémon has an "as often as you like" Ability that writes a carried damage
   reduction, has reachable states with unbounded stores and `xclamp`s in no finite list (the
   Ability is used again and again in one turn).
-* `unlimited_recycler_breaks_bound`: a well-formed start satisfying clauses 1, 2 and 4 and
+* `unlimited_recycler_breaks_bound`: a well-formed start satisfying clauses 1, 2, 4 and 5 and
   violating clause 3 (a), whose Pokémon has an "as often as you like" Ability that returns an
   Item modelled on Iron Defender from the discard pile to the hand, has the same: play the Item,
   return it with the Ability, play it again.
@@ -105,17 +105,17 @@ def red (g : GameState) : Nat := g.cur.mods.next.reduce
 theorem red_xclamp (g : GameState) : red (g.xclamp K) = red g := rfl
 
 /-- **An "as often as you like" Ability that writes a damage reduction breaks the store bound**
-(milestone M8a). There is a well-formed start satisfying clauses 1, 2 and 3 of `Faithful` and
+(milestone M8a). There is a well-formed start satisfying clauses 1, 2, 3 and 5 of `Faithful` and
 violating clause 4 (`AbilitySafe`), whose reachable states have unbounded stores and whose
 reachable states' `xclamp`s lie in no finite list. Its one Pokémon uses the Ability again and
 again in one turn. So clause 4, or some other condition on unlimited Abilities, is needed for
 `Faithful.reach_boundedStores` and the finiteness half of `Faithful.xfinite`. -/
 theorem unlimited_writer_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧
-      ¬ g₀.AbilitySafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
+      ¬ g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
       ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨wgs 0 false, wgs_wellFormed, wgs_loopFree, wgs_gxOnly, wgs_recycleSafe,
-    wgs_not_abilitySafe, fun B => ?_, ?_⟩
+    wgs_not_abilitySafe, by unfold GameState.StadiumSafe; rw [wgs_allCards]; decide, fun B => ?_, ?_⟩
   · refine ⟨_, reach_wgs (B + 1), fun hb => ?_⟩
     have := hb.1.2.1.2
     simp only [wgs, wpl, store] at this
@@ -203,18 +203,19 @@ theorem kgs_gxOnly (u : AbilityUse) : (kgs u [ironDefender] [] 0 false).GXOnly :
     rcases hc with rfl | rfl | rfl | rfl | rfl <;> rfl
 
 /-- **An "as often as you like" Ability that recycles a modifier writer breaks the store bound**
-(milestone M8a). There is a well-formed start satisfying clauses 1, 2 and 4 of `Faithful` and
+(milestone M8a). There is a well-formed start satisfying clauses 1, 2, 4 and 5 of `Faithful` and
 violating clause 3 (its Ability, an "as often as you like" one, can return `ironDefender`, a
 non-Supporter writer), whose reachable states have unbounded stores and whose reachable states'
 `xclamp`s lie in no finite list: within one turn, play `ironDefender`, return it with the
 Ability, and play it again. -/
 theorem unlimited_recycler_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ ¬ g₀.RecycleSafe ∧
-      g₀.AbilitySafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
+      g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
       ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨kgs .unlimited [ironDefender] [] 0 false, kgs_wellFormed _,
     by unfold GameState.LoopFree; rw [kgs_allCards]; decide, kgs_gxOnly _, fun h => ?_,
-    by unfold GameState.AbilitySafe; rw [kgs_allCards]; decide, fun B => ?_, ?_⟩
+    by unfold GameState.AbilitySafe; rw [kgs_allCards]; decide,
+    by unfold GameState.StadiumSafe; rw [kgs_allCards]; decide, fun B => ?_, ?_⟩
   · have := h.1 (.pokemon (keeper .unlimited)) (by rw [kgs_allCards]; simp) _ (.head _)
       ironDefender (by rw [kgs_allCards]; simp) rfl
     exact absurd this (by decide)

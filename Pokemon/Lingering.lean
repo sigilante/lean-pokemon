@@ -233,7 +233,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     clamp_st _ _ _ _ _ (bonusNow_cap k),
     .attack (atk := ⟨"Hit", [], 1, .skip, false⟩) rfl (.head _) (.nil _) rfl rfl rfl
       rfl (settled_st _ _ _ _ _ _ (by decide) (by decide))
-      (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl,
+      (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl
+      (HitTrig.exists_nil (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl) (.nil _),
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [red, st, side] at hh
@@ -258,7 +259,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
       simp [red, st, side] at hh
-  | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
+  | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl _ _ _ _ hd ht =>
       simp only [red, st, side, Option.some.injEq] at ha
       subst ha
       simp only [InPlay.attacks, InPlay.ofBasic, hitter, mon, List.flatMap_nil, List.append_nil,
@@ -274,6 +275,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
               subst hp
               cases h2 with
               | skip =>
+                  obtain rfl := hd.nil_of rfl
+                  cases ht
                   have e := congrArg (fun g : GameState => g.opp.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg, red, st,
                     side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,
@@ -391,7 +394,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       rfl (.head _) (.nil _) rfl rfl rfl rfl
       (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
       (.seq (.selfDamage _ rfl) (.drain (.const 1 _) rfl rfl)) rfl
-      (fun h => nomatch h) rfl,
+      (fun h => nomatch h) rfl (HitTrig.exists_nil (.seq (.selfDamage _ rfl) (.drain (.const 1 _) rfl rfl)) rfl) (.nil _),
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [dr, st, side] at hh
@@ -416,7 +419,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
       simp [dr, st, side] at hh
-  | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl =>
+  | @attack g' a atk ha hm hc hs hn hf hbt hst hr hl _ _ _ _ hd ht =>
       simp only [dr, st, side, Option.some.injEq] at ha
       subst ha
       simp only [InPlay.attacks, InPlay.ofBasic, drainer, mon, List.flatMap_nil, List.append_nil,
@@ -434,6 +437,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
                   cases hv
                   simp only [dr, st, side, Option.some.injEq] at hp hq
                   subst hp hq
+                  obtain rfl := hd.nil_of rfl
+                  cases ht
                   have e := congrArg (fun g : GameState => g.cur.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg,
                     dr, st, side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,

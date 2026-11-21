@@ -265,4 +265,134 @@ theorem Resolve.chain_le {g g' : GameState} (h : Resolve g g') :
   obtain ⟨n, hc⟩ := h.chain
   exact ⟨n, hc, hc.length_le⟩
 
+/-! ## With triggers (milestone M8b)
+
+Since milestone M8b the batch move (`Move.knockOuts`) ends with the `koByAttack` triggers of the
+opponent's Pokémon it Knocked Out after the turn's attack (`Fire`). A trigger's effect can put
+Pokémon into play (`putBench`) and damage counters on any Active Pokémon, so it can raise
+`koMeasure` and cause further Knock Outs: a chain batch → trigger → Knock Out → batch → trigger …
+Every such chain ends, by a lexicographic measure: the Prize cards left (both players), then
+`koMeasure`.
+
+* A batch that Knocks Out some Pokémon and leaves the game going takes Prize cards: each Knocked Out
+  Pokémon is worth at least one, and a player who would take as many as they have left has won
+  (`KOBatch.prizes_lt`). Triggers move no Prize card (`Fire.zoneOnly`). So the Prize cards left fall.
+* A batch that Knocks Out nothing fires no trigger (`GameState.koTrigs_of_koVal`) and fills an empty
+  Active Spot, so `koMeasure` falls (`KOBatch.koMeasure_lt`) and the Prize cards stay.
+
+Nothing returns a Prize card in the model, so the triggers of one game fire on at most as many
+Knock Outs as there are Prize cards left plus the Knock Outs of the last check. The bound rests on
+every Knock Out giving a Prize card: the printed effects "your opponent takes 1 fewer Prize card",
+"can't take any Prize cards for it" (Shedinja, Lillie's Pearl, Munkidori ex, Mega Gengar ex,
+Legendary Summit; survey S12) are not in the model; with them a Knock Out trigger that puts its own
+card back into play and damages it could repeat with no Prize card taken. -/
+
+/-- The Prize cards left, both players. -/
+def GameState.prizesLeft (g : GameState) : Nat := g.cur.prizes.length + g.opp.prizes.length
+
+theorem prizes_drop_of_not_win {n : Nat} {s : PlayerState} (h : s.prizeWin n = false) :
+    (s.prizes.drop n).length + n = s.prizes.length := by
+  cases n with
+  | zero => simp
+  | succ n =>
+      have ho : (s.prizes.drop (n + 1)).isEmpty = false := by
+        simpa [PlayerState.prizeWin, PlayerState.prizesOut] using h
+      cases e : s.prizes.drop (n + 1) with
+      | nil => rw [e] at ho; cases ho
+      | cons x xs =>
+          have := congrArg List.length e
+          simp only [List.length_drop, List.length_cons] at this
+          simp only [List.length_cons]
+          omega
+
+/-- **A batch that leaves the game going takes exactly the Prize value of what it Knocked Out.** -/
+theorem KOBatch.prizes_eq {g g₁ : GameState} (h : KOBatch g g₁) (hw : g₁.winner = none) :
+    g₁.prizesLeft + (g.koVal .own + g.koVal .opp) = g.prizesLeft := by
+  obtain ⟨p1, p2, -, -, pw⟩ := h.piles
+  obtain ⟨-, h1, h2⟩ := GameState.koStep_winner_none (pw ▸ hw)
+  have a1 := prizes_drop_of_not_win (winWays_eq_zero h1).1
+  have a2 := prizes_drop_of_not_win (winWays_eq_zero h2).1
+  have e1 : g₁.cur.prizes = g.cur.prizes.drop (g.koVal .opp) := p1
+  have e2 : g₁.opp.prizes = g.opp.prizes.drop (g.koVal .own) := p2
+  simp only [GameState.prizesLeft, e1, e2]
+  omega
+
+/-- A check that Knocks Out none of the opponent's Pokémon fires no trigger. -/
+theorem GameState.koTrigs_of_koVal {g : GameState} (h : g.koVal .opp = 0) : g.koTrigs = [] := by
+  have hz := g.koVal_eq_zero h
+  have h1 : optFilter (g.koT .opp .active) g.opp.active = none := by
+    cases ha : g.opp.active with
+    | none => rfl
+    | some p =>
+        have : g.koT .opp .active p = false := by
+          simpa [GameState.koT] using hz .active p ha
+        simp only [optFilter, this, Bool.false_eq_true, ite_false]
+  have h2 : g.opp.bench.filter (g.koT .opp .bench) = [] :=
+    filter_nil_of fun p hp => by simpa [GameState.koT] using hz .bench p hp
+  unfold GameState.koTrigs
+  rw [h1, h2]; rfl
+
+/-- A step of the repeated check with its triggers: the batch move (`Move.knockOuts`) taken while
+the game has no outcome. -/
+def KOMove (g g' : GameState) : Prop :=
+  g.winner = none ∧ ∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g'
+
+/-- **The measure falls**: a step of the repeated check that leaves the game going lowers the Prize
+cards left, or keeps them and lowers `koMeasure`. -/
+theorem KOMove.lt {g g' : GameState} (h : KOMove g g') (hw : g'.winner = none) :
+    g'.prizesLeft < g.prizesLeft ∨
+      (g'.prizesLeft = g.prizesLeft ∧ g'.koMeasure < g.koMeasure) := by
+  obtain ⟨-, g₁, l, hb, hl, ht⟩ := h
+  have z := ht.zoneOnly
+  have hw₁ : g₁.winner = none := z.winner.symm.trans hw
+  have hp := hb.prizes_eq hw₁
+  have ep : g'.prizesLeft = g₁.prizesLeft := by
+    simp only [GameState.prizesLeft, z.cur_prizes, z.opp_prizes]
+  rcases Nat.eq_zero_or_pos (g.koVal .own + g.koVal .opp) with h0 | h0
+  · have hn : g.batchTrigs g₁ = [] := by
+      unfold GameState.batchTrigs
+      rw [GameState.koTrigs_of_koVal (by omega)]
+      split <;> rfl
+    have e := Move.eq_of_batchTrigs_nil hl ht hn
+    subst e
+    exact .inr ⟨by omega, hb.koMeasure_lt hw⟩
+  · exact .inl (by omega)
+
+/-- **Every chain of batch moves with their triggers is finite** (milestone M8b): no infinite
+sequence of `Move.knockOuts`, each taken while the game has no outcome, starts from `g`. -/
+theorem KOMove.acc (g : GameState) : Acc (fun b a => KOMove a b) g := by
+  have key : ∀ P n g, g.prizesLeft = P → g.koMeasure = n → g.winner = none →
+      Acc (fun b a => KOMove a b) g := by
+    intro P
+    induction P using Nat.strongRecOn with
+    | ind P ihP =>
+        intro n
+        induction n using Nat.strongRecOn with
+        | ind n ihn =>
+            intro g hP hn _
+            refine Acc.intro g fun g' hm => ?_
+            cases hw : g'.winner with
+            | some o => exact Acc.intro g' fun _ ⟨hn', _⟩ => by rw [hw] at hn'; cases hn'
+            | none =>
+                rcases hm.lt hw with h | ⟨h1, h2⟩
+                · exact ihP _ (hP ▸ h) _ g' rfl rfl hw
+                · exact ihn _ (hn ▸ h2) g' (h1.trans hP) rfl hw
+  cases hw : g.winner with
+  | none => exact key _ _ g rfl rfl hw
+  | some o => exact Acc.intro g fun _ ⟨hn', _⟩ => by rw [hw] at hn'; cases hn'
+
+/-- **The repeated Knock Out check with its triggers ends, for play** (milestone M8b): there is no
+infinite sequence of moves through states that are not `Settled` (from such a state the only move is
+the batch move with its triggers, `Move.batch_of_not_settled`). So a chain of Knock Outs and
+triggers started by one move (an attack's Knock Outs, and the Knock Outs the `koByAttack` triggers
+cause) ends in a `Settled` state or with an outcome. -/
+theorem Move.unsettled_acc (g : GameState) :
+    Acc (fun b a => ¬ Settled a ∧ a.winner = none ∧ Move a b) g := by
+  have h := KOMove.acc g
+  induction h with
+  | intro g _ ih =>
+      refine Acc.intro g fun g' ⟨hu, hw, hm⟩ => ih g' ?_
+      obtain ⟨g₁, l, hb, hl, ht⟩ := hm.batch_of_not_settled hu
+      exact ⟨hw, g₁, l, hb, hl, ht⟩
+
 end Pokemon

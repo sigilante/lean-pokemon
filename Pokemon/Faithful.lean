@@ -86,15 +86,16 @@ The writers are:
 Before milestone MV nothing left a discard pile, each Trainer card was played at most once per
 game, and the bound counted the Trainer amounts once (`storeBoundNR`); that proof is kept for decks
 that recycle nothing (`reach_boundedStores_noRecycle`). With recycling the per-game count is false:
-`Recycle.recycling_breaks_bound` gives a deck satisfying clauses 1 and 2, violating clause 3, with
+`Recycle.recycling_breaks_bound` gives a deck satisfying clauses 1, 2, 4 and 5, violating clause 3, with
 unbounded stores and infinitely many `xclamp` classes.
 
 The per-turn invariant (`Faithful.TInv`) has as witnesses the Trainer and Ability amounts written
 this turn, last turn and the turn before, the writer weight of the discard piles at the start of the
 turn, and (milestone M8a) the potential at the start of the turn. `Faithful.reach_boundedStores`
 concludes `BoundedStores (storeBound g₀)` for every reachable state, with `storeBound g₀ =
-storeTotal g₀ + 6 · cardsAmt C + 3 · (Q · potBound |C|) + 3 · cardsAtkAmt C` (`C` the cards of
-`g₀`, `Q = cardsAbQ (cardsAmt C) C`, which is 0 for a deck without Abilities).
+storeTotal g₀ + 6 · cardsAmt C + 3 · (Q · potBound |C|) + 6 · cardsStQ (cardsAmt C) C +
+3 · cardsAtkAmt C` (`C` the cards of `g₀`, `Q = cardsAbQ (cardsAmt C) C`, which is 0 for a deck
+without Abilities; the Stadium term, milestone M5, is 0 for a deck without Stadiums).
 
 **Results.**
 * `Faithful.reach_boundedStores`: for a start satisfying `Faithful`, every reachable state has
@@ -137,9 +138,10 @@ read or written. Every theorem that mentions attacks was re-proved; `Counter.uni
 unchanged in statement (its attacks have `gx = false`).
 
 **What the condition does not cover.** Printed behaviours outside it, or outside the model:
-* static and triggered Abilities other than on-play ones (milestone M8b), and static Stadium and
-  Tool effects (HP, damage and Retreat Cost modifiers, Bench size, Ability and Tool locks: a later
-  milestone; the model plays such cards with no effect);
+* static effects of Abilities, Stadiums and Tools outside the language of `Static` (since
+  milestone M6 HP changes, damage bonuses and reductions and Retreat Cost changes are modelled;
+  Bench size, damage prevention, Ability and Tool locks are not), and triggered Abilities other
+  than the two shapes of milestone M8b (`TrigEvent`); the model plays such text as no effect;
 * returning a card from play to the hand or deck (Scoop Up Cyclone, and the Abilities of Abra,
   Dudunsparce and Misty's Psyduck) and devolution are not in the model; with them a Pokémon card
   could re-enter play within a turn, and the potential that bounds Ability uses would need
@@ -157,8 +159,10 @@ unchanged in statement (its attacks have `gx = false`).
   Abilities they are outside clause 4, from Stadium effects outside clause 5;
 * copy attacks are not modelled; the once-per-game rule and clause 2 are stated for the attacks
   printed on the attacker;
-* static modifiers, and modifiers from Pokémon Tools, static Abilities or Special Energy, are not
-  modelled: every modifier here is written by an effect when it resolves;
+* the store bound is about stored modifiers, written by an effect when it resolves; static damage
+  bonuses and reductions (milestone M6: from static Abilities, Stadiums and Tools, `Static`) are not
+  stored: they are constants of the cards in force (`GameState.sBonus`, `GameState.sReduce`), so
+  they need no clause; modifiers from Special Energy are not modelled;
 * reductions restricted by type are not modelled: printed Iron Defender protects Metal Pokémon
   only, whereas the model's reduction protects all of a player's Pokémon;
 * effects that lock GX attacks are not modelled.

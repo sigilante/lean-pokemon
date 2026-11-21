@@ -238,7 +238,7 @@ theorem stadium_replacement_knocks_out :
       ∃ g, Move sg1 g ∧ g.cur.bench = [] ∧ g.cur.discard = [.pokemon small] :=
   ⟨.stadium (l₁ := []) (l₂ := []) rfl rfl rfl rfl sg0_settled rfl,
     not_damageBounded_of_dbB (by decide),
-    _, .knockOuts (.go (by decide) rfl .keep .keep), rfl, rfl⟩
+    _, Move.knockOuts_of_nil (.go (by decide) rfl .keep .keep) rfl, rfl, rfl⟩
 
 /-! ## Attaching Energy raises HP in mid-effect -/
 
@@ -324,9 +324,9 @@ theorem chain_knock_out :
   ⟨settled_of_dbB rfl rfl (by decide),
     .stadium (l₁ := []) (l₂ := []) rfl rfl rfl rfl (settled_of_dbB rfl rfl (by decide)) rfl,
     by decide, by decide,
-    _, _, .knockOuts (.go (by decide) rfl .keep .keep),
+    _, _, Move.knockOuts_of_nil (.go (by decide) rfl .keep .keep) rfl,
     not_damageBounded_of_dbB (by decide), rfl,
-    .knockOuts (.go (by decide) rfl .keep .keep), rfl,
+    Move.knockOuts_of_nil (.go (by decide) rfl .keep .keep) rfl, rfl,
     damageBounded_of_dbB (by decide)⟩
 
 /-! ## A static reduction comes after Weakness -/
@@ -411,6 +411,7 @@ def rA : GameState :=
 theorem move_r0_rA : Move r0 rA :=
   .attack (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
     (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl
+    (HitTrig.exists_nil (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl) (.nil _)
 
 /-- The attack is the only move from `r0` that leaves `guard` on the Bench with 3 counters: `r0`
 has no card in hand, no Benched Pokémon of the player to move, no Stadium, no Ability and no
@@ -440,7 +441,7 @@ theorem move_r0 {g₁ : GameState} (hm : Move r0 g₁) (hb : g₁.opp.bench = [a
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
       simp [r0, gs, pl] at hh
-  | @attack g' a atk ha hm' _ _ _ _ _ _ hr =>
+  | @attack g' a atk ha hm' _ _ _ _ _ _ hr _ _ _ _ _ hd ht =>
       simp only [r0, gs, pl, Option.some.injEq] at ha; subst ha
       have e : atk = blast := by simpa [InPlay.attacks, at_, InPlay.ofBasic, blaster] using hm'
       subst e
@@ -453,6 +454,8 @@ theorem move_r0 {g₁ : GameState} (hm : Move r0 g₁) (hb : g₁.opp.bench = [a
               cases h2 with
               | benchCounters _ _ h =>
                   obtain ⟨rfl, rfl, rfl⟩ := singleton_split h
+                  obtain rfl := hd.nil_of rfl
+                  cases ht
                   rfl
               | benchCountersNone _ _ h => simp [GameState.side, r0, gs, pl] at h
               | touchActive he => simp [Effect.touch] at he
@@ -478,7 +481,7 @@ theorem move_r0 {g₁ : GameState} (hm : Move r0 g₁) (hb : g₁.opp.bench = [a
 /-- From a state whose check ends the game, every move is the check. -/
 theorem move_eq_koStep {g g' : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none)
     (hm : Move g g') : g' = g.koStep :=
-  (hm.batch_of_not_settled hu).eq_of_won hw
+  hm.eq_koStep_of_won hu hw
 
 /-- Reachability from a state whose check ends the game. -/
 theorem reach_of_won {g g' : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none)
@@ -542,8 +545,8 @@ it is now the only outcome, `guard_knocked_out`.) Redundant since milestone batc
 from `guard_knocked_out` (whose moves `Move r0 rA` and `Move rA rA.koStep` give it), and is kept
 only because earlier versions stated it. -/
 theorem promotion_rescues_alt : ∃ g₁ g₂, Move r0 g₁ ∧ Move g₁ g₂ ∧ g₂.opp.bench = [] :=
-  ⟨rA, rA.koStep, move_r0_rA, .knockOuts (.won (fun hs => (not_damageBounded_of_dbB (by decide)) hs.1)
-    (by decide)), rfl⟩
+  ⟨rA, rA.koStep, move_r0_rA, Move.knockOuts_of_nil (.won (fun hs => (not_damageBounded_of_dbB (by decide)) hs.1)
+    (by decide)) rfl, rfl⟩
 
 /-- "Each of your Pokémon gets −10 HP" (a static effect on its owner's side, the source included;
 no printed card is claimed). -/
@@ -581,6 +584,7 @@ def mA : GameState :=
 theorem move_m0_mA : Move m0 mA :=
   .attack (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
     (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl (fun h => nomatch h) rfl
+    (HitTrig.exists_nil (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl) (.nil _)
 
 /-- The attack is the only move from `m0` that leaves a `gm` with 2 counters on the opponent's
 Bench. -/
@@ -608,7 +612,7 @@ theorem move_m0 {g₁ : GameState} (hm : Move m0 g₁) (hb : g₁.opp.bench = [a
   | onPlay hp =>
       obtain ⟨_, _, hh⟩ := hp.hand
       simp [m0, gs, pl] at hh
-  | @attack g' a atk ha hm' _ _ _ _ _ _ hr =>
+  | @attack g' a atk ha hm' _ _ _ _ _ _ hr _ _ _ _ _ hd ht =>
       simp only [m0, gs, pl, Option.some.injEq] at ha; subst ha
       have e : atk = hit2 := by simpa [InPlay.attacks, at_, InPlay.ofBasic, hitter2] using hm'
       subst e
@@ -621,6 +625,8 @@ theorem move_m0 {g₁ : GameState} (hm : Move m0 g₁) (hb : g₁.opp.bench = [a
               cases h2 with
               | benchCounters _ _ h =>
                   obtain ⟨rfl, rfl, rfl⟩ := singleton_split h
+                  obtain rfl := hd.nil_of rfl
+                  cases ht
                   rfl
               | benchCountersNone _ _ h => simp [GameState.side, m0, gs, pl] at h
               | touchActive he => simp [Effect.touch] at he

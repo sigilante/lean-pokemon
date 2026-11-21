@@ -173,7 +173,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
     way, an opponent who cannot draw at the start of their turn (`deckOut`), never coincides with a
     Knock Out check in the model (the draw is a separate move);
   - effects that change the number of Prize cards taken (Shedinja, "take 1 more Prize card", S8
-    I5) and Knock Out triggers (milestone M8b) are absent;
+    I5) are absent; Knock Out triggers came with milestone M8b, for one shape ("this Pokémon is
+    Knocked Out by damage from an attack from your opponent's Pokémon", `TrigEvent.koByAttack`;
+    the triggers section above `Move`), and every trigger that changes the Prize cards taken
+    (Shedinja, Lillie's Pearl, Munkidori ex, Mega Gengar ex, Legendary Summit, Togekiss,
+    Hydreigon ex; survey S12) is absent: the termination of trigger chains rests on every Knock
+    Out giving a Prize card (`KOMove.acc`);
 * the source of the Knock Out timing outside attacks and Checkup: survey S9 found no rule in
   the 2023 English rulebook (*Scarlet & Violet—151*) that Knock Outs are checked at once at
   other times, and survey S8 quotes none from the 2024 rulebook; the model's immediate Knock
@@ -299,7 +304,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   pile (recycling), and `Faithful` has a third clause, `RecycleSafe`, in its present form (after
   milestones M8a and M5): (a) no free recycler (an Item or Supporter effect, or an "as often as you
   like" Ability of a Pokémon or given by a Tool, `Card.freeRec`; not an attack, a once-per-turn or
-  on-play Ability, or a Stadium's effect) can return an Item card that writes a bonus or reduction
+  on-play Ability, a triggered Ability (milestone M8b), or a Stadium's effect) can return an Item card that writes a bonus or reduction
   (`Card.wAmt`) from a discard pile, and (b) no effect at all can return an Item or Supporter card
   that writes a rest-of-game one (`Card.alAmt`); the
   bound is then per turn (each Item writer played at most once a turn, one Supporter, one
@@ -400,7 +405,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   otherwise use;
 * Pokémon Checkup (`InPlay.checkup`, and `BenchChar` on the Benches) covers the five Special
   Conditions (Active Pokémon only, the only ones that can have them) and the Char counter
-  only: no Ability (Checkup Abilities are milestone M8b),
+  only: no Ability (Checkup Abilities, 5 Standard cards in survey S12, are not modelled; milestone
+  M8b implemented the two commonest trigger shapes instead),
   Stadium or other "between turns" card effect exists in the model (so the rulebook's
   choice of order between Special Conditions and those effects does not arise); Burn uses the
   current rule (2 counters, then heads cures); Paralysis ends at the Checkup after its
@@ -524,7 +530,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Trench, Risky Ruins; Tools 18: "If the Pokémon this card is attached to is Knocked Out / is
   damaged by an attack / at the end of your turn …": Adversity Policy, Amulet of Hope, the six
   type Berries, Deluxe Bomb, Handheld Fan, Heavy Baton, Lillie's Pearl, Lucky Helmet, Powerglass,
-  Punk Helmet, Survival Brace, Team Rocket's Hypnotizer, Tremendous Bomb). Activated effects the
+  Punk Helmet, Survival Brace, Team Rocket's Hypnotizer, Tremendous Bomb). Since milestone M8b
+  the Tools of the two implemented trigger shapes are expressible as a triggered Ability given by
+  the Tool (5 of the 18: Amulet of Hope, Deluxe Bomb, Handheld Fan as a superset, Lucky Helmet,
+  Punk Helmet; Heavy Baton's Retreat Cost condition is not; survey S12 §3); the Berries and
+  Survival Brace are replacement effects, Powerglass is an end-of-turn trigger, Lillie's Pearl
+  changes Prize cards, Adversity Policy, Tremendous Bomb and Team Rocket's Hypnotizer have
+  conditions or filters the model lacks, and the three Stadiums are not modelled either. Activated effects the
   model cannot express exactly: Stadiums 9 (Lumiose City ends the turn; Surfing Beach ×2 and
   Spikemuth Gym need a filter on the Bench or a name prefix; Fossil Quarry benches Items; Grand Tree
   evolves by effect; Mystery Garden draws to a count of Pokémon in play; Community Center and Team
@@ -563,9 +575,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   about 5 HP, 13 bonus, 17 reduction and 11 Retreat Cost Abilities, of which those with conditions
   beyond a top-card filter, a place or an Energy count are not expressible); it is never used.
   Absent: other static (passive) Abilities (immunities, locks, cost changes and the like, about 57
-  in today's Standard by the same count) and triggered Abilities other than on-play ones, Checkup
-  and Knock Out triggers (milestone M8b; survey S9: 124 static, 33 damage-reaction or Knock Out, 16
-  other triggers; triggered effects stay out of scope after M6), Ability locks
+  in today's Standard by the same count), triggered Abilities other than on-play ones and the two
+  shapes of milestone M8b (survey S12: Checkup 5, moving between spots 8, attaching Energy 2, the
+  opponent's plays 6, end of turn 1, replacement effects 14, Knock Outs of other Pokémon or with
+  Prize changes; 44 cards of the 67 after-event triggers are of other shapes), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
   (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
@@ -573,6 +586,51 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `Reach.finite` with tame, low-constant Ability effects, `Faithful.xfinite` under clause 4
   (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
+* triggered Abilities (milestone M8b; survey S12): two shapes, `TrigEvent.damaged` ("if this
+  Pokémon is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if
+  this Pokémon is Knocked Out)") and `TrigEvent.koByAttack` ("if this Pokémon is Knocked Out by
+  damage from an attack from your opponent's Pokémon"), on a Pokémon card or given by a Tool,
+  mandatory or optional, with an effect in the trigger fragment (`Effect.trigOk`: draw, damage
+  counters and a Special Condition on the Attacking Pokémon, zone moves that cannot fail, Tool
+  discard). Resolution (see the triggers section above `Move`): from the owner's side on the
+  exchanged state (`GameState.swap`), by `Run`, each trigger as a whole, several in any order
+  (`List.Perm`: the order of simultaneous triggers is not in the 2023 rulebook, and the 2026 rule
+  on who orders them is unverified, S8); `damaged` at the end of the attack, before the Knock Out
+  check; `koByAttack` in the batch move, after the batch step. Departures: a trigger's steps get no
+  Knock Out check between them (`TRun` checks after each step of a Trainer effect); "the
+  Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves (for a
+  `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check its
+  replacement is hit); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
+  while the turn's attack has been made" (Knock Outs by the attack's damage counters and by later
+  rounds of the check included); the failed Confused attempt (`Move.attackConfused`) also sets
+  `GameState.attacked`, so in the check after it a Knock Out of an opponent's Pokémon fires its
+  `koByAttack` triggers though no attack happened (more outcomes than the rulebook; the failed
+  attempt damages only the player's own Pokémon, so this needs an opponent's Pokémon brought to its
+  HP by a change of derived HP, such as a static HP bonus leaving play with the Confused Pokémon); "is damaged by an attack" is decided on the attack's damage step
+  (`HitRun`, `HitTrig`): the triggers of the Pokémon in the opponent's Active Spot at the end of
+  the attack fire when the damage step did damage to it while it was in the Active Spot and no
+  later step of the attack switched the opponent's Active Pokémon, so
+  an attack that only switches the opponent's Active Pokémon fires nothing
+  (`TriggerWitness.gust_quiet`) and one that switches and then does damage fires the triggers of the
+  Pokémon it damaged (`TriggerWitness.pull_fires`). Two departures remain, one in each direction.
+  Fewer outcomes: a Pokémon damaged and then switched to the Bench by the same attack fires
+  nothing (`TriggerWitness.hitRun_quiet`), even if a second switch in the same attack brings it
+  back to the Active Spot (any later `switch .opp` with a Benched Pokémon clears the flag; no
+  printed attack is known to do this); the model reads "if this Pokémon is in the Active Spot
+  and is damaged by an attack" as needing the Pokémon in the Active Spot both when it is damaged
+  and at the end of the attack, an unverified reading (no ruling was found). More outcomes: when the
+  Defending Pokémon is already at or above its derived HP before the damage step (damage counters
+  placed earlier by the same attack, or its derived HP lowered earlier in the same attack: a Tool
+  with an HP bonus discarded from it, Energy discarded from under a per-Energy HP bonus, an HP
+  Stadium discarded), the triggers may fire or not, whatever the step did. This corner was chosen
+  so that the capped clamp of `Reach.finite` stays a simulation (`HitRun.cap_sim`); it is wider
+  than the case that clamp is blind to (damage at or above the cap), and whether a narrower rule
+  would do is not established, nor is it proved that such a defender is always Knocked Out after
+  the attack; a
+  trigger with a
+  printed condition (`cond`) or an effect outside the fragment never fires. The trigger chains end
+  (`KOMove.acc`, `Move.unsettled_acc`): every Knock Out takes a Prize card, and nothing returns
+  one; with Prize-changing triggers (absent) that argument fails;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
   is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that
@@ -1012,6 +1070,252 @@ def Ability.CondOk (ab : Ability) (g : GameState) : Prop :=
   | none => True
   | some t => ∃ p, g.activeOf t.whose = some p ∧ t.eval g p = true
 
+/-! ## Triggered Abilities (milestone M8b)
+
+Two shapes, the commonest of today's Standard (survey S12): "if this Pokémon is in the Active Spot
+and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), …"
+(`TrigEvent.damaged`) and "if this Pokémon is Knocked Out by damage from an attack from your
+opponent's Pokémon, …" (`TrigEvent.koByAttack`). Both belong to the player whose turn it is not, so
+their effects resolve from that player's side: on the state with the players exchanged
+(`GameState.swap`), by `Run`, and the result exchanged back (`Fire`).
+
+When they resolve. A `damaged` trigger resolves at the end of the attack, after the attack's
+script and before the Knock Out check (`Move.attack`, `HitTrig`): "even if this Pokémon is Knocked
+Out" means the Pokémon is still there when it resolves, and Knock Outs it causes (damage counters on
+the Attacking Pokémon) are taken by the one check after the attack, together with the attack's own
+(a double Knock Out, `TriggerWitness`). A `koByAttack` trigger resolves in the Knock Out check after
+the attack (`Move.knockOuts`): after the batch step (removal, Prize cards, outcome, promotions), so
+the Pokémon and its cards are in the discard pile, as printed effects need ("put it into your hand
+instead of the discard pile" is the one that would need otherwise, and is not expressible). It
+fires for every Pokémon of the opponent of the player to move that a batch Knocks Out while the
+turn's attack has been made (`GameState.attacked`), and only if the game goes on. The Knock Outs its
+effect causes are taken by the next batch: the check repeats.
+
+Order. Several triggers fire at once (several Pokémon Knocked Out by one check; a Pokémon and its
+Tool). The 2023 rulebook says nothing about their order, and the 2026 rule on who orders
+simultaneous triggers (survey S8) is unverified; the model resolves them one after another in any
+order (`List.Perm`, a nondeterministic choice that covers whoever orders them), each as a whole.
+
+Departures (Known gaps): a trigger's effect resolves as a whole, by `Run`, with the Knock Out check
+after it, not after each of its steps as for a Trainer card (`TRun`); the effects of the fragment
+read no damage (`Effect.trigOk`), so the only difference is that a later step can still act on a
+Pokémon an earlier step brought to its HP, which is what a printed sentence that is one effect does.
+"The Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves: for a
+`koByAttack` trigger after the promotions, so if the attacker was Knocked Out by the same check, the
+trigger acts on its replacement instead of on nothing. "Knocked Out by damage from an attack" is
+read as "Knocked Out by a check while the turn's attack has been made": it includes Knock Outs by
+damage counters the attack placed and by later rounds of the check. "Is damaged by an attack" is
+decided on the damage step (`HitRun`), with the reading and the corner listed in the Known gaps. -/
+
+/-- The state as the opponent sees it: the two players exchanged (milestone M8b). Effects of the
+language act for the player to move (`.own`); a trigger of the other player resolves on the
+exchanged state. -/
+def GameState.swap (g : GameState) : GameState :=
+  { g with cur := g.opp, opp := g.cur, curIsFirst := !g.curIsFirst }
+
+@[simp] theorem GameState.swap_swap (g : GameState) : g.swap.swap = g := by
+  cases g; simp only [GameState.swap, Bool.not_not]
+
+/-- The triggered Abilities of a Pokémon in play at `sp` that fire on `ev` (`Ability.trigOn`), its
+own and those its Tools give it (`InPlay.abilities`). -/
+def InPlay.trigs (ev : TrigEvent) (sp : Spot) (p : InPlay) : List Ability :=
+  p.abilities.filter (Ability.trigOn ev sp)
+
+/-- The `ev` triggers of an optional Pokémon in the Active Spot. -/
+def optTrigs (ev : TrigEvent) : Option InPlay → List Ability
+  | none => []
+  | some p => p.trigs ev .active
+
+/-- **Resolving triggers** (milestone M8b): the triggers `l` of the opponent of the player to move,
+one after another, each with "this Pokémon" where the event leaves it (`TrigEvent.place`): its effect
+resolves on the exchanged state (`GameState.swap`) by `Run`, as a whole, and the state is exchanged
+back; an optional one (`AbilityUse.optional`, "you may") may be declined instead. -/
+inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → Prop where
+  | nil (g : GameState) : Fire ev [] g g
+  | run {ab : Ability} {l : List Ability} {g g₁ g₂ : GameState}
+      (hk : (ab.script ev.place).trigOk = true)
+      (hr : Run (ab.script ev.place) g.swap g₁) (ht : Fire ev l g₁.swap g₂) :
+      Fire ev (ab :: l) g g₂
+  | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
+      (ho : ab.use.optional = true) (ht : Fire ev l g g₂) : Fire ev (ab :: l) g g₂
+
+/-- Did the opponent's Active Pokémon's damage rise from `g` to `g'`? Read on one damage step
+(`HitRun.hit`), where the opponent's Active Pokémon is the same Pokémon before and after. -/
+def GameState.damagedB (g g' : GameState) : Bool :=
+  match g.opp.active, g'.opp.active with
+  | some d, some d' => decide (d.damage < d'.damage)
+  | _, _ => false
+
+/-- A primitive effect that neither does attack damage to the opponent's Active Pokémon nor
+replaces it (milestone M8b): every primitive but the damage steps (`damage`, `drain`) and
+`switch .opp`; not the compound effects. -/
+def Effect.plain : Effect → Bool
+  | .damage _ => false
+  | .drain _ => false
+  | .switch .opp => false
+  | .ite .. => false
+  | .seq .. => false
+  | .choice .. => false
+  | .iter .. => false
+  | _ => true
+
+/-- The damage steps. -/
+def Effect.isHit : Effect → Bool
+  | .damage _ => true
+  | .drain _ => true
+  | _ => false
+
+/-- **A resolution of an effect, with what it did to the opponent's Active Pokémon** (milestone
+M8b). `HitRun e g g' hit sw`: `Run e g g'` along one line of resolution, where `sw` says whether a
+`switch .opp` replaced the opponent's Active Pokémon (its Bench was not empty), and `hit` whether a
+damage step did damage to the opponent's Active Pokémon and no `switch .opp` replaced it after
+that step. So `hit` is "the Pokémon in the opponent's Active Spot after the attack was damaged by
+it, while in the Active Spot". It is read on the damage step itself (`hit`): the defender is the
+opponent's Active Pokémon at that step, and the damage done is the rise of its damage over the
+step (`GameState.damagedB` on the step), which is `GameState.dealt` of the amount. One corner is
+left free: when the defender is already at or above its derived HP before the step (counters
+placed earlier in the same attack, or its derived HP lowered earlier in the same attack), `hit`
+may be either value. (This keeps the capped clamp of the tame decks a simulation,
+`HitRun.cap_sim`; the corner is wider than the case that clamp is blind to, and whether a narrower
+rule would do is not established.) In `seq`, any later `switch .opp` with a Benched Pokémon
+clears the flag, even if a further switch brings the damaged Pokémon back. -/
+inductive HitRun : Effect → GameState → GameState → Bool → Bool → Prop where
+  | plain {e : Effect} {g g' : GameState} (he : e.plain = true) (h : Run e g g') :
+      HitRun e g g' false false
+  | hit {e : Effect} {g g' : GameState} {p : InPlay} {b : Bool} (he : e.isHit = true)
+      (h : Run e g g') (hp : g.opp.active = some p)
+      (hb : p.damage < g.hpOf .opp .active p → b = g.damagedB g') : HitRun e g g' b false
+  | gust {g g' : GameState} (h : Run (.switch .opp) g g') :
+      HitRun (.switch .opp) g g' false (decide (0 < g.opp.bench.length))
+  | iteT {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} {hb sw : Bool}
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = true) :
+      HitRun a g g' hb sw → HitRun (.ite t a b) g g' hb sw
+  | iteF {t : Test} {a b : Effect} {g g' : GameState} {p : InPlay} {hb sw : Bool}
+      (h : g.activeOf t.whose = some p) (ht : t.eval g p = false) :
+      HitRun b g g' hb sw → HitRun (.ite t a b) g g' hb sw
+  | seq {a b : Effect} {g₁ g₂ g₃ : GameState} {h₁ s₁ h₂ s₂ : Bool} :
+      HitRun a g₁ g₂ h₁ s₁ → HitRun b g₂ g₃ h₂ s₂ →
+        HitRun (.seq a b) g₁ g₃ ((h₁ && !s₂) || h₂) (s₁ || s₂)
+  | choiceL {a b : Effect} {g g' : GameState} {hb sw : Bool} :
+      HitRun a g g' hb sw → HitRun (.choice a b) g g' hb sw
+  | choiceR {a b : Effect} {g g' : GameState} {hb sw : Bool} :
+      HitRun b g g' hb sw → HitRun (.choice a b) g g' hb sw
+  | iterNil (a : Effect) (g : GameState) : HitRun (.iter a) g g false false
+  | iterCons {a : Effect} {g₁ g₂ g₃ : GameState} {h₁ s₁ h₂ s₂ : Bool} :
+      HitRun a g₁ g₂ h₁ s₁ → HitRun (.iter a) g₂ g₃ h₂ s₂ →
+        HitRun (.iter a) g₁ g₃ ((h₁ && !s₂) || h₂) (s₁ || s₂)
+
+/-- A `HitRun` is a resolution. -/
+theorem HitRun.run {e : Effect} {g g' : GameState} {hb sw : Bool} (h : HitRun e g g' hb sw) :
+    Run e g g' := by
+  induction h with
+  | plain _ h => exact h
+  | hit _ h => exact h
+  | gust h => exact h
+  | iteT h ht _ ih => exact .iteT h ht ih
+  | iteF h ht _ ih => exact .iteF h ht ih
+  | seq _ _ ih₁ ih₂ => exact .seq ih₁ ih₂
+  | choiceL _ ih => exact .choiceL ih
+  | choiceR _ ih => exact .choiceR ih
+  | iterNil a g => exact .iterNil a g
+  | iterCons _ _ ih₁ ih₂ => exact .iterCons ih₁ ih₂
+
+/-- Every resolution is a `HitRun`, with some flags. -/
+theorem Run.hitRun {e : Effect} {g g' : GameState} (h : Run e g g') :
+    ∃ hb sw, HitRun e g g' hb sw := by
+  induction h with
+  | iteT h ht _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .iteT h ht r⟩
+  | iteF h ht _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .iteF h ht r⟩
+  | seq _ _ ih₁ ih₂ =>
+      obtain ⟨a, b, r⟩ := ih₁; obtain ⟨c, d, s⟩ := ih₂; exact ⟨_, _, .seq r s⟩
+  | choiceL _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .choiceL r⟩
+  | choiceR _ ih => obtain ⟨a, b, r⟩ := ih; exact ⟨a, b, .choiceR r⟩
+  | iterNil a g => exact ⟨_, _, .iterNil a g⟩
+  | iterCons _ _ ih₁ ih₂ =>
+      obtain ⟨a, b, r⟩ := ih₁; obtain ⟨c, d, s⟩ := ih₂; exact ⟨_, _, .iterCons r s⟩
+  | damage hv h => exact ⟨_, _, .hit rfl (.damage hv h) h (fun _ => rfl)⟩
+  | drain hv h hq => exact ⟨_, _, .hit rfl (.drain hv h hq) h (fun _ => rfl)⟩
+  | switch w ha hb =>
+      cases w with
+      | own => exact ⟨_, _, .plain rfl (.switch .own ha hb)⟩
+      | opp => exact ⟨_, _, .gust (.switch .opp ha hb)⟩
+  | switchNone w hb =>
+      cases w with
+      | own => exact ⟨_, _, .plain rfl (.switchNone .own hb)⟩
+      | opp => exact ⟨_, _, .gust (.switchNone .opp hb)⟩
+  | @touchActive e w f g p he h =>
+      exact ⟨_, _, .plain (by cases e <;> simp_all [Effect.touch, Effect.plain]) (.touchActive he h)⟩
+  | @touchBench e w f g q b₁ b₂ he h =>
+      exact ⟨_, _, .plain (by cases e <;> simp_all [Effect.touch, Effect.plain]) (.touchBench he h)⟩
+  | @zone e w g s' hw h =>
+      exact ⟨_, _, .plain (by cases e <;> simp_all [Effect.zSide, Effect.plain]) (.zone hw h)⟩
+  | skip g => exact ⟨_, _, .plain rfl (.skip g)⟩
+  | draw h => exact ⟨_, _, .plain rfl (.draw h)⟩
+  | drawEmpty h => exact ⟨_, _, .plain rfl (.drawEmpty h)⟩
+  | heal n h => exact ⟨_, _, .plain rfl (.heal n h)⟩
+  | counters n h => exact ⟨_, _, .plain rfl (.counters n h)⟩
+  | inflict c h => exact ⟨_, _, .plain rfl (.inflict c h)⟩
+  | poisonUp n h hp => exact ⟨_, _, .plain rfl (.poisonUp n h hp)⟩
+  | poisonUpSkip n h hp => exact ⟨_, _, .plain rfl (.poisonUpSkip n h hp)⟩
+  | cure h => exact ⟨_, _, .plain rfl (.cure h)⟩
+  | shuffle h => exact ⟨_, _, .plain rfl (.shuffle h)⟩
+  | search h => exact ⟨_, _, .plain rfl (.search h)⟩
+  | handToBottom h => exact ⟨_, _, .plain rfl (.handToBottom h)⟩
+  | scale w k hs h => exact ⟨_, _, .plain rfl (.scale w k hs h)⟩
+  | selfDamage n h => exact ⟨_, _, .plain rfl (.selfDamage n h)⟩
+  | healAll h => exact ⟨_, _, .plain rfl (.healAll h)⟩
+  | unmark w m g => exact ⟨_, _, .plain rfl (.unmark w m g)⟩
+  | linger w s m g => exact ⟨_, _, .plain rfl (.linger w s m g)⟩
+  | benchCounters w n h => exact ⟨_, _, .plain rfl (.benchCounters w n h)⟩
+  | benchCountersNone w n h => exact ⟨_, _, .plain rfl (.benchCountersNone w n h)⟩
+  | spreadCounters w n g => exact ⟨_, _, .plain rfl (.spreadCounters w n g)⟩
+  | benchHeal n h => exact ⟨_, _, .plain rfl (.benchHeal n h)⟩
+  | benchHealNone n h => exact ⟨_, _, .plain rfl (.benchHealNone n h)⟩
+  | benchDamage w n h => exact ⟨_, _, .plain rfl (.benchDamage w n h)⟩
+  | benchDamageNone w n h => exact ⟨_, _, .plain rfl (.benchDamageNone w n h)⟩
+  | spreadDamage w n g => exact ⟨_, _, .plain rfl (.spreadDamage w n g)⟩
+  | moveCounter h => exact ⟨_, _, .plain rfl (.moveCounter h)⟩
+  | discardStadium g => exact ⟨_, _, .plain rfl (.discardStadium g)⟩
+
+/-- **Which `damaged` triggers an attack fires** (milestone M8b), from the state `g` before its
+script and `g'` after it: none (`quiet`), or every `damaged` trigger of the opponent's Active
+Pokémon in some order (`fire`). Each is allowed for the resolutions of the script from `g` to `g'`
+that agree with it (`HitRun`): `fire` for one in which the Pokémon in the opponent's Active Spot at
+the end was damaged by the attack's damage step while in the Active Spot, `quiet` for one in which
+it was not. So an attack that only switches the opponent's Active Pokémon fires nothing
+(`TriggerWitness.gust_quiet`), one that switches and then does damage fires the triggers of the
+Pokémon it damaged (`TriggerWitness.pull_fires`), and a Pokémon damaged and then switched to the
+Bench by the same attack fires nothing: the model reads "if this Pokémon is in the Active Spot and
+is damaged by an attack" as needing the Pokémon in the Active Spot both when it is damaged and when
+the trigger resolves, at the end of the attack (an unverified reading; Known gaps). The choice is
+determined by the resolution, with two exceptions: when the defender was already at or above its
+HP before the damage step, either is allowed (`HitRun.hit`); and a Pokémon switched out after
+the damage step fires nothing even if the same attack switches it back. Two resolutions with the same end state are told
+apart only by what they did: the model's outcomes are the union, over the resolutions, of the
+printed ones. -/
+inductive HitTrig (atk : Attack) (g g' : GameState) : List Ability → Prop where
+  | quiet {sw : Bool} (h : HitRun atk.script g g' false sw) : HitTrig atk g g' []
+  | fire {l : List Ability} {sw : Bool} (h : HitRun atk.script g g' true sw)
+      (hl : l.Perm (optTrigs .damaged g'.opp.active)) : HitTrig atk g g' l
+
+/-- The resolution an attack's choice of triggers rests on. -/
+theorem HitTrig.run {atk : Attack} {g g' : GameState} {l : List Ability}
+    (h : HitTrig atk g g' l) : Run atk.script g g' := by
+  cases h with
+  | quiet h => exact h.run
+  | fire h _ => exact h.run
+
+/-- The `koByAttack` triggers of the opponent's Pokémon that the check of `g` Knocks Out. -/
+def GameState.koTrigs (g : GameState) : List Ability :=
+  optTrigs .koByAttack (optFilter (g.koT .opp .active) g.opp.active) ++
+    (g.opp.bench.filter (g.koT .opp .bench)).flatMap (InPlay.trigs .koByAttack .bench)
+
+/-- The triggers a batch Knock Out step from `g` to `g₁` fires (milestone M8b): the `koByAttack`
+triggers of the Pokémon of the opponent it Knocks Out, if the turn's attack has been made and the
+game goes on; none otherwise. -/
+def GameState.batchTrigs (g g₁ : GameState) : List Ability :=
+  if g.attacked && g₁.winner.isNone then g.koTrigs else []
+
 inductive Move : GameState → GameState → Prop where
   /-- put a Basic Pokémon from hand onto the Bench -/
   | playBasic {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
@@ -1205,7 +1509,8 @@ inductive Move : GameState → GameState → Prop where
   `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
   its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
-  using it records that (`PlayerState.gxUsed`). -/
+  using it records that (`PlayerState.gxUsed`). Since milestone M8b the attack ends with the
+  opponent's `damaged` triggers (`HitTrig`, `Fire`), resolved before the Knock Out check. -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
@@ -1213,8 +1518,9 @@ inductive Move : GameState → GameState → Prop where
       (hst : Settled g)
       (hr : Run atk.script g g')
       (hl : g.cur.mods.live.noAttack = false)
-      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) :
-      Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } }
+      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true)
+      {l : List Ability} {g'' : GameState} (hd : HitTrig atk g g' l) (ht : Fire .damaged l g' g'') :
+      Move g { g'' with attacked := true, cur := { g''.cur with gxUsed := atk.gx || g''.cur.gxUsed } }
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
   happen, and the attacker gets 3 damage counters; this still ends the turn (`attacked`). As for `attack`, a GX attack can be tried
   only by a player who has not used one in this game; the failed attempt does not use it up
@@ -1233,8 +1539,11 @@ inductive Move : GameState → GameState → Prop where
   take their Prize cards, the game ends if either player wins (Sudden Death if both win in as many
   ways), and otherwise each player with an empty Active Spot promotes a Benched Pokémon. Before
   milestone batch-KO this was eight moves (`knockOut`, `knockOutBench`, `promote`, `noPokemon` and
-  their `Own` versions), taken one at a time in any order. -/
-  | knockOuts {g g' : GameState} (h : KOBatch g g') : Move g g'
+  their `Own` versions), taken one at a time in any order. Since milestone M8b the step ends with
+  the `koByAttack` triggers of the opponent's Pokémon it Knocked Out, when the turn's attack has been
+  made and the game goes on (`GameState.batchTrigs`), in any order (`Fire`) -/
+  | knockOuts {g g₁ g' : GameState} {l : List Ability} (h : KOBatch g g₁)
+      (hl : l.Perm (g.batchTrigs g₁)) (ht : Fire .koByAttack l g₁ g') : Move g g'
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
   (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
   counters of both Benches, one coin flip per Pokémon (`BenchChar`: the opponent's Bench becomes
@@ -1336,16 +1645,71 @@ theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
 move needs `Settled` (`endTurn`, `startTurn` and `deckOut` need both Active Pokémon and no pending
 Knock Out, which is the same). -/
 theorem Move.batch_of_not_settled {g g' : GameState} (hm : Move g g') (hu : ¬ Settled g) :
-    KOBatch g g' := by
+    ∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g' := by
   have of : ∀ {a b : InPlay}, DamageBounded g → g.opp.active = some a → g.cur.active = some b →
       Settled g := fun hk ha hb =>
     ⟨hk, ⟨by rw [hb]; exact Option.some_ne_none _, by rw [ha]; exact Option.some_ne_none _⟩⟩
   cases hm with
-  | knockOuts h => exact h
+  | knockOuts h hl ht => exact ⟨_, _, h, hl, ht⟩
   | endTurn _ _ _ _ _ _ ha hb hk => exact absurd (of hk ha hb) hu
   | startTurn _ ha hb hk => exact absurd (of hk ha hb) hu
   | deckOut _ ha hb hk => exact absurd (of hk ha hb) hu
   | onPlay hp => exact absurd hp.settled hu
   | _ => exact absurd ‹Settled g› hu
+
+/-! ## Triggers: basic facts (milestone M8b) -/
+
+/-- No trigger, no change. -/
+theorem Fire.nil_eq {ev : TrigEvent} {g g' : GameState} (h : Fire ev [] g g') : g' = g := by
+  cases h; rfl
+
+/-- Before the turn's attack a batch fires no trigger. -/
+theorem GameState.batchTrigs_of_not_attacked {g g₁ : GameState} (h : g.attacked = false) :
+    g.batchTrigs g₁ = [] := by
+  simp only [GameState.batchTrigs, h, Bool.false_and, Bool.false_eq_true, ite_false]
+
+/-- A batch that fires a trigger is taken after the turn's attack (milestone M8b). -/
+theorem GameState.attacked_of_batchTrigs {g g₁ : GameState} (h : g.batchTrigs g₁ ≠ []) :
+    g.attacked = true := by
+  cases e : g.attacked with
+  | true => rfl
+  | false => exact absurd (GameState.batchTrigs_of_not_attacked e) h
+
+/-- A batch that ends the game fires no trigger. -/
+theorem GameState.batchTrigs_of_won {g g₁ : GameState} (h : g₁.winner ≠ none) :
+    g.batchTrigs g₁ = [] := by
+  have : g₁.winner.isNone = false := by
+    cases e : g₁.winner with
+    | none => exact absurd e h
+    | some _ => rfl
+  simp only [GameState.batchTrigs, this, Bool.and_false, Bool.false_eq_true, ite_false]
+
+/-- A batch that fires no trigger is the batch Knock Out step alone. -/
+theorem Move.knockOuts_of_nil {g g₁ : GameState} (h : KOBatch g g₁) (hn : g.batchTrigs g₁ = []) :
+    Move g g₁ :=
+  .knockOuts h (hn ▸ List.Perm.refl []) (.nil _)
+
+/-- Before the turn's attack the batch move is the batch Knock Out step (`Move.knockOuts` with no
+trigger). -/
+theorem Move.knockOuts' {g g₁ : GameState} (h : KOBatch g g₁) (ha : g.attacked = false) :
+    Move g g₁ :=
+  Move.knockOuts_of_nil h (GameState.batchTrigs_of_not_attacked ha)
+
+/-- A batch move whose step fires no trigger is that step. -/
+theorem Move.eq_of_batchTrigs_nil {g g₁ g' : GameState} {l : List Ability}
+    (hl : l.Perm (g.batchTrigs g₁)) (ht : Fire .koByAttack l g₁ g') (hn : g.batchTrigs g₁ = []) :
+    g' = g₁ := by
+  rw [hn] at hl
+  rw [List.Perm.eq_nil hl] at ht
+  exact ht.nil_eq
+
+/-- A move from a state that is not `Settled`, whose check ends the game, is the check alone: no
+trigger fires once the game is over. -/
+theorem Move.eq_koStep_of_won {g g' : GameState} (hm : Move g g') (hu : ¬ Settled g)
+    (hw : g.koStep.winner ≠ none) : g' = g.koStep := by
+  obtain ⟨g₁, l, h, hl, ht⟩ := hm.batch_of_not_settled hu
+  have e := h.eq_of_won hw
+  subst e
+  exact Move.eq_of_batchTrigs_nil hl ht (GameState.batchTrigs_of_won hw)
 
 end Pokemon

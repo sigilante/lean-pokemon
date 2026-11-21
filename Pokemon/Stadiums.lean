@@ -32,9 +32,11 @@ reads the stored bonus (no attack is made), so the unboundedly many states are n
 differ in play. No Standard Stadium's activated ("Once during each player's turn") effect writes
 a lingering damage bonus or reduction (survey S9); the three whose activated effect the model
 expresses (Academy at Night, Levincia, Prism Tower) move cards. Static Stadium text that changes
-damage (Postwick sv9-154: "do 30 more damage"; Full Metal Lab sv5-148: "take 30 less damage";
-the reduction or prevention of Battle Cage, Granite Cave and Neutralization Zone) is not modelled (Known gaps in
-`Pokemon/Rules.lean`): such a Stadium is played as an inert card.
+damage is, since milestone M6, a static effect (`Static`, the `statics` of a Stadium), not a
+stored modifier: the bonus of Postwick sv9-154 ("do 30 more damage") and the reductions of Full
+Metal Lab sv5-148 ("take 30 less damage") and Granite Cave are expressed, as constants of the
+Stadium in play outside the stores; damage prevention (Battle Cage, Neutralization Zone) is not
+modelled (Known gaps in `Pokemon/Rules.lean`), and such a Stadium is played as an inert card.
 -/
 
 namespace Pokemon.Stadiums

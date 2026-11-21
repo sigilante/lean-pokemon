@@ -637,6 +637,38 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ => rfl
 
+/-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
+def Qty.canFail : Qty → Bool
+  | .exactly _ => true
+  | _ => false
+
+/-- **The trigger fragment** (milestone M8b): the effects a triggered Ability resolves. Drawing,
+damage counters and a Special Condition on the opponent's Active Pokémon (from the trigger's owner,
+"the Attacking Pokémon"), shuffling, the zone moves that always have a resolution (no `exactly`),
+discarding Tools, in sequence or as a choice. Excluded: tests and `iter`, every effect that reads
+damage (`heal`, `scale`, the damage steps, `moveCounter`), lingering modifiers (`linger`), switching,
+markers, `poisonUp`, `search` (no resolution on an empty deck; "search your deck" is a `move`) and
+`discardStadium`. So a trigger can always be resolved when both Active Spots are filled
+(`Run.exists_of_trigOk`), writes no store, and reads no damage, which both clamps need. Every
+printed effect of the two implemented shapes in today's Standard that the model can express is in
+the fragment (survey S12 §3). -/
+def Effect.trigOk : Effect → Bool
+  | .skip => true
+  | .draw => true
+  | .counters _ => true
+  | .inflict _ => true
+  | .shuffle => true
+  | .move _ _ _ _ q => !q.canFail
+  | .drawTo _ _ => true
+  | .attach _ _ _ _ _ => true
+  | .putBench _ _ _ => true
+  | .discardEnergy _ _ _ q => !q.canFail
+  | .moveEnergy _ _ => true
+  | .discardTools _ _ => true
+  | .seq a b => a.trigOk && b.trigOk
+  | .choice a b => a.trigOk && b.trigOk
+  | _ => false
+
 /-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
 damage, then place damage counters, and then do all other effects"). An attack with printed base
 damage `n ≠ 0` and no damage step in its text does its damage first, then its effect. An attack
@@ -777,18 +809,57 @@ inductive PlayWay where
   | bench | evolve | either
   deriving DecidableEq
 
+/-- The event a triggered Ability (milestone M8b) fires on; survey S12 §1, the two commonest shapes
+of today's Standard.
+
+* `damaged` (S12 E1, 24 cards): "If this Pokémon is in the Active Spot and is damaged by an attack
+  from your opponent's Pokémon (even if this Pokémon is Knocked Out), …" (Iron Jugulis sv5-139,
+  Roselia sv5-8, Lucky Helmet sv6-158). It fires at the end of the attack, before the Knock Out
+  check, and "this Pokémon" is its owner's Active Pokémon.
+* `koByAttack` (S12 E2, 11 cards): "If this Pokémon is Knocked Out by damage from an attack from
+  your opponent's Pokémon, …" (Maractus sv9-8, Amulet of Hope sv8-162). It fires in the Knock Out
+  check after the attack, when the Pokémon and its cards are already in the discard pile; with the
+  Ability's `spot = some .active`, only if the Pokémon was Knocked Out in the Active Spot.
+
+Both belong to the player whose turn it is not, and their effects are written from that player's
+side: `.own` is the owner, `.opp` the attacker's player, so "the Attacking Pokémon" is the
+opponent's Active Pokémon (`counters`, `inflict`, `discardEnergy .opp .active`). -/
+inductive TrigEvent where
+  | damaged
+  | koByAttack
+  deriving DecidableEq
+
+/-- Where "this Pokémon" is when a trigger on the event resolves: in the Active Spot for `damaged`;
+nowhere in play for `koByAttack` (it has been Knocked Out), so an effect on it is not tracked. -/
+def TrigEvent.place : TrigEvent → Option Spot
+  | .damaged => some .active
+  | .koByAttack => none
+
 /-- The use limit of an Ability (survey S9 part 2, `ability_kind`): "Once during your turn, you
 may …" (`once`: once per turn for each Pokémon in play that has it); "As often as you like during
 your turn, you may …" (`unlimited`); or a trigger on entering play from the hand (`onPlay`; "you
 may", so optional); or (milestone M6) static (`static ss`: never used; its static effects `ss` are
-in force while the Pokémon is in play, `Pokemon/Static.lean`). Triggered Abilities other than
-on-play ones have no constructor. -/
+in force while the Pokémon is in play, `Pokemon/Static.lean`); or (milestone M8b) triggered by the
+event `ev` (`triggered ev opt`; `opt`: "you may", so the owner may decline it; otherwise it must
+resolve). Other triggered Abilities (S12: Checkup, moving between spots, attaching Energy, the
+opponent's plays, replacement effects) have no constructor. -/
 inductive AbilityUse where
   | once
   | unlimited
   | onPlay (w : PlayWay)
   | static (ss : List Static)
+  | triggered (ev : TrigEvent) (opt : Bool)
   deriving DecidableEq
+
+/-- The event of a triggered Ability (milestone M8b), `none` for every other use limit. -/
+def AbilityUse.event : AbilityUse → Option TrigEvent
+  | .triggered ev _ => some ev
+  | _ => none
+
+/-- May the owner decline the trigger? ("you may"; an on-play Ability is optional too.) -/
+def AbilityUse.optional : AbilityUse → Bool
+  | .triggered _ opt => opt
+  | _ => true
 
 /-- An effect on "this Pokémon", the Pokémon whose Ability resolves (milestone M8a): heal `n`
 damage counters from it; put `n` damage counters on it ("put 5 damage counters on this Pokémon",
@@ -899,6 +970,7 @@ def AbilityUse.activated : AbilityUse → Bool
   | .unlimited => true
   | .onPlay _ => false
   | .static _ => false
+  | .triggered _ _ => false
 
 /-- The static effects of an Ability (milestone M6): those of a static Ability, none otherwise. -/
 def Ability.statics (ab : Ability) : List Static :=
@@ -911,6 +983,15 @@ def Ability.spotOk (ab : Ability) (sp : Spot) : Bool :=
   match ab.spot with
   | none => true
   | some s => decide (s = sp)
+
+/-- **Does the Ability trigger on `ev`, for its Pokémon at `sp`?** (milestone M8b) A triggered
+Ability of that event, whose place allows `sp` ("if this Pokémon is in the Active Spot and is
+Knocked Out": `spot = some .active`), with no further printed condition (a trigger with a `cond`
+never fires: conditions on a trigger, such as Adversity Policy's Weakness, are not expressible), and
+whose effect is in the trigger fragment (`Effect.trigOk`; a trigger outside it never fires, which
+under-models the card). -/
+def Ability.trigOn (ev : TrigEvent) (sp : Spot) (ab : Ability) : Bool :=
+  ab.use.event == some ev && ab.spotOk sp && ab.cond.isNone && (ab.script ev.place).trigOk
 
 /-- The rule box of a Pokémon card, as far as it decides how many Prize cards its Knock Out gives
 (milestone M3; survey S8 C3, S9). The kinds are those of today's Standard (regulation marks H, I,
@@ -1000,9 +1081,13 @@ me6-100) and activated Abilities, both only while the Pokémon's top card passes
 Zygarde ex this card is attached to can use the attack on this card", Core Memory me3-70), and
 (milestone M6) static effects in force while it is attached (`statics`: HP, damage and Retreat Cost
 changes, "The Pokémon this card is attached to gets +100 HP", Hero's Cape), for the same holders;
-`Sel.self` in them means the holder. Triggered Tool text ("If the Pokémon this card is attached to
-is Knocked Out…") is not modelled: a Tool with only such text is a Tool with an empty grant
-(`ToolGrant.none`), which can be attached and does nothing (Known gaps in `Pokemon/Rules.lean`). -/
+`Sel.self` in them means the holder. Since milestone M8b triggered Tool text of the two
+implemented shapes ("If the Pokémon this card is attached to is in the Active Spot and is damaged by
+an attack …", "… is Knocked Out by damage from an attack …": Lucky Helmet, Punk Helmet, Deluxe Bomb,
+Amulet of Hope) is a triggered Ability in `abilities` (`AbilityUse.triggered`), which the holder has
+(`InPlay.abilities`); other triggered Tool text (Berries, Survival Brace, Powerglass, Prize changes)
+is not modelled: a Tool with only such text is a Tool with an empty grant (`ToolGrant.none`), which
+can be attached and does nothing (Known gaps in `Pokemon/Rules.lean`). -/
 structure ToolGrant where
   holder : Filter
   attacks : List Attack
@@ -1103,10 +1188,11 @@ theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
 effect is `skip` and that has no static effect, or a Tool that gives nothing (no attack, no
 Ability, no static effect). Such a card occupies the Stadium slot or a Pokémon's Tool place and
 does nothing. An importer writes these terms for Stadiums and Tools whose printed text the model
-does not express (triggered text, and static text outside the language of `Static`), so
-`Card.inert` tells "playable, effect not modelled" (an under-model of the printed card) from
-"playable, effect expressed" (a Stadium with an activated or, since milestone M6, a static effect;
-a Tool that gives an attack, an Ability or a static effect). -/
+does not express (triggered text outside the two shapes of milestone M8b, and static text outside
+the language of `Static`), so `Card.inert` tells "playable, effect not modelled" (an under-model of
+the printed card) from "playable, effect expressed" (a Stadium with an activated or, since milestone
+M6, a static effect; a Tool that gives an attack, an Ability or a static effect, and since milestone
+M8b a triggered Ability: a Tool whose triggered text is expressed is not inert). -/
 def Card.inert : Card → Bool
   | .trainer _ .stadium e ss => e == .skip && ss.isEmpty
   | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty && gr.statics.isEmpty
