@@ -21,6 +21,16 @@ inductive Run : Effect → GameState → GameState → Prop where
   | counters {g : GameState} {p : InPlay} (n : Nat) (h : g.opp.active = some p) :
       Run (.counters n) g
         { g with opp := { g.opp with active := some { p with damage := p.damage + n } } }
+  | inflict {g : GameState} {p : InPlay} (c : Condition) (h : g.opp.active = some p) :
+      Run (.inflict c) g { g with opp := { g.opp with active := some (p.inflict c) } }
+  | poisonUp {g : GameState} {p : InPlay} (n : Nat) (h : g.opp.active = some p)
+      (hp : p.poisoned = true) :
+      Run (.poisonUp n) g
+        { g with opp := { g.opp with active := some { p with poisonUp := p.poisonUp + n } } }
+  | poisonUpSkip {g : GameState} {p : InPlay} (n : Nat) (h : g.opp.active = some p)
+      (hp : p.poisoned = false) : Run (.poisonUp n) g g
+  | cure {g : GameState} {p : InPlay} (h : g.cur.active = some p) :
+      Run .cure g { g with cur := { g.cur with active := some p.cure } }
   | shuffle {g : GameState} {d : List Card} (h : d.Perm g.cur.deck) :
       Run .shuffle g { g with cur := { g.cur with deck := d } }
   | search {g : GameState} {l₁ l₂ : List Card} {c : Card} (h : g.cur.deck = l₁ ++ c :: l₂) :
