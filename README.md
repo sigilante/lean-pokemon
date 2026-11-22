@@ -745,11 +745,13 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,386 are imported (1,027 exactly, 359 with
-caveats) as 1,379 distinct terms, and 775 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.11.0, which writes the MV5 Energy filters as printed:
-`basicEnergy` for "Basic Energy", `energy` for "Energy", `specialEnergy` for "Special Energy";
-survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
+damage reduction). Of the pool's 2,161 cards, 1,448 are imported (1,063 exactly, 385 with
+caveats) as 1,441 distinct terms, and 713 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.12.0, which writes the MV6 vocabulary: fixed windows
+`Effect.look`, `Qty.most`, the defender modifiers `Mod.weaken` and `Mod.expose`, named-attack bonuses
+with `AtkLock.note` and `Test.usedLast`, `Amt.heads` and `Count.retreat`; since 0.11.0 the MV5 Energy
+filters as printed: `basicEnergy` for "Basic Energy", `energy` for "Energy", `specialEnergy` for
+"Special Energy"; survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
 turn", "as often as you like") and on-play Abilities are translated when every sentence has a
 rule, since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
 the model's `Static`, and since importer 0.6.0 (milestone M8b) triggered Abilities and Tool text
@@ -759,7 +761,8 @@ imported trigger fires wherever its place allows, with an effect satisfying `Eff
 passive Abilities, triggered text of other shapes, static text in other shapes, and the other
 forms the model lacks are refused with a reason. The tame-deck theorem `Reach.finite`
 does not cover imported decks in general: `Standard.untame` lists the imported cards that are
-not tame (a `drain` attack or a stored damage reduction); its clause on static reductions holds
+not tame (a `drain` attack, a stored damage reduction, or since milestone MV6 a step-2 penalty or
+step-5 increase); its clause on static reductions holds
 for every game (`reduceLe_bound`), and `Standard.sReduce_le` bounds the static reduction in force. Regenerate with
 `python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
 memory and diffs; `tools/importer/count_writers.py` recounts writers and recyclers from the

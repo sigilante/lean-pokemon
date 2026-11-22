@@ -983,7 +983,24 @@ def template_table(results):
                  'flip-until-tails-damage': 'damage (many (const k)) [+ base]',
                  'if-condition': 'ite test (consequence) (alternative); for damage, a test-dependent amount',
                  'look-top-take': 'move own (top n) hand F (upTo k); shuffle',
-                 'discard-all-and': 'the two clauses as two sentences (discardEnergy own active energy all; the damage)'})
+                 'discard-all-and': 'the two clauses as two sentences (discardEnergy own active energy all; the damage)',
+                 # importer 0.12.0 (milestone MV6)
+                 'look-take-hand': 'look w (top|bottom n) F (upTo k | most 1) (put hand) rest',
+                 'look-bench': 'look w (top|bottom n) F (upTo n) bench rest',
+                 'look-attach': 'look own (top n) F (upTo n | most 1) (attach tf) rest',
+                 'look-discard-any': 'look own (top n) any (upTo n) (put discard) top',
+                 'look-reorder': 'look w (top n) any (exactly 0) (put top) top',
+                 'look-reorder-or-bottom': 'choice (look own (top n) any (exactly 0) (put top) top) (… bottom)',
+                 'bottom-count-then-sort': 'damage (count (pile own (bottom n) F) k); look own (bottom n) pokemon all (put shuffle) discard',
+                 'draw-bottom': 'move own (bottom n) hand any all',
+                 'search-to-top': 'look own deck any (most 1) (put top) shuffle',
+                 'revealed-hand': 'move opp hand dst F (most 1 | upTo k | most 1 | … | most k | all), look opp hand F q bench hand, or damage (count (pile opp hand F) k)',
+                 'coins-revealed-hand-shuffle': 'choice over 0..N heads of move opp hand shuffle any (most h)',
+                 'coins-random-hand-shuffle': 'choice over 0..N heads of move opp hand shuffle any (most h)',
+                 'until-tails-random-hand-shuffle': 'iter (move opp hand shuffle any (most 1))',
+                 'coins-for-each-damage': 'damage (heads (count C 1) k)',
+                 'reveal-hand-count-damage': 'damage (heads (count (pile own hand F) 1) k)',
+                 'named-attack-bonus': 'selfLock := .note on the writer; ite (usedLast own) (damage (b + n)) (damage b) in the named attack'})
     imp = collections.Counter()
     allc = collections.Counter()
     ex = {}
