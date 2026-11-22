@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part07
 open Pokemon
 
+/-- Onix (me1-70). Records: me1-70. -/
+def me1_70 : Card := .pokemon
+  { name := "Onix", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .fighting, retreat := 4, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bind", cost := [.colorless, .colorless], damage := 3,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false },
+      { name := "Strength", cost := [.colorless, .colorless, .colorless, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
 /-- Tyrogue (me1-71). Records: me1-71. -/
 def me1_71 : Card := .pokemon
   { name := "Tyrogue", stage := .basic, evolvesFrom := none,
@@ -1780,19 +1794,9 @@ def me2pt5_115 : Card := .pokemon
         effect := .selfDamage 1,
         gx := false }] }
 
-/-- Rolycoly (me2pt5-118). Records: me2pt5-118. -/
-def me2pt5_118 : Card := .pokemon
-  { name := "Rolycoly", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fighting, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Mud-Slap", cost := [.fighting], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_70,
   me1_71,
   me1_72,
   me1_73,
@@ -1941,8 +1945,7 @@ def cards : List Card := [
   me2pt5_104,
   me2pt5_108,
   me2pt5_114,
-  me2pt5_115,
-  me2pt5_118]
+  me2pt5_115]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -39,6 +39,12 @@ def c(cls, what, reason='', sent=''):
 c('M', 'Special Energy (cards and text)', r'^Special Energy$|card named in text is a Special Energy')
 c('M', 'Special Energy (cards and text)', '', r'Special Energy|Team Rocket\'s Energy|Voltaic Lightning Energy|Shadowy Darkness Energy|Spiky Energy')
 c('M', 'Trainer played as a Pokémon (Fossils)', r'^Trainer played as a Pokémon$|^Ability$')
+# importer 0.10.0 (milestone MV4): "Benched Pokémon that has \"Antique\" in its name" reads Fossil Items played as Pokémon
+c('M', 'Trainer played as a Pokémon (Fossils)', r'^name substring that no card of that kind contains: Antique')
+c('M', 'history: Knock Out of a kind of Pokémon (Count.koLast records any)', r'Knock Out record of a kind of Pokémon')
+c('M', 'tests on a Pokémon chosen in the effect (not an Active Pokémon)', r'condition not expressible: that Pokémon is an')
+c('I', 'rule: "all of your Pokémon in play are F" (no Pokémon in play outside F)',
+  r'condition not expressible: all of your Pokémon in play are')
 c('M', 'Trainer played as a Pokémon (Fossils)', '', r'^Play this card as if it were|can\'t be affected by any Special Conditions and can\'t retreat|discard this card from play')
 c('M', 'data defect or out-of-range stage/Resistance (record)', r'^evolution card with no evolves-from|^stage not Basic|^Resistance not|^rule box kind without')
 c('M', 'static effects: prevention or immunity (effects, Special Conditions, healing, thresholds, Bench)', r'static, prevent')

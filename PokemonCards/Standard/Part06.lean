@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part06
 open Pokemon
 
+/-- Vanillite (rsv10pt5-27). Records: rsv10pt5-27, rsv10pt5-111. -/
+def rsv10pt5_27 : Card := .pokemon
+  { name := "Vanillite", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .water, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Beat", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Ice Edge", cost := [.water, .colorless], damage := 0,
+        effect := .choice (.damage (.const 4)) (.damage (.const 2)),
+        gx := false }] }
+
 /-- Vanillish (rsv10pt5-28). Records: rsv10pt5-28, rsv10pt5-112. -/
 def rsv10pt5_28 : Card := .pokemon
   { name := "Vanillish", stage := .stage1, evolvesFrom := some "Vanillite",
@@ -1851,22 +1865,9 @@ def me1_68 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Onix (me1-70). Records: me1-70. -/
-def me1_70 : Card := .pokemon
-  { name := "Onix", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .fighting, retreat := 4, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bind", cost := [.colorless, .colorless], damage := 3,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false },
-      { name := "Strength", cost := [.colorless, .colorless, .colorless, .colorless], damage := 10,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  rsv10pt5_27,
   rsv10pt5_28,
   rsv10pt5_30,
   rsv10pt5_31,
@@ -2015,8 +2016,7 @@ def cards : List Card := [
   me1_64,
   me1_65,
   me1_67,
-  me1_68,
-  me1_70]
+  me1_68]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

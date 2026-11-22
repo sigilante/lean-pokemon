@@ -4,16 +4,16 @@ Pool: 3402 records, 2161 cards (S9 identities: 2164), 10 Lean files.
 
 | kind | cards | imported exactly | with caveats | not imported |
 |---|---|---|---|---|
-| Pokémon | 1881 | 962 (51.1%) | 308 (16.4%) | 611 (32.5%) |
+| Pokémon | 1881 | 963 (51.2%) | 308 (16.4%) | 610 (32.4%) |
 | Item | 86 | 17 (19.8%) | 24 (27.9%) | 45 (52.3%) |
 | Supporter | 83 | 15 (18.1%) | 14 (16.9%) | 54 (65.1%) |
 | Pokémon Tool | 44 | 8 (18.2%) | 8 (18.2%) | 28 (63.6%) |
 | Stadium | 36 | 7 (19.4%) | 3 (8.3%) | 26 (72.2%) |
 | Basic Energy | 9 | 9 (100.0%) | 0 (0.0%) | 0 (0.0%) |
 | Special Energy | 22 | 0 (0.0%) | 0 (0.0%) | 22 (100.0%) |
-| **all** | **2161** | **1018 (47.1%)** | **357 (16.5%)** | **786 (36.4%)** |
+| **all** | **2161** | **1019 (47.2%)** | **357 (16.5%)** | **785 (36.3%)** |
 
-By records: imported exactly 1530, with caveats 541, not imported 1331 (of 3402).
+By records: imported exactly 1531, with caveats 541, not imported 1330 (of 3402).
 
 Caveats (cards may carry several), with their direction: does the term allow outcomes the printed card does not (allows more), forbid outcomes it allows (forbids some), or both? A card imported with caveats is in general neither an over- nor an under-approximation of its printed card, so the imported pool must not be used for "no deck can ..." arguments without checking the caveat.
 
@@ -48,7 +48,7 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `koBetweenSteps` | both | 1 | a Trainer or Ability sentence written as several primitives gets a Knock Out check between them, and after a Knock Out later steps act on the replacement (Known gaps, TRun, M8a) |
 | `poisonStrength` | both | 1 | a stronger Poison ('N damage counters instead of 1') is written as Poison plus poisonUp (N-1); the Known gaps list numbered Poison variants as absent |
 
-Blocking mechanisms of the 786 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
+Blocking mechanisms of the 785 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
 
 | mechanism | blocks alone | blocks (any) |
 |---|---|---|
@@ -83,11 +83,11 @@ Blocking mechanisms of the 786 cards not imported (keyword classification of eac
 | spread: amount computed by the text (not modelled, Known gaps MV2) | 6 | 8 |
 | draw or discard variants (may draw until, draw for each, discard until) | 6 | 8 |
 | history: an attack used last turn (not modelled, Known gaps MV2) | 6 | 7 |
-| test on a card in play (ex, Evolution, Basic, name, Tool, attack) | 5 | 12 |
 | Weakness/Resistance or effects ignored | 5 | 9 |
 | a card kind with no filter | 5 | 6 |
 | Pokémon Tool card: other (attack grant not expressible, end-of-turn discard, Mega rule, unclassified record) | 5 | 5 |
 | static text (Ability, Tool or Stadium): a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage) | 4 | 28 |
+| test on a card in play (ex, Evolution, Basic, name, Tool, attack) | 4 | 11 |
 | per-attack lock or attack choice | 4 | 9 |
 | static text (Ability, Tool or Stadium): "has no Retreat Cost" (a set form; the model has more and less only) | 4 | 9 |
 | history: the Supporter played this turn (not modelled, Known gaps MV2) | 4 | 6 |

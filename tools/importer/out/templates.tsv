@@ -1,8 +1,8 @@
 rule	lean_fragment	sentences_in_imported_cards	sentences_in_pool	example_card	example_sentence
 shuffle	shuffle	129	196	svp-123 Teal Mask Ogerpon	Then, shuffle your deck.
 flip-a-coin	choice (heads) (tails), or a choice of damage, or choice (whole attack) skip	128	176	svp-114 Picnicker	Flip a coin.
+if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	105	119	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
 inflict	inflict c [; inflict c' ...]	105	148	sv5-22 Scovillain ex	Your opponent's Active Pokémon is now Burned.
-if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	104	118	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
 discard-energy	ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip); in a Trainer no fallback when none (min_take)	89	118	svp-105 Armarouge ex	Discard a Fire Energy from this Pokémon.
 reminder	skip (the model never applies Weakness or Resistance to the Bench)	71	105	svp-163 Cinderace ex	(Don't apply Weakness and Resistance for Benched Pokémon.)
 search-to-hand	move own deck hand F (upTo n)	67	76	svp-123 Teal Mask Ogerpon	Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand.

@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part08
 open Pokemon
 
+/-- Rolycoly (me2pt5-118). Records: me2pt5-118. -/
+def me2pt5_118 : Card := .pokemon
+  { name := "Rolycoly", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fighting, retreat := 3, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Mud-Slap", cost := [.fighting], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
 /-- Carkol (me2pt5-119). Records: me2pt5-119. Caveats: perPokemon. -/
 def me2pt5_119 : Card := .pokemon
   { name := "Carkol", stage := .stage1, evolvesFrom := some "Rolycoly",
@@ -1761,19 +1772,9 @@ def me5_36 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Primeape (me5-43). Records: me5-43. -/
-def me5_43 : Card := .pokemon
-  { name := "Primeape", stage := .stage1, evolvesFrom := some "Mankey",
-    hp := 11, type := .fighting, retreat := 2, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Corkscrew Punch", cost := [.colorless, .colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me2pt5_118,
   me2pt5_119,
   me2pt5_120,
   me2pt5_121,
@@ -1922,8 +1923,7 @@ def cards : List Card := [
   me5_25,
   me5_27,
   me5_30,
-  me5_36,
-  me5_43]
+  me5_36]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

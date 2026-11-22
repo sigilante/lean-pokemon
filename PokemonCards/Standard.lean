@@ -21,7 +21,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1368 terms, for 1375 of the pool's 2161 cards: 7 cards share the term of another,
+/-- Every imported card (1369 terms, for 1376 of the pool's 2161 cards: 7 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -440,7 +440,6 @@ def notImported : List (String × String × String) := [
   ("sv10-106", "Hippowdon", "not modelled (Known gaps, MV2): spread: target filtered by its damage: This attack also does 40 damage to each Benched Pokémon that has any damage counters on it (both yours and your opponent's)."),
   ("sv10-113", "Team Rocket's Arbok", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): As long as this Pokémon is in the Active Spot, your opponent can't play any Pokémon that has an Ability from their hand, except for Team Rocket's Pokémon."),
   ("sv10-115", "Team Rocket's Nidorina", "unhandled sentence: Choose up to 2 of your Darkness Pokémon."),
-  ("sv10-116", "Team Rocket's Nidoqueen", "condition not expressible: a Pokémon that has \"Nidoking\" in its name is on your Bench: If a Pokémon that has \"Nidoking\" in its name is on your Bench, this attack does 120 more damage."),
   ("sv10-122", "Team Rocket's Crobat ex", "unhandled sentence: Choose 2 of your opponent's Pokémon and put 2 damage counters on each of them."),
   ("sv10-123", "Team Rocket's Grimer", "unhandled sentence: At the end of your opponent's next turn, discard the Defending Pokémon and all attached cards."),
   ("sv10-126", "Team Rocket's Weezing", "count not expressible: Pokémon in play that has \"Koffing\" or \"Weezing\" in its name (both yours and your opponent's): This attack does 40 damage for each Pokémon in play that has \"Koffing\" or \"Weezing\" in its name (both yours and your opponent's)."),
@@ -830,13 +829,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-133", "Growing Grass Energy", "Special Energy"),
   ("me6-134", "Nitro Fire Energy", "Special Energy")]
 
-/-- **The count.** `all` has 1368 entries. -/
-theorem all_length : all.length = 1368 := by decide +kernel
+/-- **The count.** `all` has 1369 entries. -/
+theorem all_length : all.length = 1369 := by decide +kernel
 
-/-- `notImported` has 786 entries. -/
-theorem notImported_length : notImported.length = 786 := by decide +kernel
+/-- `notImported` has 785 entries. -/
+theorem notImported_length : notImported.length = 785 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1368 + 7 + 786 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1369 + 7 + 785 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -993,7 +992,7 @@ theorem cross_8_10 : crossOk Part08.cards Part10.cards = true := by decide +kern
 /-- No card of part 9 is the same term as a card of part 10. -/
 theorem cross_9_10 : crossOk Part09.cards Part10.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1368 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1369 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=

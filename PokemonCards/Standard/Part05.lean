@@ -1028,6 +1028,20 @@ def sv10_114 : Card := .pokemon
         effect := .choice (.damage (.const 3)) .skip,
         gx := false }] }
 
+/-- Team Rocket's Nidoqueen (sv10-116). Records: sv10-116. -/
+def sv10_116 : Card := .pokemon
+  { name := "Team Rocket's Nidoqueen", stage := .stage2, evolvesFrom := some "Team Rocket's Nidorina",
+    hp := 17, type := .darkness, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Love Impact", cost := [.darkness], damage := 0,
+        effect := .ite (.countGe (.bench .own (.and .pokemon (.nameHas "Nidoking"))) 1) (.damage (.const 18)) (.damage (.const 6)),
+        gx := false },
+      { name := "Mega Kick", cost := [.darkness, .darkness], damage := 13,
+        effect := .skip,
+        gx := false }] }
+
 /-- Team Rocket's Nidoran♂ (sv10-117). Records: sv10-117. -/
 def sv10_117 : Card := .pokemon
   { name := "Team Rocket's Nidoran♂", stage := .basic, evolvesFrom := none,
@@ -1778,20 +1792,6 @@ def rsv10pt5_26 : Card := .pokemon
         effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
         gx := false }] }
 
-/-- Vanillite (rsv10pt5-27). Records: rsv10pt5-27, rsv10pt5-111. -/
-def rsv10pt5_27 : Card := .pokemon
-  { name := "Vanillite", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .water, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Beat", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Ice Edge", cost := [.water, .colorless], damage := 0,
-        effect := .choice (.damage (.const 4)) (.damage (.const 2)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   sv9_136,
@@ -1877,6 +1877,7 @@ def cards : List Card := [
   sv10_111,
   sv10_112,
   sv10_114,
+  sv10_116,
   sv10_117,
   sv10_118,
   sv10_119,
@@ -1942,8 +1943,7 @@ def cards : List Card := [
   rsv10pt5_22,
   rsv10pt5_23,
   rsv10pt5_25,
-  rsv10pt5_26,
-  rsv10pt5_27]
+  rsv10pt5_26]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

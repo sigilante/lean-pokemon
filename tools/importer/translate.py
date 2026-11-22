@@ -1605,6 +1605,13 @@ def parse_test_s16(c, ctx):
     m = re.match(r'^(\S+(?: ex)?) is on your Bench$', c)
     if m and KNOWN_NAMES.get(m.group(1)) == {'Pokémon'}:
         return [('countGe', ('bench', OWN, ('named', m.group(1))), 1)], False
+    # milestone MV4 (importer 0.10.0): "a Pokémon that has \"Nidoking\" in its name is on your Bench", a Benched Pokémon
+    # whose card passes a Pokémon filter (`Count.bench own f`, the filter read on the top card)
+    m = re.match(r'^an? (.+?) is on your Bench$', c)
+    if m and m.group(1) not in KNOWN_NAMES:
+        f = parse_filter(m.group(1), ctx)
+        if is_pokemon_filter(f):
+            return [('countGe', ('bench', OWN, f), 1)], False
     # "X is in your discard pile" (a card name)
     m = re.match(r'^(.+?) is in your discard pile$', c)
     if m and m.group(1) in KNOWN_NAMES:

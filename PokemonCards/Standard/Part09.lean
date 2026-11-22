@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part09
 open Pokemon
 
+/-- Primeape (me5-43). Records: me5-43. -/
+def me5_43 : Card := .pokemon
+  { name := "Primeape", stage := .stage1, evolvesFrom := some "Mankey",
+    hp := 11, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Corkscrew Punch", cost := [.colorless, .colorless], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
 /-- Cranidos (me5-44). Records: me5-44. -/
 def me5_44 : Card := .pokemon
   { name := "Cranidos", stage := .stage1, evolvesFrom := some "Antique Skull Fossil",
@@ -1874,19 +1885,9 @@ def me6_63 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Purrloin (me6-64). Records: me6-64. -/
-def me6_64 : Card := .pokemon
-  { name := "Purrloin", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Dig Claws", cost := [.darkness], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me5_43,
   me5_44,
   me5_45,
   me5_46,
@@ -2035,8 +2036,7 @@ def cards : List Card := [
   me6_57,
   me6_61,
   me6_62,
-  me6_63,
-  me6_64]
+  me6_63]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 10 of 10 (18 cards).
+Imported Standard cards, part 10 of 10 (19 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,17 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part10
 open Pokemon
+
+/-- Purrloin (me6-64). Records: me6-64. -/
+def me6_64 : Card := .pokemon
+  { name := "Purrloin", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Dig Claws", cost := [.darkness], damage := 2,
+        effect := .skip,
+        gx := false }] }
 
 /-- Liepard (me6-65). Records: me6-65. -/
 def me6_65 : Card := .pokemon
@@ -234,6 +245,7 @@ def me6_89 : Card := .trainer "Aarune" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me6_64,
   me6_65,
   me6_66,
   me6_67,
