@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 5 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -254,7 +254,7 @@ def sv10_20 : Card := .pokemon
     abilities := [
       { name := "Charging Up", use := .once,
         spot := none, cond := none,
-        effect := .self (.attach .discard .energy) }],
+        effect := .self (.attach .discard .basicEnergy) }],
     attacks := [
       { name := "Rocket Rush", cost := [.grass, .colorless], damage := 0,
         effect := .damage (.count (.inPlay .own (.and .pokemon (.namePrefix "Team Rocket's "))) 3),
@@ -1480,7 +1480,7 @@ def sv10_162 : Card := .tool "Cynthia's Power Weight"
 
 /-- Energy Recycler (sv10-164). Records: sv10-164, me3-108. Caveats: upTo0. -/
 def sv10_164 : Card := .trainer "Energy Recycler" .item
-    (.move .own .discard .shuffle .energy (.upTo 5))
+    (.move .own .discard .shuffle .basicEnergy (.upTo 5))
 
 /-- Ethan's Adventure (sv10-165). Records: sv10-165, sv10-221, sv10-236. Caveats: upTo0. -/
 def sv10_165 : Card := .trainer "Ethan's Adventure" .supporter

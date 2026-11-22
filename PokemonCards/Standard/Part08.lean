@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 8 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -367,7 +367,7 @@ def me2pt5_168 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Minor Errand-Running", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
         gx := false },
       { name := "Glide", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -409,7 +409,7 @@ def me2pt5_172 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Kaleidowaltz", cost := [.colorless], damage := 0,
-        effect := .choice .skip (.choice (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle) (.choice (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle)) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle))))),
+        effect := .choice .skip (.choice (.seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) .shuffle) (.choice (.seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) .shuffle)) (.seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) (.seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) .shuffle))))),
         gx := false },
       { name := "Ear Force", cost := [.colorless, .colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 2) (.count (.energy .opp .energy) 8)),
@@ -1037,7 +1037,7 @@ def me3_71 : Card := .trainer "Crushing Hammer" .item
 
 /-- Energy Search (me3-72). Records: me3-72. -/
 def me3_72 : Card := .trainer "Energy Search" .item
-    (.seq (.move .own .deck .hand .energy (.upTo 1)) .shuffle)
+    (.seq (.move .own .deck .hand .basicEnergy (.upTo 1)) .shuffle)
 
 /-- Hole-Digging Shovel (me3-74). Records: me3-74. -/
 def me3_74 : Card := .trainer "Hole-Digging Shovel" .item

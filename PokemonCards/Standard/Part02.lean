@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -345,7 +345,7 @@ def sv6_72 : Card := .pokemon
         effect := .fx (.choice (.move .own (.top 1) .discard .any .all) .skip) }],
     attacks := [
       { name := "Pick and Stick", cost := [.lightning], damage := 0,
-        effect := .seq (.choice (.attach .own .discard .energy .active .any) (.attach .own .discard .energy .bench .any)) (.choice (.attach .own .discard .energy .active .any) (.attach .own .discard .energy .bench .any)),
+        effect := .seq (.choice (.attach .own .discard .basicEnergy .active .any) (.attach .own .discard .basicEnergy .bench .any)) (.choice (.attach .own .discard .basicEnergy .active .any) (.attach .own .discard .basicEnergy .bench .any)),
         gx := false }] }
 
 /-- Tadbulb (sv6-73). Records: sv6-73. -/
@@ -470,7 +470,7 @@ def sv6_87 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Minor Errand-Running", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 3)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 3)) .shuffle,
         gx := false },
       { name := "Spinning Attack", cost := [.psychic, .colorless], damage := 4,
         effect := .skip,
@@ -861,7 +861,7 @@ def sv6_133 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Lucky Attachment", cost := [.colorless], damage := 0,
-        effect := .choice (.attach .own .hand .energy .active .any) (.attach .own .hand .energy .bench .any),
+        effect := .choice (.attach .own .hand .basicEnergy .active .any) (.attach .own .hand .basicEnergy .bench .any),
         gx := false },
       { name := "Boundless Power", cost := [.colorless, .colorless, .colorless], damage := 8,
         effect := .skip,
@@ -875,7 +875,7 @@ def sv6_134 : Card := .pokemon
     abilities := [
       { name := "Happy Switch", use := .once,
         spot := none, cond := none,
-        effect := .fx (.moveEnergy .own .energy) }],
+        effect := .fx (.moveEnergy .own .basicEnergy) }],
     attacks := [
       { name := "Return", cost := [.colorless, .colorless, .colorless], damage := 18,
         effect := .choice (.drawTo .own 6) .skip,
@@ -941,7 +941,7 @@ def sv6_152 : Card := .trainer "Hyper Aroma" .item
 
 /-- Lana's Aid (sv6-155). Records: sv6-155, sv6-207, sv6-219. Caveats: upTo0. -/
 def sv6_155 : Card := .trainer "Lana's Aid" .supporter
-    (.move .own .discard .hand (.or (.and .pokemon .noRuleBox) .energy) (.upTo 3))
+    (.move .own .discard .hand (.or (.and .pokemon .noRuleBox) .basicEnergy) (.upTo 3))
 
 /-- Lucky Helmet (sv6-158). Records: sv6-158. Caveats: trigDamaged. -/
 def sv6_158 : Card := .tool "Lucky Helmet"
@@ -1306,7 +1306,7 @@ def sv6pt5_51 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Energy Assist", cost := [.colorless], damage := 3,
-        effect := .attach .own .discard .energy .bench .any,
+        effect := .attach .own .discard .basicEnergy .bench .any,
         gx := false }] }
 
 /-- Stufful (sv6pt5-52). Records: sv6pt5-52. Caveats: recoil. -/
@@ -1328,7 +1328,7 @@ def sv6pt5_53 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Power Charger", cost := [.colorless], damage := 3,
-        effect := .seq (.attach .own .deck .energy .active .any) .shuffle,
+        effect := .seq (.attach .own .deck .basicEnergy .active .any) .shuffle,
         gx := false },
       { name := "Hammer In", cost := [.colorless, .colorless, .colorless], damage := 13,
         effect := .skip,
@@ -1348,7 +1348,7 @@ def sv6pt5_58 : Card := .trainer "Dangerous Laser" .item
 
 /-- Night Stretcher (sv6pt5-61). Records: sv6pt5-61, sv8-251, me1-173, me2pt5-196. -/
 def sv6pt5_61 : Card := .trainer "Night Stretcher" .item
-    (.move .own .discard .hand (.or .pokemon .energy) (.exactly 1))
+    (.move .own .discard .hand (.or .pokemon .basicEnergy) (.exactly 1))
 
 /-- Ledyba (sv7-2). Records: sv7-2. -/
 def sv7_2 : Card := .pokemon

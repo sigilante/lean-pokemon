@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 7 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -398,7 +398,7 @@ def me1_114 : Card := .trainer "Boss's Orders" .supporter
 
 /-- Energy Switch (me1-115). Records: me1-115, me5-107. Caveats: moveMayFail. -/
 def me1_115 : Card := .trainer "Energy Switch" .item
-    (.moveEnergy .own .energy)
+    (.moveEnergy .own .basicEnergy)
 
 /-- Fighting Gong (me1-116). Records: me1-116, me1-168, me2pt5-187. -/
 def me1_116 : Card := .trainer "Fighting Gong" .item
@@ -537,7 +537,7 @@ def me2_19 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Gather Strength", cost := [.fire], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
         gx := false },
       { name := "Chop", cost := [.fire], damage := 1,
         effect := .skip,

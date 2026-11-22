@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 6 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -470,10 +470,10 @@ def rsv10pt5_78 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Wrapped in Wind", cost := [.colorless], damage := 0,
-        effect := .attach .own .hand .energy .active .any,
+        effect := .attach .own .hand .basicEnergy .active .any,
         gx := false },
       { name := "Hurricane", cost := [.colorless, .colorless, .colorless], damage := 10,
-        effect := .moveEnergy .own .energy,
+        effect := .moveEnergy .own .basicEnergy,
         gx := false }] }
 
 /-- Brave Bangle (rsv10pt5-80). Records: rsv10pt5-80. -/
@@ -490,7 +490,7 @@ def rsv10pt5_81 : Card := .trainer "Cheren" .supporter
 
 /-- Energy Retrieval (rsv10pt5-82). Records: rsv10pt5-82, me4-108. Caveats: upTo0. -/
 def rsv10pt5_82 : Card := .trainer "Energy Retrieval" .item
-    (.move .own .discard .hand .energy (.upTo 2))
+    (.move .own .discard .hand .basicEnergy (.upTo 2))
 
 /-- Harlequin (rsv10pt5-83). Records: rsv10pt5-83, rsv10pt5-163. -/
 def rsv10pt5_83 : Card := .trainer "Harlequin" .supporter
@@ -1193,7 +1193,7 @@ def zsv10pt5_68 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Gather Strength", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
         gx := false }] }
 
 /-- Fraxure (zsv10pt5-69). Records: zsv10pt5-69, zsv10pt5-146. -/
@@ -1295,7 +1295,7 @@ def zsv10pt5_79 : Card := .tool "Air Balloon"
 
 /-- Energy Coin (zsv10pt5-81). Records: zsv10pt5-81. -/
 def zsv10pt5_81 : Card := .trainer "Energy Coin" .item
-    (.choice (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) .shuffle) .skip)
+    (.choice (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) .shuffle) .skip)
 
 /-- Pokégear 3.0 (zsv10pt5-84). Records: zsv10pt5-84. -/
 def zsv10pt5_84 : Card := .trainer "Pokégear 3.0" .item

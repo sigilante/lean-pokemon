@@ -43,7 +43,25 @@ import re
 import terms as T
 from terms import OWN, OPP, SKIP, seq, choice, ite
 
+# Energy filters (milestone MV5, Pokemon/Card.lean `Filter`): an Energy card is Basic or Special (`EnergyCard`).
+# Printed "Energy card(s)" with no qualifier is `energy`, which passes both kinds; "Basic Energy card(s)" is
+# `basicEnergy`; "Special Energy" is `specialEnergy`; "Basic Fire Energy" and "Fire Energy" are `energyOf .fire`, which
+# passes Basic Fire Energy only. For a card in a deck, hand or discard pile "a Fire Energy card" is a Basic Energy card
+# (2026 rulebook, glossary p. 43: "Basic Energy card: A Grass, Fire, … or Fairy Energy card"); for Energy attached to a
+# Pokémon print reads a type by what the Energy provides, so `energyOf` in a count or test reads less than print once a
+# Special Energy card that provides that type is in play (Known gaps, Energy item; vacuous in a game of imported cards,
+# which contains no Special Energy card).
 ENERGY_F = ('energy',)
+BASIC_F = ('basicEnergy',)
+SPECIAL_F = ('specialEnergy',)
+
+
+def is_energy_filter(f):
+    """A filter only Energy cards pass (what `attach` may take: `ZStep.attachActive` takes an Energy card anyway, so
+    this keeps the printed kind visible): the Energy filters above, or the name of a Special Energy card."""
+    if f in (ENERGY_F, BASIC_F, SPECIAL_F) or f[0] == 'energyOf':
+        return True
+    return f[0] == 'named' and KNOWN_NAMES.get(f[1]) == {'Special Energy'}
 
 CAVEATS = {
     'perPokemon': "a lingering effect printed on one Pokémon ('this Pokémon', 'the Defending Pokémon') "
@@ -309,12 +327,17 @@ def parse_filter(np, ctx):
         return ('tool',)
     if s == 'Stadium':
         return ('kind', ('stadium',))
-    if s in ('Energy', 'Basic Energy'):
-        # With Basic Energy only in the model (Special Energy cards are not imported), "an Energy
-        # card" and "a Basic Energy card" are the same filter (`Filter.energy`, Pokemon/Card.lean).
+    if s == 'Energy':
+        # "an Energy card": Basic or Special (`Filter.energy`, milestone MV5)
         return ENERGY_F
-    m = re.match(r'^Basic ' + TYPE_RE + r' Energy$', s)
+    if s == 'Basic Energy':
+        # "a Basic Energy card" (`Filter.basicEnergy`, milestone MV5; until importer 0.10.0 written `Filter.energy`,
+        # the same filter while no Special Energy card is in the game)
+        return BASIC_F
+    m = re.match(r'^(?:Basic )?' + TYPE_RE + r' Energy$', s)
     if m:
+        # "a Basic Fire Energy card", and "a Fire Energy card", which the rulebook's glossary makes a Basic Energy card
+        # (see ENERGY_F); `Filter.energyOf` passes Basic Energy of that type only
         if m.group(1) in ('Dragon', 'Colorless'):
             raise Refuse('no Basic Energy of that type')
         return ('energyOf', etype(m.group(1)))
@@ -332,7 +355,7 @@ def parse_filter(np, ctx):
         # Supporters and (milestone M5) Stadiums and Tools; names of kinds the model lacks are refused
         # with that kind as the reason
         kinds = KNOWN_NAMES[s]
-        bad = sorted(kinds & {'Special Energy', 'Trainer (other)'})
+        bad = sorted(kinds & {'Special Energy', 'Trainer (other)', 'Basic Energy'})
         if bad:
             raise Refuse('card named in text is a ' + ' / '.join(bad) + ': ' + s)
         return ('named', s)
@@ -518,7 +541,15 @@ def parse_count(x, ctx):
         return lambda k: ('add', ('count', ('inPlay', OWN, f), k), ('count', ('inPlay', OPP, f), k))
     if x == 'type of Basic Energy attached to all of your Pokémon':
         return lambda k: ('count', ('energyTypes', OWN), k)
-    x = re.sub(r'^Basic Energy attached', 'Energy attached', x)
+    # "Basic Energy attached" is `basicEnergy` (milestone MV5; until 0.10.0 `energy`)
+    m = re.match(r'^(Basic) Energy(?: cards?)? attached to (this Pokémon|your opponent\'s Active Pokémon'
+                 r'|all of your Pokémon|all of your opponent\'s Pokémon)$', x)
+    if m:
+        f = BASIC_F if m.group(1) == 'Basic' else SPECIAL_F
+        where = m.group(2)
+        c = (('energy', OWN, f) if where == 'this Pokémon' else ('energy', OPP, f) if where.startswith('your opponent')
+             else ('energyAll', OWN, f) if where == 'all of your Pokémon' else ('energyAll', OPP, f))
+        return lambda k: ('count', c, k)
     m = re.match(r'^(?:(Basic )?' + TYPE_RE + r' )?Energy attached to (this Pokémon|your opponent\'s Active Pokémon'
                  r'|all of your Pokémon|all of your opponent\'s Pokémon)$', x)
     if m:
@@ -1239,7 +1270,7 @@ def attach_one(src, f, tgt, ctx):
 def _(m, ctx):
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
-    if f != ENERGY_F and f[0] != 'energyOf':
+    if not is_energy_filter(f):
         raise Refuse('attach a non-Energy card')
     if n > 1 and m.group(3) in ('1 of your Pokémon', '1 of your Benched Pokémon'):
         raise Refuse('several cards to one chosen Pokémon')
@@ -1252,7 +1283,7 @@ def _(m, ctx):
 def _(m, ctx):
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
-    if f != ENERGY_F and f[0] != 'energyOf':
+    if not is_energy_filter(f):
         raise Refuse('attach a non-Energy card')
     if n > 1 and m.group(3) in ('1 of your Pokémon', '1 of your Benched Pokémon'):
         raise Refuse('several cards to one chosen Pokémon')
@@ -1527,9 +1558,18 @@ def _(m, ctx):
 
 
 def energy_filter(basic, t):
+    """The filter of "[Basic | Special] [T] Energy" (see ENERGY_F): `basic` is the qualifier as matched ('Basic',
+    'Basic ', 'Special' or None)."""
     if t in ('Dragon', 'Colorless'):
         raise Refuse('Energy of a type with no Basic Energy')
-    return ('energyOf', etype(t)) if t else ENERGY_F
+    q = (basic or '').strip()
+    if q == 'Special':
+        if t:
+            raise Refuse('Special Energy of a type')
+        return SPECIAL_F
+    if t:
+        return ('energyOf', etype(t))
+    return BASIC_F if q == 'Basic' else ENERGY_F
 
 
 @rule('ab-move-energy', r'Move (an|a) (?:(Basic )?(?:' + TYPE_RE + r' )?)?Energy from 1 of your (Pokémon to another of your Pokémon|'
@@ -1547,7 +1587,7 @@ def _(m, ctx):
 def _(m, ctx):
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
-    if f != ENERGY_F and f[0] != 'energyOf':
+    if not is_energy_filter(f):
         raise Refuse('attach a non-Energy card')
     cv = {'upTo0'} if upto else {'mayFail'}
     tgt = m.group(3)
@@ -1693,7 +1733,7 @@ def _(m, ctx):
         raise Refuse('unhandled sentence', m.string)
     n, upto = parse_qty_np(m.group(1))
     f = parse_filter(m.group(2), ctx)
-    if f != ENERGY_F and f[0] != 'energyOf':
+    if not is_energy_filter(f):
         raise Refuse('attach a non-Energy card')
     src = ('hand',) if m.group(3) == 'hand' else ('discard',)
     tgt = m.group(4)
@@ -1728,7 +1768,7 @@ def _(m, ctx):
       'attach own deck F spot (ptype t)')
 def _(m, ctx):
     f = parse_filter(m.group(2), ctx)
-    if f != ENERGY_F and f[0] != 'energyOf':
+    if not is_energy_filter(f):
         raise Refuse('attach a non-Energy card')
     tf = parse_filter(m.group(4) + ' Pokémon', ctx)
     if not is_pokemon_filter(tf):
@@ -1795,13 +1835,14 @@ def _(m, ctx):
     # an Energy (`ZStep.discardActive`, `discardBench`), and the Bench branch is guarded so that `discardNone` (empty
     # Bench) is not a do-nothing resolution. With no Energy in play on that side: nothing in an attack, no resolution
     # in a Trainer (min_take's convention)
-    e = choice(('discardEnergy', OPP, ('active',), ENERGY_F, ('exactly', 1)),
+    F = ENERGY_F
+    e = choice(('discardEnergy', OPP, ('active',), F, ('exactly', 1)),
                ite(('countGe', ('bench', OPP, ('pokemon',)), 1),
-                   ('discardEnergy', OPP, ('bench',), ENERGY_F, ('exactly', 1)), NO_PLAY))
+                   ('discardEnergy', OPP, ('bench',), F, ('exactly', 1)), NO_PLAY))
     if ctx['kind'] == 'ability':
         ctx['_cavs'].add('noopUse')
     ctx['_s16coin'] = True
-    return Eff(ite(('countGe', ('energyAll', OPP, ENERGY_F), 1), e, NO_PLAY if ctx['kind'] == 'trainer' else SKIP))
+    return Eff(ite(('countGe', ('energyAll', OPP, F), 1), e, NO_PLAY if ctx['kind'] == 'trainer' else SKIP))
 
 
 @rule('bench-any-number-basic', r'Search your deck for any number of Basic Pokémon and put them onto your Bench\.', 'B',

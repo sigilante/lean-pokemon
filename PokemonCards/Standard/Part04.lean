@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 4 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -299,7 +299,7 @@ def sv8pt5_63 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Call to Muster", cost := [.darkness], damage := 0,
-        effect := .seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle,
+        effect := .seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) .shuffle,
         gx := false },
       { name := "Pitch-Black Fangs", cost := [.darkness, .colorless, .colorless], damage := 10,
         effect := .skip,
@@ -483,11 +483,11 @@ def sv8pt5_109 : Card := .trainer "Friends in Paldea" .supporter
 
 /-- Larry's Skill (sv8pt5-115). Records: sv8pt5-115, sv8pt5-139. -/
 def sv8pt5_115 : Card := .trainer "Larry's Skill" .supporter
-    (.seq (.seq (.move .own .hand .discard .any .all) (.seq (.move .own .deck .hand .pokemon (.upTo 1)) (.seq (.move .own .deck .hand (.kind .supporter) (.upTo 1)) (.move .own .deck .hand .energy (.upTo 1))))) .shuffle)
+    (.seq (.seq (.move .own .hand .discard .any .all) (.seq (.move .own .deck .hand .pokemon (.upTo 1)) (.seq (.move .own .deck .hand (.kind .supporter) (.upTo 1)) (.move .own .deck .hand .basicEnergy (.upTo 1))))) .shuffle)
 
 /-- Max Rod (sv8pt5-116). Records: sv8pt5-116. Caveats: aceSpec, upTo0. -/
 def sv8pt5_116 : Card := .trainer "Max Rod" .item
-    (.move .own .discard .hand (.or .pokemon .energy) (.upTo 5))
+    (.move .own .discard .hand (.or .pokemon .basicEnergy) (.upTo 5))
 
 /-- Roto-Stick (sv8pt5-127). Records: sv8pt5-127. -/
 def sv8pt5_127 : Card := .trainer "Roto-Stick" .item
@@ -732,7 +732,7 @@ def sv9_24 : Card := .pokemon
     abilities := [
       { name := "Seething Spirit", use := .once,
         spot := none, cond := none,
-        effect := .fx (.choice (.attach .own .discard .energy .active .any) (.attach .own .discard .energy .bench .any)) }],
+        effect := .fx (.choice (.attach .own .discard .basicEnergy .active .any) (.attach .own .discard .basicEnergy .bench .any)) }],
     attacks := [
       { name := "Smolder-sault", cost := [.fire, .colorless], damage := 20,
         effect := .skip,
@@ -774,7 +774,7 @@ def sv9_27 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Back Draft", cost := [.colorless, .colorless], damage := 0,
-        effect := .damage (.count (.pile .opp .discard .energy) 3),
+        effect := .damage (.count (.pile .opp .discard .basicEnergy) 3),
         gx := false },
       { name := "Flamebody Cannon", cost := [.fire, .fire, .colorless], damage := 9,
         effect := .seq (.discardEnergy .own .active .energy .all) (.benchDamage .opp 9),

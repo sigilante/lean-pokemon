@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 3 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -288,7 +288,7 @@ def sv7_98 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Swelling Wish", cost := [.colorless], damage := 0,
-        effect := .attach .own .discard .energy .bench .any,
+        effect := .attach .own .discard .basicEnergy .bench .any,
         gx := false },
       { name := "Slap", cost := [.metal, .colorless], damage := 3,
         effect := .skip,
@@ -1317,7 +1317,7 @@ def sv8_97 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Minor Errand-Running", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
         gx := false },
       { name := "Tackle", cost := [.colorless, .colorless, .colorless], damage := 5,
         effect := .skip,
@@ -1648,7 +1648,7 @@ def sv8_134 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Humming Charge", cost := [.water], damage := 0,
-        effect := .seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle,
+        effect := .seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) .shuffle,
         gx := false },
       { name := "Cotton Wings", cost := [.water, .metal], damage := 10,
         effect := .choice (.linger .own .next .prevent) .skip,
@@ -1676,7 +1676,7 @@ def sv8_136 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Space Crash", cost := [.grass, .water], damage := 0,
-        effect := .damage (.count (.energy .own .energy) 4),
+        effect := .damage (.count (.energy .own .basicEnergy) 4),
         gx := false }] }
 
 /-- Applin (sv8-138). Records: sv8-138. -/

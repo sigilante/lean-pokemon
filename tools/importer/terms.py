@@ -394,7 +394,9 @@ def filter_eval(f, card):
             return card[1] == f[1]
         return h in ('trainer', 'tool')
     if kind == 'energy':
-        if h == 'energy':
+        # an imported Energy card is a Basic Energy card ('energy', (t,)); no Special Energy card is imported
+        # (milestone MV5: `Filter.basicEnergy` passes it, `specialEnergy` and the name filters do not)
+        if h in ('energy', 'basicEnergy'):
             return True
         if h == 'energyOf':
             return card[1] == f[1]

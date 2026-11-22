@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -214,7 +214,7 @@ def svp_123 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Mountain Stroll", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
         gx := false },
       { name := "Ogre Comeback", cost := [.grass, .colorless], damage := 0,
         effect := .damage (.add (.const 2) (.count (.bench .opp .pokemon) 2)),
@@ -610,7 +610,7 @@ def sv5_26 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Charge Energy", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 1)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 1)) .shuffle,
         gx := false },
       { name := "Flame Tail", cost := [.fire, .colorless], damage := 2,
         effect := .skip,
