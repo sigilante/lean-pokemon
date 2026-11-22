@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 3 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,56 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part03
 open Pokemon
+
+/-- Slowpoke (sv7-57). Records: sv7-57. -/
+def sv7_57 : Card := .pokemon
+  { name := "Slowpoke", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Dangle Tail", cost := [.colorless], damage := 0,
+        effect := .ite (.countGe (.pile .own .discard .pokemon) 1) (.move .own .discard .hand .pokemon (.exactly 1)) .skip,
+        gx := false },
+      { name := "Tackle", cost := [.psychic, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Mewtwo (sv7-59). Records: sv7-59. -/
+def sv7_59 : Card := .pokemon
+  { name := "Mewtwo", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Super Psy Bolt", cost := [.psychic, .psychic, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Drifloon (sv7-60). Records: sv7-60. Caveats: perPokemon. -/
+def sv7_60 : Card := .pokemon
+  { name := "Drifloon", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Expand", cost := [.psychic], damage := 1,
+        effect := .linger .own .next (.reduce 1),
+        gx := false }] }
+
+/-- Comfey (sv7-63). Records: sv7-63. -/
+def sv7_63 : Card := .pokemon
+  { name := "Comfey", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Flower Shower", cost := [.psychic], damage := 0,
+        effect := .seq (.move .own (.top 3) .hand .any .all) (.move .opp (.top 3) .hand .any .all),
+        gx := false },
+      { name := "Play Rough", cost := [.psychic], damage := 0,
+        effect := .choice (.damage (.const 4)) (.damage (.const 2)),
+        gx := false }] }
 
 /-- Milcery (sv7-64). Records: sv7-64, sv7-152. -/
 def sv7_64 : Card := .pokemon
@@ -202,6 +252,20 @@ def sv7_85 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Diancie (sv7-86). Records: sv7-86. -/
+def sv7_86 : Card := .pokemon
+  { name := "Diancie", stage := .basic, evolvesFrom := none,
+    hp := 11, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Diffuse Reflection", cost := [.colorless], damage := 0,
+        effect := .damage (.count (.energyAll .opp .specialEnergy) 4),
+        gx := false },
+      { name := "Power Gem", cost := [.fighting, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
 /-- Crabrawler (sv7-87). Records: sv7-87. -/
 def sv7_87 : Card := .pokemon
   { name := "Crabrawler", stage := .basic, evolvesFrom := none,
@@ -288,7 +352,7 @@ def sv7_98 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Swelling Wish", cost := [.colorless], damage := 0,
-        effect := .attach .own .discard .energy .bench .any,
+        effect := .attach .own .discard .basicEnergy .bench .any,
         gx := false },
       { name := "Slap", cost := [.metal, .colorless], damage := 3,
         effect := .skip,
@@ -1317,7 +1381,7 @@ def sv8_97 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Minor Errand-Running", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .energy (.upTo 2)) .shuffle,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
         gx := false },
       { name := "Tackle", cost := [.colorless, .colorless, .colorless], damage := 5,
         effect := .skip,
@@ -1648,7 +1712,7 @@ def sv8_134 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Humming Charge", cost := [.water], damage := 0,
-        effect := .seq (.seq (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any)) (.choice (.attach .own .deck .energy .active .any) (.attach .own .deck .energy .bench .any))) .shuffle,
+        effect := .seq (.seq (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any)) (.choice (.attach .own .deck .basicEnergy .active .any) (.attach .own .deck .basicEnergy .bench .any))) .shuffle,
         gx := false },
       { name := "Cotton Wings", cost := [.water, .metal], damage := 10,
         effect := .choice (.linger .own .next .prevent) .skip,
@@ -1676,7 +1740,7 @@ def sv8_136 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Space Crash", cost := [.grass, .water], damage := 0,
-        effect := .damage (.count (.energy .own .energy) 4),
+        effect := .damage (.count (.energy .own .basicEnergy) 4),
         gx := false }] }
 
 /-- Applin (sv8-138). Records: sv8-138. -/
@@ -1832,43 +1896,12 @@ def sv8_157 : Card := .pokemon
         effect := .choice (.damage (.const 2)) (.damage (.const 1)),
         gx := false }] }
 
-/-- Cyclizar ex (sv8-159). Records: sv8-159, sv8-228. Caveats: benchMods. -/
-def sv8_159 : Card := .pokemon
-  { name := "Cyclizar ex", stage := .basic, evolvesFrom := none,
-    hp := 21, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .ex, tera := true,
-    abilities := [],
-    attacks := [
-      { name := "Break Through", cost := [.colorless, .colorless, .colorless], damage := 13,
-        effect := .benchDamage .opp 3,
-        gx := false },
-      { name := "Zircon Road", cost := [.grass, .fire, .psychic], damage := 18,
-        effect := .choice (.move .own (.top 5) .hand .any .all) .skip,
-        gx := false }] }
-
-/-- Amulet of Hope (sv8-162). Records: sv8-162. Caveats: aceSpec, searchAny, trigKO, upTo0. -/
-def sv8_162 : Card := .tool "Amulet of Hope"
-  { holder := .pokemon,
-    attacks := [],
-    abilities := [
-      { name := "Amulet of Hope", use := .triggered .koByAttack false,
-        spot := none, cond := none,
-        effect := .fx (.seq (.move .own .deck .hand .any (.upTo 3)) .shuffle) }] }
-
-/-- Brilliant Blender (sv8-164). Records: sv8-164. Caveats: aceSpec, searchAny, upTo0. -/
-def sv8_164 : Card := .trainer "Brilliant Blender" .item
-    (.seq (.move .own .deck .discard .any (.upTo 5)) .shuffle)
-
-/-- Cyrano (sv8-170). Records: sv8-170, sv8-230. Caveats: upTo0. -/
-def sv8_170 : Card := .trainer "Cyrano" .supporter
-    (.seq (.move .own .deck .hand (.and .pokemon (.not .noRuleBox)) (.upTo 3)) .shuffle)
-
-/-- Drasna (sv8-173). Records: sv8-173, sv8-231. -/
-def sv8_173 : Card := .trainer "Drasna" .supporter
-    (.seq (.move .own .hand .shuffle .any .all) (.choice (.move .own (.top 8) .hand .any .all) (.move .own (.top 3) .hand .any .all)))
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_57,
+  sv7_59,
+  sv7_60,
+  sv7_63,
   sv7_64,
   sv7_66,
   sv7_68,
@@ -1885,6 +1918,7 @@ def cards : List Card := [
   sv7_83,
   sv7_84,
   sv7_85,
+  sv7_86,
   sv7_87,
   sv7_90,
   sv7_91,
@@ -2013,12 +2047,7 @@ def cards : List Card := [
   sv8_153,
   sv8_154,
   sv8_155,
-  sv8_157,
-  sv8_159,
-  sv8_162,
-  sv8_164,
-  sv8_170,
-  sv8_173]
+  sv8_157]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2057,7 +2086,7 @@ theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = tr
 theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Deluxe Bomb", "Bruxish"] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
-theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = ["Amulet of Hope"] := by decide +kernel
+theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel
@@ -2071,6 +2100,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Tornadus", "Volcarona", "Donphan", "Skarmory"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Drifloon", "Tornadus", "Volcarona", "Donphan", "Skarmory"] := by decide +kernel
 
 end PokemonCards.Standard.Part03

@@ -676,10 +676,11 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,377 are imported (1,020 exactly, 357 with
-caveats) as 1,370 distinct terms, and 784 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.10.0, which writes the MV4 name filters, counts
-and per-Pokémon attack locks; survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
+damage reduction). Of the pool's 2,161 cards, 1,386 are imported (1,027 exactly, 359 with
+caveats) as 1,379 distinct terms, and 775 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.11.0, which writes the MV5 Energy filters as printed:
+`basicEnergy` for "Basic Energy", `energy` for "Energy", `specialEnergy` for "Special Energy";
+survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
 turn", "as often as you like") and on-play Abilities are translated when every sentence has a
 rule, since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
 the model's `Static`, and since importer 0.6.0 (milestone M8b) triggered Abilities and Tool text
@@ -692,7 +693,8 @@ does not cover imported decks in general: `Standard.untame` lists the imported c
 not tame (a `drain` attack or a stored damage reduction); its clause on static reductions holds
 for every game (`reduceLe_bound`), and `Standard.sReduce_le` bounds the static reduction in force. Regenerate with
 `python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
-memory and diffs); build with `lake build PokemonCards`, which runs its own axiom gate
+memory and diffs; `tools/importer/count_writers.py` recounts writers and recyclers from the
+generated library); build with `lake build PokemonCards`, which runs its own axiom gate
 (`PokemonCards/Audit.lean`). These are facts about the generated terms; whether a term says
 what its printed card says is the importer's claim, validated by eye in survey S11. The
 theorems cover only games built entirely from imported cards: the refused cards, and decks
