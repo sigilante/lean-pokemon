@@ -114,12 +114,25 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   put into play or evolved this turn);
 * attack costs are typed (milestone M4; rulebook 2023 p. 13): each typed symbol is paid by a
   unit of attached Energy of that type and each Colorless symbol by any unit, every unit paying
-  one symbol (`Pays`, decided by `payable`); only Basic Energy exists, one unit of its type
-  (`Card.provides`); Special Energy (several units, or units of several types), cost changes
-  ("this attack costs ✱ less") and Energy that provides nothing in some states are absent. A
-  Retreat Cost is still paid by discarding that many Energy cards, which with Basic Energy only
-  is the rulebook's rule ("you must discard 1 Energy from your Active Pokémon for each [✱] listed
-  in its Retreat Cost", 2026 p. 12); the player chooses which (`Move.retreat`: any sub-multiset,
+  one symbol (`Pays`, decided by `payable`); a Basic Energy card provides one unit of its type
+  (`Card.provides`); since milestone MV5 a Special Energy card (`EnergyCard.special`) provides a
+  fixed list of units, each of one or several types, whatever Pokémon holds it. Absent: every rider
+  of the printed Special Energy cards (survey S18 §A: static, triggered, on-attach,
+  return-to-hand and discard text; restrictions on the holder), provision that depends on the
+  holder (Prism, Neo Upper, Ignition Energy) or on other attached cards (Luminous Energy), cost
+  changes ("this attack costs ✱ less") and Energy that provides nothing in some states. Every
+  Special Energy card is therefore an under-model, marked `Card.inert`: neither a superset nor a
+  subset of the printed card in general (Team Rocket's Energy without its holder restriction allows
+  more; Spiky Energy without its trigger does less), so an importer must refuse it or caveat it.
+  Deck construction is not modelled (the 4-copy rule, which counts Special Energy, rulebook 2026
+  PDF p. 21; ACE SPEC). "Fire Energy" in a count or test reads `Filter.energyOf`, Basic Energy only,
+  so a Special Energy card that provides Fire is not counted (a subset of print, which counts Energy
+  by what it provides; vacuous for decks without Special Energy). A Retreat Cost is still paid by
+  discarding that many Energy cards, which with one-unit Energy is the rulebook's rule; a Special
+  Energy card that provides 2 units (Team Rocket's Energy) pays one symbol of the Retreat Cost in
+  the model, where print, read by units, would let it pay two:
+  a subset of print for such cards, unverified against a ruling (the rule: "you must discard 1
+  Energy from your Active Pokémon for each [✱] listed in its Retreat Cost", 2026 p. 12); the player chooses which (`Move.retreat`: any sub-multiset,
   `Split .any`; until survey S14 only the most recently attached Energy could be discarded, which
   forbade keeping the Energy an attack needs; `Retreat.discard_first`, `Retreat.discard_second`);
 * Weakness is ×2 to one type and Resistance −N to one type, as printed today (S9: every Standard
@@ -243,7 +256,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   ("The effect of Vibrant Dance doesn't stack", "You can't apply more than 1 … at a time": the
   model adds every effect in force), HP bonuses counted per Prize card taken, per Benched Pokémon
   or per named Pokémon in play (Brambleghast, Pangoro, Nidoking), effects that read "remaining HP"
-  (Rescue Board), and Special Energy HP bonuses (no Special Energy). Before milestone M6 HP was the
+  (Rescue Board), and Special Energy HP bonuses (no rider of a Special Energy card is modelled). Before milestone M6 HP was the
   printed value, and the clamps capped damage there; they now cap at a bound on every derived HP
   (`hpBound`, `Enum.bound`). A Pokémon whose derived HP is 0 (its `hpMinus` effects reach its
   printed HP plus its `hpPlus` effects) is a pending Knock Out at once, with no damage on it;
@@ -296,7 +309,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (1),
   of a Retreat Cost (7), of cards moved "in this way" (12), coins counted by the state (6), printed
   subtypes the card terms lack (Ancient, Future: 13 with other kinds), reads of the defender's
-  Retreat Cost or remaining HP, and Special Energy; two filters read less than print does:
+  Retreat Cost or remaining HP (Special Energy cards are counted and filtered since milestone MV5:
+  `Filter.basicEnergy`, `Filter.specialEnergy`); two filters read less than print does:
   `Filter.ptype` reads the printed type and ignores a Coloring counter, and `Filter.hasAbility`
   reads the printed Abilities and ignores one a Tool gives (the first cannot arise among the
   imported Standard cards, none of which places a Coloring counter; the second can: one imported
@@ -635,14 +649,17 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Survival Brace are replacement effects, Powerglass is an end-of-turn trigger, Lillie's Pearl
   changes Prize cards, Adversity Policy, Tremendous Bomb and Team Rocket's Hypnotizer have
   conditions or filters the model lacks, and the three Stadiums are not modelled either. Activated effects the
-  model cannot express exactly: Stadiums 9 (Lumiose City ends the turn; Surfing Beach ×2 and
-  Spikemuth Gym need a filter on the Bench or a name prefix; Fossil Quarry benches Items; Grand Tree
-  evolves by effect; Mystery Garden draws to a count of Pokémon in play; Community Center and Team
-  Rocket's Factory read the turn's history), Tools 2 granting attacks (Technical Machine: Fluorite,
+  model cannot express exactly: Stadiums 8 (Lumiose City ends the turn; Surfing Beach ×2 needs a
+  filter on the switch, the Benched Pokémon being a Water Pokémon; Fossil Quarry benches Items; Grand
+  Tree evolves by effect; Mystery Garden draws to a count of Pokémon in play, and `drawTo` takes a
+  printed number; Community Center's condition, a Supporter played this turn, is expressible since
+  milestone MV4 (`Count.supporter`) but its healing of each of the player's Pokémon is not; Team
+  Rocket's Factory reads the name of the Supporter played this turn, which is not recorded), Tools 2 granting attacks (Technical Machine: Fluorite,
   "heal all damage from each of your Tera Pokémon" and its end-of-turn discard; Mega Rayquaza Cap,
   an attachment per capped Pokémon). Backtrack Badge (re-flip coins) changes nothing in a model in
-  which flips are nondeterministic choices. Expressed with effect: Stadiums 3 (Academy at Night,
-  Levincia, Prism Tower) and Tool 1 (Core Memory, whose attack goes to a holder named "Mega
+  which flips are nondeterministic choices. Expressed with effect: Stadiums 4 (Academy at Night,
+  Levincia, Prism Tower, and since milestone MV4 Spikemuth Gym, whose "Marnie's Pokémon" is a name
+  prefix, `Filter.namePrefix`) and Tool 1 (Core Memory, whose attack goes to a holder named "Mega
   Zygarde ex"). Adventure Lantern me6-90's record carries only an Item-like text and is left
   unclassified. A Stadium's play condition ("only if you discard a Prism Tower in play", Ange
   Floette) and "This card can't be put into your hand or deck from the discard pile"
@@ -680,8 +697,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Prize changes; 44 cards of the 67 after-event triggers are of other shapes), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
-  (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
-  sv9-85 attaches Spiky Energy). The finiteness results cover activated and on-play Abilities:
+  (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45); Lycanroc sv9-85's "attach up to 2
+  Spiky Energy cards" is expressible since milestone MV5 (`Filter.named` reads a Special Energy
+  card's name). The finiteness results cover activated and on-play Abilities:
   `Reach.finite` with tame, low-constant Ability effects, `StoreSafe.xfinite` under clause 4
   (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
@@ -1532,8 +1550,9 @@ inductive Move : GameState → GameState → Prop where
       (hat : g.attacked = false) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, bench := g.cur.bench ++ [InPlay.ofBasic p] } }
-  /-- attach one Energy card from hand to the Active Pokémon, once per turn -/
-  | attach {g : GameState} {l₁ l₂ : List Card} {t : BasicEnergy} {a : InPlay}
+  /-- attach one Energy card (Basic or, since milestone MV5, Special: `EnergyCard`) from hand to
+  the Active Pokémon, once per turn -/
+  | attach {g : GameState} {l₁ l₂ : List Card} {t : EnergyCard} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
       (hf : g.cur.energyAttached = false) (ha : g.cur.active = some a)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
@@ -1560,7 +1579,7 @@ inductive Move : GameState → GameState → Prop where
   once-per-turn attachment as `attach` ("Take an Energy card from your hand and put it under your
   Active Pokémon or one of your Benched Pokémon … You can attach Energy just once each turn!",
   rulebook 2023 p. 11; milestone M3) -/
-  | attachBench {g : GameState} {l₁ l₂ : List Card} {t : BasicEnergy} {q : InPlay}
+  | attachBench {g : GameState} {l₁ l₂ : List Card} {t : EnergyCard} {q : InPlay}
       {b₁ b₂ : List InPlay}
       (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
       (hf : g.cur.energyAttached = false) (hb : g.cur.bench = b₁ ++ q :: b₂)

@@ -48,4 +48,5 @@ import Pokemon.Prevent
 import Pokemon.Retreat
 import Pokemon.Vocab4
 import Pokemon.Lock
+import Pokemon.Special
 import Pokemon.Audit

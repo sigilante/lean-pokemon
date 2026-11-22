@@ -200,12 +200,12 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
   | drawTo (w : Whose) (n : Nat) (s : PlayerState) :
       ZStep (.drawTo w n) s (s.drawK (n - s.hand.length))
   | attachActive {w : Whose} {src : Src} {f tf : Filter} {s : PlayerState} {r : List Card}
-      {t : BasicEnergy} {a : InPlay} (hs : Split f (src.get s) [.energy t] r)
+      {t : EnergyCard} {a : InPlay} (hs : Split f (src.get s) [.energy t] r)
       (ha : s.active = some a) (ht : tf.eval (.pokemon a.top) = true) :
       ZStep (.attach w src f .active tf) s
         { src.set r s with active := some (a.addEnergy (.energy t)) }
   | attachBench {w : Whose} {src : Src} {f tf : Filter} {s : PlayerState} {r : List Card}
-      {t : BasicEnergy} {q : InPlay} {b₁ b₂ : List InPlay} (hs : Split f (src.get s) [.energy t] r)
+      {t : EnergyCard} {q : InPlay} {b₁ b₂ : List InPlay} (hs : Split f (src.get s) [.energy t] r)
       (hb : s.bench = b₁ ++ q :: b₂) (ht : tf.eval (.pokemon q.top) = true) :
       ZStep (.attach w src f .bench tf) s
         { src.set r s with bench := b₁ ++ q.addEnergy (.energy t) :: b₂ }

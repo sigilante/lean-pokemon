@@ -18,7 +18,7 @@ inductive EType where
 
 /-- The nine types of Basic Energy card: "A Grass, Fire, Water, Lightning, Psychic, Fighting,
 Darkness, Metal or Fairy Energy card" (rulebook 2023, glossary p. 39). There is no Basic
-Colorless or Dragon Energy. Special Energy cards are absent from the model. -/
+Colorless or Dragon Energy. Since milestone MV5 an Energy card is Basic or Special (`EnergyCard`). -/
 inductive BasicEnergy where
   | grass | fire | water | lightning | psychic | fighting | darkness | metal | fairy
   deriving DecidableEq
@@ -34,6 +34,50 @@ def BasicEnergy.type : BasicEnergy → EType
   | .darkness => .darkness
   | .metal => .metal
   | .fairy => .fairy
+
+/-- **An Energy card** (milestone MV5): Basic (`basic t`) or Special (`special name prov`). A Special
+Energy card has its printed name and what it provides while attached, one entry per unit, each entry
+the types that unit counts as ("provides Colorless Energy" is `[[.colorless]]`; "provides every type
+of Energy but provides only 1 Energy at a time" is one unit of every type; Team Rocket's Energy, "2 in
+any combination of Psychic Energy and Darkness Energy", is `[[.psychic, .darkness], [.psychic,
+.darkness]]`). Nothing else of its text is modelled: no rider (static, triggered, on-attach, return
+or discard text), no provision that depends on the holder or on other attached cards, no restriction
+on what it may be attached to. Every Special Energy card of today's Standard has such text (survey
+S18 §A), so each is an under-model of the printed card, marked by `Card.inert`.
+
+Why a kind inside `Card.energy` and not a flag with a default or a new `Card` constructor: in Lean
+v4.36.0 a pattern `.energy t` fills in an omitted default argument, so a defaulted flag would
+silently narrow every existing match on `.energy _` to Basic Energy (S18 §A2); and a new `Card`
+constructor would break the exhaustive matches of `PokemonCards/Props.lean`. With `EnergyCard`,
+`.energy _` still matches every Energy card, and the generated `.energy .fire` still elaborates
+(`EnergyCard.fire` is `basic .fire`).
+
+Deck construction is not modelled: the rule that a deck may hold only 4 copies of a card with the
+same name "except for Basic Energy cards" (rulebook 2026, PDF p. 21), which covers Special Energy,
+and the ACE SPEC limit (Neo Upper, Legacy, Enriching Energy), are not checked anywhere. -/
+inductive EnergyCard where
+  | basic (t : BasicEnergy)
+  | special (name : String) (prov : List (List EType))
+  deriving DecidableEq
+
+namespace EnergyCard
+/-- The Basic Energy cards by type, so that `.energy .fire` denotes the Basic Fire Energy card. -/
+@[match_pattern] abbrev grass : EnergyCard := .basic .grass
+@[match_pattern] abbrev fire : EnergyCard := .basic .fire
+@[match_pattern] abbrev water : EnergyCard := .basic .water
+@[match_pattern] abbrev lightning : EnergyCard := .basic .lightning
+@[match_pattern] abbrev psychic : EnergyCard := .basic .psychic
+@[match_pattern] abbrev fighting : EnergyCard := .basic .fighting
+@[match_pattern] abbrev darkness : EnergyCard := .basic .darkness
+@[match_pattern] abbrev metal : EnergyCard := .basic .metal
+@[match_pattern] abbrev fairy : EnergyCard := .basic .fairy
+end EnergyCard
+
+/-- The Energy one card provides while attached, one entry per unit, each entry the types that unit
+counts as: one unit of its type for a Basic Energy card, `prov` for a Special Energy card. -/
+def EnergyCard.units : EnergyCard → List (List EType)
+  | .basic t => [[t.type]]
+  | .special _ p => p
 
 /-! ## Energy and attack costs -/
 
@@ -250,8 +294,10 @@ Supporter card", "a Basic Fire Energy card", "up to 2 Pokémon that don't have a
 Evaluated by `Filter.eval`, a `Bool`, so every filter is decidable; a new printed kind is one more
 constructor and one more clause of `Filter.eval`. Pokémon filters read the printed card (stage,
 type, name, HP, rule box; since milestone MV2 also Tera, a printed attack's name and whether the
-card has an Ability), not the Pokémon in play. With Basic Energy only (no Special Energy in
-the model), "an Energy card" and "a Basic Energy card" are the same filter, `energy`. -/
+card has an Ability), not the Pokémon in play. Since milestone MV5 an Energy card is Basic or
+Special (`EnergyCard`): "an Energy card" is `energy`, "a Basic Energy card" `basicEnergy`, "a Special
+Energy card" `specialEnergy`; "a Basic Fire Energy card" is `energyOf`, which passes Basic Energy
+only. -/
 inductive Filter where
   /-- any card ("a card", "cards") -/
   | any
@@ -276,9 +322,10 @@ inductive Filter where
   | kind (k : TrainerKind)
   /-- a Pokémon Tool card (milestone M5; `Card.tool`) -/
   | tool
-  /-- an Energy card (in the model every Energy card is a Basic Energy card) -/
+  /-- an Energy card, Basic or (milestone MV5) Special -/
   | energy
-  /-- a Basic Energy card of type `t` ("a Basic Fire Energy card") -/
+  /-- a Basic Energy card of type `t` ("a Basic Fire Energy card"); never a Special Energy card,
+  whatever it provides -/
   | energyOf (t : EType)
   /-- a Pokémon ex, Mega Evolution Pokémon ex included (milestone MV2: "if your opponent's Active
   Pokémon is a Pokémon ex"; the rule box gives it, `RuleBox`). Today's Standard has no Pokémon V,
@@ -300,6 +347,12 @@ inductive Filter where
   /-- a card whose printed name contains `s` (milestone MV4): "a Pokémon that has \"Nidoking\" in its
   name", "a Supporter card that has \"Team Rocket\" in its name" -/
   | nameHas (s : String)
+  /-- a Basic Energy card (milestone MV5: "a Basic Energy card", as against "an Energy card") -/
+  | basicEnergy
+  /-- a Special Energy card (milestone MV5: "Discard a Special Energy from your opponent's Active
+  Pokémon", Victini sv5-30; "for each Special Energy card attached to this Pokémon", Cinccino
+  sv5-137) -/
+  | specialEnergy
   | and (a b : Filter)
   | or (a b : Filter)
   | not (a : Filter)
@@ -1281,8 +1334,9 @@ def ToolGrant.none : ToolGrant := ⟨.any, [], [], []⟩
 
 inductive Card where
   | pokemon (p : PokemonCard)
-  /-- a Basic Energy card (`BasicEnergy`: nine types, no Colorless or Dragon) -/
-  | energy (t : BasicEnergy)
+  /-- an Energy card: Basic (`BasicEnergy`: nine types, no Colorless or Dragon) or, since milestone
+  MV5, Special (`EnergyCard`) -/
+  | energy (t : EnergyCard)
   /-- an Item, Supporter or (milestone M5) Stadium card. For an Item or a Supporter, `effect` is
   what it does when played (`Move.item`, `Move.supporter`); for a Stadium it is what "Once during
   each player's turn, that player may …" lets the player to move do while the Stadium is in play
@@ -1310,13 +1364,14 @@ def Card.abilities : Card → List Ability
   | .tool _ gr => gr.abilities
   | _ => []
 
-/-- The printed name of a Pokémon, Trainer or Tool card; none for a Basic Energy card (milestone
-MV4, read by the name filters). -/
+/-- The printed name of a Pokémon, Trainer, Tool or (milestone MV5) Special Energy card; none for
+a Basic Energy card (milestone MV4, read by the name filters). -/
 def Card.name? : Card → Option String
   | .pokemon p => some p.name
   | .trainer m _ _ _ => some m
   | .tool m _ => some m
-  | .energy _ => none
+  | .energy (.basic _) => none
+  | .energy (.special m _) => some m
 
 /-- The name filters (milestone MV4): does the card's printed name contain `x` (`sub`) or begin
 with it? A Basic Energy card has no name the filters read. -/
@@ -1335,6 +1390,7 @@ def Filter.eval : Filter → Card → Bool
   | .named n, .pokemon p => decide (p.name = n)
   | .named n, .trainer m _ _ _ => decide (m = n)
   | .named n, .tool m _ => decide (m = n)
+  | .named n, .energy (.special m _) => decide (m = n)
   | .hpLe n, .pokemon p => decide (p.hp ≤ n)
   | .noRuleBox, .pokemon p => decide (p.ruleBox = .none)
   | .trainer, .trainer _ _ _ _ => true
@@ -1342,7 +1398,9 @@ def Filter.eval : Filter → Card → Bool
   | .kind k, .trainer _ k' _ _ => decide (k' = k)
   | .tool, .tool _ _ => true
   | .energy, .energy _ => true
-  | .energyOf t, .energy e => decide (e.type = t)
+  | .energyOf t, .energy (.basic e) => decide (e.type = t)
+  | .basicEnergy, .energy (.basic _) => true
+  | .specialEnergy, .energy (.special _ _) => true
   | .ex, .pokemon p => decide (p.ruleBox ≠ .none)
   | .tera, .pokemon p => p.tera
   | .hasAttack n, .pokemon p => p.attacks.any fun a => decide (a.name = n)
@@ -1394,10 +1452,14 @@ does not express (triggered text outside the two shapes of milestone M8b, and st
 the language of `Static`), so `Card.inert` tells "playable, effect not modelled" (an under-model of
 the printed card) from "playable, effect expressed" (a Stadium with an activated or, since milestone
 M6, a static effect; a Tool that gives an attack, an Ability or a static effect, and since milestone
-M8b a triggered Ability: a Tool whose triggered text is expressed is not inert). -/
+M8b a triggered Ability: a Tool whose triggered text is expressed is not inert). Since milestone
+MV5 every Special Energy card is inert: it provides Energy and nothing of the rest of its text is
+modelled (`EnergyCard`), so an importer must refuse it or caveat it as "provides …; text not
+modelled". -/
 def Card.inert : Card → Bool
   | .trainer _ .stadium e ss => e == .skip && ss.isEmpty
   | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty && gr.statics.isEmpty
+  | .energy (.special _ _) => true
   | _ => false
 
 /-- **The static effects printed on a card** (milestone M6): a Pokémon card's static Abilities; a
@@ -1420,12 +1482,14 @@ def Card.isTool : Card → Bool
   | _ => false
 
 /-- The Energy a card attached to a Pokémon provides, one entry per unit, each entry the types
-that unit counts as. A Basic Energy card provides one unit of its type. Special Energy cards
-(several units, as "provides 2 Colorless Energy", or one unit of several types, as "provides
-every type of Energy but only 1 Energy at a time") are not in the model; each would be one more
-clause here, and `Pays` already matches units of several types. Other cards provide nothing. -/
+that unit counts as (`EnergyCard.units`). A Basic Energy card provides one unit of its type; a
+Special Energy card (milestone MV5) what its `prov` says, whatever Pokémon holds it (several units,
+as Team Rocket's Energy's two, or one unit of several types, as "provides every type of Energy but
+only 1 Energy at a time"; `Pays` matches units of several types). Provision that depends on the
+holder (Prism, Neo Upper, Ignition) or on other attached cards (Luminous) is not expressible.
+Other cards provide nothing. -/
 def Card.provides : Card → List (List EType)
-  | .energy t => [[t.type]]
+  | .energy t => t.units
   | _ => []
 
 /-- The constant a test compares damage with (0 for the tests that do not read damage). -/
