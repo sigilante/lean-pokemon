@@ -381,9 +381,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   step-5 increase of the damage to the player's Pokémon (`Mod.expose`, `Mods.more`) are stored
   amounts too, added up without limit, bounded by the clauses of `StoreSafe` like the bonus and the
   reduction (`Mod.isAmt`), capped by the capped clamp and excluded from tame decks (`Mod.plain`).
-  Readings: a penalty that brings the damage after step 2 to 0 stops the calculation ("Stop if the
-  base damage is 0", 2026 p. 20, read after step 2's effects), so a step-5 increase then adds
-  nothing; inside step 5 the increase is added before the reduction is subtracted (the rulebook
+  A departure: a penalty that brings the damage after step 2 to 0 stops the calculation, so a
+  step-5 increase then adds nothing. The rulebook says "Stop if the base damage is 0" (2026 p. 20)
+  and defines base damage in step 1 as the number printed on the attack (or computed by its text),
+  so read literally a penalised attack with positive base damage goes on to step 5: an attack for
+  30 under a 30 penalty against a Pokémon that takes 50 more does 0 here and 50 by the literal
+  text. The model does less damage than print in that case and agrees elsewhere. Readings: inside step 5 the increase is added before the reduction is subtracted (the rulebook
   gives no order; the other order gives more damage when the reduction exceeds the damage after
   Resistance); each subtraction stops at 0, so a Resistance larger than the damage leaves 0 to which
   the increase is added (carrying a negative value over, which step 6's "If the damage is 0 or less"
@@ -847,7 +850,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   primitive ("up to 2" is two of them; "to each of your Benched Pokémon" is written as one per
   Pokémon); the player chooses wherever the printed card lets the opponent choose; hidden
   information is not modelled (the state is public, so "reveal" and "look at" are no-ops, and a
-  search may take fewer cards than it could, which "up to" already allows); the model resolves a
+  search may take fewer cards than it could, which "up to" already allows; a window written
+  with `Qty.most` must take a passing card when there is one, which is right for a public window
+  such as a revealed hand and fewer outcomes than the usual practice of failing to find in a
+  private one such as the top cards of a deck, a practice the 2026 rulebook does not state); the model resolves a
   played Item or Supporter with the card already in the discard pile (the rulebook: "follow the
   instructions on the card and then discard it", 2023 glossary), so a card can recycle itself in
   the model; clause 3 of `StoreSafe` constrains that case like any other. For the same reason a

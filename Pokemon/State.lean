@@ -550,8 +550,9 @@ counters, against a Defending Pokémon that is weak to the attacker (`weak`) and
    all). Otherwise, keep going." If `n = 0` the result is 0; otherwise the attacker's damage
    bonus is added and (milestone MV6) its step-2 penalty (`Mod.weaken`, "attacks used by the
    Defending Pokémon do 30 less damage (before applying Weakness and Resistance)") subtracted,
-   stopping at 0; if that leaves 0, the calculation stops (the model reads "Stop if the base
-   damage is 0" as applying after step 2's effects, so a penalty that cancels the damage also
+   stopping at 0; if that leaves 0, the calculation stops (a departure, listed in the Known gaps: the model
+   applies "Stop if the base damage is 0" after step 2's effects, where the rulebook's base damage
+   is the printed number, so a penalty that cancels the damage also
    cancels the defender's step-5 increase).
 3. "Increase the damage by the amount next to your opponent's Active Pokémon's Weakness, if it
    has Weakness to your Active Pokémon's type." Weakness ×2 doubles.
