@@ -1039,7 +1039,7 @@ structure Ability where
 def Ability.script (ab : Ability) (p : Option Spot) : Effect := ab.effect.compile p
 
 /-- Every effect the Ability can resolve: with "this Pokémon" Active, Benched, or not tracked. The
-conditions on cards (`Card.tame`, `Card.tmax`, the clauses of `Faithful`) read all three. -/
+conditions on cards (`Card.tame`, `Card.tmax`, the clauses of `StoreSafe`) read all three. -/
 def Ability.scripts (ab : Ability) : List Effect :=
   [ab.script (some .active), ab.script (some .bench), ab.script none]
 

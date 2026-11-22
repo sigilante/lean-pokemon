@@ -1,4 +1,4 @@
-import Pokemon.Faithful
+import Pokemon.StoreSafe
 import Pokemon.IfDo
 
 /-!
@@ -17,20 +17,20 @@ statements the model's theorems use. Every check is stated with the model's own 
   is `hitFree` and `benchHitFree` (premises of `Move.item`, `Move.supporter` and
   `Move.stadiumUse`); every script of every Ability the card has or gives is `hitFree` and
   `benchHitFree` (premises of `Move.ability` and `Move.onPlay`); the card satisfies clause 1 of
-  `Faithful` (`Card.loopFree`), the per-card part of clause 2 (`GXOnly`: an attack that is not a
+  `StoreSafe` (`Card.loopFree`), the per-card part of clause 2 (`GXOnly`: an attack that is not a
   GX attack writes no rest-of-game bonus or reduction), clause 4 (`Card.abilitySafe`) and clause 5
   (`Card.stadiumSafe`: a Stadium's effect writes no rest-of-game bonus or reduction).
-* `recSafeB C`: clause 3 of `Faithful` (`RecycleSafe`) for every game whose cards all come from `C`,
+* `recSafeB C`: clause 3 of `StoreSafe` (`RecycleSafe`) for every game whose cards all come from `C`,
   as one Boolean over the recycling filters of `C` (`Card.freeRec`, which counts "as often as you
   like" Abilities with Items and Supporters and, since milestone M5, not Stadiums, whose uses are
   bounded per turn; and `Card.allRec`) and the modifier writers of `C`.
-* `faithful_of`: from both, every game whose cards all come from `C` is `Faithful` (all five
-  clauses), so `Faithful.xfinite` applies to it.
+* `storeSafe_of`: from both, every game whose cards all come from `C` is `StoreSafe` (all five
+  clauses), so `StoreSafe.xfinite` applies to it.
 * `nodupFp`: a check that a list of cards has no two equal terms, cheap enough for the kernel on
   the whole imported list (`nodup_of_nodupFp`).
 
 Since milestone M6 a card may carry static effects (`Card.statics`: a static Ability's, a Tool's
-static text, a Stadium's static text). `Faithful` has no clause about them and `Faithful.xfinite`
+static text, a Stadium's static text). `StoreSafe` has no clause about them and `StoreSafe.xfinite`
 holds with the clamp at `Enum.bound`, which bounds every derived HP and every static damage
 reduction; `Card.hasStatic` lists the cards by kind (a static damage reduction is `Static.isReduce`,
 a nonzero `Static.reduceUnit` of the model), `hpOf_le_of` bounds derived HP over a pool, and
@@ -41,13 +41,13 @@ The tame-deck theorem `Reach.finite` does not apply to imported decks in general
 imported pool has cards with `drain` attacks and with stored damage reductions. Its new clause
 `ReduceLe` (Resistance plus `sReduceBound`) holds at `Enum.bound` for every game by the definition
 of the bound (`reduceLe_bound`), so static reductions do not stand in the way; tameness does.
-For imported decks the theorem that applies is `Faithful.xfinite`, through `faithful_of`.
+For imported decks the theorem that applies is `StoreSafe.xfinite`, through `storeSafe_of`.
 
 Triggered Abilities (milestone M8b, importer 0.6.0): `Card.trigsOn`, `Card.hasTrig` list a card's
 triggers by event (`AbilityUse.event`); `Card.trigsOk` checks that each has no printed condition and an
 effect of the trigger fragment at its event's place, so that `Ability.trigOn` is the test of its place
 alone (`trigOn_of_trigsOk`); `Card.trigLingers` and `Card.trigRecycles` find triggers that write a
-lingering modifier or return a card from a discard pile. The five clauses of `Faithful` need no new
+lingering modifier or return a card from a discard pile. The five clauses of `StoreSafe` need no new
 check: a trigger is an Ability, so its scripts are among those `Card.loopFree`, `Card.abilitySafe` and
 `Card.allRec` (clause 3 (b)) already read.
 
@@ -145,7 +145,7 @@ def Card.trigLingers (c : Card) : Bool :=
   c.abilities.any fun ab => ab.use.event.isSome && ab.scripts.any Effect.lingers
 
 /-- A triggered Ability the card has or gives can return a card from a discard pile (`Effect.recFilters` of
-one of its scripts; these filters are among `Card.allRec`, which clause 3 (b) of `Faithful` constrains). -/
+one of its scripts; these filters are among `Card.allRec`, which clause 3 (b) of `StoreSafe` constrains). -/
 def Card.trigRecycles (c : Card) : Bool :=
   c.abilities.any fun ab => ab.use.event.isSome && ab.scripts.any fun e => !e.recFilters.isEmpty
 
@@ -206,7 +206,7 @@ namespace PokemonCards
 
 open Pokemon
 
-/-- Clause 3 of `Faithful` for the pool `C`, decidable by evaluation: no recycling filter of an Item
+/-- Clause 3 of `StoreSafe` for the pool `C`, decidable by evaluation: no recycling filter of an Item
 or Supporter or of an "as often as you like" Ability of `C` (`Card.freeRec`; since milestone M5 a
 Stadium's effect is not a free recycler) admits a card of `C` that is an Item writing a bonus or
 reduction (`Card.wAmt`), and no recycling filter of any effect of `C`, attacks, Abilities and
@@ -429,11 +429,11 @@ theorem trigOn_of_trigsOk {c : Card} (h : c.trigsOk = true) {ab : Ability} (hab 
   refine ⟨?_, h1.2⟩
   simp only [Ability.trigOn, he, beq_self_eq_true, Bool.true_and, h1.1, h1.2, Bool.and_true]
 
-/-- **Faithful decks from a checked pool.** If every card of `C` passes `Card.importOk` and
-`recSafeB C` holds, every game whose cards all come from `C` is `Faithful`: `LoopFree`, `GXOnly`,
+/-- **Store-safe decks from a checked pool.** If every card of `C` passes `Card.importOk` and
+`recSafeB C` holds, every game whose cards all come from `C` is `StoreSafe`: `LoopFree`, `GXOnly`,
 `RecycleSafe`, `AbilitySafe` and `StadiumSafe`. -/
-theorem faithful_of {C : List Card} (h : C.all Card.importOk = true) (hr : recSafeB C = true)
-    (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ C) : g.Faithful :=
+theorem storeSafe_of {C : List Card} (h : C.all Card.importOk = true) (hr : recSafeB C = true)
+    (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ C) : g.StoreSafe :=
   ⟨fun x hx => loopFree_of h x (hg x hx),
    fun c hc atk ha hgx => gxOnly_of h c (hg c hc) atk ha hgx,
    recycleSafe_of hr g hg,

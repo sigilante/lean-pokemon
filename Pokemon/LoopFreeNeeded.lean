@@ -1,10 +1,10 @@
 import Pokemon.Stadiums
 
 /-!
-# Clause 1 of `Faithful` is needed
+# Clause 1 of `StoreSafe` is needed
 
-Clauses 2 to 5 of `GameState.Faithful` each have a negative theorem showing that the store bound
-fails without them (`Faithful.counter_not_gxOnly` and `Faithful.dichotomy` for clause 2,
+Clauses 2 to 5 of `GameState.StoreSafe` each have a negative theorem showing that the store bound
+fails without them (`StoreSafe.counter_not_gxOnly` and `StoreSafe.dichotomy` for clause 2,
 `Recycle.recycling_breaks_bound` for clause 3, `Abilities.unlimited_writer_breaks_bound` for
 clause 4, `Stadiums.stadium_writer_breaks_bound` for clause 5). This file gives one for clause 1
 (`LoopFree`: no damage bonus or reduction written under `iter`).
@@ -78,11 +78,11 @@ def bon (g : GameState) : Nat := g.cur.mods.now.bonus
 theorem bon_xclamp (g : GameState) : bon (g.xclamp K) = bon g := rfl
 
 /-- **A damage bonus written under `iter` breaks the store bound.** There is a well-formed start
-satisfying clauses 2 to 5 of `Faithful` and violating clause 1 (`LoopFree`), whose reachable
+satisfying clauses 2 to 5 of `StoreSafe` and violating clause 1 (`LoopFree`), whose reachable
 states have unbounded stores and whose reachable states' `xclamp`s lie in no finite list: one
 play of an Item whose effect is `iter (linger .own .now (bonus 1))` writes any this-turn bonus.
 So clause 1, or some other condition on modifiers written under `iter`, is needed for
-`Faithful.reach_boundedStores` and the finiteness half of `Faithful.xfinite`. The result is about
+`StoreSafe.reach_boundedStores` and the finiteness half of `StoreSafe.xfinite`. The result is about
 representation, not play: no Pokémon of the deck has an attack, so nothing reads the bonus. -/
 theorem iter_writer_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ ¬ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧

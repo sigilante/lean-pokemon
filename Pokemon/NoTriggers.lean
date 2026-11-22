@@ -1,11 +1,11 @@
-import Pokemon.Faithful.Invariant
+import Pokemon.StoreSafe.Invariant
 import Pokemon.Terminate
 
 /-!
 # Decks without triggered Abilities (milestone M8b)
 
 Milestone M8b changed two moves (`Move.attack` ends with the opponent's `damaged` triggers,
-`Move.knockOuts` with the `koByAttack` triggers of the batch); `Faithful` is unchanged (a first
+`Move.knockOuts` with the `koByAttack` triggers of the batch); `StoreSafe` is unchanged (a first
 version of M8b counted triggered Abilities as free recyclers in clause 3 (a); a review showed that
 unnecessary, and it was undone). For a game in which no card has a
 triggered Ability (`GameState.TrigFree`, kept by play) nothing changed:

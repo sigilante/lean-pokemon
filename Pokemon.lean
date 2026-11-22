@@ -19,9 +19,9 @@ import Pokemon.Lingering
 import Pokemon.Counter
 import Pokemon.Exact
 import Pokemon.Bounded
-import Pokemon.Faithful.Deck
-import Pokemon.Faithful.Invariant
-import Pokemon.Faithful
+import Pokemon.StoreSafe.Deck
+import Pokemon.StoreSafe.Invariant
+import Pokemon.StoreSafe
 import Pokemon.Dichotomy
 import Pokemon.Turn
 import Pokemon.Calc

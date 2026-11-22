@@ -327,7 +327,7 @@ def run(data, out, survey=None):
            'theorem lingerers : (all.filter Card.lingers).map Card.label = ' + T.lean([recs[0]['name'] for recs, _ in lingerers])
            + ' := by decide +kernel\n',
            '/-- The imported Items that write a bonus or reduction (`Card.wAmt`), the cards clause 3 (a) of\n'
-           '`Faithful` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/',
+           '`StoreSafe` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/',
            'theorem nonSupporterWriters : (all.filter fun c => c.wAmt != 0).map Card.label = '
            + T.lean([t[1] for t in [r['term'] for _, r in imported] if w_amt(t)]) + ' := by decide +kernel\n',
            '/-- The imported Items and Supporters that write a rest-of-game bonus or reduction (`Card.alAmt`), by\n'
@@ -352,7 +352,7 @@ def run(data, out, survey=None):
            '/-- The imported cards whose effects a player can resolve again and again in one turn and that can\n'
            'return a card from a discard pile (`Card.freeRec`: Items, Supporters and "as often as you like"\n'
            'Abilities; not Stadiums, whose uses are bounded per turn), by name: the recyclers clause 3 (a) of\n'
-           '`Faithful` constrains. -/',
+           '`StoreSafe` constrains. -/',
            'theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if free_rec(r['term'])]) + ' := by decide +kernel\n',
            '/-- The imported Stadiums and Pokémon Tools, by name (milestone M5; none is `Card.inert`, `notInert`). -/',
@@ -364,7 +364,7 @@ def run(data, out, survey=None):
            'theorem stadiumRecyclers : (all.filter fun c => c.isStadium && !c.allRec.isEmpty).map Card.label = '
            + T.lean([recs[0]['name'] for recs, r in imported if r['term'][0] == 'trainer'
                      and r['term'][2] == ('stadium',) and T.rec_filters(r['term'][3])]) + ' := by decide +kernel\n',
-           '/-- Clause 3 of `Faithful` over the whole imported pool, decided. -/',
+           '/-- Clause 3 of `StoreSafe` over the whole imported pool, decided. -/',
            'theorem recSafe : recSafeB all = ' + ('true' if not rs_pairs else 'false') + ' := by decide +kernel\n',
            ]
     if not rs_pairs:
@@ -379,11 +379,11 @@ def run(data, out, survey=None):
                 '/-- Clause 5 (`StadiumSafe`) for every game whose cards are all imported cards. -/',
                 'theorem stadiumSafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.StadiumSafe :=\n'
                 '  fun x hx => stadiumSafe_of all_ok x (hg x hx)\n',
-                '/-- **Every game whose cards are all imported cards is `Faithful`** (all five clauses: `LoopFree`,\n'
-                '`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `Faithful.xfinite` applies to it. -/',
-                'theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=\n'
-                '  faithful_of all_ok recSafe g hg\n',
-                '/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged; the clamp\n'
+                '/-- **Every game whose cards are all imported cards is `StoreSafe`** (all five clauses: `LoopFree`,\n'
+                '`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `StoreSafe.xfinite` applies to it. -/',
+                'theorem storeSafe (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.StoreSafe :=\n'
+                '  storeSafe_of all_ok recSafe g hg\n',
+                '/-- The finiteness theorem for imported decks: `StoreSafe.xfinite` with its premise discharged; the clamp\n'
                 'is taken at `Enum.bound g₀.allCards`, which bounds every derived HP (milestone M6). -/',
                 'theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :\n'
                 '    (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧\n'
@@ -393,7 +393,7 @@ def run(data, out, survey=None):
                 '          g₁\'.xclamp (Enum.bound g₀.allCards) = g₂\'.xclamp (Enum.bound g₀.allCards)) ∧\n'
                 '        (∀ g₂\', Move g₂ g₂\' → ∃ g₁\', Move g₁ g₁\' ∧\n'
                 '          g₂\'.xclamp (Enum.bound g₀.allCards) = g₁\'.xclamp (Enum.bound g₀.allCards)) :=\n'
-                '  Faithful.xfinite (faithful g₀ hg)\n']
+                '  StoreSafe.xfinite (storeSafe g₀ hg)\n']
     src += static_theorems(imported, part_names, hp_max, gain_max, red_max)
     src += trigger_theorems(imported, part_names)
     src += ['/-- Every attack an imported card has or (a Tool) gives is well formed (`Attack.wf`, required by\n'
@@ -408,12 +408,12 @@ def run(data, out, survey=None):
             'and no attack damage to the Bench (premises of `Move.ability` and `Move.onPlay`). -/',
             'theorem abilities_hitFree : ∀ c ∈ all, ∀ ab ∈ c.abilities, ∀ e ∈ ab.scripts,\n'
             '    e.hitFree = true ∧ e.benchHitFree = true :=\n  abilities_of all_ok\n',
-            '/-- Every imported card satisfies clause 4 of `Faithful` (`Card.abilitySafe`): no imported "as often\n'
+            '/-- Every imported card satisfies clause 4 of `StoreSafe` (`Card.abilitySafe`): no imported "as often\n'
             'as you like" Ability writes a damage bonus or reduction, and no imported Ability a rest-of-game one. -/',
             'theorem abilitySafe : ∀ c ∈ all, c.abilitySafe = true := abilitySafe_of all_ok\n',
-            '/-- Every imported card satisfies clause 1 of `Faithful` (`Card.loopFree`, Ability scripts included). -/',
+            '/-- Every imported card satisfies clause 1 of `StoreSafe` (`Card.loopFree`, Ability scripts included). -/',
             'theorem loopFree : ∀ c ∈ all, c.loopFree = true := loopFree_of all_ok\n',
-            '/-- Every imported card satisfies clause 5 of `Faithful` (`Card.stadiumSafe`): no imported Stadium\'s\n'
+            '/-- Every imported card satisfies clause 5 of `StoreSafe` (`Card.stadiumSafe`): no imported Stadium\'s\n'
             'effect writes a rest-of-game bonus or reduction. -/',
             'theorem stadiumSafe : ∀ c ∈ all, c.stadiumSafe = true := stadiumSafe_of all_ok\n',
             '/-- `GXOnly` over the imported pool: no attack an imported card has or gives that is not a GX attack\n'
@@ -810,8 +810,8 @@ def static_theorems(imported, part_names, hp_max, gain_max, red_max):
             'stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`\n'
             '(Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game\n'
             '(`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards\n'
-            'is not covered by `Reach.finite`; every game of imported cards is `Faithful` (`faithful`), and\n'
-            '`Faithful.xfinite` (`xfinite`) applies to all of them. -/' % len(untame_names),
+            'is not covered by `Reach.finite`; every game of imported cards is `StoreSafe` (`storeSafe`), and\n'
+            '`StoreSafe.xfinite` (`xfinite`) applies to all of them. -/' % len(untame_names),
             'theorem untame : (all.filter (fun c => !c.tame)).map Card.label = %s := by\n'
             '  simp only [all, List.filter_append, List.map_append, %s, List.cons_append, List.nil_append%s]\n'
             % (T.lean(untame_names), pl('cards_untame'),

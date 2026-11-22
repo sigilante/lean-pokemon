@@ -338,15 +338,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   a damage reduction or uses `drain` and no reduction is in effect at the start
   (`GameState.Fit`); for every cap `k ≥ 3` there is a deck with a reduction for which that clamp
   is not a simulation (`Lingering.reduce_breaks_clamp`), and for every `k ≥ 2` a deck with
-  `drain` (`Lingering.drain_breaks_clamp`). *Faithful decks* (`Faithful.xfinite`): the clamp
+  `drain` (`Lingering.drain_breaks_clamp`). *Store-safe decks* (`StoreSafe.xfinite`): the clamp
   with exact stores, `GameState.xclamp`, is a bisimulation for every deck, on all pairs of
   states with equal `xclamp` (`Reach.xclamp_bisim`, `GameState.xclamp_bisim`), and its reachable
   values are finite when the stores stay bounded
   (`Reach.xfinite_bounded`), which holds for decks with no damage bonus or reduction under
   `iter` (`LoopFree`) and rest-of-game bonuses and reductions only in GX attacks (`GXOnly`;
-  `Faithful.reach_boundedStores`). Faithful decks may use damage reduction, `drain`, and
+  `StoreSafe.reach_boundedStores`). Store-safe decks may use damage reduction, `drain`, and
   carried bonuses and reductions in attacks and Trainers. Since milestone MV cards leave the discard
-  pile (recycling), and `Faithful` has a third clause, `RecycleSafe`, in its present form (after
+  pile (recycling), and `StoreSafe` has a third clause, `RecycleSafe`, in its present form (after
   milestones M8a and M5): (a) no free recycler (an Item or Supporter effect, or an "as often as you
   like" Ability of a Pokémon or given by a Tool, `Card.freeRec`; not an attack, a once-per-turn or
   on-play Ability, a triggered Ability (milestone M8b), or a Stadium's effect) can return an Item card that writes a bonus or reduction
@@ -366,14 +366,14 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   of the bound. Each of the five clauses has a negative theorem: without it the stores are
   unbounded (clause 1: `LoopFreeNeeded.iter_writer_breaks_bound`; 2: below; 3:
   `Recycle.recycling_breaks_bound`; 4: `Abilities.unlimited_writer_breaks_bound`; 5:
-  `Stadiums.stadium_writer_breaks_bound`). What `Faithful.xfinite` covers is the model: for a
+  `Stadiums.stadium_writer_breaks_bound`). What `StoreSafe.xfinite` covers is the model: for a
   deck containing a card whose static or triggered text is not modelled (the Stadium and Tool
   item below, static and triggered Abilities), it is a theorem about the inert card the model
   plays, not the printed one. Until milestone M6 the omission that most directly made the model's
   finiteness easier than the real game's was HP modifiers: the clamps capped damage at printed HP,
   and `Settled` forced a Knock Out at printed HP. Since M6 HP is derived (item above): the clamps
   cap damage and Poison strength at a bound `K` on every derived HP (`hpBound`, a function of the
-  cards of the game), and `Reach.finite` and `Faithful.xfinite` hold with the clamp at that bound
+  cards of the game), and `Reach.finite` and `StoreSafe.xfinite` hold with the clamp at that bound
   (`GameState.xclamp_bisim` is stated at `K = Enum.bound` of the state's cards, and holds at any
   larger `K`, `GameState.xclamp_bisim_of_le`);
   for `Reach.finite` the bound also exceeds every Resistance plus the static damage reductions the
@@ -388,13 +388,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   over-approximation of rest-of-game modifiers just described, on `damage` read by a test later
   in the same attack, on a printed HP chosen for the machine, and on the other departures listed
   in `Pokemon/Counter.lean`); its start states satisfy `LoopFree`, and violate `GXOnly` when the
-  machine's first instruction is not `halt` (`Faithful.counter_not_gxOnly`), so the `GXOnly`
-  clause cannot be dropped from `Faithful.xfinite` (`Faithful.dichotomy`, a sharpness result, not
-  a classification: nothing is proved about other decks that are not faithful); with Minsky's theorem (prose) this rules out a uniform computable
+  machine's first instruction is not `halt` (`StoreSafe.counter_not_gxOnly`), so the `GXOnly`
+  clause cannot be dropped from `StoreSafe.xfinite` (`StoreSafe.dichotomy`, a sharpness result, not
+  a classification: nothing is proved about other decks that are not store-safe); with Minsky's theorem (prose) this rules out a uniform computable
   finite abstraction of the generalised model; for one such deck the reachable states are not
   finite up to the exact-store clamp, nor up to any equivalence fine enough to recover the
   machine's configuration, a statement about representation, not play
-  (`Faithful.xclamp_not_finite`, `Counter.not_finite_up_to`);
+  (`StoreSafe.xclamp_not_finite`, `Counter.not_finite_up_to`);
 * an attack's damage (milestone M4): an attack with a printed base damage and no damage text
   does that damage and then its effect (`Attack.script`); an attack whose text computes or
   conditions its damage has base damage field 0 and one damage step in its effect
@@ -427,7 +427,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `iter (benchDamage .opp n)` in an attack does Bench damage any number of times, which no
   printed card does;
 * GX attacks (`Attack.gx`): a player who has used one (`PlayerState.gxUsed`) cannot use another
-  in the same game; the flag is set by `Move.attack` (a rule added for `Pokemon/Faithful.lean`;
+  in the same game; the flag is set by `Move.attack` (a rule added for `Pokemon/StoreSafe.lean`;
   before it, `gxUsed` was never read or written). A Confused Pokémon can try a GX attack
   (`attackConfused`) only under the same condition, and a failed attempt (tails) does not use it
   up: whether a failed Confused GX attempt uses up the once-per-game attack is an unverified
@@ -553,7 +553,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`ToolGrant`, for a holder passing a filter: `InPlay.attacks`, `InPlay.abilities`); a Tool's
   once-per-turn Ability shares the Pokémon's one use flag (`InPlay.used`), so a Pokémon with an
   Ability of its own and one from a Tool uses only one of them in a turn (fewer outcomes than the
-  rulebook). For such a holder `Faithful.xfinite` is therefore a theorem about a game with fewer
+  rulebook). For such a holder `StoreSafe.xfinite` is therefore a theorem about a game with fewer
   outcomes than the printed one; the store bound is not proved for a model with one use flag per
   Ability. Effects discard a Stadium in play (`Effect.discardStadium`) and the Tools of a
   Pokémon (`Effect.discardTools`). Not modelled: the end-of-turn discard of Technical Machine:
@@ -567,7 +567,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Tool with such text is still playable, as a card with no effect (`Card.inert`: a Stadium whose
   effect is `skip`, a Tool with an empty grant): it occupies the slot or the Tool place and does
   nothing, which under-models the printed card (it removes the printed outcomes the text adds and
-  keeps the ones it forbids). `Faithful.xfinite` for a deck containing such a card is a theorem
+  keeps the ones it forbids). `StoreSafe.xfinite` for a deck containing such a card is a theorem
   about the inert card, not the printed one. Since milestone M6 static text in the language of
   `Static` is expressed (`ToolGrant.statics`, the `statics` of a Stadium; `Card.inert` is false
   for such a card): HP changes (Stadiums 3: Ange Floette, Gravity Mountain, Lively Stadium; Tools
@@ -660,7 +660,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
   (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45), and Special Energy (Lycanroc
   sv9-85 attaches Spiky Energy). The finiteness results cover activated and on-play Abilities:
-  `Reach.finite` with tame, low-constant Ability effects, `Faithful.xfinite` under clause 4
+  `Reach.finite` with tame, low-constant Ability effects, `StoreSafe.xfinite` under clause 4
   (`AbilitySafe`) with clauses 1 and 3 extended to Abilities; `Abilities.unlimited_writer_breaks_bound` and
   `Abilities.unlimited_recycler_breaks_bound` show what clauses 4 and 3 (a) exclude;
 * triggered Abilities (milestone M8b; survey S12): two shapes, `TrigEvent.damaged` ("if this
@@ -772,7 +772,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   search may take fewer cards than it could, which "up to" already allows); the model resolves a
   played Item or Supporter with the card already in the discard pile (the rulebook: "follow the
   instructions on the card and then discard it", 2023 glossary), so a card can recycle itself in
-  the model; clause 3 of `Faithful` constrains that case like any other. For the same reason a
+  the model; clause 3 of `StoreSafe` constrains that case like any other. For the same reason a
   count of the discard pile read by that Trainer's own effect includes the card itself. Inside an attack nothing
   after a `switch .own` may attach Energy to, discard Energy from or move Energy off the player's
   Active Pokémon (`Effect.ownFree`), and the attacker at a damage step is the same Pokémon (top
@@ -820,7 +820,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   include only one total ACE SPEC card" (p. 26), one Radiant Pokémon (p. 29). The theorems
   quantify over every state and so over every multiset of card terms, illegal decks included (more
   decks, a superset). The negative theorems (`LoopFreeNeeded.iter_writer_breaks_bound`,
-  `Faithful.counter_not_gxOnly`, `Recycle.recycling_breaks_bound`,
+  `StoreSafe.counter_not_gxOnly`, `Recycle.recycling_breaks_bound`,
   `Abilities.unlimited_writer_breaks_bound`, `Abilities.unlimited_recycler_breaks_bound`,
   `Stadiums.stadium_writer_breaks_bound`) and the universality construction (`Counter.universal`)
   are about decks in the model's sense, arbitrary multisets of card terms: their witness states

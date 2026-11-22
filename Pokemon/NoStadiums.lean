@@ -3,7 +3,7 @@ import Pokemon.NoAbilities
 /-!
 # Decks without Stadiums (milestone M5)
 
-Milestone M5 changed `Faithful` in three places that matter only for Stadium cards: clause 5
+Milestone M5 changed `StoreSafe` in three places that matter only for Stadium cards: clause 5
 (`StadiumSafe`) is new; clause 3 (`RecycleSafe`) no longer counts a Stadium as a writer that may
 not be recycled, nor a Stadium's effect as a free recycler (`Card.wAmt`, `Card.alAmt`,
 `Card.freeRec`); and the store bound has a Stadium term (`cardsStQ`). For a game in which no card
@@ -28,7 +28,7 @@ theorem GameState.NoStadiums.of_perm {g g' : GameState} (h : g.NoStadiums)
     (hp : g'.allCards.Perm g.allCards) : g'.NoStadiums :=
   fun x hx => h x (hp.mem_iff.1 hx)
 
-/-- Without Stadiums, clause 5 of `Faithful` (`StadiumSafe`) holds. -/
+/-- Without Stadiums, clause 5 of `StoreSafe` (`StadiumSafe`) holds. -/
 theorem GameState.NoStadiums.safe {g : GameState} (h : g.NoStadiums) : g.StadiumSafe := by
   intro x hx
   have := h x hx
@@ -109,33 +109,33 @@ theorem GameState.NoStadiums.recycleSafe_iff {g : GameState} (h : g.NoStadiums) 
     · rw [Card.alAmt_eq (h y hy)]
       exact h2 x hx f hf y hy hfy
 
-/-- **Without Stadiums, `Faithful` is the four-clause condition of milestone M8a**, its clause 3
+/-- **Without Stadiums, `StoreSafe` is the four-clause condition of milestone M8a**, its clause 3
 word for word for decks with no Tool cards (`RecycleSafeM8a` has `.tool` cases, for a card kind
 that milestone M8a did not have; with Tool cards it is that clause's natural extension). -/
-theorem GameState.NoStadiums.faithful_iff {g : GameState} (h : g.NoStadiums) :
-    g.Faithful ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafeM8a ∧ g.AbilitySafe :=
+theorem GameState.NoStadiums.storeSafe_iff {g : GameState} (h : g.NoStadiums) :
+    g.StoreSafe ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafeM8a ∧ g.AbilitySafe :=
   ⟨fun ⟨a, b, c, d, _⟩ => ⟨a, b, h.recycleSafe_iff.1 c, d⟩,
     fun ⟨a, b, c, d⟩ => ⟨a, b, h.recycleSafe_iff.2 c, d, h.safe⟩⟩
 
 /-- **Without Stadiums, the store bound is the bound of milestone M8a.** -/
 theorem GameState.NoStadiums.storeBound {g : GameState} (h : g.NoStadiums) :
-    Faithful.storeBound g =
+    StoreSafe.storeBound g =
       g.storeTotal + 6 * cardsAmt g.allCards +
         3 * (cardsAbQ (cardsAmt g.allCards) g.allCards * potBound g.allCards.length) +
         3 * cardsAtkAmt g.allCards := by
-  simp [Faithful.storeBound, cardsStQ_zero _ _ h]
+  simp [StoreSafe.storeBound, cardsStQ_zero _ _ h]
 
 /-- **Without Abilities and Stadiums, the store bound is the bound of milestone MV.** -/
 theorem GameState.NoStadiums.storeBound_noAbilities {g : GameState} (h : g.NoStadiums)
     (ha : g.NoAbilities) :
-    Faithful.storeBound g = g.storeTotal + 6 * cardsAmt g.allCards + 3 * cardsAtkAmt g.allCards := by
-  simp [Faithful.storeBound, cardsStQ_zero _ _ h, cardsAbQ_zero _ _ ha]
+    StoreSafe.storeBound g = g.storeTotal + 6 * cardsAmt g.allCards + 3 * cardsAtkAmt g.allCards := by
+  simp [StoreSafe.storeBound, cardsStQ_zero _ _ h, cardsAbQ_zero _ _ ha]
 
 /-- Without Stadiums, the per-game bound `reach_boundedStores_noRecycle` has the hypotheses it had
 before milestone M5. -/
 theorem GameState.NoStadiums.reach_boundedStores_noRecycle {g₀ g : GameState}
     (hs : g₀.NoStadiums) (hL : g₀.LoopFree) (hG : g₀.GXOnly) (hN : g₀.NoRecycle)
-    (hQ : g₀.AbilityQuiet) (h : Reach g₀ g) : g.BoundedStores (Faithful.storeBoundNR g₀) :=
-  Faithful.reach_boundedStores_noRecycle hL hG hN hQ hs.quiet h
+    (hQ : g₀.AbilityQuiet) (h : Reach g₀ g) : g.BoundedStores (StoreSafe.storeBoundNR g₀) :=
+  StoreSafe.reach_boundedStores_noRecycle hL hG hN hQ hs.quiet h
 
 end Pokemon

@@ -51,7 +51,7 @@ What is proved about finiteness.
   a bisimulation for every deck, on all pairs of states (`Reach.xclamp_bisim`,
   `GameState.xclamp_bisim`), and its reachable values are finite for
   decks with no damage bonus or reduction under `iter` and rest-of-game bonuses and reductions
-  only in GX attacks (`Faithful.xfinite`, `Pokemon/Faithful.lean`); such decks may use damage
+  only in GX attacks (`StoreSafe.xfinite`, `Pokemon/StoreSafe.lean`); such decks may use damage
   reduction and `drain`.
 
 Beyond the clamp. For some decks that are not tame the obstacle is not the choice of clamp.

@@ -19,15 +19,15 @@ of a state, not of the proof, and proves finiteness under it.
   so the reachable states satisfying it fall into finitely many classes of a bisimulation. The
   bounded part is not closed under moves: a move can leave it, and the theorem says nothing
   about where it goes then. So on its own it gives a finite set of classes and a bisimulation
-  that may leave that set, not a finite quotient; the finite quotient is `Faithful.xfinite`,
+  that may leave that set, not a finite quotient; the finite quotient is `StoreSafe.xfinite`,
   for decks whose reachable states all have bounded stores.
 
 Nothing here bounds the stores: whether play keeps them bounded depends on the deck.
-`Pokemon/Faithful.lean` gives a deck condition under which every reachable state satisfies
-`BoundedStores` at a bound computed from the start (`Faithful.reach_boundedStores`), and
+`Pokemon/StoreSafe.lean` gives a deck condition under which every reachable state satisfies
+`BoundedStores` at a bound computed from the start (`StoreSafe.reach_boundedStores`), and
 `Pokemon/Dichotomy.lean` shows that the bound cannot be dropped: for the two-counter start
 `Counter.start Counter.countUp 0 0` the `xclamp`s of the reachable states lie in no finite list
-(`Faithful.xclamp_not_finite`).
+(`StoreSafe.xclamp_not_finite`).
 -/
 
 namespace Pokemon
@@ -86,7 +86,7 @@ There is no hypothesis on the cards: damage reduction, `drain`, rest-of-game mod
 state with bounded stores may lead to one without: the bounded part of the reachable states is
 not closed under moves. So this theorem alone gives a finite set of classes and a bisimulation
 that may leave that set; it is not a finite quotient of the reachable states. The genuine
-finite quotient is `Faithful.xfinite`, under a deck condition that keeps every reachable state
+finite quotient is `StoreSafe.xfinite`, under a deck condition that keeps every reachable state
 in the bounded part. As for `Reach.finite`, the list is not computed and the quotient's moves
 are not shown computable. -/
 theorem Reach.xfinite_bounded {g₀ : GameState} (B : Nat) :

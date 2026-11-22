@@ -1121,7 +1121,7 @@ theorem writers : (all.filter Card.writesAmt).map Card.label = ["Seedot", "Grotl
 theorem lingerers : (all.filter Card.lingers).map Card.label = ["Seedot", "Breloom", "Roserade", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Azumarill", "Golett", "Golurk", "Tranquill", "Torkoal", "Crawdaunt", "Finizen", "Luxio", "Kilowattrel", "Nosepass", "Whirlipede", "Sneasel", "Golbat", "Varoom", "Lileep", "Turtonator", "Electivire", "Galvantula ex", "Drifloon", "Tornadus", "Bruxish", "Xerneas", "Donphan", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Pyroar", "Heatran", "Maractus", "Shelmet", "Blaziken ex", "Lombre", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Escavalier", "Hop's Corviknight", "Shelgon", "Oinkologne", "Clamperl", "Floatzel", "Skarmory", "Steven's Metang", "Virizion", "Sigilyph", "Frillish", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Genesect ex", "Fraxure", "Bulbasaur", "Exeggutor", "Stonjourner", "Yveltal", "Gliscor", "Eternatus", "Bronzor", "Erika's Weepinbell", "N's Vanillish", "Stunfisk ex", "Carkol", "Hoopa", "Registeel ex", "N's Zekrom", "Larry's Braviary", "Spinarak", "Ariados", "Aegislash", "Flaaffy", "Donphan", "Krookodile ex", "Metang", "Rampardos ex", "Toxtricity", "Cosmoem", "Zamazenta", "Mega Golisopod ex", "Onix", "Nidoqueen", "Jangmo-o", "Fletchinder"] := by decide +kernel
 
 /-- The imported Items that write a bonus or reduction (`Card.wAmt`), the cards clause 3 (a) of
-`Faithful` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/
+`StoreSafe` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/
 theorem nonSupporterWriters : (all.filter fun c => c.wAmt != 0).map Card.label = [] := by decide +kernel
 
 /-- The imported Items and Supporters that write a rest-of-game bonus or reduction (`Card.alAmt`), by
@@ -1146,7 +1146,7 @@ theorem abilityRecyclers : (all.filter Card.abilityRecycles).map Card.label = ["
 /-- The imported cards whose effects a player can resolve again and again in one turn and that can
 return a card from a discard pile (`Card.freeRec`: Items, Supporters and "as often as you like"
 Abilities; not Stadiums, whose uses are bounded per turn), by name: the recyclers clause 3 (a) of
-`Faithful` constrains. -/
+`StoreSafe` constrains. -/
 theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label = ["Night Stretcher", "Miracle Headset", "Max Rod", "Energy Recycler", "Sacred Ash", "Energy Retrieval", "Tarragon"] := by decide +kernel
 
 /-- The imported Stadiums and Pokémon Tools, by name (milestone M5; none is `Card.inert`, `notInert`). -/
@@ -1156,7 +1156,7 @@ theorem stadiumsAndTools : (all.filter fun c => c.isStadium || c.isTool).map Car
 free recyclers, `Card.freeRec`, since their uses are bounded per turn), by name. -/
 theorem stadiumRecyclers : (all.filter fun c => c.isStadium && !c.allRec.isEmpty).map Card.label = ["Levincia"] := by decide +kernel
 
-/-- Clause 3 of `Faithful` over the whole imported pool, decided. -/
+/-- Clause 3 of `StoreSafe` over the whole imported pool, decided. -/
 theorem recSafe : recSafeB all = true := by decide +kernel
 
 /-- Clause 3 (`RecycleSafe`) for every game whose cards are all imported cards: no Trainer and no
@@ -1173,12 +1173,12 @@ theorem abilitySafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) 
 theorem stadiumSafeGames (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.StadiumSafe :=
   fun x hx => stadiumSafe_of all_ok x (hg x hx)
 
-/-- **Every game whose cards are all imported cards is `Faithful`** (all five clauses: `LoopFree`,
-`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `Faithful.xfinite` applies to it. -/
-theorem faithful (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.Faithful :=
-  faithful_of all_ok recSafe g hg
+/-- **Every game whose cards are all imported cards is `StoreSafe`** (all five clauses: `LoopFree`,
+`GXOnly`, `RecycleSafe`, `AbilitySafe` and `StadiumSafe`), so `StoreSafe.xfinite` applies to it. -/
+theorem storeSafe (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) : g.StoreSafe :=
+  storeSafe_of all_ok recSafe g hg
 
-/-- The finiteness theorem for imported decks: `Faithful.xfinite` with its premise discharged; the clamp
+/-- The finiteness theorem for imported decks: `StoreSafe.xfinite` with its premise discharged; the clamp
 is taken at `Enum.bound g₀.allCards`, which bounds every derived HP (milestone M6). -/
 theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧
@@ -1188,7 +1188,7 @@ theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :
           g₁'.xclamp (Enum.bound g₀.allCards) = g₂'.xclamp (Enum.bound g₀.allCards)) ∧
         (∀ g₂', Move g₂ g₂' → ∃ g₁', Move g₁ g₁' ∧
           g₂'.xclamp (Enum.bound g₀.allCards) = g₁'.xclamp (Enum.bound g₀.allCards)) :=
-  Faithful.xfinite (faithful g₀ hg)
+  StoreSafe.xfinite (storeSafe g₀ hg)
 
 /-- The imported cards with a static HP effect (milestone M6), by name (5). Checked part by part. -/
 theorem staticHp : (all.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape", "Okidogi", "Gravity Mountain", "Lively Stadium", "Conkeldurr"] := by
@@ -1262,8 +1262,8 @@ theorem sReduce_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : N
 stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`
 (Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game
 (`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards
-is not covered by `Reach.finite`; every game of imported cards is `Faithful` (`faithful`), and
-`Faithful.xfinite` (`xfinite`) applies to all of them. -/
+is not covered by `Reach.finite`; every game of imported cards is `StoreSafe` (`storeSafe`), and
+`StoreSafe.xfinite` (`xfinite`) applies to all of them. -/
 theorem untame : (all.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle", "Trevenant", "Torkoal", "Varoom", "Drifloon", "Tornadus", "Volcarona", "Donphan", "Skarmory", "Jasmine's Gaze", "Paras", "Hop's Corviknight", "Shelgon", "Clamperl", "Virizion", "Sigilyph", "Klink", "Klang", "Genesect ex", "Exeggutor", "Carkol", "Registeel ex", "Metang", "Cosmoem", "Zamazenta", "Onix", "Jangmo-o"] := by
   simp only [all, List.filter_append, List.map_append, Part01.cards_untame, Part02.cards_untame, Part03.cards_untame, Part04.cards_untame, Part05.cards_untame, Part06.cards_untame, Part07.cards_untame, Part08.cards_untame, Part09.cards_untame, List.cons_append, List.nil_append]
 
@@ -1318,14 +1318,14 @@ theorem abilities_hitFree : ∀ c ∈ all, ∀ ab ∈ c.abilities, ∀ e ∈ ab.
     e.hitFree = true ∧ e.benchHitFree = true :=
   abilities_of all_ok
 
-/-- Every imported card satisfies clause 4 of `Faithful` (`Card.abilitySafe`): no imported "as often
+/-- Every imported card satisfies clause 4 of `StoreSafe` (`Card.abilitySafe`): no imported "as often
 as you like" Ability writes a damage bonus or reduction, and no imported Ability a rest-of-game one. -/
 theorem abilitySafe : ∀ c ∈ all, c.abilitySafe = true := abilitySafe_of all_ok
 
-/-- Every imported card satisfies clause 1 of `Faithful` (`Card.loopFree`, Ability scripts included). -/
+/-- Every imported card satisfies clause 1 of `StoreSafe` (`Card.loopFree`, Ability scripts included). -/
 theorem loopFree : ∀ c ∈ all, c.loopFree = true := loopFree_of all_ok
 
-/-- Every imported card satisfies clause 5 of `Faithful` (`Card.stadiumSafe`): no imported Stadium's
+/-- Every imported card satisfies clause 5 of `StoreSafe` (`Card.stadiumSafe`): no imported Stadium's
 effect writes a rest-of-game bonus or reduction. -/
 theorem stadiumSafe : ∀ c ∈ all, c.stadiumSafe = true := stadiumSafe_of all_ok
 

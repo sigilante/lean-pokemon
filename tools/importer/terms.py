@@ -1,6 +1,6 @@
 """The model's card language as Python terms, its Lean printer, and Python mirrors of the Lean
 checks (`Effect.hitFree`, `oneHit`, `switchSafe`, `loopFree`, ... in Pokemon/Card.lean and
-Pokemon/Faithful.lean). The mirrors only decide what the importer emits; the Lean proofs in
+Pokemon/StoreSafe.lean). The mirrors only decide what the importer emits; the Lean proofs in
 PokemonCards/ re-check every emitted term.
 
 Terms are tuples whose head names the Lean constructor: ('seq', a, b) prints as `.seq a b`;
