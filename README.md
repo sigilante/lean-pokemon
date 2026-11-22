@@ -234,6 +234,18 @@ premise of `Move.retreat_marks` and `Move.retreat_movedUp`; and `Effect.trigOk` 
 owner's next turn and the model would cure it at once). The Known gaps were updated against the
 2026 rulebook (tiebreaker game, "up to", deck construction, Legendary Stadiums, effects ending on
 evolution, `putBench .opp` and evolution).
+Milestone MV4 (effect vocabulary 4; census in survey S17) added, in stage 1, two filters on the
+printed name, `Filter.namePrefix` ("Iono's Pokémon" is `and pokemon (namePrefix "Iono's ")`) and
+`Filter.nameHas` ("a Pokémon that has \"Nidoking\" in its name"), which compare the UTF-8 bytes of
+the names (`nameBytes`; `String.startsWith` depends on `Classical.choice` in this Lean version), so
+`Filter.eval` stays a kernel-computable `Bool`; and five counts (`Count`, now 12 constructors):
+Pokémon Tools attached to a player's Pokémon (`tools`), Special Conditions on an Active Pokémon
+(`conds`), Prize cards a player has taken (`prizesTaken`, 6 less those left: exact for games set up
+with 6 Prize cards, rulebook 2026 p. 8), types of Basic Energy attached (`energyTypes`) and the
+turn's Supporter flag (`supporter`). None reads damage, so both clamps keep them exactly and
+`Count.val_clampAt`, `Count.val_xclampAt` gained one case each; counts of damage counters on several
+Pokémon are left out (not clamp-exact; S17 §B). Witnesses in `Pokemon/Vocab4.lean` (attacks whose
+damage is computed from a Tool count, a Special Condition count and a Prize count, as legal moves).
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

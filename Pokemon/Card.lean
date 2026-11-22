@@ -220,6 +220,31 @@ inductive TrainerKind where
   | item | supporter | stadium
   deriving DecidableEq
 
+/-- The UTF-8 bytes of a string (milestone MV4). The name filters compare bytes: `String.toList`
+and `String.startsWith` depend on `Classical.choice` in this Lean version and do not reduce in the
+kernel, while the bytes do. A byte-level prefix or substring test is a character-level one for
+valid UTF-8 (no encoded character is a prefix of another, and a continuation byte never starts
+one). -/
+def nameBytes (s : String) : List UInt8 := s.toByteArray.data.toList
+
+/-- Is the byte list `p` a prefix of `n`? (milestone MV4; written out with `decide` on bytes, since
+`List.isPrefixOf` at `UInt8` goes through a `BEq` instance that depends on `Classical.choice`) -/
+def bytesPrefix : List UInt8 → List UInt8 → Bool
+  | [], _ => true
+  | _ :: _, [] => false
+  | a :: as, b :: bs => decide (a = b) && bytesPrefix as bs
+
+/-- Does the byte list `p` occur in `n` as a contiguous block? (milestone MV4) -/
+def bytesHas (p : List UInt8) : List UInt8 → Bool
+  | [] => bytesPrefix p []
+  | c :: cs => bytesPrefix p (c :: cs) || bytesHas p cs
+
+/-- Does the name `n` begin with `p`? (milestone MV4) -/
+def nameStarts (p n : String) : Bool := bytesPrefix (nameBytes p) (nameBytes n)
+
+/-- Does `s` occur in the name `n`? ("has \"Koffing\" in its name"; milestone MV4) -/
+def nameContains (s n : String) : Bool := bytesHas (nameBytes s) (nameBytes n)
+
 /-- A card filter (milestone MV): the kind of card a zone move may pick ("a Basic Pokémon", "a
 Supporter card", "a Basic Fire Energy card", "up to 2 Pokémon that don't have a Rule Box").
 Evaluated by `Filter.eval`, a `Bool`, so every filter is decidable; a new printed kind is one more
@@ -267,6 +292,14 @@ inductive Filter where
   | hasAttack (n : String)
   /-- a Pokémon card with a printed Ability (milestone MV2: "a Pokémon that has an Ability") -/
   | hasAbility
+  /-- a card whose printed name begins with `p` (milestone MV4): the owner prefixes of today's
+  Standard, "Iono's Pokémon" (`and pokemon (namePrefix "Iono's ")`), "Team Rocket's Pokémon",
+  "Cynthia's Pokémon". Pokémon, Trainer and Tool names; the importer writes the prefix with its
+  apostrophe and the following space, as printed -/
+  | namePrefix (p : String)
+  /-- a card whose printed name contains `s` (milestone MV4): "a Pokémon that has \"Nidoking\" in its
+  name", "a Supporter card that has \"Team Rocket\" in its name" -/
+  | nameHas (s : String)
   | and (a b : Filter)
   | or (a b : Filter)
   | not (a : Filter)
@@ -338,6 +371,29 @@ inductive Count where
   more damage" (Iron Leaves sv6-19) is `ite (countGe (koLast .own true) 1) …`. A flag read as a
   count, so that it is a read of the state that both clamps keep like every count -/
   | koLast (w : Whose) (atk : Bool)
+  /-- the Pokémon Tools attached to all of the `w` player's Pokémon in play (milestone MV4: "30
+  damage for each Pokémon Tool attached to all of your Pokémon", Mow Rotom sv10-9; "attached to all
+  Pokémon", Bronzong me2-72, is the sum of the two players' counts) -/
+  | tools (w : Whose)
+  /-- the Special Conditions affecting the `w` player's Active Pokémon, 0 to 3 (milestone MV4: "100
+  damage for each Special Condition affecting your opponent's Active Pokémon", Cradily sv7-6): one
+  for Asleep, Confused or Paralyzed (they replace each other), one for Poisoned, one for Burned; 0
+  with no Active Pokémon -/
+  | conds (w : Whose)
+  /-- the Prize cards the `w` player has taken, 6 less the Prize cards left, at least 0 (milestone
+  MV4: "60 damage for each Prize card your opponent has taken", Pecharunt ex sv6pt5-39). Exact for a
+  game set up with 6 Prize cards ("7) Put the top 6 cards of your deck off to the side face down as
+  your Prize cards", rulebook 2026 p. 8), since nothing in the model returns a card to the Prizes;
+  the model does not require 6 at the start (Known gaps) -/
+  | prizesTaken (w : Whose)
+  /-- the number of distinct types of the Basic Energy cards attached to all of the `w` player's
+  Pokémon in play (milestone MV4: "50 damage for each type of Basic Energy attached to all of your
+  Pokémon", Sylveon ex me55-71) -/
+  | energyTypes (w : Whose)
+  /-- 1 if the `w` player has played a Supporter card from the hand this turn
+  (`PlayerState.supporterPlayed`), else 0 (milestone MV4: "if they played a Supporter card from
+  their hand this turn", Community Center sv6-146); the Supporter's name is not recorded -/
+  | supporter (w : Whose)
   deriving DecidableEq
 
 /-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. Milestone
@@ -629,6 +685,7 @@ included). -/
 def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
   | .countGe (.energy .own _) _ => true
+  | .countGe (.conds .own) _ => true
   | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own => true
   | _ => false
 
@@ -1216,6 +1273,21 @@ def Card.abilities : Card → List Ability
   | .tool _ gr => gr.abilities
   | _ => []
 
+/-- The printed name of a Pokémon, Trainer or Tool card; none for a Basic Energy card (milestone
+MV4, read by the name filters). -/
+def Card.name? : Card → Option String
+  | .pokemon p => some p.name
+  | .trainer m _ _ _ => some m
+  | .tool m _ => some m
+  | .energy _ => none
+
+/-- The name filters (milestone MV4): does the card's printed name contain `x` (`sub`) or begin
+with it? A Basic Energy card has no name the filters read. -/
+def Filter.nameEval (sub : Bool) (x : String) (c : Card) : Bool :=
+  match c.name? with
+  | some n => if sub then nameContains x n else nameStarts x n
+  | none => false
+
 /-- Does the card pass the filter? -/
 def Filter.eval : Filter → Card → Bool
   | .any, _ => true
@@ -1240,6 +1312,8 @@ def Filter.eval : Filter → Card → Bool
   | .hasAbility, .pokemon p => !p.abilities.isEmpty
   | .and a b, c => a.eval c && b.eval c
   | .or a b, c => a.eval c || b.eval c
+  | .namePrefix x, c => Filter.nameEval false x c
+  | .nameHas x, c => Filter.nameEval true x c
   | .not a, c => !a.eval c
   | _, _ => false
 

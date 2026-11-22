@@ -383,6 +383,15 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   have t4 : ∀ (cb : Cap) (o : Option InPlay),
       (o.map (InPlay.clampWith k cb)).map InPlay.top = o.map InPlay.top := fun cb o => by
     cases o <;> rfl
+  have t5 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith k cb)).map InPlay.tools = o.map InPlay.tools := fun cb o => by
+    cases o <;> rfl
+  have t6 : ∀ (cb : Cap) (b : List InPlay),
+      (b.map (InPlay.clampWith k cb)).map InPlay.tools = b.map InPlay.tools := fun cb b => by
+    rw [List.map_map]; rfl
+  have t7 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith k cb)).map InPlay.condCount = o.map InPlay.condCount :=
+    fun cb o => by cases o <;> rfl
   cases c with
   | pile w z f => cases w <;> cases z <;> rfl
   | prizes w => cases w <;> rfl
@@ -392,6 +401,12 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
       cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
   | inPlay w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t1, t4]
   | koLast w atk => cases w <;> rfl
+  | tools w => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t5, t6]
+  | conds w => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t7]
+  | prizesTaken w => cases w <;> rfl
+  | energyTypes w =>
+      cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
+  | supporter w => cases w <;> rfl
 
 /-- States with equal `clampAt` have equal counts. -/
 theorem GameState.count_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}

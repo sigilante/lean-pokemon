@@ -575,6 +575,20 @@ def Pile.get : Pile → PlayerState → List Card
   | .deck, s => s.deck
   | .discard, s => s.discard
 
+/-- The nine Basic Energy cards, one of each type (milestone MV4: `Count.energyTypes`). -/
+def BasicEnergy.all : List BasicEnergy :=
+  [.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy]
+
+/-- The number of Special Conditions affecting a Pokémon (milestone MV4, `Count.conds`): one for
+its rotation (Asleep, Confused or Paralyzed), one for Poisoned, one for Burned. -/
+def InPlay.condCount (p : InPlay) : Nat :=
+  (match p.rot with | .none => 0 | _ => 1) + (if p.poisoned then 1 else 0) +
+    (if p.burned then 1 else 0)
+
+/-- The number of distinct types among the Basic Energy cards of a list (milestone MV4). -/
+def energyTypeCount (l : List Card) : Nat :=
+  BasicEnergy.all.countP fun t => decide (Card.energy t ∈ l)
+
 /-- The value of a count in a state. -/
 def Count.val : Count → GameState → Nat
   | .pile w z f, g => (z.get (g.side w)).countP f.eval
@@ -588,6 +602,15 @@ def Count.val : Count → GameState → Nat
   | .inPlay w f, g =>
       (((g.side w).active.map InPlay.top).toList ++ (g.side w).bench.map InPlay.top).countP
         fun p => f.eval (.pokemon p)
+  | .tools w, g =>
+      ((((g.side w).active.map InPlay.tools).getD []) ++
+        ((g.side w).bench.map InPlay.tools).flatten).length
+  | .conds w, g => (((g.side w).active.map InPlay.condCount).getD 0)
+  | .prizesTaken w, g => 6 - (g.side w).prizes.length
+  | .energyTypes w, g =>
+      energyTypeCount ((((g.side w).active.map InPlay.energy).getD []) ++
+        ((g.side w).bench.map InPlay.energy).flatten)
+  | .supporter w, g => if (g.side w).supporterPlayed then 1 else 0
 
 /-- The value of a test in a state, on the Active Pokémon `p` it reads (a count test reads the
 state instead). -/

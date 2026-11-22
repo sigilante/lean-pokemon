@@ -279,9 +279,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   since milestone MV2 tests also read the printed card of either Active Pokémon (`Test.top`: "is a
   Pokémon ex", "is an Evolution Pokémon", "is a Tera Pokémon") and whether it has a Tool
   (`Test.hasTool`), and counts read the Pokémon in play passing a filter (`Count.inPlay`), all
-  exact under both clamps (`Pokemon/InPlayTests.lean`); absent: name-prefix filters ("has
-  \"Nidoking\" in its name", 8 refused cards in survey S13 §C), reads of the defender's Retreat
-  Cost or remaining HP, and Special Energy; two filters read less than print does:
+  exact under both clamps (`Pokemon/InPlayTests.lean`); since milestone MV4 (survey S17 §A–B,
+  `Pokemon/Vocab4.lean`) filters on the printed name (`Filter.namePrefix`: "Iono's Pokémon",
+  "Team Rocket's Pokémon"; `Filter.nameHas`: "has \"Nidoking\" in its name"; byte-level tests on
+  the printed name, exact for the printed names the importer writes) and counts of the Pokémon Tools
+  attached to a player's Pokémon (`Count.tools`), of the Special Conditions on an Active Pokémon
+  (`Count.conds`), of the Prize cards a player has taken (`Count.prizesTaken`, 6 less those left:
+  exact for games set up with 6 Prize cards, rulebook 2026 p. 8; the model allows other start
+  states, for which it is the shortfall from 6, at least 0), of the types of Basic Energy attached
+  (`Count.energyTypes`) and the per-player Supporter flag of the turn (`Count.supporter`), all exact
+  under both clamps; absent: counts of damage counters on several Pokémon ("for each damage counter
+  on all of your opponent's Pokémon", Azelf sv8-80; 4 refused Standard cards, S17 §B: not
+  clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (1),
+  of a Retreat Cost (7), of cards moved "in this way" (12), coins counted by the state (6), printed
+  subtypes the card terms lack (Ancient, Future: 13 with other kinds), reads of the defender's
+  Retreat Cost or remaining HP, and Special Energy; two filters read less than print does:
   `Filter.ptype` reads the printed type and ignores a Coloring counter, and `Filter.hasAbility`
   reads the printed Abilities and ignores one a Tool gives (the first cannot arise among the
   imported Standard cards, none of which places a Coloring counter; the second can: one imported
@@ -808,8 +820,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   this Pokémon can't use [attack]" (36 in its own family), "healed this turn" (3), "damaged during
   your opponent's last turn … that much more damage" (2, an amount), next-turn per-Pokémon
   triggers (4), filtered "during this turn" bonuses (4), Prize and Knock Out consequences (8),
-  "Prize cards your opponent took during their last turn" (1, the one counted quantity, at most 6),
-  and name prefixes ("any of your Ethan's Pokémon", 2 of the 10 Knock Out tests);
+  "Prize cards your opponent took during their last turn" (1, the one counted quantity, at most 6);
+  the name prefixes these tests needed ("any of your Ethan's Pokémon", 2 of the 10 Knock Out tests)
+  are expressible since milestone MV4 (`Filter.namePrefix`);
 * a Pokémon that an effect puts onto the opponent's Bench (`putBench .opp`) enters play `fresh`,
   and `Move.endTurn` clears `fresh` only on the side whose turn ends, so it stays `fresh` through
   its owner's next turn and cannot evolve then. The rulebook allows evolving "a Pokémon you had in
