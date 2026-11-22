@@ -610,10 +610,6 @@ theorem dealtBy_of_noReduce {own opp : Store} (h : opp.NoReduce) (hc : own.NoRed
   have ho := h.live'
   have hm := hc.live'
   simp only [dealtBy, ho.1, ho.2.2, hm.2.1, Nat.sub_zero, Nat.add_zero]
-  by_cases h0 : n = 0
-  · simp only [h0, ↓reduceIte]
-  · have h1 : n + own.live.bonus ≠ 0 := by omega
-    simp only [h0, h1, ↓reduceIte]
 
 /-- **The cap survives Weakness and Resistance.** With no damage reduction and a Resistance of
 at most `k`, damage done agrees at the cap `k` when the stores agree at the cap `2 * k`. If the
@@ -654,9 +650,7 @@ theorem dealtBy_add_reduce {o : Store} (h : o.NoReduce) (n : Nat) (w : Bool) (r 
   · exact (Nat.zero_sub s).symm
   · split
     · exact (Nat.zero_sub s).symm
-    · split
-      · exact (Nat.zero_sub s).symm
-      · omega
+    · omega
 
 /-- **The cap survives one more bounded reduction** (milestone M6): `dealtBy_cap` with a reduction
 `s` subtracted after Resistance (the static reduction, `GameState.dealt`), the same in both states,

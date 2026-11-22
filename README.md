@@ -317,8 +317,10 @@ player like every lingering modifier: `Mod.weaken n` ("During your opponent's ne
 by the Defending Pokémon do 30 less damage (before applying Weakness and Resistance)", 11 refused
 Standard cards; `Mods.minus`, subtracted at step 2) and `Mod.expose n` ("During your next turn, the
 Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance)", 4;
-`Mods.more`, added at step 5 before the reduction). `dealtBy` reads them (and stops when the damage
-after step 2 is 0, the rulebook's "Stop if the base damage is 0" read after step 2's effects). They
+`Mods.more`, added at step 5 before the reduction). `dealtBy` reads them (at this stage it stopped
+when the damage after step 2 was 0; since then the stop test is on the base damage alone, as the
+rulebook defines it, 2026 p. 20, so a penalty that cancels an attack's damage leaves a step-5
+increase in force: `Defender.weaken_then_expose`, `Defender.cancelled_exposed`). They
 are amounts (`Mod.isAmt`, `Mods.amt`), so `StoreSafe`'s five clauses govern their writers with no
 change to the clauses' text, and the store bound, `BoundedStores` (`Enum.ModsLe`) and the
 enumerations cover them; `LoopFreeNeeded.iter_weaken_breaks_bound` is the negative theorem for clause

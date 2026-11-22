@@ -36,8 +36,10 @@ Facts and witnesses:
   attacker of 6 against Weakness does `2 · (6 − 3) = 6`, where a reduction of 3 on the defender
   would leave `2 · 6 − 3 = 9`; an increase of 5 after Weakness and Resistance 3 gives
   `(2 · 5 − 3) + 5 = 12`, where a bonus of 5 would give `2 · (5 + 5) − 3 = 17`.
-* `weaken_stops`: a penalty that brings the damage to 0 stops the calculation, so a step-5 increase
-  does not apply ("Stop if the base damage is 0", read after step 2).
+* `weaken_then_expose`: a penalty that brings the damage to 0 does not stop the calculation, since
+  "Stop if the base damage is 0" (2026 p. 20) tests the base damage of step 1; a step-5 increase
+  still applies. `cancelled_exposed` and `zero_exposed`: as legal attacks, a 30 attack under a 30
+  penalty against a Pokémon that takes 50 more places 5 damage counters; a 0 attack places none.
 * `growl_witness`, `screech_witness`: attacks writing each new kind as legal moves from well-formed,
   `Settled` states; `next_in_effect` and `after_in_effect`: the stores' shifts put them in effect
   in the opponent's next turn and in the attacker's next turn.
@@ -70,9 +72,12 @@ theorem expose_after_weakness :
     dealtBy 5 true 3 Store.empty (moreStore 5) = 12 ∧
       dealtBy 5 true 3 (Calc.bonusStore 5) Store.empty = 17 := ⟨rfl, rfl⟩
 
-/-- **A penalty that cancels the damage stops the calculation**: 20 damage less 20 does nothing,
-even against a defender that takes 50 more. -/
-theorem weaken_stops : dealtBy 2 false 0 (minusStore 2) (moreStore 5) = 0 := rfl
+/-- **A penalty that cancels the damage does not stop the calculation**: the base damage, 20, is not
+0, so 20 damage less 20 leaves 0, to which a defender that takes 50 more adds 50. With base damage 0
+the calculation stops. -/
+theorem weaken_then_expose :
+    dealtBy 2 false 0 (minusStore 2) (moreStore 5) = 5 ∧
+      dealtBy 0 false 0 (minusStore 2) (moreStore 5) = 0 := ⟨rfl, rfl⟩
 
 /-- A penalty written for the opponent's next turn is in effect in it (after one turn boundary),
 and an increase written for the turn after is in effect two boundaries on. -/
@@ -160,6 +165,52 @@ theorem mash_boosted :
   exact ⟨start_wellFormed _, settled_noted, _,
     .attack (hlk := rfl) (atk := mash) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       settled_noted hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
+    rfl⟩
+
+/-! ## The stop test is on the base damage -/
+
+/-- "30 damage" (base damage 3 counters). -/
+def jab : Attack := ⟨"Jab", [], 0, .damage (.const 3), false, .none⟩
+
+/-- An attack that does no damage: base damage 0. -/
+def nudge : Attack := ⟨"Nudge", [], 0, .damage (.const 0), false, .none⟩
+
+def jabber : PokemonCard := ⟨"Jabber", .basic, none, 10, .colorless, [jab, nudge], 1,
+  none, none, .none, false, []⟩
+
+/-- The player to move has `jabber` Active under a 30 penalty written by the opponent's Growl in
+force this turn; the opponent's `big` takes 50 more damage this turn (its Screech, in force). -/
+def penalised : GameState :=
+  let g := start (InPlay.ofBasic jabber)
+  { g with cur := { g.cur with mods := minusStore 3 }, opp := { g.opp with mods := moreStore 5 } }
+
+theorem penalised_wellFormed : WellFormed penalised := by
+  refine ⟨fun _ => ⟨by simp [penalised, start, side], by simp [penalised, start, side]⟩, ?_, ?_⟩ <;>
+    intro p hp <;> cases hp
+
+theorem settled_penalised : Settled penalised := (GameState.settled_iff _).2 (by decide)
+
+/-- **Witness: a cancelled attack still meets the step-5 increase.** Jab (30) under a 30 penalty
+against a Pokémon that takes 50 more: the base damage is 30, not 0, so the calculation goes on, and
+the running damage 0 is increased by 50 at step 5: 5 damage counters. -/
+theorem cancelled_exposed :
+    WellFormed penalised ∧ Settled penalised ∧ ∃ g, Move penalised g ∧
+      g.opp.active = some { InPlay.ofBasic big with damage := 5 } := by
+  have hr : Run jab.script penalised _ := .damage (.const 3 _) rfl
+  exact ⟨penalised_wellFormed, settled_penalised, _,
+    .attack (hlk := rfl) (atk := jab) rfl (.head _) (.nil _) rfl rfl rfl rfl
+      settled_penalised hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
+    rfl⟩
+
+/-- **Witness: base damage 0 stops the calculation.** Nudge (0) from the same state against the
+same exposed Pokémon places no damage counters. -/
+theorem zero_exposed :
+    WellFormed penalised ∧ Settled penalised ∧ ∃ g, Move penalised g ∧
+      g.opp.active = some (InPlay.ofBasic big) := by
+  have hr : Run nudge.script penalised _ := .damage (.const 0 _) rfl
+  exact ⟨penalised_wellFormed, settled_penalised, _,
+    .attack (hlk := rfl) (atk := nudge) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
+      settled_penalised hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
 
 /-- The record is per Pokémon: a Pokémon sent to the Bench loses it (`InPlay.unlock`), as print
