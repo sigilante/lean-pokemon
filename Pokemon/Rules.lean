@@ -940,8 +940,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   its owner's next turn and cannot evolve then. The rulebook allows evolving "a Pokémon you had in
   play at the beginning of your turn" but "Neither player can evolve a Pokémon on its first turn in
   play" (2026 p. 11); whether the owner's next turn is that Pokémon's "first turn in play" is not
-  settled there. If it is not, the model forbids an evolution print allows. No imported card uses
-  `putBench .opp`;
+  settled there. If it is not, the model forbids an evolution print allows. Since importer 0.12 five imported
+  cards use `putBench .opp` and carry the caveat `oppBenchFresh`;
 * deck construction is not modelled: "your deck must be exactly 60 cards", "except for Basic
   Energy, you can only have 4 cards with the same name in your deck" (2026 p. 22), "your deck can
   include only one total ACE SPEC card" (p. 26), one Radiant Pokémon (p. 29). The theorems
