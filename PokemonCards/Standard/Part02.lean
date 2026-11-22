@@ -1167,7 +1167,7 @@ def sv6pt5_7 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Houndoom (sv6pt5-8). Records: sv6pt5-8, sv6pt5-66. Caveats: benchMods, perPokemon, stopAfterPenalty. -/
+/-- Houndoom (sv6pt5-8). Records: sv6pt5-8, sv6pt5-66. Caveats: benchMods, perPokemon. -/
 def sv6pt5_8 : Card := .pokemon
   { name := "Houndoom", stage := .stage1, evolvesFrom := some "Houndour",
     hp := 12, type := .fire, retreat := 2, weakness := some .water,

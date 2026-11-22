@@ -86,7 +86,7 @@ def me4_14 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Mega Pyroar ex (me4-15). Records: me4-15, me4-99. Caveats: benchMods, perPokemon, stopAfterPenalty. -/
+/-- Mega Pyroar ex (me4-15). Records: me4-15, me4-99. Caveats: benchMods, perPokemon. -/
 def me4_15 : Card := .pokemon
   { name := "Mega Pyroar ex", stage := .stage1, evolvesFrom := some "Litleo",
     hp := 34, type := .fire, retreat := 2, weakness := some .water,
@@ -907,7 +907,7 @@ def me5_57 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Mabosstiff (me5-58). Records: me5-58. Caveats: perPokemon, stopAfterPenalty. -/
+/-- Mabosstiff (me5-58). Records: me5-58. Caveats: perPokemon. -/
 def me5_58 : Card := .pokemon
   { name := "Mabosstiff", stage := .stage1, evolvesFrom := some "Maschiff",
     hp := 14, type := .darkness, retreat := 3, weakness := some .grass,
@@ -1790,7 +1790,7 @@ def me55_86 : Card := .pokemon
         effect := .ite (.countGe (.energy .own (.energyOf .fighting)) 2) (.discardEnergy .own .active (.energyOf .fighting) (.exactly 2)) (.discardEnergy .own .active (.energyOf .fighting) .all),
         gx := false }] }
 
-/-- Nidoran ♀ (me55-87). Records: me55-87. Caveats: benchMods, perPokemon, stopAfterPenalty. -/
+/-- Nidoran ♀ (me55-87). Records: me55-87. Caveats: benchMods, perPokemon. -/
 def me55_87 : Card := .pokemon
   { name := "Nidoran ♀", stage := .basic, evolvesFrom := none,
     hp := 6, type := .darkness, retreat := 1, weakness := some .fighting,

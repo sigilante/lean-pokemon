@@ -53,7 +53,7 @@ def me2pt5_7 : Card := .pokemon
         effect := .choice (.inflict .paralyzed) .skip,
         gx := false }] }
 
-/-- Chikorita (me2pt5-8). Records: me2pt5-8. Caveats: benchMods, perPokemon, stopAfterPenalty. -/
+/-- Chikorita (me2pt5-8). Records: me2pt5-8. Caveats: benchMods, perPokemon. -/
 def me2pt5_8 : Card := .pokemon
   { name := "Chikorita", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .fire,
@@ -408,7 +408,7 @@ def me2pt5_58 : Card := .pokemon
         effect := .damage (.add (.const 10) (.many (.const 10))),
         gx := false }] }
 
-/-- Stunfisk (me2pt5-62). Records: me2pt5-62. Caveats: perPokemon, stopAfterPenalty. -/
+/-- Stunfisk (me2pt5-62). Records: me2pt5-62. Caveats: perPokemon. -/
 def me2pt5_62 : Card := .pokemon
   { name := "Stunfisk", stage := .basic, evolvesFrom := none,
     hp := 11, type := .lightning, retreat := 2, weakness := some .fighting,

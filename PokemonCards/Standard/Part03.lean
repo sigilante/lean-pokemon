@@ -1620,7 +1620,7 @@ def sv8_104 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Vibrava (sv8-105). Records: sv8-105, sv8-206. Caveats: perPokemon, stopAfterPenalty. -/
+/-- Vibrava (sv8-105). Records: sv8-105, sv8-206. Caveats: perPokemon. -/
 def sv8_105 : Card := .pokemon
   { name := "Vibrava", stage := .stage1, evolvesFrom := some "Trapinch",
     hp := 9, type := .fighting, retreat := 1, weakness := some .grass,
