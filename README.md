@@ -19,8 +19,9 @@ once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Colo
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
 Active Pokémon at Checkup), lingering modifiers (per player, for this turn, the next turn, the
 turn after, or the rest of the game, shifted at the end of every turn: a damage bonus, a damage
-reduction, damage prevention, and locks on attacking, retreating and playing Items; bonuses and
-reductions add up without limit, and enter the damage calculation described below), and effects
+reduction, since milestone MV6 a step-2 penalty and a step-5 increase, damage prevention, and locks
+on attacking, retreating and playing Items; the amounts add up without limit, and enter the damage
+calculation described below), and effects
 that read the state: a test on either
 Active Pokémon (at least `n` damage counters, exactly `n`, a Special Condition, a marker, a
 type), placing `k`
@@ -249,7 +250,7 @@ damage is computed from a Tool count, a Special Condition count and a Prize coun
 Stage 2 added per-Pokémon attack locks (S17 §C: "During your next turn, this Pokémon can't use
 [this attack]", 27 refused Standard cards; "… can't use attacks"): `Attack.selfLock` (`AtkLock`:
 none, this attack, all attacks; a defaulted field, so the generated library builds unchanged) and
-`InPlay.lk` (`LockState`: the lock set this turn and the lock in force, nine values per Pokémon, in
+`InPlay.lk` (`LockState`: the lock set this turn and the lock in force, nine values per Pokémon (sixteen since milestone MV6's `AtkLock.note`), in
 the enumeration `Enum.lockStates`, kept exactly by both clamps). `Move.attack` sets the attacker's
 lock (its result is now `GameState.afterAttack`), `InPlay.unfresh` brings it into force at the end
 of its owner's turn and ends it a turn later, `Move.attack` and `Move.attackConfused` refuse an
@@ -311,6 +312,36 @@ Witnesses: attacks of Delibird's, Reuniclus's and Metang's shapes as legal moves
 definitions: `Src`, `Qty`, `Effect` (a constructor each), `Src.get`, `Src.set`, `Qty.ok`,
 `Effect.zSide`, `Effect.ownFree`, `Effect.recFilters`, `ZStep` (a constructor); new `Into`,
 `Place`, `Deal`. No theorem statement changed in text.
+Stage 2 (S19 §B) added the defender modifiers outside steps 2 and 5. Two new stored amounts, per
+player like every lingering modifier: `Mod.weaken n` ("During your opponent's next turn, attacks used
+by the Defending Pokémon do 30 less damage (before applying Weakness and Resistance)", 11 refused
+Standard cards; `Mods.minus`, subtracted at step 2) and `Mod.expose n` ("During your next turn, the
+Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance)", 4;
+`Mods.more`, added at step 5 before the reduction). `dealtBy` reads them (and stops when the damage
+after step 2 is 0, the rulebook's "Stop if the base damage is 0" read after step 2's effects). They
+are amounts (`Mod.isAmt`, `Mods.amt`), so `StoreSafe`'s five clauses govern their writers with no
+change to the clauses' text, and the store bound, `BoundedStores` (`Enum.ModsLe`) and the
+enumerations cover them; `LoopFreeNeeded.iter_weaken_breaks_bound` is the negative theorem for clause
+1's reading of the new kind. The exact-store clamp keeps them; the capped clamp caps them at `2 · k`,
+and tame decks may not write them (`Mod.plain`; `Store.NoReduce` now asks for no reduction, penalty
+or increase, and `dealtBy_cap`, `dealtBy_cap_reduce`, `dealtBy_cap_ign` gained the premise that the
+attacker's store has none). "During your next turn, this Pokémon's [attack] does 60 more damage" (5)
+needs no store: the attack records its use on its Pokémon (`AtkLock.note`, in the MV4 lock state, now
+sixteen values per Pokémon) and the named attack tests it (`Test.usedLast`), per Pokémon and exact.
+Witnesses in `Pokemon/Defender.lean`. Changed definitions: `Mod`, `AtkLock`, `Test` (a constructor
+each), `Mods` (fields `minus`, `more`), `Mods.empty`, `Mods.merge`, `Mods.addMod`, `dealtBy`,
+`Mods.cap`, `Store.NoReduce` (now per slot `Mods.NoReduce`), `Effect.tame` (`Mod.plain`), `Mod.amt`,
+`Mod.isAmt`, `Mods.amt`, `Enum.modss`, `Enum.ModsLe`, `Enum.atkLocks`, `Test.eval`, `Test.whose`,
+`Test.onOwn`, `AtkLock.allows`. Changed statements, each spelling out a changed definition or adding
+the premise the new kinds need: `Mods.cap_iff` (two conjuncts), `Store.NoReduce.add` (premise
+`m.plain = true` for `∀ n, m ≠ .reduce n`), `dealtBy_of_noReduce`, `dealtBy_cap`,
+`dealtBy_cap_reduce`, `dealtBy_cap_ign` (premise: the attacker's store `NoReduce`),
+`dealtBy_le_empty` and `GameState.dealt_le_dealtI` (premise: no step-5 increase in effect on the
+defender; switching off "effects on your opponent's Active Pokémon" removes an increase, so without
+it the old statements are false). Weakness changes ("has no Weakness", 3) are left out (a stored
+value with an order, not an amount). `Counter.universal`, `Counter.simulate`,
+`Counter.halts_of_haltMarked` and `Counter.Encodes` are unchanged in text (the encoded stores fix the
+new fields at 0).
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the
@@ -398,7 +429,7 @@ came with milestone MV3), cost changes and every triggered effect
   HP a Pokémon can have (`hpBound`, since milestone M6, when HP became derived; before it the clamp
   capped at the printed HP), every Resistance plus the bound `sReduceBound` on static damage
   reductions (M6), and every test constant; the factor 2 absorbs Resistance, which is
-  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no stored damage reduction, no
+  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no stored damage reduction (since milestone MV6 also no step-2 penalty or step-5 increase), no
   `drain`; static reductions are allowed) and with no reduction stored (`GameState.Fit` at
   `bound`, which `GameState.fit_bound` gives from those two hypotheses alone), the clamps of all reachable states lie in one finite list, and
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
@@ -505,7 +536,7 @@ finiteness; the deck condition `StoreSafe` buys it back:
 * **finiteness on bounded stores** (`Reach.xfinite_bounded`, `Pokemon/Bounded.lean`): from
   any start, for every `B` one finite list (depending only on the start and `B`)
   contains the `xclamp` of every reachable state satisfying `BoundedStores B` (every slot's
-  bonus and reduction at most `B`). The bounded part is not closed under moves, so on its own
+  bonus and reduction, and since milestone MV6 step-2 penalty and step-5 increase, at most `B`). The bounded part is not closed under moves, so on its own
   this gives a finite set of classes and a bisimulation that may leave that set, not a finite
   quotient; the finite quotient is `StoreSafe.xfinite`;
 * **finiteness for store-safe decks** (`StoreSafe.xfinite`, `Pokemon/StoreSafe/Invariant.lean`, imported by `Pokemon/StoreSafe.lean`): a start is
@@ -602,7 +633,7 @@ finiteness; the deck condition `StoreSafe` buys it back:
   not store-safe, and some of them are finite (tame decks that violate `GXOnly` are covered by
   `Reach.finite`).
 
-Which theorem applies. `Reach.finite` needs tame cards (no stored damage reduction, no `drain`;
+Which theorem applies. `Reach.finite` needs tame cards (no stored damage reduction, step-2 penalty or step-5 increase, no `drain`;
 static reductions are allowed) and no reduction stored at the start; it allows bonus writes under `iter` and rest-of-game bonuses
 in attacks that are not GX attacks, and recycling of every kind (milestone MV), and gives a
 coarser quotient (the clamp caps stored bonuses). `StoreSafe.xfinite` allows damage reduction,

@@ -14,12 +14,17 @@ namespace Pokemon
 def Mod.amt : Mod → Nat
   | .bonus n => n
   | .reduce n => n
+  | .weaken n => n
+  | .expose n => n
   | _ => 0
 
-/-- Does the modifier carry an amount (a damage bonus or reduction)? -/
+/-- Does the modifier carry an amount (a damage bonus or reduction; since milestone MV6 also a
+step-2 penalty or a step-5 increase, which are stored and bounded like them)? -/
 def Mod.isAmt : Mod → Bool
   | .bonus _ => true
   | .reduce _ => true
+  | .weaken _ => true
+  | .expose _ => true
   | _ => false
 
 theorem Mod.amt_of_not_isAmt {m : Mod} (h : m.isAmt = false) : m.amt = 0 := by
@@ -74,8 +79,9 @@ theorem Effect.amtAt_le_amt (e : Effect) (s : Slot) : e.amtAt s ≤ e.amt := by
 
 /-! ## Amounts in the stores -/
 
-/-- The amount in one turn's modifiers. -/
-def Mods.amt (m : Mods) : Nat := m.bonus + m.reduce
+/-- The amount in one turn's modifiers (since milestone MV6 the step-2 penalty and the step-5
+increase too). -/
+def Mods.amt (m : Mods) : Nat := m.bonus + m.reduce + m.minus + m.more
 
 /-- One slot of a store. -/
 def Store.at : Slot → Store → Mods
@@ -98,6 +104,8 @@ theorem Mods.amt_addMod (m : Mods) (x : Mod) : (m.addMod x).amt = m.amt + x.amt 
   | reduce n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
   | prevent => rfl
   | lock l => cases l <;> rfl
+  | weaken n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
+  | expose n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
 
 theorem Store.at_add (t : Store) (s s' : Slot) (x : Mod) :
     (t.add s x).at s' = if s = s' then (t.at s').addMod x else t.at s' := by

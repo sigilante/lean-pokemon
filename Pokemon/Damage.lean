@@ -56,9 +56,11 @@ Out at Checkup.) -/
 def InPlay.clampWith (K : Nat) (c : Cap) (p : InPlay) : InPlay :=
   { p with damage := c.dmg K p, poisonUp := min p.poisonUp K }
 
-/-- Damage bonus and reduction capped at `k`. -/
+/-- Damage bonus and reduction capped at `k` (since milestone MV6 also the step-2 penalty and the
+step-5 increase, so that the capped stores stay finite). -/
 def Mods.cap (k : Nat) (m : Mods) : Mods :=
-  { m with bonus := min m.bonus k, reduce := min m.reduce k }
+  { m with bonus := min m.bonus k, reduce := min m.reduce k, minus := min m.minus k,
+           more := min m.more k }
 
 /-- Every damage bonus and reduction in a store capped at `k`. -/
 def Store.cap (k : Nat) (t : Store) : Store :=
@@ -465,6 +467,7 @@ theorem Test.eval_agree (t : Test) {k : Nat} {g₁ g₂ : GameState} {q p : InPl
       rw [e]
   | countGe c n => simp only [Test.eval, hv c]
   | movedUp w => simp only [Test.eval, h.movedUp]
+  | usedLast w => simp only [Test.eval, h.lk]
   | evolved w => simp only [Test.eval, h.fresh, h.under]
   | top w f => simp only [Test.eval, h.top]
   | hasTool w => simp only [Test.eval, h.tools]
@@ -474,7 +477,7 @@ theorem Test.eval_agree (t : Test) {k : Nat} {g₁ g₂ : GameState} {q p : InPl
 theorem Mods.cap_iff {k : Nat} {a b : Mods} :
     a.cap k = b.cap k ↔ min a.bonus k = min b.bonus k ∧ min a.reduce k = min b.reduce k ∧
       a.prevent = b.prevent ∧ a.noAttack = b.noAttack ∧ a.noRetreat = b.noRetreat ∧
-      a.noItem = b.noItem := by
+      a.noItem = b.noItem ∧ min a.minus k = min b.minus k ∧ min a.more k = min b.more k := by
   cases a; cases b
   simp only [Mods.cap, Mods.mk.injEq]
 
@@ -487,20 +490,23 @@ theorem Store.cap_iff {k : Nat} {a b : Store} :
 theorem Mods.cap_merge {k : Nat} {a₁ a₂ b₁ b₂ : Mods} (ha : a₁.cap k = a₂.cap k)
     (hb : b₁.cap k = b₂.cap k) : (a₁.merge b₁).cap k = (a₂.merge b₂).cap k := by
   rw [Mods.cap_iff] at ha hb ⊢
-  obtain ⟨a1, a2, a3, a4, a5, a6⟩ := ha
-  obtain ⟨b1, b2, b3, b4, b5, b6⟩ := hb
-  simp only [Mods.merge, a3, a4, a5, a6, b3, b4, b5, b6, and_true]
-  exact ⟨by clear a2 b2; omega, by clear a1 b1; omega⟩
+  obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8⟩ := ha
+  obtain ⟨b1, b2, b3, b4, b5, b6, b7, b8⟩ := hb
+  simp only [Mods.merge, a3, a4, a5, a6, b3, b4, b5, b6, true_and]
+  exact ⟨by clear a2 b2 a7 b7 a8 b8; omega, by clear a1 b1 a7 b7 a8 b8; omega,
+    by clear a1 b1 a2 b2 a8 b8; omega, by clear a1 b1 a2 b2 a7 b7; omega⟩
 
 theorem Mods.cap_addMod {k : Nat} {a b : Mods} (h : a.cap k = b.cap k) (m : Mod) :
     (a.addMod m).cap k = (b.addMod m).cap k := by
   rw [Mods.cap_iff] at h ⊢
-  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := h
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8⟩ := h
   cases m with
-  | bonus n => simp only [Mods.addMod]; exact ⟨by omega, h2, h3, h4, h5, h6⟩
-  | reduce n => simp only [Mods.addMod]; exact ⟨h1, by omega, h3, h4, h5, h6⟩
-  | prevent => exact ⟨h1, h2, rfl, h4, h5, h6⟩
+  | bonus n => simp only [Mods.addMod]; exact ⟨by clear h2 h7 h8; omega, h2, h3, h4, h5, h6, h7, h8⟩
+  | reduce n => simp only [Mods.addMod]; exact ⟨h1, by clear h1 h7 h8; omega, h3, h4, h5, h6, h7, h8⟩
+  | prevent => exact ⟨h1, h2, rfl, h4, h5, h6, h7, h8⟩
   | lock l => cases l <;> simp only [Mods.addMod] <;> simp only [*, and_self]
+  | weaken n => simp only [Mods.addMod]; exact ⟨h1, h2, h3, h4, h5, h6, by clear h1 h2 h8; omega, h8⟩
+  | expose n => simp only [Mods.addMod]; exact ⟨h1, h2, h3, h4, h5, h6, h7, by clear h1 h2 h7; omega⟩
 
 /-- The modifiers in effect agree at the cap when the stores do. -/
 theorem Store.live_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
@@ -525,44 +531,88 @@ theorem Store.cap_shift {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
 
 /-! ## No damage reduction -/
 
-/-- No damage reduction anywhere in a store. -/
+/-- No damage reduction in a slot, and (milestone MV6) no step-2 penalty and no step-5 increase:
+the amounts that the capped clamp cannot absorb (`Mod.plain`). -/
+def Mods.NoReduce (m : Mods) : Prop := m.reduce = 0 ∧ m.minus = 0 ∧ m.more = 0
+
+/-- No damage reduction anywhere in a store (since milestone MV6 also no step-2 penalty and no
+step-5 increase, `Mods.NoReduce`). -/
 def Store.NoReduce (t : Store) : Prop :=
-  t.now.reduce = 0 ∧ t.next.reduce = 0 ∧ t.after.reduce = 0 ∧ t.always.reduce = 0
+  t.now.NoReduce ∧ t.next.NoReduce ∧ t.after.NoReduce ∧ t.always.NoReduce
 
 /-- No damage reduction in either player's store. -/
 def GameState.NoReduce (g : GameState) : Prop := g.cur.mods.NoReduce ∧ g.opp.mods.NoReduce
 
-theorem Store.NoReduce.live {t : Store} (h : t.NoReduce) : t.live.reduce = 0 := by
-  simp only [Store.live, Mods.merge, h.1, h.2.2.2]
+theorem Mods.NoReduce.empty : Mods.empty.NoReduce := ⟨rfl, rfl, rfl⟩
+
+theorem Store.NoReduce.empty : Store.empty.NoReduce :=
+  ⟨Mods.NoReduce.empty, Mods.NoReduce.empty, Mods.NoReduce.empty, Mods.NoReduce.empty⟩
+
+theorem Mods.NoReduce.merge {a b : Mods} (ha : a.NoReduce) (hb : b.NoReduce) :
+    (a.merge b).NoReduce := by
+  obtain ⟨a1, a2, a3⟩ := ha
+  obtain ⟨b1, b2, b3⟩ := hb
+  simp only [Mods.NoReduce, Mods.merge, a1, a2, a3, b1, b2, b3, and_self]
+
+theorem Store.NoReduce.live' {t : Store} (h : t.NoReduce) : t.live.NoReduce :=
+  Mods.NoReduce.merge h.1 h.2.2.2
+
+theorem Store.NoReduce.live {t : Store} (h : t.NoReduce) : t.live.reduce = 0 := h.live'.1
+
+theorem Mods.NoReduce.addMod {a : Mods} (h : a.NoReduce) (m : Mod) (hm : m.plain = true) :
+    (a.addMod m).NoReduce := by
+  obtain ⟨h1, h2, h3⟩ := h
+  cases m with
+  | reduce n => simp [Mod.plain] at hm
+  | weaken n => simp [Mod.plain] at hm
+  | expose n => simp [Mod.plain] at hm
+  | bonus n => exact ⟨h1, h2, h3⟩
+  | prevent => exact ⟨h1, h2, h3⟩
+  | lock l => cases l <;> exact ⟨h1, h2, h3⟩
 
 theorem Store.NoReduce.add {t : Store} (h : t.NoReduce) (s : Slot) (m : Mod)
-    (hm : ∀ n, m ≠ .reduce n) : (t.add s m).NoReduce := by
+    (hm : m.plain = true) : (t.add s m).NoReduce := by
   obtain ⟨h1, h2, h3, h4⟩ := h
-  cases m with
-  | reduce n => exact absurd rfl (hm n)
-  | bonus n => cases s <;> exact ⟨h1, h2, h3, h4⟩
-  | prevent => cases s <;> exact ⟨h1, h2, h3, h4⟩
-  | lock l => cases s <;> cases l <;> exact ⟨h1, h2, h3, h4⟩
+  cases s
+  · exact ⟨h1.addMod m hm, h2, h3, h4⟩
+  · exact ⟨h1, h2.addMod m hm, h3, h4⟩
+  · exact ⟨h1, h2, h3.addMod m hm, h4⟩
+  · exact ⟨h1, h2, h3, h4.addMod m hm⟩
 
 theorem Store.NoReduce.shift {t : Store} (h : t.NoReduce) : t.shift.NoReduce :=
-  ⟨h.2.1, h.2.2.1, rfl, h.2.2.2⟩
+  ⟨h.2.1, h.2.2.1, Mods.NoReduce.empty, h.2.2.2⟩
+
+theorem Mods.NoReduce.of_cap {k : Nat} (hk : 0 < k) {a b : Mods} (h : a.cap k = b.cap k)
+    (hb : b.NoReduce) : a.NoReduce := by
+  rw [Mods.cap_iff] at h
+  obtain ⟨-, h2, -, -, -, -, h7, h8⟩ := h
+  obtain ⟨b1, b2, b3⟩ := hb
+  -- One amount at a time: `omega` given all the facts at once splits on every `min`.
+  have key : ∀ {x y : Nat}, min x k = min y k → y = 0 → x = 0 := fun hm hy => by omega
+  exact ⟨key h2 b1, key h7 b2, key h8 b3⟩
 
 theorem Store.NoReduce.of_cap {k : Nat} (hk : 0 < k) {a b : Store} (h : a.cap k = b.cap k)
     (hb : b.NoReduce) : a.NoReduce := by
   rw [Store.cap_iff] at h
   obtain ⟨h1, h2, h3, h4⟩ := h
-  rw [Mods.cap_iff] at h1 h2 h3 h4
   obtain ⟨b1, b2, b3, b4⟩ := hb
-  -- One reduction at a time: `omega` given all four stores' facts at once splits on every `min`.
-  have key : ∀ {x y : Nat}, min x k = min y k → y = 0 → x = 0 := fun hm hy => by omega
-  exact ⟨key h1.2.1 b1, key h2.2.1 b2, key h3.2.1 b3, key h4.2.1 b4⟩
+  exact ⟨Mods.NoReduce.of_cap hk h1 b1, Mods.NoReduce.of_cap hk h2 b2, Mods.NoReduce.of_cap hk h3 b3,
+    Mods.NoReduce.of_cap hk h4 b4⟩
 
-/-- With no damage reduction, the damage done is the base damage plus the bonus, doubled under
-Weakness, less Resistance; or nothing (base damage 0, or prevention). -/
-theorem dealtBy_of_noReduce {own opp : Store} (h : opp.NoReduce) (n : Nat) (w : Bool) (r : Nat) :
+/-- With no damage reduction on the defender and no step-2 penalty on the attacker (milestone MV6),
+the damage done is the base damage plus the bonus, doubled under Weakness, less Resistance; or
+nothing (base damage 0, or prevention). -/
+theorem dealtBy_of_noReduce {own opp : Store} (h : opp.NoReduce) (hc : own.NoReduce) (n : Nat)
+    (w : Bool) (r : Nat) :
     dealtBy n w r own opp = if n = 0 then 0 else if opp.live.prevent then 0 else
       (if w then 2 * (n + own.live.bonus) else n + own.live.bonus) - r := by
-  simp only [dealtBy, h.live, Nat.sub_zero]
+  have ho := h.live'
+  have hm := hc.live'
+  simp only [dealtBy, ho.1, ho.2.2, hm.2.1, Nat.sub_zero, Nat.add_zero]
+  by_cases h0 : n = 0
+  · simp only [h0, ↓reduceIte]
+  · have h1 : n + own.live.bonus ≠ 0 := by omega
+    simp only [h0, h1, ↓reduceIte]
 
 /-- **The cap survives Weakness and Resistance.** With no damage reduction and a Resistance of
 at most `k`, damage done agrees at the cap `k` when the stores agree at the cap `2 * k`. If the
@@ -572,10 +622,11 @@ both states, with or without Weakness: doubling a quantity of at least `2 * k` k
 the subtraction of Resistance that needs the stores capped above the damage cap. -/
 theorem dealtBy_cap {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
     (hc : c₂.cap (2 * k) = c₁.cap (2 * k)) (ho : o₂.cap (2 * k) = o₁.cap (2 * k))
-    (hn : o₁.NoReduce) (n : Nat) (w : Bool) {r : Nat} (hr : r ≤ k) :
+    (hn : o₁.NoReduce) (hm : c₁.NoReduce) (n : Nat) (w : Bool) {r : Nat} (hr : r ≤ k) :
     min (dealtBy n w r c₂ o₂) k = min (dealtBy n w r c₁ o₁) k := by
   have hn₂ := Store.NoReduce.of_cap (by omega) ho hn
-  rw [dealtBy_of_noReduce hn, dealtBy_of_noReduce hn₂]
+  have hm₂ := Store.NoReduce.of_cap (by omega) hc hm
+  rw [dealtBy_of_noReduce hn hm, dealtBy_of_noReduce hn₂ hm₂]
   have hc' := Mods.cap_iff.1 (Store.live_cap hc)
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
   have hb := hc'.1
@@ -596,13 +647,15 @@ calculation, `GameState.dealt`) subtracts `s` from the damage done. -/
 theorem dealtBy_add_reduce {o : Store} (h : o.NoReduce) (n : Nat) (w : Bool) (r s : Nat)
     (c : Store) : dealtBy n w r c (o.add .always (.reduce s)) = dealtBy n w r c o - s := by
   obtain ⟨h1, -, -, h4⟩ := h
-  simp only [dealtBy, Store.add, Store.live, Mods.merge, Mods.addMod, h1, h4]
-  by_cases h0 : n = 0
-  · simp only [h0, ↓reduceIte, Nat.zero_sub]
-  · simp only [h0, ↓reduceIte]
-    split
+  simp only [dealtBy, Store.add, Store.live, Mods.merge, Mods.addMod, h1.1, h4.1, h1.2.2, h4.2.2,
+    Nat.add_zero, Nat.zero_add]
+  split
+  · exact (Nat.zero_sub s).symm
+  · split
     · exact (Nat.zero_sub s).symm
-    · omega
+    · split
+      · exact (Nat.zero_sub s).symm
+      · omega
 
 /-- **The cap survives one more bounded reduction** (milestone M6): `dealtBy_cap` with a reduction
 `s` subtracted after Resistance (the static reduction, `GameState.dealt`), the same in both states,
@@ -610,12 +663,13 @@ and `r + s ≤ k`. If the two bonuses differ, both are at least `2 * k`, so the 
 reduction is at least `2 * k - r ≥ k + s`, and after it at least `k`, in both states. -/
 theorem dealtBy_cap_reduce {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
     (hc : c₂.cap (2 * k) = c₁.cap (2 * k)) (ho : o₂.cap (2 * k) = o₁.cap (2 * k))
-    (hn : o₁.NoReduce) (n : Nat) (w : Bool) {r s : Nat} (hr : r + s ≤ k) :
+    (hn : o₁.NoReduce) (hm : c₁.NoReduce) (n : Nat) (w : Bool) {r s : Nat} (hr : r + s ≤ k) :
     min (dealtBy n w r c₂ (o₂.add .always (.reduce s))) k =
       min (dealtBy n w r c₁ (o₁.add .always (.reduce s))) k := by
   have hn₂ := Store.NoReduce.of_cap (by omega) ho hn
-  rw [dealtBy_add_reduce hn, dealtBy_add_reduce hn₂, dealtBy_of_noReduce hn,
-    dealtBy_of_noReduce hn₂]
+  have hm₂ := Store.NoReduce.of_cap (by omega) hc hm
+  rw [dealtBy_add_reduce hn, dealtBy_add_reduce hn₂, dealtBy_of_noReduce hn hm,
+    dealtBy_of_noReduce hn₂ hm₂]
   have hc' := Mods.cap_iff.1 (Store.live_cap hc)
   have ho' := Mods.cap_iff.1 (Store.live_cap ho)
   have hb := hc'.1
@@ -636,19 +690,21 @@ theorem dealtBy_cap_reduce {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
 same in both states; without it, `dealtBy_cap_reduce`. -/
 theorem dealtBy_cap_ign {k : Nat} (hk : 0 < k) {c₁ c₂ o₁ o₂ : Store}
     (hc : c₂.cap (2 * k) = c₁.cap (2 * k)) (ho : o₂.cap (2 * k) = o₁.cap (2 * k))
-    (hn : o₁.NoReduce) (n : Nat) (w : Bool) {r s : Nat} (fx : Bool) (hr : r + s ≤ k) :
+    (hn : o₁.NoReduce) (hm : c₁.NoReduce) (n : Nat) (w : Bool) {r s : Nat} (fx : Bool)
+    (hr : r + s ≤ k) :
     min (dealtBy n w r c₂ ((cond fx Store.empty o₂).add .always (.reduce (cond fx 0 s)))) k =
       min (dealtBy n w r c₁ ((cond fx Store.empty o₁).add .always (.reduce (cond fx 0 s)))) k := by
   cases fx
-  · exact dealtBy_cap_reduce hk hc ho hn n w hr
-  · exact dealtBy_cap_reduce hk hc rfl ⟨rfl, rfl, rfl, rfl⟩ n w (Nat.le_trans (Nat.add_le_add_left
-      (Nat.zero_le _) _) hr)
+  · exact dealtBy_cap_reduce hk hc ho hn hm n w hr
+  · exact dealtBy_cap_reduce hk hc rfl Store.NoReduce.empty hm n w (Nat.le_trans
+      (Nat.add_le_add_left (Nat.zero_le _) _) hr)
 
 /-- The flags in effect agree when the stores agree at a cap. -/
 theorem Store.flags_of_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
     a.live.prevent = b.live.prevent ∧ a.live.noAttack = b.live.noAttack ∧
       a.live.noRetreat = b.live.noRetreat ∧ a.live.noItem = b.live.noItem :=
-  (Mods.cap_iff.1 (Store.live_cap h)).2.2
+  have e := (Mods.cap_iff.1 (Store.live_cap h)).2.2
+  ⟨e.1, e.2.1, e.2.2.1, e.2.2.2.1⟩
 
 /-! ## Agreement of states -/
 

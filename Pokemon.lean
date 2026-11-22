@@ -50,4 +50,5 @@ import Pokemon.Vocab4
 import Pokemon.Lock
 import Pokemon.Special
 import Pokemon.Look
+import Pokemon.Defender
 import Pokemon.Audit

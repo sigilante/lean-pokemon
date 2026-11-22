@@ -379,7 +379,7 @@ def haltMarks : Marks := Marks.set .imprison true Marks.empty
 
 /-- A store with only a rest-of-game damage bonus `b` and damage reduction `r`. -/
 def storeOf (b r : Nat) : Store :=
-  ⟨Mods.empty, Mods.empty, Mods.empty, ⟨b, r, false, false, false, false⟩⟩
+  ⟨Mods.empty, Mods.empty, Mods.empty, ⟨b, r, false, false, false, false, 0, 0⟩⟩
 
 def isEnergy : Card → Bool
   | .energy _ => true

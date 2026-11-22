@@ -154,11 +154,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   "This attack's damage isn't affected by Weakness / Resistance / any effects on your opponent's
   Active Pokémon" and their combinations, 39 refused Standard cards in survey S15; exact: the
   rulebook's step 3, 4 or 5 is switched off, 2026 p. 20, and step 2, the attacker's bonuses, is
-  kept). Absent from the same family: a reduction of the Defending Pokémon's attacks before Weakness
-  ("attacks used by the Defending Pokémon do 30 less damage (before applying Weakness and
-  Resistance)", 10 cards), an increase after it ("the Defending Pokémon takes 50 more damage", 4),
-  per-attack bonuses ("this Pokémon's Meteor Mash attack does 60 more damage", 4), and the static
-  form on an Ability (Walking Wake ex svp-127, 1);
+  kept). Since milestone MV6 (survey S19 §B, `Pokemon/Defender.lean`) the same family has a penalty
+  on the Defending Pokémon's attacks before Weakness ("attacks used by the Defending Pokémon do 30
+  less damage (before applying Weakness and Resistance)", 11 cards: `Mod.weaken`, step 2), an
+  increase after it ("the Defending Pokémon takes 50 more damage", 4: `Mod.expose`, step 5), both
+  per player (lingering-modifiers item), and per-attack bonuses ("this Pokémon's Meteor Mash attack
+  does 60 more damage", "… Hyper Fang attack's base damage is 240", 5: per Pokémon, `AtkLock.note`
+  and `Test.usedLast`). Absent: Weakness changes ("has no Weakness", "Weakness is now …", 3: a stored
+  value with an order, not an amount), cost changes, and the static form on an Ability (Walking Wake
+  ex svp-127, 1);
 * Knock Outs (milestone batch-KO; before it, separate moves taken one at a time in any order, a
   DEPARTURE from the rulebook since milestone M6 that is now removed, see below): every Knock Out
   is taken by the batch Knock Out step (`KOBatch`, the move `Move.knockOuts`, and the steps of
@@ -364,7 +368,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage) is not modified, as in the rulebook. The bonus is placed at step 2 and the reduction
   at step 5, which is what printed modifiers say ("… more damage … (before applying Weakness
   and Resistance)", "… less damage … (after applying Weakness and Resistance)", survey S9);
-  modifiers that name the other step are not expressible. An attack whose damage "isn't affected
+  since milestone MV6 a step-2 penalty on the player's attacks (`Mod.weaken`, `Mods.minus`) and a
+  step-5 increase of the damage to the player's Pokémon (`Mod.expose`, `Mods.more`) are stored
+  amounts too, added up without limit, bounded by the clauses of `StoreSafe` like the bonus and the
+  reduction (`Mod.isAmt`), capped by the capped clamp and excluded from tame decks (`Mod.plain`).
+  Readings: a penalty that brings the damage after step 2 to 0 stops the calculation ("Stop if the
+  base damage is 0", 2026 p. 20, read after step 2's effects), so a step-5 increase then adds
+  nothing; inside step 5 the increase is added before the reduction is subtracted (the rulebook
+  gives no order; the other order gives more damage when the reduction exceeds the damage after
+  Resistance); each subtraction stops at 0, so a Resistance larger than the damage leaves 0 to which
+  the increase is added (carrying a negative value over, which step 6's "If the damage is 0 or less"
+  may suggest, would give less). Like every lingering modifier they belong to a player: "attacks used
+  by the Defending Pokémon do 30 less damage" also weakens the Pokémon that replaces it in the Active
+  Spot, and "the Defending Pokémon takes 50 more damage" also exposes its replacement (more damage
+  than print in the second case, less in the first: the departure in both directions listed above).
+  An attack whose damage "isn't affected
   by any effects on your opponent's Active Pokémon" (milestone MV3, `Ign.fx`) reads the defender's
   store as empty and its static reduction as 0: no reduction and no prevention apply to it,
   including a Stadium's (Full Metal Lab's reduction, Neutralization Zone's prevention): the model

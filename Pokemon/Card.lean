@@ -253,7 +253,25 @@ inductive Mod where
   | prevent
   /-- the player cannot attack, retreat, or play Item cards -/
   | lock (l : Lock)
+  /-- (milestone MV6) the player's attacks do `n` less damage, at step 2 of the damage calculation,
+  before Weakness and Resistance: "During your opponent's next turn, attacks used by the Defending
+  Pokémon do 30 less damage (before applying Weakness and Resistance)" (Pawmi me2-32) is
+  `linger .opp .next (.weaken 3)`; repeated uses add up -/
+  | weaken (n : Nat)
+  /-- (milestone MV6) attacks do `n` more damage to the player's Pokémon, at step 5 of the damage
+  calculation, after Weakness and Resistance and before the player's damage reduction: "During your
+  next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and
+  Resistance)" (Vibrava sv8-105) is `linger .opp .after (.expose 5)`; repeated uses add up -/
+  | expose (n : Nat)
   deriving DecidableEq
+
+/-- A modifier the capped clamp can absorb (milestone MV6): every modifier but a damage reduction,
+a step-2 penalty (`weaken`) and a step-5 increase (`expose`). `Effect.tame` admits only these. -/
+def Mod.plain : Mod → Bool
+  | .reduce _ => false
+  | .weaken _ => false
+  | .expose _ => false
+  | _ => true
 
 /-! ## Card filters and zone moves (milestone MV) -/
 
@@ -505,6 +523,15 @@ inductive Test where
   `fresh` is cleared at the end of its owner's turn; the printed "from X" is the card's own
   pre-evolution, the only way the model evolves it -/
   | evolved (w : Whose)
+  /-- (milestone MV6) it used an attack whose `Attack.selfLock` is `AtkLock.note` during its owner's
+  last turn (the record in force in `InPlay.lk`). "During your next turn, this Pokémon's Meteor Mash
+  attack does 60 more damage (before applying Weakness and Resistance)" (Metagross sv5-115) is
+  Meteor Mash with `selfLock := .note` and the effect `ite (usedLast .own) (damage (const 12))
+  (damage (const 6))`; "this Pokémon's Hyper Fang attack's base damage is 240" (Watchog
+  rsv10pt5-73) puts the record on Focus Energy and the test in Hyper Fang. Per Pokémon: the record
+  ends when the Pokémon moves to the Bench or evolves (2026 p. 20, p. 11), as print says. Exact for
+  a Pokémon with at most one attack whose `selfLock` is not `none` -/
+  | usedLast (w : Whose)
   deriving DecidableEq
 
 /-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
@@ -728,6 +755,11 @@ the attacks of the Pokémon whose `Attack.selfLock` is `this`); or "this Pokémo
 (`all`). -/
 inductive AtkLock where
   | none | this | all
+  /-- (milestone MV6) no lock: the record that the Pokémon used an attack whose `selfLock` is
+  `note`, read during its owner's next turn by `Test.usedLast` ("During your next turn, this
+  Pokémon's Meteor Mash attack does 60 more damage", Metagross sv5-115; "If this Pokémon used
+  [attack] during your last turn") -/
+  | note
   deriving DecidableEq
 
 structure Attack where
@@ -758,6 +790,7 @@ def AtkLock.allows : AtkLock → Attack → Bool
   | .none, _ => true
   | .this, atk => !decide (atk.selfLock = .this)
   | .all, _ => false
+  | .note, _ => true
 
 /-- No damage step (`damage` or `drain`) anywhere in the effect. -/
 def Effect.hitFree : Effect → Bool
@@ -798,7 +831,7 @@ def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
   | .countGe (.energy .own _) _ => true
   | .countGe (.conds .own) _ => true
-  | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own => true
+  | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own | .usedLast .own => true
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
@@ -1543,9 +1576,11 @@ def Effect.tmax : Effect → Nat
   | _ => 0
 
 /-- No damage reduction and no `drain`: the effects for which the damage bonus can be capped
-(`Pokemon/Lingering.lean` shows that each of the two breaks the cap). -/
+(`Pokemon/Lingering.lean` shows that each of the two breaks the cap); since milestone MV6 also no
+step-2 penalty (`Mod.weaken`, a subtraction like the reduction) and no step-5 increase
+(`Mod.expose`), the modifiers that are not `Mod.plain`. -/
 def Effect.tame : Effect → Bool
-  | .linger _ _ (.reduce _) => false
+  | .linger _ _ m => m.plain
   | .drain _ => false
   | .ite _ a b => a.tame && b.tame
   | .seq a b => a.tame && b.tame

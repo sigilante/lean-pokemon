@@ -105,4 +105,71 @@ theorem iter_writer_breaks_bound :
     simp only [bon, T, pl, nowB, n] at this
     omega
 
+/-! ## The new stored kinds of milestone MV6
+
+Clause 1 counts a step-2 penalty (`Mod.weaken`) and a step-5 increase (`Mod.expose`) as amounts
+(`Mod.isAmt`), like a bonus or a reduction. Without that the bound fails in the same way: one play of
+an Item whose effect is `iter (linger .own .now (weaken 1))` writes any this-turn penalty. -/
+
+/-- "Any number of times, your attacks do 10 less damage this turn": an Item whose effect writes a
+step-2 penalty under `iter`. No printed card has it. -/
+def sap : Card := .trainer "Sap" .item (.iter (.linger .own .now (.weaken 1)))
+
+/-- A store with a this-turn step-2 penalty of `b`. -/
+def nowM (b : Nat) : Store := ⟨{ Mods.empty with minus := b }, Mods.empty, Mods.empty, Mods.empty⟩
+
+def W0 : GameState :=
+  ⟨pl [sap] [] (nowM 0), pl [] [] (nowM 0), true, false, false, false, none, none, false, false⟩
+
+def V (b : Nat) : GameState :=
+  ⟨pl [] [sap] (nowM b), pl [] [] (nowM 0), true, false, false, false, none, none, false, false⟩
+
+theorem stepV (b : Nat) : TRun (.linger .own .now (.weaken 1)) (V b) (V (b + 1)) :=
+  .prim rfl rfl (.linger .own .now (.weaken 1) _) (.done (.inl (settled_mon rfl rfl rfl rfl)))
+
+theorem iterV : ∀ m b : Nat, TRun (.iter (.linger .own .now (.weaken 1))) (V b) (V (b + m))
+  | 0, b => .iterNil _ _
+  | m + 1, b => by
+      have h := TRun.iterCons (stepV b) (iterV m (b + 1))
+      rwa [show b + 1 + m = b + (m + 1) by omega] at h
+
+theorem reach_V (k : Nat) : Reach W0 (V k) := by
+  have h := iterV k 0
+  rw [Nat.zero_add] at h
+  exact .step (.refl _) rfl
+    (.item (l₁ := []) (l₂ := []) rfl rfl (settled_mon rfl rfl rfl rfl) h rfl rfl rfl rfl)
+
+theorem W0_allCards : W0.allCards =
+    [sap, .energy .metal, .pokemon guard, .energy .metal, .pokemon guard] := rfl
+
+/-- The this-turn penalty of the player to move. -/
+def pen (g : GameState) : Nat := g.cur.mods.now.minus
+
+theorem pen_xclamp (g : GameState) : pen (g.xclamp K) = pen g := rfl
+
+/-- **A step-2 penalty written under `iter` breaks the store bound** (milestone MV6): the analogue
+of `iter_writer_breaks_bound` for the new stored kind `Mod.weaken`, so clause 1's reading of it as
+an amount is needed. About representation, not play, as above. -/
+theorem iter_weaken_breaks_bound :
+    ∃ g₀ : GameState, WellFormed g₀ ∧ ¬ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧
+      g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
+      ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
+  refine ⟨W0, ⟨fun _ => ⟨by simp [W0, pl], by simp [W0, pl]⟩, (fun p hp => by cases hp),
+    (fun p hp => by cases hp)⟩, fun h => absurd (h sap (by rw [W0_allCards]; simp)) (by decide),
+    GameState.GXOnly.of_noAttacks (by rw [W0_allCards]; decide),
+    by unfold GameState.RecycleSafe; rw [W0_allCards]; decide,
+    by unfold GameState.AbilitySafe; rw [W0_allCards]; decide,
+    by unfold GameState.StadiumSafe; rw [W0_allCards]; decide, fun B => ?_, ?_⟩
+  · refine ⟨_, reach_V (B + 1), fun hb => ?_⟩
+    have := hb.1.1.2.2.1
+    simp only [V, pl, nowM] at this
+    omega
+  · intro ⟨L, hL⟩
+    let n := (L.map pen).sum + 1
+    have hm := hL _ (reach_V n)
+    have : pen ((V n).xclamp K) ≤ (L.map pen).sum := Infinite.le_sum (List.mem_map_of_mem hm)
+    rw [pen_xclamp] at this
+    simp only [pen, V, pl, nowM, n] at this
+    omega
+
 end Pokemon.LoopFreeNeeded

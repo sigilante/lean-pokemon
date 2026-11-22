@@ -9,7 +9,7 @@ use Giant Wave."). The rulebook makes it an effect on the Pokémon, not on the p
 Pokémon moves to the Bench, all effects of attacks go away" (2026 p. 20) and "Any effects of attacks
 … end when it evolves" (p. 11).
 
-The record is `InPlay.lk : LockState`, two values of the three-valued `AtkLock` (nine values per
+The record is `InPlay.lk : LockState`, two values of the three-valued `AtkLock` (four-valued since milestone MV6, `AtkLock.note`; nine, now sixteen, values per
 Pokémon, in the enumeration `Enum.lockStates`), kept exactly by both clamps (`InPlay.clampWith`
 changes only damage and Poison strength; `InPlay.Agree.lk`). It is
 

@@ -68,8 +68,7 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @zone e w g s' hw hz => intro _ hn; cases w <;> exact hn
   | linger w s m g =>
       intro ht hn
-      have hm : ∀ n, m ≠ .reduce n := by
-        intro n hm; subst hm; simp [Effect.tame] at ht
+      have hm : m.plain = true := by simpa [Effect.tame] using ht
       cases w with
       | own => exact ⟨hn.1.add s m hm, hn.2⟩
       | opp => exact ⟨hn.1, hn.2.add s m hm⟩
@@ -454,7 +453,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           simp only [GameState.dealtI, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce, hsf.sPrevent]
           rcases Bool.eq_false_or_eq_true (cond ig.fx false g.sPrevent) with hc | hc <;>
             simp only [hc, ↓reduceIte, Bool.false_eq_true]
-          exact dealtBy_cap_ign hk0 (Store.cap_add hm₁ _ _) hm₂ hn.2 n _ ig.fx hr
+          exact dealtBy_cap_ign hk0 (Store.cap_add hm₁ _ _) hm₂ hn.2 (hn.1.add _ _ rfl) n _ ig.fx hr
         have hq' : InPlay.Agree k (.upto k)
             { q with damage := q.damage + GameState.dealtI ig n { g with
                 cur := { g.cur with active := c₂, bench := e₁, mods := m₁ },
@@ -778,7 +777,7 @@ theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameSt
 
 /-- The conditions under which the kernel of `clamp k` is a bisimulation for moves: `0 < k`;
 `HpLe k` (`hpBound` of the cards, which bounds every derived HP, and every Resistance at most `k`);
-every card is tame (no stored damage reduction, no `drain`) and its test constants are below `k`;
+every card is tame (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`)) and its test constants are below `k`;
 no damage reduction is stored; and `ReduceLe k` (every Resistance plus the static reduction bound
 `sReduceBound` of the cards at most `k`; milestone M6). Static damage reductions are allowed: the
 one in force is a function of the cards in play, bounded by `sReduceBound`, not an amount that
