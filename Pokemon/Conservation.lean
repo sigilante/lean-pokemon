@@ -124,6 +124,7 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
       List.count_nil, optCardList, benchCardList, benchCardList_append, InPlay.cardList,
       InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
       InPlay.inflict_energy, InPlay.inflict_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
+      InPlay.unlock,
       $hs,*] <;>
     omega))
 
@@ -389,7 +390,8 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | toolBench hh hb ht => perm_count [hh, hb, ht]
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.perm.trans hu.perm
   | onPlay hp _ _ _ _ _ hr => exact hr.perm.trans hp.perm
-  | attack ha hm hc hs hn hf hbt hst hr _ _ _ _ ht => exact ht.perm.trans hr.perm
+  | attack ha hm hc hs hn hf hbt hst hr _ _ _ _ ht =>
+      rw [GameState.allCards_afterAttack]; exact ht.perm.trans hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | knockOuts h _ ht => exact ht.perm.trans h.perm
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>

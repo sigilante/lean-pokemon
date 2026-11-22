@@ -1138,6 +1138,16 @@ def PlayerState.abPot (s : PlayerState) : Nat :=
 card the opponent has left. -/
 def GameState.abPot (g : GameState) : Nat := g.cur.abPot + 2 * g.opp.prizes.length
 
+/-- The state an attack leaves has the potential of the state before (milestone MV4: the lock on
+the attacker changes no flag the potential reads). -/
+theorem GameState.abPot_afterAttack (l : AtkLock) (x : Bool) (g : GameState) :
+    (g.afterAttack l x).abPot = g.abPot := by
+  have e1 : abWo (g.cur.active.map (InPlay.noteLock l)) = abWo g.cur.active := by
+    cases g.cur.active <;> rfl
+  have e2 : optN (g.cur.active.map (InPlay.noteLock l)) = optN g.cur.active := by
+    cases g.cur.active <;> rfl
+  simp only [GameState.abPot, GameState.afterAttack, PlayerState.abPot, e1, e2]
+
 theorem abWs_append (a b : List InPlay) : abWs (a ++ b) = abWs a + abWs b := by
   induction a with
   | nil => simp only [List.nil_append, abWs, Nat.zero_add]
@@ -1353,7 +1363,7 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
       cases w with
       | own =>
           simp only [GameState.side] at ha hb
-          have e1 : a.cure.abW = a.abW := rfl
+          have e1 : a.cure.unlock.abW = a.abW := rfl
           have e2 : (Whose.mover .own q).abW = q.abW := rfl
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, ha, hb, abWo, optN,
             abWs_append, abWs, e1, e2, List.length_append, List.length_cons]; omega
@@ -1551,14 +1561,14 @@ theorem PlayFromHand.abPot {g g₁ : GameState} {x : InPlay} {w : PlayWay}
       have : a.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
       have e : InPlay.abW { a with
           top := p, under := Card.pokemon a.top :: a.under, rot := .none,
-          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false, lk := {} } = 1 :=
         rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
   | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr =>
       have : q.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
       have e : InPlay.abW { q with
           top := p, under := Card.pokemon q.top :: q.under, rot := .none,
-          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false, lk := {} } = 1 :=
         rfl
       simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs, e,
         List.length_append, List.length_cons]; omega

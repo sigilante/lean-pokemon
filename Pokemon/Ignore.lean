@@ -104,11 +104,11 @@ namespace Ignore
 open Trainer InPlayTests
 
 /-- 60 damage (6 counters), with the full calculation. -/
-def plain : Attack := ⟨"Plain", [], 0, .damage (.const 6), false⟩
+def plain : Attack := ⟨"Plain", [], 0, .damage (.const 6), false, .none⟩
 
 /-- 60 damage that "isn't affected by Resistance, or by any effects on your opponent's Active
 Pokémon" (the Resistance half of Ledian svp-133's text, with its step-5 half). -/
-def pierce : Attack := ⟨"Pierce", [], 0, .damage (.const 6) { resist := true, fx := true }, false⟩
+def pierce : Attack := ⟨"Pierce", [], 0, .damage (.const 6) { resist := true, fx := true }, false, .none⟩
 
 def driller : PokemonCard := ⟨"Driller", .basic, none, 10, .fighting, [plain, pierce], 1, none,
   none, .none, false, []⟩
@@ -143,7 +143,7 @@ theorem plain_reduced :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { InPlay.ofBasic rock with damage := 1 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (atk := plain) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
+    .attack (hlk := rfl) (atk := plain) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.const 6 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.const 6 _) rfl) rfl) (.nil _), rfl⟩
 
@@ -153,7 +153,7 @@ theorem pierce_ignores :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { InPlay.ofBasic rock with damage := 6 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
+    .attack (hlk := rfl) (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.const 6 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.const 6 _) rfl) rfl) (.nil _), rfl⟩
 

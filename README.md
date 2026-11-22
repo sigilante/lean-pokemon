@@ -234,6 +234,40 @@ premise of `Move.retreat_marks` and `Move.retreat_movedUp`; and `Effect.trigOk` 
 owner's next turn and the model would cure it at once). The Known gaps were updated against the
 2026 rulebook (tiebreaker game, "up to", deck construction, Legendary Stadiums, effects ending on
 evolution, `putBench .opp` and evolution).
+Milestone MV4 (effect vocabulary 4; census in survey S17) added, in stage 1, two filters on the
+printed name, `Filter.namePrefix` ("Iono's Pokémon" is `and pokemon (namePrefix "Iono's ")`) and
+`Filter.nameHas` ("a Pokémon that has \"Nidoking\" in its name"), which compare the UTF-8 bytes of
+the names (`nameBytes`; `String.startsWith` depends on `Classical.choice` in this Lean version), so
+`Filter.eval` stays a kernel-computable `Bool`; and five counts (`Count`, now 12 constructors):
+Pokémon Tools attached to a player's Pokémon (`tools`), Special Conditions on an Active Pokémon
+(`conds`), Prize cards a player has taken (`prizesTaken`, 6 less those left: exact for games set up
+with 6 Prize cards, rulebook 2026 p. 8), types of Basic Energy attached (`energyTypes`) and the
+turn's Supporter flag (`supporter`). None reads damage, so both clamps keep them exactly and
+`Count.val_clampAt`, `Count.val_xclampAt` gained one case each; counts of damage counters on several
+Pokémon are left out (not clamp-exact; S17 §B). Witnesses in `Pokemon/Vocab4.lean` (attacks whose
+damage is computed from a Tool count, a Special Condition count and a Prize count, as legal moves).
+Stage 2 added per-Pokémon attack locks (S17 §C: "During your next turn, this Pokémon can't use
+[this attack]", 27 refused Standard cards; "… can't use attacks"): `Attack.selfLock` (`AtkLock`:
+none, this attack, all attacks; a defaulted field, so the generated library builds unchanged) and
+`InPlay.lk` (`LockState`: the lock set this turn and the lock in force, nine values per Pokémon, in
+the enumeration `Enum.lockStates`, kept exactly by both clamps). `Move.attack` sets the attacker's
+lock (its result is now `GameState.afterAttack`), `InPlay.unfresh` brings it into force at the end
+of its owner's turn and ends it a turn later, `Move.attack` and `Move.attackConfused` refuse an
+attack the lock forbids, and moving to the Bench (`Move.retreat`, `Effect.switch` through
+`InPlay.unlock`) or evolving clears it (rulebook 2026 p. 20, p. 11). Witnesses in
+`Pokemon/Lock.lean`: from a well-formed, `Settled` start, Giant Wave is used, every attack in its
+user's next turn is the other one (`g3_no_wave`, over all moves), a retreat in that turn clears the
+lock, and two turns later Giant Wave is legal again (`trace`). Changed definitions: `InPlay` (field
+`lk`), `Attack` (field `selfLock`), `InPlay.unfresh`, `InPlay.Agree` (field `lk`), `Move.attack`,
+`Move.attackConfused`, `Move.retreat`, `Move.evolve`, `Move.evolveBench`, `PlayFromHand`, `Run.switch`,
+`Enum.inPlays`, and internal ones (`Counter.Fits` gained the conjunct that the Active Pokémon carries
+no lock, so `Counter.Encodes` requires it; `Counter.onPlay`, `StoreSafe` `atkRes`). Changed statements,
+each spelling out a changed definition: `Move.attack_of_trigFree` (premise `hlk`, conclusion
+`afterAttack`), `Counter.move_shape` (its attack disjunct is `afterAttack`) and `Counter.attack_move`
+(premise `atk.selfLock = .none`). No other theorem statement changed in text; `Counter.universal`,
+`Counter.simulate`, `Counter.halts_of_haltMarked` are unchanged. The per-player `Mod.lock .attack`
+stays; "if this Pokémon used [attack] during your last turn", the named Supporter of the turn and
+Paralysis timing per Pokémon are not modelled (Known gaps; S17 §E).
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the
@@ -621,9 +655,10 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,320 are imported (966 exactly, 354 with
-caveats) as 1,314 distinct terms, and 841 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.9.0, survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
+damage reduction). Of the pool's 2,161 cards, 1,377 are imported (1,020 exactly, 357 with
+caveats) as 1,370 distinct terms, and 784 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.10.0, which writes the MV4 name filters, counts
+and per-Pokémon attack locks; survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
 turn", "as often as you like") and on-play Abilities are translated when every sentence has a
 rule, since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
 the model's `Static`, and since importer 0.6.0 (milestone M8b) triggered Abilities and Tool text

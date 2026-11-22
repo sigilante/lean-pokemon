@@ -338,7 +338,7 @@ theorem switch_cures :
 
 /-- An attack that does 10 damage and Paralyzes the opponent's Active Pokémon, then switches in
 one of the opponent's Benched Pokémon. -/
-def whirl : Attack := ⟨"Whirl", [], 1, .seq (.inflict .paralyzed) (.switch .opp), false⟩
+def whirl : Attack := ⟨"Whirl", [], 1, .seq (.inflict .paralyzed) (.switch .opp), false, .none⟩
 
 def whirler : PokemonCard := ⟨"Whirler", .basic, none, 10, .grass, [whirl], 1, none, none, .none, false, []⟩
 
@@ -370,7 +370,7 @@ theorem whirl_reachable :
       .seq (.damage (.const 1 _) rfl) (.seq (.inflict .paralyzed rfl)
         (.switch (b₁ := []) .opp rfl rfl))
   have hm : Move whirlStart _ :=
-    .attack (atk := whirl) rfl (.head _) (.nil _) rfl rfl rfl rfl whirlStart_settled hr rfl
+    .attack (hlk := rfl) (atk := whirl) rfl (.head _) (.nil _) rfl rfl rfl rfl whirlStart_settled hr rfl
       (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _)
   exact ⟨whirlStart, whirlStart_wellFormed, whirlStart_settled, _, _, hm, .step (.refl _) rfl hm,
     rfl, rfl, rfl, rfl, ⟨rfl, rfl, rfl, rfl⟩⟩
@@ -656,10 +656,10 @@ open Trainer
 
 /-- An attack that switches its user out and then does 10 damage: the damage step would read the
 switched-in Pokémon's type. -/
-def switchThenHit : Attack := ⟨"SwitchThenHit", [], 0, .seq (.switch .own) (.damage (.const 1)), false⟩
+def switchThenHit : Attack := ⟨"SwitchThenHit", [], 0, .seq (.switch .own) (.damage (.const 1)), false, .none⟩
 
 /-- The printed order: 10 damage, then switch this Pokémon with a Benched Pokémon. -/
-def hitThenSwitch : Attack := ⟨"HitThenSwitch", [], 1, .switch .own, false⟩
+def hitThenSwitch : Attack := ⟨"HitThenSwitch", [], 1, .switch .own, false, .none⟩
 
 /-- **Witness: switch-then-damage is not playable.** `switchThenHit` is not well formed, so no
 `Move.attack` (nor `Move.attackConfused`) uses it; the printed order, `hitThenSwitch`, is. -/
@@ -669,7 +669,7 @@ theorem switchThenHit_not_wf : switchThenHit.wf = false ∧ hitThenSwitch.wf = t
 /-! ## Attack damage to the Bench, and Tera -/
 
 /-- 50 damage to each of the opponent's Benched Pokémon, no damage to the Active Pokémon. -/
-def snipe : Attack := ⟨"Snipe", [], 0, .spreadDamage .opp 5, false⟩
+def snipe : Attack := ⟨"Snipe", [], 0, .spreadDamage .opp 5, false, .none⟩
 
 /-- A 100-HP Basic Pokémon with `snipe`. -/
 def sniper : PokemonCard := ⟨"Sniper", .basic, none, 10, .grass, [snipe], 1, none, none, .none, false, []⟩
@@ -703,7 +703,7 @@ theorem teraBench_reachable :
       g.opp.bench = [(InPlay.ofBasic low).addDamage 5, InPlay.ofBasic teraMon] ∧
       ¬ DamageBounded g := by
   have hm : Move snipeStart _ :=
-    .attack (atk := snipe) rfl (.head _) (.nil _) rfl rfl rfl rfl snipeStart_settled
+    .attack (hlk := rfl) (atk := snipe) rfl (.head _) (.nil _) rfl rfl rfl rfl snipeStart_settled
       (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl
       (HitTrig.exists_nil (.spreadDamage .opp 5 _) rfl) (.nil _)
   refine ⟨snipeStart, snipeStart_wellFormed, snipeStart_settled, _, hm, .step (.refl _) rfl hm,
@@ -712,7 +712,7 @@ theorem teraBench_reachable :
     (by decide)
 
 /-- 50 damage to one of the opponent's Benched Pokémon. -/
-def poke : Attack := ⟨"Poke", [], 0, .benchDamage .opp 5, false⟩
+def poke : Attack := ⟨"Poke", [], 0, .benchDamage .opp 5, false, .none⟩
 
 def poker : PokemonCard := ⟨"Poker", .basic, none, 10, .grass, [poke], 1, none, none, .none, false, []⟩
 
@@ -741,7 +741,7 @@ theorem benchDamage_reachable :
       g.opp.bench = [(InPlay.ofBasic low).addDamage 5, InPlay.ofBasic low] ∧
       ¬ DamageBounded g := by
   have hm : Move pokeStart _ :=
-    .attack (atk := poke) rfl (.head _) (.nil _) rfl rfl rfl rfl pokeStart_settled
+    .attack (hlk := rfl) (atk := poke) rfl (.head _) (.nil _) rfl rfl rfl rfl pokeStart_settled
       (.benchDamage (b₁ := []) .opp 5 rfl) rfl (fun h => nomatch h) rfl
       (HitTrig.exists_nil (.benchDamage (b₁ := []) .opp 5 rfl) rfl) (.nil _)
   refine ⟨pokeStart, pokeStart_wellFormed, pokeStart_settled, _, hm, .step (.refl _) rfl hm,
@@ -762,7 +762,7 @@ player could win). With the batch Knock Out step the outcome no longer depends o
 move from the state after the attack gives the rulebook's outcome. -/
 
 /-- "Put 5 damage counters on your opponent's Active Pokémon and 5 on this Pokémon." -/
-def both : Attack := ⟨"Both", [], 0, .seq (.counters 5) (.selfDamage 5), false⟩
+def both : Attack := ⟨"Both", [], 0, .seq (.counters 5) (.selfDamage 5), false, .none⟩
 
 /-- A 50-HP Basic Pokémon with `both`. -/
 def bother : PokemonCard :=
@@ -794,7 +794,7 @@ def lastHit (b : List InPlay) : GameState :=
 
 theorem move_lastHit (b : List InPlay) (hs : Settled (lastStart b)) :
     Move (lastStart b) (lastHit b) :=
-  .attack (atk := both) rfl (.head _) (.nil _) rfl rfl rfl rfl hs
+  .attack (hlk := rfl) (atk := both) rfl (.head _) (.nil _) rfl rfl rfl rfl hs
     (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl (fun h => nomatch h) rfl
     (HitTrig.exists_nil (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl) (.nil _)
 

@@ -385,12 +385,13 @@ inductive Run : Effect → GameState → GameState → Prop where
   /-- the `w` player's Active Pokémon `a` switches with the Benched `q`; `a` goes to the Bench
   cured of its Special Conditions ("When your Active Pokémon goes to your Bench (whether it
   retreated or got there some other way), some things do go away—Special Conditions and any
-  effects from attacks", rulebook 2023 p. 12); `q` has moved to the Active Spot, which is recorded
-  when the switch is the player's own (milestone MV2, `Whose.mover`) -/
+  effects from attacks", rulebook 2023 p. 12; since milestone MV4 its attack locks end too,
+  `InPlay.unlock`); `q` has moved to the Active Spot, which is recorded when the switch is the
+  player's own (milestone MV2, `Whose.mover`) -/
   | switch {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} (w : Whose)
       (ha : (g.side w).active = some a) (hb : (g.side w).bench = b₁ ++ q :: b₂) :
       Run (.switch w) g
-        (g.updSide w fun s => { s with active := some (w.mover q), bench := b₁ ++ a.cure :: b₂ })
+        (g.updSide w fun s => { s with active := some (w.mover q), bench := b₁ ++ a.cure.unlock :: b₂ })
   | switchNone {g : GameState} (w : Whose) (hb : (g.side w).bench = []) : Run (.switch w) g g
   /-- attack damage to one of the `w` player's Benched Pokémon (milestone M3) -/
   | benchDamage {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)

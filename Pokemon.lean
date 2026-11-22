@@ -46,4 +46,6 @@ import Pokemon.Ignore
 import Pokemon.IfDo
 import Pokemon.Prevent
 import Pokemon.Retreat
+import Pokemon.Vocab4
+import Pokemon.Lock
 import Pokemon.Audit

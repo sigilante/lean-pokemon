@@ -128,6 +128,9 @@ CAVEATS = {
                      "Pokémon's Ability is not settled); if it does, a Pokémon whose Ability comes from a Tool is not "
                      "counted where print counts it, and an attacker with such an Ability is not prevented where print "
                      "prevents its damage",
+    'prizes6': "'Prize cards taken' is `Count.prizesTaken w`, 6 less the Prize cards left (milestone MV4): exact in a game set "
+               "up with 6 Prize cards (2026 rulebook p. 8), which the model does not require of a start state (Known gaps: "
+               "setup is not modelled; `Count.prizesTaken`); from another start it is the shortfall from 6, at least 0",
     'moveMayFail': "a move of Energy is `moveEnergy`, which may move nothing (`moveNone`; Known gaps, zone moves item: "
                    "'attach, putBench and moveEnergy may always do nothing, a superset of \"if you can\"'), where print moves "
                    "one Energy if one can be moved",
@@ -139,6 +142,7 @@ CAVEATS = {
 # with caveats is in general neither an over- nor an under-approximation of its printed card.
 CAVEAT_DIRECTION = {
     'moveMayFail': 'allows more',  # the move of nothing is an extra outcome
+    'prizes6': 'both',             # off a 6-Prize start the count differs from the printed one, either way
     'perPokemon': 'both',          # a reduction or prevention on one Pokémon covers all of its player's
                                    # (allows more); a lock on the Defending Pokémon locks every Pokémon
                                    # of that player, so a switched-in Pokémon cannot attack (forbids some)
@@ -244,6 +248,22 @@ def parse_filter(np, ctx):
     if s == 'Tera Pokémon':
         # milestone MV2: `Filter.tera`, the card's Tera mark (every Tera Pokémon of today's Standard)
         return ('and', ('pokemon',), ('tera',))
+    # milestone MV4: "F that has \"X\" in its name" (`Filter.nameHas`, `name_has`)
+    m = re.match(r'^(.+?) that (?:has|have) "([^"]+)" in (?:its|their) names?$', s)
+    if m:
+        base = parse_filter(m.group(1), ctx)
+        return ('and', base, name_has(m.group(2), base))
+    m = re.match(r'^(.+?) that (?:has|have) "([^"]+)" or "([^"]+)" in (?:its|their) names?$', s)
+    if m:
+        base = parse_filter(m.group(1), ctx)
+        return ('and', base, ('or', name_has(m.group(2), base), name_has(m.group(3), base)))
+    # milestone MV4: owner phrases "[Basic / Evolution] X's Pokémon [ex]" (`owner_filter`)
+    m = re.match(r"^(Basic |Evolution |Stage [12] )?(.+?)'s (Pokémon(?: ex)?)$", s)
+    if m:
+        base = parse_filter((m.group(1) or '') + m.group(3), ctx)
+        if not is_pokemon_filter(base):
+            raise Refuse('card kind with no filter: ' + s)
+        return owner_filter(m.group(2), base)
     m = re.match(r'^(.+?),? or (an? )?(.+)$', s)
     if m and ' or less' not in s and ' or more' not in s:
         return ('or', parse_filter(m.group(1), ctx), parse_filter(m.group(3), ctx))
@@ -332,6 +352,55 @@ NAME_STAGES = {}
 TOOL_ATTACKS = set()
 
 
+# milestone MV4 (importer 0.10.0): the owners of the whole dataset, the X of every Pokémon card named "X's …"
+# ("Iono's Voltorb", "Team Rocket's Mewtwo ex", "N's Zoroark ex"). An owner phrase "X's Pokémon" is written as
+# `and pokemon (namePrefix "X's ")`: the printed owner with its ASCII apostrophe (every name of the data uses
+# U+0027; `norm` straightens the text's U+2019), "s" and the following space, so that "N's " does not match
+# "Naganadel" and the conjoined `pokemon` keeps Trainer names ("Arven's Sandwich") out. Filled by `set_names`.
+OWNERS = set()
+
+
+def owner_filter(owner, base):
+    """`Filter.and base (namePrefix "X's ")`, `base` a filter that only Pokémon cards pass."""
+    if owner not in OWNERS:
+        raise Refuse('card kind with no filter: ' + owner + "'s Pokémon (no Pokémon card has that owner)")
+    return ('and', base, ('namePrefix', owner + "'s "))
+
+
+# milestone MV4: `Filter.nameHas s` is a byte-level substring test. Print's "has \"X\" in its name" is written with it
+# only when every card name of the whole dataset that contains X contains it as a whole word (not followed or
+# preceded by a letter), so the substring test and the printed reading agree on every card of the data: "Mew" would
+# also match "Mewtwo", and is refused. Filled by `set_names`: name -> True if the literal is safe.
+ALL_NAMES = set()
+
+
+def name_kinds(base):
+    """The card kinds (`KNOWN_NAMES` values) a filter can pass, as far as `name_has` needs: Pokémon for a Pokémon-only filter,
+    Supporter, Item, Stadium or Pokémon Tool for those kinds, None (any) otherwise."""
+    if is_pokemon_filter(base):
+        return {'Pokémon'}
+    if base == ('tool',):
+        return {'Pokémon Tool'}
+    if base[0] == 'kind':
+        return {{'supporter': 'Supporter', 'item': 'Item', 'stadium': 'Stadium'}[base[1][0]]}
+    return None
+
+
+def name_has(x, base):
+    """`Filter.nameHas x` under the filter `base`: refused if no card of `base`'s kinds in the whole dataset has a name
+    containing `x` (print would then read cards the model cannot have in that place: "Benched Pokémon that has
+    \"Antique\" in its name" means Fossil Items played as Pokémon, which the model does not play), or if a name contains
+    it inside a longer word."""
+    ks = name_kinds(base)
+    hits = [n for n in ALL_NAMES if x in n and (ks is None or KNOWN_NAMES.get(norm(n), set()) & ks)]
+    if not hits:
+        raise Refuse('name substring that no card of that kind contains: ' + x)
+    bad = [n for n in hits if not re.search(r'(?<![A-Za-zé])' + re.escape(x) + r'(?![A-Za-zé])', n)]
+    if bad:
+        raise Refuse('name substring that is part of a longer word in a card name: ' + x + ' (' + sorted(bad)[0] + ')')
+    return ('nameHas', x)
+
+
 def has_attack(n):
     """`Filter.hasAttack n` reads the printed attacks of a Pokémon card, not attacks a Tool gives (Pokemon/Card.lean).
     For a Pokémon in play that is the printed "has the X attack" unless a Tool can give an attack named X, so
@@ -362,7 +431,14 @@ def set_names(cards):
     KNOWN_NAMES.clear()
     NAME_STAGES.clear()
     TOOL_ATTACKS.clear()
+    OWNERS.clear()
+    ALL_NAMES.clear()
     for c in cards:
+        ALL_NAMES.add(c['name'])
+        if c['supertype'] == 'Pokémon':
+            m = re.match(r"^(.+?)'s ", c['name'])
+            if m:
+                OWNERS.add(m.group(1))
         if c['supertype'] == 'Trainer' and 'Pokémon Tool' in c['_sub']:
             TOOL_ATTACKS.update(norm(a.get('name')) for a in c.get('attacks') or [])
         sub = c['_sub']
@@ -421,6 +497,27 @@ def parse_count(x, ctx):
     r = parse_count_s16(x, ctx)
     if r is not None:
         return r
+    # milestone MV4 (S17 §B): Tools, Prize cards taken, Special Conditions, types of Basic Energy
+    if x == 'Pokémon Tool attached to all of your Pokémon':
+        return lambda k: ('count', ('tools', OWN), k)
+    if x == "Pokémon Tool attached to all of your opponent's Pokémon":
+        return lambda k: ('count', ('tools', OPP), k)
+    if x == 'Pokémon Tool attached to all Pokémon':
+        return lambda k: ('add', ('count', ('tools', OWN), k), ('count', ('tools', OPP), k))
+    if x == 'Prize card your opponent has taken':
+        return lambda k: ('count', ('prizesTaken', OPP), k)
+    if x == 'Prize card you have taken':
+        return lambda k: ('count', ('prizesTaken', OWN), k)
+    if x == "Special Condition affecting your opponent's Active Pokémon":
+        return lambda k: ('count', ('conds', OPP), k)
+    # "Pokémon in play that has \"Koffing\" or \"Weezing\" in its name (both yours and your opponent's)": both players'
+    # Pokémon in play whose top card passes the name filter (`Count.inPlay`)
+    m = re.match(r"^Pokémon in play that (?:has|have) (.+ in (?:its|their) names?) \(both yours and your opponent's\)$", x)
+    if m:
+        f = parse_filter('Pokémon that has ' + m.group(1), ctx)
+        return lambda k: ('add', ('count', ('inPlay', OWN, f), k), ('count', ('inPlay', OPP, f), k))
+    if x == 'type of Basic Energy attached to all of your Pokémon':
+        return lambda k: ('count', ('energyTypes', OWN), k)
     x = re.sub(r'^Basic Energy attached', 'Energy attached', x)
     m = re.match(r'^(?:(Basic )?' + TYPE_RE + r' )?Energy attached to (this Pokémon|your opponent\'s Active Pokémon'
                  r'|all of your Pokémon|all of your opponent\'s Pokémon)$', x)
@@ -639,7 +736,8 @@ def parse_test_mv2(c, ctx):
     m = re.match(KO_LAST, c)
     if m:
         if m.group(1) != 'Pokémon':
-            raise Refuse(GAP_PREFIX + 'name prefix (a filter on part of a name)')
+            # `Count.koLast` records a Knock Out of any of the player's Pokémon, not of a kind (milestone MV4 left it so)
+            raise Refuse('condition not expressible: Knock Out record of a kind of Pokémon (Count.koLast records any): ' + c)
         if m.group(2):
             tcav(ctx, 'koAttackWide')
             return [('countGe', ('koLast', OWN, True), 1)], False
@@ -1513,6 +1611,13 @@ def parse_test_s16(c, ctx):
     m = re.match(r'^(\S+(?: ex)?) is on your Bench$', c)
     if m and KNOWN_NAMES.get(m.group(1)) == {'Pokémon'}:
         return [('countGe', ('bench', OWN, ('named', m.group(1))), 1)], False
+    # milestone MV4 (importer 0.10.0): "a Pokémon that has \"Nidoking\" in its name is on your Bench", a Benched Pokémon
+    # whose card passes a Pokémon filter (`Count.bench own f`, the filter read on the top card)
+    m = re.match(r'^an? (.+?) is on your Bench$', c)
+    if m and m.group(1) not in KNOWN_NAMES:
+        f = parse_filter(m.group(1), ctx)
+        if is_pokemon_filter(f):
+            return [('countGe', ('bench', OWN, f), 1)], False
     # "X is in your discard pile" (a card name)
     m = re.match(r'^(.+?) is in your discard pile$', c)
     if m and m.group(1) in KNOWN_NAMES:
@@ -1888,7 +1993,6 @@ GAP_PREFIX = 'not modelled (Known gaps, MV2): '
 GAP_SHAPES = [
     ('history: the Supporter played this turn', r"(?:If|if) you (?:played|didn't play) .+ from your hand during this turn"),
     ('history: an attack used last turn', r"used (?:.+|an attack) during your last turn"),
-    ('history: per-attack lock', r"During your next turn, this Pokémon can't use (?!attacks)"),
     ('history: healed this turn', r"was healed during this turn"),
     ('history: counted (damage or Prize cards of last turn)',
      r"that much more damage|Prize cards? your opponent took during their last turn"),
@@ -1896,7 +2000,6 @@ GAP_SHAPES = [
     ('spread: amount computed by the text', r"damage (?:counters )?(?:to|on) \d+ of your opponent's (?:Benched )?Pokémon for each|"
                                             r"for each damage counter on that Pokémon"),
     ('spread: target filtered by its damage', r"Benched Pokémon that has any damage counters on it"),
-    ('name prefix (a filter on part of a name)', r'in its name|in the name|\b(?!Pok)[A-Z][a-z]+(?: [A-Z][a-z]+)?\'s (?:Pokémon|Mega)'),
 ]
 GAP_OVERRIDABLE = ('unhandled sentence', 'condition not expressible', 'count not expressible', 'card kind with no filter',
                    'history: ')
@@ -2816,6 +2919,8 @@ def translate_card(c):
     res = _translate_card(c)
     if res['ok'] and 'hasAbility' in repr(res['term']):
         res['caveats'].add('abilityByTool')
+    if res['ok'] and 'prizesTaken' in repr(res['term']):
+        res['caveats'].add('prizes6')
     return res
 
 
@@ -3053,6 +3158,9 @@ def translate_tool(c, res, text, joined):
         at = translate_attack(c, a, res)
         if at is not None:
             attacks.append(at)
+    if any(at.get('selfLock') for at in attacks):
+        # a Tool's attack with a lock would share the holder's lock flag (`AtkLock.allows`); not written (milestone MV4)
+        B.append(('Pokémon Tool: a given attack with a per-attack lock', ''))
     if B:
         return res
     res['term'] = ('tool', c['name'], {'holder': holder, 'attacks': attacks, 'abilities': []})
@@ -3343,7 +3451,7 @@ def pokemon_only(f):
     """A filter on a Pokémon's top card built from the parts that name Pokémon (no `hpLe`: no static
     condition reads HP, printed or derived)."""
     h = f[0]
-    if h in ('any', 'pokemon', 'basic', 'stage', 'ptype', 'noRuleBox'):
+    if h in ('any', 'pokemon', 'basic', 'stage', 'ptype', 'noRuleBox', 'namePrefix', 'nameHas'):
         return True
     if h == 'named':
         return KNOWN_NAMES.get(f[1]) == {'Pokémon'}
@@ -4229,6 +4337,8 @@ def translate_pokemon(c, res):
         at = translate_attack(c, a, res)
         if at is not None:
             attacks.append(at)
+    if sum(1 for at in attacks if at.get('selfLock') == ('this',)) > 1:
+        B.append(('per-attack lock: two attacks with a lock on themselves (the lock flag forbids both)', ''))
     if B:
         return res
     fields = {'name': name, 'stage': stage, 'evolvesFrom': ('some', c['evolvesFrom']) if c.get('evolvesFrom') else None,
@@ -4265,10 +4375,20 @@ def translate_attack(c, a, res):
         return None
     ctx = {'kind': 'attack', 'name': c['name'], 'base': base, 'cost': cost,
            'evolvesFrom': norm(c.get('evolvesFrom')) or None}
-    p = Parser(ctx).run(split_sentences(a.get('text')))
+    sents = split_sentences(a.get('text'))
+    lock, sents = self_lock(sents, norm(a.get('name')), res)
+    if lock is False:
+        return None
+    p = Parser(ctx).run(sents)
     res['used'] += p.used
     if p.blockers:
         B += p.blockers
+        return None
+    if lock and any(isinstance(it, Nothing) or (isinstance(it, tuple) and it[0] in ('wrapFlip', 'wrapIf', 'wrapFn'))
+                    for _, it in p.items):
+        # print sets no lock when the attack does nothing; the model's lock is set by every use of the attack
+        B.append(('per-attack lock on an attack that may do nothing (the model sets the lock on every use)',
+                  norm(a.get('text'))))
         return None
     try:
         damage, eff, cavs = build_attack(base or 0, suffix, p.items, cost)
@@ -4283,8 +4403,48 @@ def translate_attack(c, a, res):
     if not T.attack_wf(damage, eff):
         B.append(('attack not well formed in the model (Attack.wf)', norm(a.get('text'))))
         return None
+    if lock and T.switches_own(eff):
+        # `Attack.lockSet` sets no lock for an attack that may switch its user out (Known gaps, per-Pokémon attack locks)
+        B.append(('per-attack lock on an attack that may switch its user out (the model sets no lock)', norm(a.get('text'))))
+        return None
     res['caveats'] |= cavs
-    return {'name': a.get('name') or '', 'cost': cost, 'damage': damage, 'effect': eff, 'gx': False}
+    out = {'name': a.get('name') or '', 'cost': cost, 'damage': damage, 'effect': eff, 'gx': False}
+    if lock:
+        out['selfLock'] = (lock,)
+    return out
+
+
+# milestone MV4 (importer 0.10.0): per-Pokémon attack locks (`Attack.selfLock`, `InPlay.lk`, Pokemon/Lock.lean). Only the
+# two printed forms, as a sentence of their own (not inside a coin flip or a condition): "During your next turn, this
+# Pokémon can't use [this attack's own name]." (`.this`) and "During your next turn, this Pokémon can't attack." / "…
+# can't use attacks." (`.all`). The model sets the lock on the attacker after the attack (`GameState.afterAttack`),
+# brings it into force at the end of its owner's turn, reads it in the owner's next turn and clears it when the Pokémon
+# moves to the Bench or evolves, which is what print says of effects of attacks (2026 rulebook pp. 11, 20). Refused: a
+# lock on a different attack, several lock sentences, a lock on an attack that may do nothing (print sets none then) or
+# may switch its user out (the model sets none then), a Tool's attack with a lock, a Pokémon with two `.this` attacks
+# (`AtkLock.allows .this` forbids every attack whose `selfLock` is `.this`, including one a Tool gives).
+LOCK_RX = re.compile(r"^During your next turn, this Pokémon can't (attack|use attacks|use (.+?))\.?$")
+
+
+def self_lock(sents, atk_name, res):
+    """(lock, other sentences): lock is None, 'this' or 'all'; False if refused (a blocker is appended)."""
+    hits = [(i, LOCK_RX.match(x)) for i, x in enumerate(sents)]
+    hits = [(i, m) for i, m in hits if m]
+    if not hits:
+        return None, sents
+    if len(hits) > 1:
+        res['blockers'].append(('per-attack lock: several lock sentences', ' '.join(sents)))
+        return False, sents
+    i, m = hits[0]
+    if m.group(1) in ('attack', 'use attacks'):
+        lock = 'all'
+    elif m.group(2) == atk_name:
+        lock = 'this'
+    else:
+        res['blockers'].append(('per-attack lock on a different attack', sents[i]))
+        return False, sents
+    res['used'].append(('self-lock-' + lock, sents[i]))
+    return lock, sents[:i] + sents[i + 1:]
 
 
 def poison_before_up(e):

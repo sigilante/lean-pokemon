@@ -67,6 +67,15 @@ def GameState.xclampAt (K : Nat) (co cp cb : Cap) (g : GameState) : GameState :=
            opp := { g.opp with active := g.opp.active.map (InPlay.clampWith K cp),
                                bench := g.opp.bench.map (InPlay.clampWith K cb) } }
 
+/-- The state an attack leaves commutes with the clamp with exact stores (milestone MV4). -/
+theorem GameState.xclampAt_afterAttack (K : Nat) (co cp cb : Cap) (l : AtkLock) (x : Bool)
+    (g : GameState) :
+    (g.afterAttack l x).xclampAt K co cp cb = (g.xclampAt K co cp cb).afterAttack l x := by
+  simp only [GameState.afterAttack, GameState.xclampAt, Option.map_map]
+  have : InPlay.clampWith K co ∘ InPlay.noteLock l = InPlay.noteLock l ∘ InPlay.clampWith K co :=
+    funext (InPlay.clampWith_noteLock co l)
+  rw [this]
+
 /-- **The clamp with exact stores**, at move boundaries: damage and Poison strength on every
 Pokémon in play (both Active Pokémon and, since milestone M3, every Benched Pokémon) capped at `K`
 (milestone M6: a bound on every derived HP; before it, the printed HP); the modifier stores, and
@@ -128,6 +137,15 @@ theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState
   have t4 : ∀ (cb : Cap) (o : Option InPlay),
       (o.map (InPlay.clampWith K cb)).map InPlay.top = o.map InPlay.top := fun cb o => by
     cases o <;> rfl
+  have t5 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith K cb)).map InPlay.tools = o.map InPlay.tools := fun cb o => by
+    cases o <;> rfl
+  have t6 : ∀ (cb : Cap) (b : List InPlay),
+      (b.map (InPlay.clampWith K cb)).map InPlay.tools = b.map InPlay.tools := fun cb b => by
+    rw [List.map_map]; rfl
+  have t7 : ∀ (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith K cb)).map InPlay.condCount = o.map InPlay.condCount :=
+    fun cb o => by cases o <;> rfl
   cases c with
   | pile w z f => cases w <;> cases z <;> rfl
   | prizes w => cases w <;> rfl
@@ -137,6 +155,12 @@ theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState
       cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t2, t3]
   | inPlay w f => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t1, t4]
   | koLast w atk => cases w <;> rfl
+  | tools w => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t5, t6]
+  | conds w => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t7]
+  | prizesTaken w => cases w <;> rfl
+  | energyTypes w =>
+      cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t2, t3]
+  | supporter w => cases w <;> rfl
 
 theorem GameState.count_of_xclampAt {co cp cb : Cap} {g₁ g₂ : GameState}
     (h : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) (c : Count) : c.val g₂ = c.val g₁ := by
@@ -563,7 +587,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
           exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, ha₂, he₂, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock]⟩
       | opp =>
           simp only [GameState.side] at ha h
           rw [ha] at ha₂
@@ -571,7 +595,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
           exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, he₁, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1]⟩
+              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock]⟩
   | switchNone w h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -1163,7 +1187,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
         (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf) hnd hbh,
         hc'⟩
-  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw l g'' hd ht' =>
+  | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw l g'' hd ht' hlk =>
       have hs' := hs₂ hst
       have hb := hF.attack ha hm
       have hxr := GameState.xrclamp_of_xclamp hc hst.1 hH
@@ -1175,18 +1199,17 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) (by exact hn) (by exact hf) (by exact hbt) hs' hr' (by exact hl)
-        (by exact hgx) hw hd' ht₂, ?_⟩
-      have := congrArg (fun g : GameState => ({ g with
-        attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } } :
-        GameState)) hc'''
+        (by exact hgx) hw hd' ht₂ (by rw [hq.lk]; exact hlk), ?_⟩
+      have := congrArg (GameState.afterAttack atk.lockSet atk.gx) hc'''
+      rw [← GameState.xclampAt_afterAttack, ← GameState.xclampAt_afterAttack] at this
       exact GameState.xclamp_of_xrclamp this
-  | attackConfused ha hm hc' hs hn hf hbt hst hl hgx hw =>
+  | attackConfused ha hm hc' hs hn hf hbt hst hl hgx hw hlk =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       exact ⟨_, .attackConfused rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
-        (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx hw, by
+        (by rw [hq.rot]; exact hs) hn hf hbt hs' hl hgx hw (by rw [hq.lk]; exact hlk), by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩
   | @knockOuts g₁m g' l h hl ht =>

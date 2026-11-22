@@ -50,10 +50,10 @@ def warden : PokemonCard := ⟨"Warden", .basic, none, 10, .fairy, [], 1, none, 
   [shield, barb]⟩
 
 /-- 60 damage, the full calculation. -/
-def hit : Attack := ⟨"Hit", [], 0, .damage (.const 6), false⟩
+def hit : Attack := ⟨"Hit", [], 0, .damage (.const 6), false, .none⟩
 
 /-- 60 damage that "isn't affected by any effects on your opponent's Active Pokémon". -/
-def pierce : Attack := ⟨"Pierce", [], 0, .damage (.const 6) { fx := true }, false⟩
+def pierce : Attack := ⟨"Pierce", [], 0, .damage (.const 6) { fx := true }, false, .none⟩
 
 /-- A Pokémon ex attacker with both attacks, and one without a rule box. -/
 def brute (rb : RuleBox) : PokemonCard := ⟨"Brute", .basic, none, 20, .dragon, [hit, pierce], 1,
@@ -101,7 +101,7 @@ theorem prevented :
     WellFormed (start .ex) ∧ Settled (start .ex) ∧ ∃ g, Move (start .ex) g ∧
       g.opp.active = some (InPlay.ofBasic warden) ∧ g.cur.active = some (InPlay.ofBasic (brute .ex)) :=
   ⟨start_wellFormed _, start_settled, _,
-    .attack (atk := hit) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled hit_run rfl
+    .attack (hlk := rfl) (atk := hit) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled hit_run rfl
       (fun h => absurd h (by decide)) rfl
       (.quiet (sw := false) (.hit rfl hit_run rfl (fun _ => rfl))) (.nil _), rfl, rfl⟩
 
@@ -126,7 +126,7 @@ theorem pierce_fires :
     ∃ g, Move (start .ex) g ∧ g.opp.active = some { InPlay.ofBasic warden with damage := 6 } ∧
       g.cur.active = some { InPlay.ofBasic (brute .ex) with damage := 2 } := by
   have hr : Run pierce.script (start .ex) _ := Run.damage (ig := { fx := true }) (.const 6 _) rfl
-  exact ⟨_, .attack (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled hr
+  exact ⟨_, .attack (hlk := rfl) (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled hr
     rfl (fun h => absurd h (by decide)) rfl
     (.fire (sw := false) (.hit rfl hr rfl (fun _ => rfl)) (List.Perm.refl _))
     (.run (ab := barb) (l := []) rfl (.counters 2 rfl) (.nil _)), rfl, rfl⟩

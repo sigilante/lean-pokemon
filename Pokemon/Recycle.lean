@@ -174,7 +174,7 @@ def nightStretcher : Card :=
 attack, which ends the turn). -/
 def dedenne : PokemonCard :=
   ⟨"Dedenne", .basic, none, 7, .lightning,
-    [⟨"Recycle", [], 0, .move .own .discard .hand .trainer (.upTo 1), false⟩], 1, none, none,
+    [⟨"Recycle", [], 0, .move .own .discard .hand .trainer (.upTo 1), false, .none⟩], 1, none, none,
     .none, false, []⟩
 
 /-- A deck with Iron Defender, the two printed Item recyclers above, and an attack that returns any

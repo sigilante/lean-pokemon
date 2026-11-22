@@ -76,7 +76,7 @@ def Effect.countersSome (m n : Nat) : Effect :=
 
 /-- The spread forms are well formed in an attack: one damage step on each line. -/
 theorem Effect.hitSome_wf (m n : Nat) :
-    (⟨"Spread", [], 0, Effect.hitSome m n, false⟩ : Attack).wf = true := rfl
+    (⟨"Spread", [], 0, Effect.hitSome m n, false, .none⟩ : Attack).wf = true := rfl
 
 /-- `rep` of a hit-free effect is hit-free, so the counters forms are usable anywhere. -/
 theorem Effect.rep_hitFree {e : Effect} (h : e.hitFree = true) : ∀ n, (e.rep n).hitFree = true

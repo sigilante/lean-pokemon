@@ -38,7 +38,7 @@ theorem hasTool_agree {K : Nat} {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q
 def exPunish : Effect := .ite (.top .opp .ex) (.counters 3) .skip
 
 /-- An attack whose whole effect is `exPunish`. -/
-def punish : Attack := ⟨"Punish", [], 0, exPunish, false⟩
+def punish : Attack := ⟨"Punish", [], 0, exPunish, false, .none⟩
 
 def punisher : PokemonCard := ⟨"Punisher", .basic, none, 10, .grass, [punish], 1, none, none, .none,
   false, []⟩
@@ -63,7 +63,7 @@ theorem exPunish_ex :
     WellFormed (duel exMon) ∧ Settled (duel exMon) ∧ ∃ g, Move (duel exMon) g ∧
       g.opp.active = some { InPlay.ofBasic exMon with damage := 3 } :=
   ⟨duel_wellFormed exMon, duel_settled_ex, _,
-    .attack (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_ex
+    .attack (hlk := rfl) (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_ex
       (.iteT (p := InPlay.ofBasic exMon) rfl (by decide) (.counters 3 rfl)) rfl
       (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.iteT (p := InPlay.ofBasic exMon) rfl (by decide) (.counters 3 rfl)) rfl)
@@ -75,7 +75,7 @@ theorem exPunish_plain :
     WellFormed (duel big) ∧ Settled (duel big) ∧ ∃ g, Move (duel big) g ∧
       g.opp.active = some (InPlay.ofBasic big) :=
   ⟨duel_wellFormed big, duel_settled_plain, _,
-    .attack (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_plain
+    .attack (hlk := rfl) (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_plain
       (.iteF (p := InPlay.ofBasic big) rfl (by decide) (.skip _)) rfl
       (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.iteF (p := InPlay.ofBasic big) rfl (by decide) (.skip _)) rfl)
@@ -83,7 +83,7 @@ theorem exPunish_plain :
 
 /-- "For each of your Pokémon in play that has the Round attack": two of the player's three
 Pokémon in play pass `hasAttack "Round"`. -/
-def round : Attack := ⟨"Round", [], 2, .skip, false⟩
+def round : Attack := ⟨"Round", [], 2, .skip, false, .none⟩
 
 def singer : PokemonCard := ⟨"Singer", .basic, none, 6, .water, [round], 1, none, none, .none,
   false, []⟩

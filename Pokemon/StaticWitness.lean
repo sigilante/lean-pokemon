@@ -375,7 +375,7 @@ def guard : PokemonCard :=
 
 /-- "Put 3 damage counters on your opponent's Active Pokémon and 3 on one of their Benched
 Pokémon." -/
-def blast : Attack := ⟨"Blast", [], 0, .seq (.counters 3) (.benchCounters .opp 3), false⟩
+def blast : Attack := ⟨"Blast", [], 0, .seq (.counters 3) (.benchCounters .opp 3), false, .none⟩
 
 def blaster : PokemonCard :=
   ⟨"Blaster", .basic, none, 10, .colorless, [blast], 1, none, none, .none, false, []⟩
@@ -409,7 +409,7 @@ def rA : GameState :=
   { g₃ with attacked := true, cur := { g₃.cur with gxUsed := blast.gx || g₃.cur.gxUsed } }
 
 theorem move_r0_rA : Move r0 rA :=
-  .attack (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
+  .attack (hlk := rfl) (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
     (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl
     (HitTrig.exists_nil (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl) (.nil _)
 
@@ -558,7 +558,7 @@ def gm : PokemonCard := ⟨"Gm", .basic, none, 4, .colorless, [], 1, none, none,
 
 /-- "Put 2 damage counters on your opponent's Active Pokémon and 2 on one of their Benched
 Pokémon." -/
-def hit2 : Attack := ⟨"Hit2", [], 0, .seq (.counters 2) (.benchCounters .opp 2), false⟩
+def hit2 : Attack := ⟨"Hit2", [], 0, .seq (.counters 2) (.benchCounters .opp 2), false, .none⟩
 
 def hitter2 : PokemonCard :=
   ⟨"Hitter2", .basic, none, 10, .colorless, [hit2], 1, none, none, .none, false, []⟩
@@ -582,7 +582,7 @@ def mA : GameState :=
   { g₃ with attacked := true, cur := { g₃.cur with gxUsed := hit2.gx || g₃.cur.gxUsed } }
 
 theorem move_m0_mA : Move m0 mA :=
-  .attack (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
+  .attack (hlk := rfl) (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
     (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl (fun h => nomatch h) rfl
     (HitTrig.exists_nil (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl) (.nil _)
 
