@@ -125,7 +125,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   subset of the printed card in general (Team Rocket's Energy without its holder restriction allows
   more; Spiky Energy without its trigger does less), so an importer must refuse it or caveat it.
   Deck construction is not modelled (the 4-copy rule, which counts Special Energy, rulebook 2026
-  PDF p. 21; ACE SPEC). "Fire Energy" in a count or test reads `Filter.energyOf`, Basic Energy only,
+  PDF p. 21; ACE SPEC). Three further readings by card where print reads
+  Energy by what it provides, all vacuous for games without a Special Energy card: "for each
+  Energy attached" (`Count.energy`, `Count.energyAll`) counts one per card, so a card that
+  provides 2 units counts 1 (fewer than print); "discard 2 Energy" (`discardEnergy` with an exact
+  quantity) needs 2 cards; and the type admits a Special Energy card that provides nothing, which
+  would still pay one symbol of a Retreat Cost (more than print; no printed card is of this form).
+  In a game that contains a Special Energy card, `Filter.energy` passes it and the name filters
+  (`named`, `namePrefix`, `nameHas`) read its name, so a term that writes `Filter.energy` for
+  printed "Basic Energy card" over-reads there; `energyOf`, `Count.energyTypes` and
+  `Filter.basicEnergy` read Basic Energy only. "Fire Energy" in a count or test reads `Filter.energyOf`, Basic Energy only,
   so a Special Energy card that provides Fire is not counted (a subset of print, which counts Energy
   by what it provides; vacuous for decks without Special Energy). A Retreat Cost is still paid by
   discarding that many Energy cards, which with one-unit Energy is the rulebook's rule; a Special
