@@ -392,7 +392,9 @@ inductive Count where
   | energyTypes (w : Whose)
   /-- 1 if the `w` player has played a Supporter card from the hand this turn
   (`PlayerState.supporterPlayed`), else 0 (milestone MV4: "if they played a Supporter card from
-  their hand this turn", Community Center sv6-146); the Supporter's name is not recorded -/
+  their hand this turn", Community Center sv6-146); the Supporter's name is not recorded. The flag
+  is cleared when its player's turn starts, so for the player whose turn it is it means "this
+  turn", and for the other player it means "during their last turn" -/
   | supporter (w : Whose)
   deriving DecidableEq
 

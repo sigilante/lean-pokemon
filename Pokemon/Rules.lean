@@ -288,7 +288,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`Count.conds`), of the Prize cards a player has taken (`Count.prizesTaken`, 6 less those left:
   exact for games set up with 6 Prize cards, rulebook 2026 p. 8; the model allows other start
   states, for which it is the shortfall from 6, at least 0), of the types of Basic Energy attached
-  (`Count.energyTypes`) and the per-player Supporter flag of the turn (`Count.supporter`), all exact
+  (`Count.energyTypes`) and the per-player Supporter flag (`Count.supporter`: "this turn" for the player whose turn it
+  is; for the other player it reads their last turn, since the flag is cleared when its player's
+  turn starts), all exact
   under both clamps; absent: counts of damage counters on several Pokémon ("for each damage counter
   on all of your opponent's Pokémon", Azelf sv8-80; 4 refused Standard cards, S17 §B: not
   clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (1),
@@ -837,7 +839,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`GameState.afterAttack`), the end of its owner's turn brings it into force (`InPlay.unfresh`),
   `Move.attack` and `Move.attackConfused` read it, and moving to the Bench (retreat, `switch`) or
   evolving ends it (2026 p. 20, p. 11). Departures: `this` forbids every attack of the Pokémon
-  whose `selfLock` is `this`, exact when it has at most one (every card record in the data); an
+  whose `selfLock` is `this`, exact when it has at most one, attacks given by an attached Tool included (every card record
+  in the data has at most one of its own; no printed Tool is known to give one); an
   attack that may switch its user out (`Effect.switchesOwn`) sets no lock (`Attack.lockSet`; no
   printed self-locking attack switches), an under-model; a failed Confused attempt sets no lock (the
   attack did not happen) but is refused while the attack is locked (`attackConfused` reads the
