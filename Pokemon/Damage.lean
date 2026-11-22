@@ -431,6 +431,7 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   | energyTypes w =>
       cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
   | supporter w => cases w <;> rfl
+  | retreat w => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t4]
 
 /-- States with equal `clampAt` have equal counts. -/
 theorem GameState.count_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}

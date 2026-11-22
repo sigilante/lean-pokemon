@@ -646,6 +646,8 @@ def Pile.get : Pile → PlayerState → List Card
   | .hand, s => s.hand
   | .deck, s => s.deck
   | .discard, s => s.discard
+  | .top n, s => s.deck.take n
+  | .bottom n, s => s.deck.drop (s.deck.length - n)
 
 /-- The nine Basic Energy cards, one of each type (milestone MV4: `Count.energyTypes`). -/
 def BasicEnergy.all : List BasicEnergy :=
@@ -683,6 +685,7 @@ def Count.val : Count → GameState → Nat
       energyTypeCount ((((g.side w).active.map InPlay.energy).getD []) ++
         ((g.side w).bench.map InPlay.energy).flatten)
   | .supporter w, g => if (g.side w).supporterPlayed then 1 else 0
+  | .retreat w, g => (((g.side w).active.map InPlay.top).map PokemonCard.retreat).getD 0
 
 /-- The value of a test in a state, on the Active Pokémon `p` it reads (a count test reads the
 state instead). -/

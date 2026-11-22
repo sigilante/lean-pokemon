@@ -438,6 +438,13 @@ inductive Spot where
 /-- A zone of one player that a count reads (milestone MV). -/
 inductive Pile where
   | hand | deck | discard
+  /-- (milestone MV6) the top `n` cards of the deck ("Reveal the top 5 cards of your deck. This
+  attack does 70 damage for each … you find there", Iron Thorns svp-98) -/
+  | top (n : Nat)
+  /-- (milestone MV6) the bottom `n` cards of the deck ("Reveal the bottom 7 cards of your deck, and
+  this attack does 50 damage for each Pokémon you find there that has the Bug Out attack",
+  Sizzlipede me5-9) -/
+  | bottom (n : Nat)
   deriving DecidableEq
 
 /-- A number read from the state (milestone MV), for amounts ("30 damage for each card in your
@@ -487,6 +494,14 @@ inductive Count where
   is cleared when its player's turn starts, so for the player whose turn it is it means "this
   turn", and for the other player it means "during their last turn" -/
   | supporter (w : Whose)
+  /-- the printed Retreat Cost of the `w` player's Active Pokémon, 0 with no Active Pokémon
+  (milestone MV6: "This attack does 30 more damage for each Colorless in your opponent's Active
+  Pokémon's Retreat Cost", Ariados sv6-5). The printed card's, not the derived Retreat Cost
+  (`GameState.retreatOf`, which static effects change): counts are defined before the static
+  effects, so for a Pokémon whose Retreat Cost a static effect changes (Air Balloon, Gravity
+  Gemstone, N's Castle, …) the count reads the printed value (Known gaps). It reads the printed card,
+  which both clamps keep -/
+  | retreat (w : Whose)
   deriving DecidableEq
 
 /-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. Milestone
@@ -554,6 +569,15 @@ inductive Amt where
   /-- `k` for each unit of the count `c` ("30 damage for each Energy attached to this Pokémon" is
   `count (.energy .own .energy) 3`; milestone MV) -/
   | count (c : Count) (k : Nat)
+  /-- `k` for each heads among `a` coins (milestone MV6): any multiple `k · m` with `m` at most the
+  value of `a`. "Flip a coin for each Energy attached to this Pokémon. This attack does 80 damage for
+  each heads" (Larry's Dudunsparce ex me2pt5-164) is `heads (count (.energy .own .energy) 1) 8`;
+  "Flip 3 coins. This attack does 50 damage for each heads" is `heads (const 3) 5`; "Reveal any
+  number of Honedge … from your hand, and this attack does 60 damage for each card you revealed in
+  this way" (Doublade me3-57) is `heads (count (.pile .own .hand f) 1) 6`. Coin flips are
+  nondeterministic choices (the model is silent about probability), so each number of heads is one
+  value -/
+  | heads (a : Amt) (k : Nat)
   deriving DecidableEq
 
 /-- Which steps of the damage calculation an attack's damage step switches off (milestone MV3): the
@@ -831,6 +855,7 @@ def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
   | .countGe (.energy .own _) _ => true
   | .countGe (.conds .own) _ => true
+  | .countGe (.retreat .own) _ => true
   | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own | .usedLast .own => true
   | _ => false
 

@@ -342,6 +342,22 @@ it the old statements are false). Weakness changes ("has no Weakness", 3) are le
 value with an order, not an amount). `Counter.universal`, `Counter.simulate`,
 `Counter.halts_of_haltMarked` and `Counter.Encodes` are unchanged in text (the encoded stores fix the
 new fields at 0).
+Stage 3 (S19 §C) added counts that read no damage: `Amt.heads a k` ("Flip a coin for each Energy
+attached to this Pokémon. This attack does 80 damage for each heads": `k` times any number of heads
+up to the value of `a`, `Amt.Val.heads_iff`; 7 refused cards, and "reveal any number … for each card
+revealed"), counts over the top or bottom `n` cards of a deck (`Pile.top`, `Pile.bottom`: Bug Out,
+"reveal the bottom 7 cards … for each Pokémon you find there"), and the printed Retreat Cost of an
+Active Pokémon (`Count.retreat`, 7 cards; printed, not derived: a listed departure when a static
+effect changes it). Both clamps keep them, so `Count.val_clampAt`, `Count.val_xclampAt`,
+`Amt.Val.congr` and `Amt.Val.transfer` gained a case each with unchanged statements. Left out, with
+the argument in S19 §C: sums of damage over several Pokémon (not kept by either clamp: the sum of
+capped values is not the capped sum, and under the in-attack clamp a capped excess on the opponent's
+Bench would reach the Active Pokémon's damage through Resistance) and the number of Pokémon with
+damage counters (exact at every cap of at least 1, but the count theorems hold at the cap 0 too).
+Witnesses in `Pokemon/Coins.lean` (Work Rush does 0, 80 or 160 with two Energy and nothing else;
+String Bind against a Retreat Cost of 1; Bug Out as one attack: a count over the bottom 2 cards, then
+a window that shuffles the counted Pokémon back and discards the rest). Changed definitions: `Amt`,
+`Pile`, `Count` (constructors), `Amt.Val`, `Pile.get`, `Count.val`, `Test.onOwn`.
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

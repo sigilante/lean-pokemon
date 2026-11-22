@@ -76,6 +76,9 @@ inductive Amt.Val : Amt → GameState → Nat → Prop where
   | manyCons {a : Amt} {g : GameState} {x y : Nat} :
       Amt.Val a g x → Amt.Val (.many a) g y → Amt.Val (.many a) g (x + y)
   | count (c : Count) (k : Nat) (g : GameState) : Amt.Val (.count c k) g (k * c.val g)
+  /-- (milestone MV6) `k` for each heads among `n` coins: any number of heads `m` up to `n` -/
+  | heads {a : Amt} {g : GameState} {n m : Nat} (k : Nat) :
+      Amt.Val a g n → m ≤ n → Amt.Val (.heads a k) g (k * m)
 
 /-- An amount evaluates the same in a state whose Active Pokémon have the same damage and whose
 counts are the same. -/
@@ -93,6 +96,7 @@ theorem Amt.Val.congr {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val g�
   | manyNil a g => exact .manyNil a g₂
   | manyCons _ _ ih₁ ih₂ => exact .manyCons (ih₁ hv hc) (ih₂ hv hc)
   | count c k g => rw [← hv c]; exact .count c k g₂
+  | heads k _ hm ih => exact .heads k (ih hv hc) hm
 
 /-- An amount that has a value in one state has one in every state with Active Pokémon where
 the first has them (the values may differ). -/
@@ -114,6 +118,9 @@ theorem Amt.Val.transfer {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val 
   | manyNil a g => exact ⟨0, .manyNil a g₂⟩
   | manyCons _ _ _ _ => exact ⟨0, .manyNil _ g₂⟩
   | count c k g => exact ⟨_, .count c k g₂⟩
+  | heads k _ _ ih =>
+      obtain ⟨x, hx⟩ := ih hc
+      exact ⟨_, .heads (m := 0) k hx (Nat.zero_le _)⟩
 
 /-- A printed number evaluates to itself. -/
 theorem Amt.Val.const_inv {n m : Nat} {g : GameState} (h : (Amt.const n).Val g m) : m = n := by

@@ -314,13 +314,22 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`Count.conds`), of the Prize cards a player has taken (`Count.prizesTaken`, 6 less those left:
   exact for games set up with 6 Prize cards, rulebook 2026 p. 8; the model allows other start
   states, for which it is the shortfall from 6, at least 0), of the types of Basic Energy attached
-  (`Count.energyTypes`) and the per-player Supporter flag (`Count.supporter`: "this turn" for the player whose turn it
+  (`Count.energyTypes`), since milestone MV6 (survey S19 §C, `Pokemon/Coins.lean`) the cards in
+  the top or bottom `n` cards of a deck (`Pile.top`, `Pile.bottom`), the printed Retreat Cost of an
+  Active Pokémon (`Count.retreat`: the printed value, not the derived one, `GameState.retreatOf`,
+  since counts are defined before the static effects; a departure in both directions for a
+  Pokémon whose Retreat Cost a static effect in force changes, Air Balloon, Gravity Gemstone, N's
+  Castle, Paradise Resort; exact otherwise), and coins counted by the state as an amount
+  (`Amt.heads a k`: `k` times any number of heads up to the value of `a`; exact up to probability,
+  as every coin flip; also "reveal any number of … from your hand, … for each card revealed"), and the per-player Supporter flag (`Count.supporter`: "this turn" for the player whose turn it
   is; for the other player it reads their last turn, since the flag is cleared when its player's
   turn starts), all exact
   under both clamps; absent: counts of damage counters on several Pokémon ("for each damage counter
-  on all of your opponent's Pokémon", Azelf sv8-80; 4 refused Standard cards, S17 §B: not
-  clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (1),
-  of a Retreat Cost (7), of cards moved "in this way" (12), coins counted by the state (6), printed
+  on all of your opponent's Pokémon", Azelf sv8-80; 5 refused Standard cards in S19 §C: not
+  clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (2;
+  exact at every cap of at least 1, but the count theorems hold at every cap, 0 included), draws by a
+  count ("draw a card for each …", 5),
+  of cards moved "in this way" (12), printed
   subtypes the card terms lack (Ancient, Future: 13 with other kinds), reads of the defender's
   Retreat Cost or remaining HP (Special Energy cards are counted and filtered since milestone MV5:
   `Filter.basicEnergy`, `Filter.specialEnergy`); two filters read less than print does:
