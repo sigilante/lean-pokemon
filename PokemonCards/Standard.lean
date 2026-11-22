@@ -21,7 +21,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1370 terms, for 1377 of the pool's 2161 cards: 7 cards share the term of another,
+/-- Every imported card (1379 terms, for 1386 of the pool's 2161 cards: 7 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -74,7 +74,6 @@ def notImported : List (String × String × String) := [
   ("sv5-21", "Brambleghast", "Ability: static, cond (a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage)): This Pokémon gets +50 HP for each Prize card your opponent has taken."),
   ("sv5-24", "Rabsca", "Ability: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Prevent all damage from and effects of attacks from your opponent's Pokémon done to your Benched Pokémon."),
   ("sv5-29", "Magcargo", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): Whenever your opponent's Active Pokémon moves to the Bench during their turn, their new Active Pokémon is now Burned."),
-  ("sv5-30", "Victini", "unhandled sentence: Discard a Special Energy from your opponent's Active Pokémon."),
   ("sv5-31", "Heatmor", "coin flips not expressible: Flip 3 coins. For each tails, discard an Energy from this Pokémon."),
   ("sv5-34", "Incineroar ex", "Ability: static, cost (attack cost or Energy provision): Attacks used by this Pokémon cost Colorless less for each of your opponent's Benched Pokémon."),
   ("sv5-49", "Palafin", "unhandled sentence: This Pokémon also does 10 damage to itself for each damage counter on it."),
@@ -104,7 +103,6 @@ def notImported : List (String × String × String) := [
   ("sv5-133", "Pidove", "Ability: condition on this Pokémon, which may be on the Bench: this Pokémon's remaining HP is 30 or less: Once during your turn, if this Pokémon's remaining HP is 30 or less, you may search your deck for an Unfezant or Unfezant ex and put it onto this Pidove to evolve it. Then, shuffle your deck."),
   ("sv5-135", "Unfezant", "unhandled sentence: You may put 2 Energy attached to your opponent's Active Pokémon into their hand."),
   ("sv5-136", "Minccino", "unhandled sentence: Discard up to 2 Pokémon Tools from your opponent's Pokémon."),
-  ("sv5-137", "Cinccino", "count not expressible: Special Energy card attached to this Pokémon: This attack does 70 damage for each Special Energy card attached to this Pokémon."),
   ("sv5-138", "Drampa", "condition not expressible: all of your Benched Pokémon have at least 1 damage counter on them: If all of your Benched Pokémon have at least 1 damage counter on them, this attack does 120 more damage."),
   ("sv5-140", "Ancient Booster Energy Capsule", "Pokémon Tool: subtype not modelled on a Tool: Ancient: The Ancient Pokémon this card is attached to gets +60 HP, recovers from all Special Conditions, and can't be affected by any Special Conditions."),
   ("sv5-141", "Awakening Drum", "unhandled sentence: Draw a card for each of your Ancient Pokémon in play."),
@@ -172,7 +170,6 @@ def notImported : List (String × String × String) := [
   ("sv6-144", "Caretaker", "condition not expressible: you drew any cards in this way and if Community Center is in play: If you drew any cards in this way and if Community Center is in play, shuffle this Caretaker into your deck instead of discarding it."),
   ("sv6-145", "Carmine", "condition not expressible: you go first: If you go first, you may use this card during your first turn."),
   ("sv6-146", "Community Center", "Stadium: activated effect not expressible: a condition on the history of the turn: Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."),
-  ("sv6-148", "Enhanced Hammer", "unhandled sentence: Discard a Special Energy from 1 of your opponent's Pokémon."),
   ("sv6-149", "Festival Grounds", "Stadium: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions."),
   ("sv6-150", "Handheld Fan", "Pokémon Tool: triggered (M8b shape), effect sentence not translated (unhandled sentence): Move an Energy from your opponent's Active Pokémon to 1 of your opponent's Benched Pokémon."),
   ("sv6-153", "Jamming Tower", "Stadium: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect."),
@@ -220,7 +217,6 @@ def notImported : List (String × String × String) := [
   ("sv6pt5-63", "Powerglass", "Pokémon Tool: triggered: At the end of your turn (after your attack), if the Pokémon this card is attached to is in the Active Spot, you may attach a Basic Energy card from your discard pile to it."),
   ("sv6pt5-64", "Xerosic's Machinations", "unhandled sentence: Your opponent discards cards from their hand until they have 3 cards in their hand."),
   ("sv7-6", "Cradily", "unhandled sentence: Choose Burned, Confused, or Poisoned."),
-  ("sv7-8", "Mow Rotom", "unhandled sentence: Before doing damage, discard all Pokémon Tools and Special Energy from your opponent's Active Pokémon."),
   ("sv7-11", "Eldegoss", "unhandled sentence: Put this Pokémon and all attached cards into your deck."),
   ("sv7-13", "Dipplin", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Basic Pokémon."),
   ("sv7-14", "Hydrapple ex", "condition not expressible: you attached Energy to a Pokémon in this way: If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon."),
@@ -238,7 +234,6 @@ def notImported : List (String × String × String) := [
   ("sv7-73", "Marowak", "unhandled sentence: During your opponent's next turn, attacks used by the Defending Pokémon do 40 less damage (before applying Weakness and Resistance)."),
   ("sv7-76", "Rhyperior", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): As long as this Pokémon is in the Active Spot, whenever your opponent plays a Supporter card from their hand, prevent all effects of that card done to all of your Pokémon."),
   ("sv7-80", "Medicham ex", "unhandled sentence: Put damage counters on your opponent's Active Pokémon until its remaining HP is 50."),
-  ("sv7-86", "Diancie", "count not expressible: Special Energy attached to all of your opponent's Pokémon: This attack does 40 damage for each Special Energy attached to all of your opponent's Pokémon."),
   ("sv7-88", "Falinks", "not modelled (Known gaps, MV2): history: an attack used last turn: If this Pokémon used Form Ranks during your last turn, this attack does 90 more damage."),
   ("sv7-92", "Swalot", "condition not expressible: this Pokémon has more Energy attached than your opponent's Active Pokémon: If this Pokémon has more Energy attached than your opponent's Active Pokémon, this attack does 160 more damage."),
   ("sv7-93", "Pangoro", "unhandled sentence: This Pokémon is now Confused."),
@@ -377,7 +372,6 @@ def notImported : List (String × String × String) := [
   ("sv9-67", "Lillie's Ribombee", "unhandled sentence: Have your opponent reveal their hand and you put any number of Basic Pokémon you find there onto their Bench."),
   ("sv9-68", "Lillie's Comfey", "unhandled sentence: You may search your deck for any number of Basic Lillie's Pokémon and put them onto your Bench."),
   ("sv9-73", "Grimmsnarl", "count not expressible: Colorless in your opponent's Active Pokémon's Retreat Cost: This attack does 50 damage for each Colorless in your opponent's Active Pokémon's Retreat Cost."),
-  ("sv9-85", "Lycanroc", "card named in text is a Special Energy: Spiky Energy: Attach up to 2 Spiky Energy cards from your discard pile to this Pokémon."),
   ("sv9-92", "Weezing", "not modelled (Known gaps, MV2): history: an attack used last turn: If this Pokémon used Pervasive Gas during your last turn, this attack does 120 more damage."),
   ("sv9-95", "Tyranitar", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): As long as this Pokémon is in the Active Spot, your opponent can't play any Item cards from their hand."),
   ("sv9-96", "N's Purrloin", "unhandled sentence: Your opponent reveals their hand, and you choose a card you find there and put it on the bottom of their deck."),
@@ -396,7 +390,7 @@ def notImported : List (String × String × String) := [
   ("sv9-152", "N's Castle", "Stadium: static, noRetreat (\"has no Retreat Cost\" (a set form; the model has more and less only)): N's Pokémon in play (both yours and your opponent's) have no Retreat Cost."),
   ("sv9-153", "N's PP Up", "unhandled sentence: Attach a Basic Energy card from your discard pile to 1 of your Benched N's Pokémon."),
   ("sv9-156", "Redeemable Ticket", "unhandled sentence: Count your Prize cards, shuffle them, and put them on the bottom of your deck."),
-  ("sv9-157", "Ruffian", "unhandled sentence: Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon."),
+  ("sv9-157", "Ruffian", "Tool and Special Energy from the same Benched Pokémon (two primitives choose separately): Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon."),
   ("sv9-158", "Super Potion", "condition not expressible: you healed any damage in this way: If you healed any damage in this way, discard an Energy from that Pokémon."),
   ("sv9-159", "Spiky Energy", "Special Energy"),
   ("sv10-1", "Ethan's Pinsir", "condition not expressible: Knock Out record of a kind of Pokémon (Count.koLast records any): any of your Ethan's Pokémon were Knocked Out by damage from an attack during your opponent's last turn: If any of your Ethan's Pokémon were Knocked Out by damage from an attack during your opponent's last turn, this attack does 100 more damage."),
@@ -422,7 +416,6 @@ def notImported : List (String × String × String) := [
   ("sv10-63", "Barraskewda", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("sv10-65", "Cetitan ex", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon."),
   ("sv10-66", "Dondozo ex", "unhandled sentence: You may do 120 more damage."),
-  ("sv10-70", "Team Rocket's Zapdos", "condition not expressible: this Pokémon has any Team Rocket's Energy attached: If this Pokémon has any Team Rocket's Energy attached, this attack does 60 more damage."),
   ("sv10-74", "Team Rocket's Ampharos", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): Whenever your opponent plays a Pokémon from their hand to evolve 1 of their Pokémon, put 4 damage counters on that Pokémon. The effect of Darkest Impulse doesn't stack."),
   ("sv10-80", "Team Rocket's Hypno", "unhandled sentence: Your opponent flips a coin for each of their Benched Pokémon."),
   ("sv10-81", "Team Rocket's Mewtwo ex", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): This Pokémon can't attack unless you have 4 or more Team Rocket's Pokémon in play."),
@@ -498,7 +491,6 @@ def notImported : List (String × String × String) := [
   ("zsv10pt5-46", "Excadrill ex", "not modelled (Known gaps, MV2): spread: target filtered by its damage: This attack also does 60 damage to 1 of your opponent's Benched Pokémon that has any damage counters on it."),
   ("zsv10pt5-50", "Throh", "count not expressible: Colorless in your opponent's Active Pokémon's Retreat Cost: This attack does 30 less damage for each Colorless in your opponent's Active Pokémon's Retreat Cost."),
   ("zsv10pt5-52", "Crustle", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): If this Pokémon has full HP and would be Knocked Out by damage from an attack, it is not Knocked Out, and its remaining HP becomes 10."),
-  ("zsv10pt5-66", "Cobalion", "unhandled sentence: Discard a Special Energy from your opponent's Active Pokémon."),
   ("zsv10pt5-70", "Haxorus", "unhandled sentence: It is Knocked Out."),
   ("zsv10pt5-72", "Tranquill", "condition not expressible: heads: If heads, during your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("zsv10pt5-73", "Unfezant", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
@@ -633,7 +625,6 @@ def notImported : List (String × String × String) := [
   ("me3-39", "Hippopotas", "unhandled sentence: During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips a coin."),
   ("me3-40", "Hippowdon", "not modelled (Known gaps, MV2): history: the Supporter played this turn: If you played Tarragon from your hand during this turn, discard the top 3 cards of your opponent's deck."),
   ("me3-41", "Landorus", "unhandled sentence: Put an Energy attached to this Pokémon into your hand."),
-  ("me3-45", "Tyrantrum", "Ability: static, cond (a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage)): If this Pokémon has any Special Energy attached, it gets +150 HP."),
   ("me3-46", "Hawlucha", "condition not expressible: your Benched Pokémon have any damage counters on them: If your Benched Pokémon have any damage counters on them, this attack does 60 more damage."),
   ("me3-47", "Mega Zygarde ex", "unhandled sentence: For each of your opponent's Pokémon, flip a coin."),
   ("me3-50", "Gengar", "Ability: triggered (M8b shape), replacement effect (\"instead of\"): If this Pokémon is Knocked Out by damage from an attack from your opponent's Pokémon, put it into your hand instead of the discard pile. (Discard all attached cards.)"),
@@ -828,13 +819,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-133", "Growing Grass Energy", "Special Energy"),
   ("me6-134", "Nitro Fire Energy", "Special Energy")]
 
-/-- **The count.** `all` has 1370 entries. -/
-theorem all_length : all.length = 1370 := by decide +kernel
+/-- **The count.** `all` has 1379 entries. -/
+theorem all_length : all.length = 1379 := by decide +kernel
 
-/-- `notImported` has 784 entries. -/
-theorem notImported_length : notImported.length = 784 := by decide +kernel
+/-- `notImported` has 775 entries. -/
+theorem notImported_length : notImported.length = 775 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1370 + 7 + 784 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1379 + 7 + 775 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -991,7 +982,7 @@ theorem cross_8_10 : crossOk Part08.cards Part10.cards = true := by decide +kern
 /-- No card of part 9 is the same term as a card of part 10. -/
 theorem cross_9_10 : crossOk Part09.cards Part10.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1370 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1379 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=
@@ -1075,8 +1066,8 @@ theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :
           g₂'.xclamp (Enum.bound g₀.allCards) = g₁'.xclamp (Enum.bound g₀.allCards)) :=
   StoreSafe.xfinite (storeSafe g₀ hg)
 
-/-- The imported cards with a static HP effect (milestone M6), by name (7). Checked part by part. -/
-theorem staticHp : (all.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape", "Okidogi", "Gravity Mountain", "Lively Stadium", "Cynthia's Power Weight", "Conkeldurr", "Alolan Exeggutor"] := by
+/-- The imported cards with a static HP effect (milestone M6), by name (8). Checked part by part. -/
+theorem staticHp : (all.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape", "Okidogi", "Gravity Mountain", "Lively Stadium", "Cynthia's Power Weight", "Conkeldurr", "Tyrantrum", "Alolan Exeggutor"] := by
   simp only [all, List.filter_append, List.map_append, Part01.cards_staticHp, Part02.cards_staticHp, Part03.cards_staticHp, Part04.cards_staticHp, Part05.cards_staticHp, Part06.cards_staticHp, Part07.cards_staticHp, Part08.cards_staticHp, Part09.cards_staticHp, Part10.cards_staticHp, List.cons_append, List.nil_append,
     List.append_nil]
 

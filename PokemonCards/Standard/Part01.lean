@@ -641,6 +641,20 @@ def sv5_28 : Card := .pokemon
         effect := .ite (.cond .opp .burned) (.damage (.const 5)) (.damage (.const 1)),
         gx := false }] }
 
+/-- Victini (sv5-30). Records: sv5-30. -/
+def sv5_30 : Card := .pokemon
+  { name := "Victini", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Flippity Flap", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .hand .shuffle .any .all) (.move .own (.top 6) .hand .any .all),
+        gx := false },
+      { name := "Singe Off", cost := [.fire], damage := 3,
+        effect := .ite (.countGe (.energy .opp .specialEnergy) 1) (.discardEnergy .opp .active .specialEnergy (.exactly 1)) .skip,
+        gx := false }] }
+
 /-- Litten (sv5-32). Records: sv5-32, sv5-167. -/
 def sv5_32 : Card := .pokemon
   { name := "Litten", stage := .basic, evolvesFrom := none,
@@ -1493,6 +1507,20 @@ def sv5_134 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .all }] }
 
+/-- Cinccino (sv5-137). Records: sv5-137, sv5-183. -/
+def sv5_137 : Card := .pokemon
+  { name := "Cinccino", stage := .stage1, evolvesFrom := some "Minccino",
+    hp := 11, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gentle Slap", cost := [.colorless], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Special Roll", cost := [.colorless, .colorless], damage := 0,
+        effect := .damage (.count (.energy .own .specialEnergy) 7),
+        gx := false }] }
+
 /-- Iron Jugulis (sv5-139). Records: sv5-139. Caveats: trigAttacker, trigDamaged. -/
 def sv5_139 : Card := .pokemon
   { name := "Iron Jugulis", stage := .basic, evolvesFrom := none,
@@ -1762,34 +1790,6 @@ def sv6_31 : Card := .pokemon
         effect := .choice (.damage (.const 4)) (.damage (.const 2)),
         gx := false }] }
 
-/-- Monferno (sv6-32). Records: sv6-32. -/
-def sv6_32 : Card := .pokemon
-  { name := "Monferno", stage := .stage1, evolvesFrom := some "Chimchar",
-    hp := 9, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Chop", cost := [.fire, .colorless], damage := 4,
-        effect := .skip,
-        gx := false },
-      { name := "Heat Blow", cost := [.fire, .fire, .colorless], damage := 8,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Darumaka (sv6-34). Records: sv6-34. Caveats: recoil. -/
-def sv6_34 : Card := .pokemon
-  { name := "Darumaka", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Strength", cost := [.fire], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Fire Tackle", cost := [.fire, .fire], damage := 5,
-        effect := .selfDamage 2,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1848,6 +1848,7 @@ def cards : List Card := [
   sv5_26,
   sv5_27,
   sv5_28,
+  sv5_30,
   sv5_32,
   sv5_33,
   sv5_35,
@@ -1914,6 +1915,7 @@ def cards : List Card := [
   sv5_130,
   sv5_132,
   sv5_134,
+  sv5_137,
   sv5_139,
   sv5_144,
   sv5_145,
@@ -1939,9 +1941,7 @@ def cards : List Card := [
   sv6_27,
   sv6_28,
   sv6_30,
-  sv6_31,
-  sv6_32,
-  sv6_34]
+  sv6_31]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

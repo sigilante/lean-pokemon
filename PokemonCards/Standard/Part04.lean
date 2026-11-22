@@ -11,6 +11,41 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part04
 open Pokemon
 
+/-- Cyclizar ex (sv8-159). Records: sv8-159, sv8-228. Caveats: benchMods. -/
+def sv8_159 : Card := .pokemon
+  { name := "Cyclizar ex", stage := .basic, evolvesFrom := none,
+    hp := 21, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .ex, tera := true,
+    abilities := [],
+    attacks := [
+      { name := "Break Through", cost := [.colorless, .colorless, .colorless], damage := 13,
+        effect := .benchDamage .opp 3,
+        gx := false },
+      { name := "Zircon Road", cost := [.grass, .fire, .psychic], damage := 18,
+        effect := .choice (.move .own (.top 5) .hand .any .all) .skip,
+        gx := false }] }
+
+/-- Amulet of Hope (sv8-162). Records: sv8-162. Caveats: aceSpec, searchAny, trigKO, upTo0. -/
+def sv8_162 : Card := .tool "Amulet of Hope"
+  { holder := .pokemon,
+    attacks := [],
+    abilities := [
+      { name := "Amulet of Hope", use := .triggered .koByAttack false,
+        spot := none, cond := none,
+        effect := .fx (.seq (.move .own .deck .hand .any (.upTo 3)) .shuffle) }] }
+
+/-- Brilliant Blender (sv8-164). Records: sv8-164. Caveats: aceSpec, searchAny, upTo0. -/
+def sv8_164 : Card := .trainer "Brilliant Blender" .item
+    (.seq (.move .own .deck .discard .any (.upTo 5)) .shuffle)
+
+/-- Cyrano (sv8-170). Records: sv8-170, sv8-230. Caveats: upTo0. -/
+def sv8_170 : Card := .trainer "Cyrano" .supporter
+    (.seq (.move .own .deck .hand (.and .pokemon (.not .noRuleBox)) (.upTo 3)) .shuffle)
+
+/-- Drasna (sv8-173). Records: sv8-173, sv8-231. -/
+def sv8_173 : Card := .trainer "Drasna" .supporter
+    (.seq (.move .own .hand .shuffle .any .all) (.choice (.move .own (.top 8) .hand .any .all) (.move .own (.top 3) .hand .any .all)))
+
 /-- Gravity Mountain (sv8-177). Records: sv8-177, sv8-250. -/
 def sv8_177 : Card := .trainer "Gravity Mountain" .stadium
     .skip [
@@ -1306,6 +1341,20 @@ def sv9_84 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Lycanroc (sv9-85). Records: sv9-85, sv9-166. Caveats: selfBench, upTo0. -/
+def sv9_85 : Card := .pokemon
+  { name := "Lycanroc", stage := .stage1, evolvesFrom := some "Rockruff",
+    hp := 12, type := .fighting, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Spike-Clad", use := .onPlay .evolve,
+        spot := none, cond := none,
+        effect := .seq (.self (.attach .discard (.named "Spiky Energy"))) (.self (.attach .discard (.named "Spiky Energy"))) }],
+    attacks := [
+      { name := "Clamping Fangs", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .damage (.add (.const 4) (.per .opp 4)),
+        gx := false }] }
+
 /-- Hop's Silicobra (sv9-86). Records: sv9-86. -/
 def sv9_86 : Card := .pokemon
   { name := "Hop's Silicobra", stage := .basic, evolvesFrom := none,
@@ -1741,83 +1790,13 @@ def sv9_126 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Noibat (sv9-127). Records: sv9-127, sv9-169. -/
-def sv9_127 : Card := .pokemon
-  { name := "Noibat", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .colorless, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rapid Draw", cost := [.colorless], damage := 1,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false }] }
-
-/-- Drampa (sv9-130). Records: sv9-130. -/
-def sv9_130 : Card := .pokemon
-  { name := "Drampa", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .colorless, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ram", cost := [.colorless], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Dragon Claw", cost := [.colorless, .colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
-/-- Skwovet (sv9-131). Records: sv9-131. -/
-def sv9_131 : Card := .pokemon
-  { name := "Skwovet", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Collect", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Gnaw", cost := [.colorless, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Greedent (sv9-132). Records: sv9-132. -/
-def sv9_132 : Card := .pokemon
-  { name := "Greedent", stage := .stage1, evolvesFrom := some "Skwovet",
-    hp := 12, type := .colorless, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gluttonous Tail", cost := [.colorless, .colorless], damage := 6,
-        effect := .move .own (.top 2) .hand .any .all,
-        gx := false }] }
-
-/-- Hop's Corvisquire (sv9-134). Records: sv9-134. -/
-def sv9_134 : Card := .pokemon
-  { name := "Hop's Corvisquire", stage := .stage1, evolvesFrom := some "Hop's Rookidee",
-    hp := 9, type := .colorless, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Speed Dive", cost := [.colorless], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Razor Wing", cost := [.colorless, .colorless, .colorless], damage := 8,
-        effect := .skip,
-        gx := false }] }
-
-/-- Hop's Wooloo (sv9-135). Records: sv9-135, sv9-170. -/
-def sv9_135 : Card := .pokemon
-  { name := "Hop's Wooloo", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Smash Kick", cost := [.colorless, .colorless, .colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv8_159,
+  sv8_162,
+  sv8_164,
+  sv8_170,
+  sv8_173,
   sv8_177,
   sv8_178,
   sv8_180,
@@ -1929,6 +1908,7 @@ def cards : List Card := [
   sv9_82,
   sv9_83,
   sv9_84,
+  sv9_85,
   sv9_86,
   sv9_87,
   sv9_88,
@@ -1961,13 +1941,7 @@ def cards : List Card := [
   sv9_123,
   sv9_124,
   sv9_125,
-  sv9_126,
-  sv9_127,
-  sv9_130,
-  sv9_131,
-  sv9_132,
-  sv9_134,
-  sv9_135]
+  sv9_126]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2006,7 +1980,7 @@ theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = tr
 theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
-theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = ["Maractus"] := by decide +kernel
+theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = ["Amulet of Hope", "Maractus"] := by decide +kernel
 
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel

@@ -11,6 +11,34 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part02
 open Pokemon
 
+/-- Monferno (sv6-32). Records: sv6-32. -/
+def sv6_32 : Card := .pokemon
+  { name := "Monferno", stage := .stage1, evolvesFrom := some "Chimchar",
+    hp := 9, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Chop", cost := [.fire, .colorless], damage := 4,
+        effect := .skip,
+        gx := false },
+      { name := "Heat Blow", cost := [.fire, .fire, .colorless], damage := 8,
+        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
+        gx := false }] }
+
+/-- Darumaka (sv6-34). Records: sv6-34. Caveats: recoil. -/
+def sv6_34 : Card := .pokemon
+  { name := "Darumaka", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Strength", cost := [.fire], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Fire Tackle", cost := [.fire, .fire], damage := 5,
+        effect := .selfDamage 2,
+        gx := false }] }
+
 /-- Darmanitan (sv6-35). Records: sv6-35. Caveats: recoil. -/
 def sv6_35 : Card := .pokemon
   { name := "Darmanitan", stage := .stage1, evolvesFrom := some "Darumaka",
@@ -931,6 +959,10 @@ def sv6_143 : Card := .trainer "Bug Catching Set" .item
 def sv6_147 : Card := .trainer "Cook" .supporter
     (.heal 7)
 
+/-- Enhanced Hammer (sv6-148). Records: sv6-148, sv6-224. -/
+def sv6_148 : Card := .trainer "Enhanced Hammer" .item
+    (.ite (.countGe (.energyAll .opp .specialEnergy) 1) (.choice (.discardEnergy .opp .active .specialEnergy (.exactly 1)) (.ite (.countGe (.bench .opp .pokemon) 1) (.discardEnergy .opp .bench .specialEnergy (.exactly 1)) (.move .own (.top 0) .hand .any (.exactly 1)))) (.move .own (.top 0) .hand .any (.exactly 1)))
+
 /-- Hassel (sv6-151). Records: sv6-151, sv6-205. Caveats: koCheckup, upTo0. -/
 def sv6_151 : Card := .trainer "Hassel" .supporter
     (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 8) .hand .any (.upTo 3)) .shuffle))
@@ -1400,6 +1432,17 @@ def sv7_7 : Card := .pokemon
         effect := .damage (.sub (.const 13) (.per .own 1)),
         gx := false }] }
 
+/-- Mow Rotom (sv7-8). Records: sv7-8. -/
+def sv7_8 : Card := .pokemon
+  { name := "Mow Rotom", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Reaping Dash", cost := [.colorless], damage := 0,
+        effect := .seq (.seq (.discardTools .opp .active) (.discardEnergy .opp .active .specialEnergy .all)) (.damage (.const 3)),
+        gx := false }] }
+
 /-- Grubbin (sv7-9). Records: sv7-9, me2pt5-17. -/
 def sv7_9 : Card := .pokemon
   { name := "Grubbin", stage := .basic, evolvesFrom := none,
@@ -1796,58 +1839,10 @@ def sv7_56 : Card := .pokemon
         effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 2)) (.benchDamage .opp 2)) (.damage (.const 2)),
         gx := false }] }
 
-/-- Slowpoke (sv7-57). Records: sv7-57. -/
-def sv7_57 : Card := .pokemon
-  { name := "Slowpoke", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .psychic, retreat := 2, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Dangle Tail", cost := [.colorless], damage := 0,
-        effect := .ite (.countGe (.pile .own .discard .pokemon) 1) (.move .own .discard .hand .pokemon (.exactly 1)) .skip,
-        gx := false },
-      { name := "Tackle", cost := [.psychic, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Mewtwo (sv7-59). Records: sv7-59. -/
-def sv7_59 : Card := .pokemon
-  { name := "Mewtwo", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .psychic, retreat := 2, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Super Psy Bolt", cost := [.psychic, .psychic, .colorless], damage := 10,
-        effect := .skip,
-        gx := false }] }
-
-/-- Drifloon (sv7-60). Records: sv7-60. Caveats: perPokemon. -/
-def sv7_60 : Card := .pokemon
-  { name := "Drifloon", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Expand", cost := [.psychic], damage := 1,
-        effect := .linger .own .next (.reduce 1),
-        gx := false }] }
-
-/-- Comfey (sv7-63). Records: sv7-63. -/
-def sv7_63 : Card := .pokemon
-  { name := "Comfey", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flower Shower", cost := [.psychic], damage := 0,
-        effect := .seq (.move .own (.top 3) .hand .any .all) (.move .opp (.top 3) .hand .any .all),
-        gx := false },
-      { name := "Play Rough", cost := [.psychic], damage := 0,
-        effect := .choice (.damage (.const 4)) (.damage (.const 2)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_32,
+  sv6_34,
   sv6_35,
   sv6_36,
   sv6_37,
@@ -1919,6 +1914,7 @@ def cards : List Card := [
   sv6_140,
   sv6_143,
   sv6_147,
+  sv6_148,
   sv6_151,
   sv6_152,
   sv6_155,
@@ -1961,6 +1957,7 @@ def cards : List Card := [
   sv7_4,
   sv7_5,
   sv7_7,
+  sv7_8,
   sv7_9,
   sv7_10,
   sv7_12,
@@ -1993,11 +1990,7 @@ def cards : List Card := [
   sv7_48,
   sv7_51,
   sv7_55,
-  sv7_56,
-  sv7_57,
-  sv7_59,
-  sv7_60,
-  sv7_63]
+  sv7_56]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2050,6 +2043,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Varoom", "Drifloon"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Varoom"] := by decide +kernel
 
 end PokemonCards.Standard.Part02

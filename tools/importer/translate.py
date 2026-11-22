@@ -334,6 +334,8 @@ def parse_filter(np, ctx):
         # "a Basic Energy card" (`Filter.basicEnergy`, milestone MV5; until importer 0.10.0 written `Filter.energy`,
         # the same filter while no Special Energy card is in the game)
         return BASIC_F
+    if s == 'Special Energy':
+        return SPECIAL_F
     m = re.match(r'^(?:Basic )?' + TYPE_RE + r' Energy$', s)
     if m:
         # "a Basic Fire Energy card", and "a Fire Energy card", which the rulebook's glossary makes a Basic Energy card
@@ -355,7 +357,8 @@ def parse_filter(np, ctx):
         # Supporters and (milestone M5) Stadiums and Tools; names of kinds the model lacks are refused
         # with that kind as the reason
         kinds = KNOWN_NAMES[s]
-        bad = sorted(kinds & {'Special Energy', 'Trainer (other)', 'Basic Energy'})
+        # since importer 0.11.0 (milestone MV5) a Special Energy card's name is a filter too (`Filter.named` reads it)
+        bad = sorted(kinds & {'Trainer (other)', 'Basic Energy'})
         if bad:
             raise Refuse('card named in text is a ' + ' / '.join(bad) + ': ' + s)
         return ('named', s)
@@ -541,8 +544,9 @@ def parse_count(x, ctx):
         return lambda k: ('add', ('count', ('inPlay', OWN, f), k), ('count', ('inPlay', OPP, f), k))
     if x == 'type of Basic Energy attached to all of your Pokémon':
         return lambda k: ('count', ('energyTypes', OWN), k)
-    # "Basic Energy attached" is `basicEnergy` (milestone MV5; until 0.10.0 `energy`)
-    m = re.match(r'^(Basic) Energy(?: cards?)? attached to (this Pokémon|your opponent\'s Active Pokémon'
+    # "Basic Energy attached" is `basicEnergy` (milestone MV5; until 0.10.0 `energy`); "Special Energy [card]
+    # attached" is `specialEnergy`, counted by card (`Count.energy`)
+    m = re.match(r'^(Basic|Special) Energy(?: cards?)? attached to (this Pokémon|your opponent\'s Active Pokémon'
                  r'|all of your Pokémon|all of your opponent\'s Pokémon)$', x)
     if m:
         f = BASIC_F if m.group(1) == 'Basic' else SPECIAL_F
@@ -644,6 +648,12 @@ def parse_test(c, ctx):
     m = re.match(r'^this Pokémon has any (Basic )?' + TYPE_RE + r' Energy attached(?: to it)?$', c)
     if m:
         return [('countGe', ('energy', OWN, ('energyOf', etype(m.group(2)))), 1)], False
+    # importer 0.11.0 (milestone MV5): "any Special Energy" (`specialEnergy`) and "any Team Rocket's Energy" (the
+    # name of a Special Energy card, `named`), counted by card on this Pokémon
+    m = re.match(r'^this Pokémon has any (.+?) attached(?: to it)?$', c)
+    if m and (m.group(1) == 'Special Energy' or KNOWN_NAMES.get(m.group(1)) == {'Special Energy'}):
+        f = SPECIAL_F if m.group(1) == 'Special Energy' else ('named', m.group(1))
+        return [('countGe', ('energy', OWN, f), 1)], False
     m = re.match(r'^(you have|your opponent has) (\d+) or (more|fewer) cards in (your|their) hand$', c)
     if m:
         w = OWN if m.group(1) == 'you have' else OPP
@@ -1331,7 +1341,7 @@ def _(m, ctx):
     return Eff(seq(*[('putBench', OWN, ('discard',), f)] * n), cv)
 
 
-@rule('discard-energy', r"Discard (an|a|all|\d+) (?:(Basic )?" + TYPE_RE + r" )?Energy (?:cards? )?from (this Pokémon|"
+@rule('discard-energy', r"Discard (an|a|all|\d+) (?:(Basic )?" + TYPE_RE + r" |(Special) )?Energy (?:cards? )?from (this Pokémon|"
       + OPPA + r')\.', 'B',
       'ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip); in a Trainer no fallback when none (min_take)')
 def _(m, ctx):
@@ -1339,8 +1349,9 @@ def _(m, ctx):
     t = m.group(3)
     if t in ('Dragon', 'Colorless'):
         raise Refuse('Energy of a type with no Basic Energy')
-    f = ('energyOf', etype(t)) if t else ENERGY_F
-    if m.group(4) == 'this Pokémon':
+    # importer 0.11.0: "Discard a Special Energy from …" (`specialEnergy`; one card, as printed)
+    f = ('energyOf', etype(t)) if t else SPECIAL_F if m.group(4) else ENERGY_F
+    if m.group(5) == 'this Pokémon':
         if ctx['kind'] != 'attack':
             raise Refuse('this Pokémon outside an attack')
         w = OWN
@@ -1631,6 +1642,23 @@ def _(m, ctx):
     return Eff(('discardTools', OPP, ('active',)), pre=True)
 
 
+@rule('pre-discard-tools-special-opp-active', r"Before doing damage, discard all Pokémon Tools and Special Energy from your "
+      r"opponent's Active Pokémon\.", 'A', 'discardTools opp active; discardEnergy opp active specialEnergy all, before the damage step')
+def _(m, ctx):
+    # importer 0.11.0 (Mow Rotom sv7-8): every Tool and every Special Energy card of the opponent's Active Pokémon, to
+    # the opponent's discard pile; `all` leaves no Special Energy card attached (`Qty.ok .all`), and none is a resolution
+    return Eff(seq(('discardTools', OPP, ('active',)), ('discardEnergy', OPP, ('active',), SPECIAL_F, ('all',))), pre=True)
+
+
+@rule('tool-and-special-1-opp', r"Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon\.", 'B',
+      'refused')
+def _(m, ctx):
+    # importer 0.11.0 (Ruffian sv9-157): on the Active Pokémon two primitives would be exact, but on the Bench
+    # `discardTools .opp .bench` and `discardEnergy .opp .bench` each choose their own Benched Pokémon, so the term would
+    # allow a Tool from one and a Special Energy from another (allows more), a departure no Known gaps entry names
+    raise Refuse('Tool and Special Energy from the same Benched Pokémon (two primitives choose separately)', m.string)
+
+
 @rule('hand-to-deck-top', r'Put a card from your hand on top of your deck\.', 'T', 'move own hand top any (exactly 1)')
 def _(m, ctx):
     return Eff(('move', OWN, ('hand',), ('top',), ('any',), ('exactly', 1)))
@@ -1827,15 +1855,16 @@ def _(m, ctx):
     return Eff(seq(('shuffle',), min_take(('pile', OWN, ('deck',), ('any',)), n, mk, ctx)))
 
 
-@rule('discard-energy-1-opp', r"Discard an Energy from 1 of your opponent's Pokémon\.", 'B',
+@rule('discard-energy-1-opp', r"Discard an? (Special )?Energy from 1 of your opponent's Pokémon\.", 'B',
       'ite (countGe (energyAll opp energy) 1) (choice (discardEnergy opp active energy (exactly 1)) '
       '(ite (countGe (bench opp pokemon) 1) (discardEnergy opp bench energy (exactly 1)) none)) (skip | none)')
 def _(m, ctx):
     # one Energy from one of the opponent's Pokémon that has one: `exactly 1` has a resolution only on a Pokémon with
     # an Energy (`ZStep.discardActive`, `discardBench`), and the Bench branch is guarded so that `discardNone` (empty
     # Bench) is not a do-nothing resolution. With no Energy in play on that side: nothing in an attack, no resolution
-    # in a Trainer (min_take's convention)
-    F = ENERGY_F
+    # in a Trainer (min_take's convention). Importer 0.11.0: "a Special Energy" is the same with `specialEnergy`
+    # (Enhanced Hammer sv6-148)
+    F = SPECIAL_F if m.group(1) else ENERGY_F
     e = choice(('discardEnergy', OPP, ('active',), F, ('exactly', 1)),
                ite(('countGe', ('bench', OPP, ('pokemon',)), 1),
                    ('discardEnergy', OPP, ('bench',), F, ('exactly', 1)), NO_PLAY))
@@ -3557,7 +3586,7 @@ def static_ability_sentence(s, ctx, src=None, need=None):
         if src is not None:
             raise Refuse('other', s)
         return static_ability_sentence(cap(m.group(2)), ctx, 'active' if 'Active' in m.group(1) else 'bench', need)
-    m = re.match(r'^If this Pokémon has (any|(\d+) or more) (?:(Basic) )?(?:' + TYPE_RE + r' )?Energy attached, it (.+)$', s)
+    m = re.match(r'^If this Pokémon has (any|(\d+) or more) (?:(Basic|Special) )?(?:' + TYPE_RE + r' )?Energy attached, it (.+)$', s)
     if m:
         if need is not None:
             raise Refuse('other', s)

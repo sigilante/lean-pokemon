@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 10 of 10 (20 cards).
+Imported Standard cards, part 10 of 10 (29 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.11.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,117 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part10
 open Pokemon
+
+/-- Hypno (me6-44). Records: me6-44. -/
+def me6_44 : Card := .pokemon
+  { name := "Hypno", stage := .stage1, evolvesFrom := some "Drowzee",
+    hp := 12, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Mind Ruler", cost := [.psychic], damage := 0,
+        effect := .damage (.count (.pile .opp .hand .any) 2),
+        gx := false },
+      { name := "Hypnoblast", cost := [.psychic, .colorless], damage := 5,
+        effect := .inflict .asleep,
+        gx := false }] }
+
+/-- Golett (me6-46). Records: me6-46. -/
+def me6_46 : Card := .pokemon
+  { name := "Golett", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Light Punch", cost := [.psychic, .psychic], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
+/-- Sandslash (me6-50). Records: me6-50. Caveats: trigAttacker, trigDamaged. -/
+def me6_50 : Card := .pokemon
+  { name := "Sandslash", stage := .stage1, evolvesFrom := some "Sandshrew",
+    hp := 11, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Counterattack Quills", use := .triggered .damaged false,
+        spot := some .active, cond := none,
+        effect := .fx (.counters 3) }],
+    attacks := [
+      { name := "Digging Claw", cost := [.fighting], damage := 6,
+        effect := .move .opp (.top 1) .discard .any .all,
+        gx := false }] }
+
+/-- Onix (me6-51). Records: me6-51. Caveats: perPokemon. -/
+def me6_51 : Card := .pokemon
+  { name := "Onix", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .fighting, retreat := 4, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Guard Press", cost := [.colorless, .colorless, .colorless], damage := 8,
+        effect := .linger .own .next (.reduce 3),
+        gx := false }] }
+
+/-- Nidoran♀ (me6-55). Records: me6-55. -/
+def me6_55 : Card := .pokemon
+  { name := "Nidoran♀", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .darkness, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Find a Friend", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle,
+        gx := false },
+      { name := "Gnaw", cost := [.darkness], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Nidorina (me6-56). Records: me6-56. -/
+def me6_56 : Card := .pokemon
+  { name := "Nidorina", stage := .stage1, evolvesFrom := some "Nidoran♀",
+    hp := 9, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Tackle", cost := [.darkness, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
+/-- Nidoqueen (me6-57). Records: me6-57. Caveats: noopUse. -/
+def me6_57 : Card := .pokemon
+  { name := "Nidoqueen", stage := .stage2, evolvesFrom := some "Nidorina",
+    hp := 17, type := .darkness, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Maternal Call", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.choice (.switch .opp) .skip) }],
+    attacks := [
+      { name := "Giga Impact", cost := [.darkness, .colorless, .colorless], damage := 15,
+        effect := .skip,
+        gx := false, selfLock := .all }] }
+
+/-- Carvanha (me6-61). Records: me6-61. -/
+def me6_61 : Card := .pokemon
+  { name := "Carvanha", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Ambush", cost := [.darkness, .colorless], damage := 0,
+        effect := .choice (.damage (.const 4)) (.damage (.const 2)),
+        gx := false }] }
+
+/-- Sharpedo (me6-62). Records: me6-62. -/
+def me6_62 : Card := .pokemon
+  { name := "Sharpedo", stage := .stage1, evolvesFrom := some "Carvanha",
+    hp := 12, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Crunch", cost := [.darkness, .colorless], damage := 6,
+        effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
+        gx := false }] }
 
 /-- Darkrai (me6-63). Records: me6-63. -/
 def me6_63 : Card := .pokemon
@@ -259,6 +370,15 @@ def me6_89 : Card := .trainer "Aarune" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me6_44,
+  me6_46,
+  me6_50,
+  me6_51,
+  me6_55,
+  me6_56,
+  me6_57,
+  me6_61,
+  me6_62,
   me6_63,
   me6_64,
   me6_65,
@@ -314,7 +434,7 @@ counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
-theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = [] := by decide +kernel
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Sandslash"] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
@@ -331,6 +451,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Jangmo-o"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Onix", "Jangmo-o"] := by decide +kernel
 
 end PokemonCards.Standard.Part10
