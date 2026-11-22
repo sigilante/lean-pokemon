@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 9 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.8.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.9.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -810,6 +810,20 @@ def sv5_55 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Vikavolt (sv5-56). Records: sv5-56. -/
+def sv5_56 : Card := .pokemon
+  { name := "Vikavolt", stage := .stage2, evolvesFrom := some "Charjabug",
+    hp := 16, type := .lightning, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Mach Bolt", cost := [.lightning], damage := 5,
+        effect := .skip,
+        gx := false },
+      { name := "Circuit Cannon", cost := [.lightning, .lightning], damage := 0,
+        effect := .damage (.add (.const 12) (.count (.bench .own (.named "Charjabug")) 8)),
+        gx := false }] }
+
 /-- Zeraora (sv5-57). Records: sv5-57. -/
 def sv5_57 : Card := .pokemon
   { name := "Zeraora", stage := .basic, evolvesFrom := none,
@@ -1130,6 +1144,20 @@ def sv5_95 : Card := .pokemon
         effect := .move .opp (.top 2) .discard .any .all,
         gx := false }] }
 
+/-- Sandy Shocks (sv5-98). Records: sv5-98. -/
+def sv5_98 : Card := .pokemon
+  { name := "Sandy Shocks", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .fighting, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Magnetic Burst", cost := [.fighting], damage := 0,
+        effect := .ite (.countGe (.energyAll .own .energy) 3) (.damage (.const 9) { weak := true }) (.damage (.const 2) { weak := true }),
+        gx := false },
+      { name := "Power Gem", cost := [.fighting, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
 /-- Ekans (sv5-100). Records: sv5-100. -/
 def sv5_100 : Card := .pokemon
   { name := "Ekans", stage := .basic, evolvesFrom := none,
@@ -1234,6 +1262,20 @@ def sv5_110 : Card := .pokemon
         gx := false },
       { name := "Steel Tackle", cost := [.colorless, .colorless, .colorless], damage := 13,
         effect := .selfDamage 4,
+        gx := false }] }
+
+/-- Mawile (sv5-112). Records: sv5-112. -/
+def sv5_112 : Card := .pokemon
+  { name := "Mawile", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .metal, retreat := 1, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Invite and Strike", cost := [.colorless, .colorless], damage := 0,
+        effect := .seq (.switch .opp) (.ite (.countGe (.bench .opp .pokemon) 1) (.damage (.const 3)) .skip),
+        gx := false },
+      { name := "Sharp Fang", cost := [.metal, .metal, .colorless], damage := 10,
+        effect := .skip,
         gx := false }] }
 
 /-- Beldum (sv5-113). Records: sv5-113. Caveats: recoil. -/
@@ -1384,6 +1426,14 @@ def sv5_139 : Card := .pokemon
 /-- Buddy-Buddy Poffin (sv5-144). Records: sv5-144, sv6-223, sv8pt5-101, me1-167, me2pt5-184. Caveats: upTo0. -/
 def sv5_144 : Card := .trainer "Buddy-Buddy Poffin" .item
     (.seq (.seq (.putBench .own .deck (.and .basic (.hpLe 7))) (.putBench .own .deck (.and .basic (.hpLe 7)))) .shuffle)
+
+/-- Ciphermaniac's Codebreaking (sv5-145). Records: sv5-145, sv5-198, sv8pt5-104. -/
+def sv5_145 : Card := .trainer "Ciphermaniac's Codebreaking" .supporter
+    (.seq .shuffle (.ite (.countGe (.pile .own .deck .any) 2) (.move .own .deck .top .any (.exactly 2)) (.ite (.countGe (.pile .own .deck .any) 1) (.move .own .deck .top .any .all) (.move .own .deck .top .any (.exactly 1)))))
+
+/-- Explorer's Guidance (sv5-147). Records: sv5-147, sv5-200, sv8pt5-107. -/
+def sv5_147 : Card := .trainer "Explorer's Guidance" .supporter
+    (.seq (.ite (.countGe (.pile .own .deck .any) 2) (.move .own (.top 6) .hand .any (.exactly 2)) (.ite (.countGe (.pile .own .deck .any) 1) (.move .own (.top 6) .hand .any .all) (.move .own (.top 6) .hand .any (.exactly 1)))) (.move .own (.top 4) .discard .any .all))
 
 /-- Full Metal Lab (sv5-148). Records: sv5-148. Caveats: staticBench. -/
 def sv5_148 : Card := .trainer "Full Metal Lab" .stadium
@@ -1740,70 +1790,6 @@ def sv6_41 : Card := .pokemon
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 2)) (.damage (.const 4))),
         gx := false }] }
 
-/-- Poliwhirl (sv6-42). Records: sv6-42. -/
-def sv6_42 : Card := .pokemon
-  { name := "Poliwhirl", stage := .stage1, evolvesFrom := some "Poliwag",
-    hp := 10, type := .water, retreat := 2, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Hypnosis", cost := [.water], damage := 0,
-        effect := .inflict .asleep,
-        gx := false },
-      { name := "Double Slap", cost := [.colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 3)) (.damage (.const 6))),
-        gx := false }] }
-
-/-- Seaking (sv6-45). Records: sv6-45. -/
-def sv6_45 : Card := .pokemon
-  { name := "Seaking", stage := .stage1, evolvesFrom := some "Goldeen",
-    hp := 9, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Peck Off", cost := [.water], damage := 0,
-        effect := .seq (.discardTools .opp .active) (.damage (.const 5)),
-        gx := false },
-      { name := "Horn Drill", cost := [.colorless, .colorless, .colorless], damage := 9,
-        effect := .skip,
-        gx := false }] }
-
-/-- Corphish (sv6-47). Records: sv6-47. -/
-def sv6_47 : Card := .pokemon
-  { name := "Corphish", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .water, retreat := 2, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Vise Grip", cost := [.water, .water, .colorless], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
-/-- Crawdaunt (sv6-48). Records: sv6-48. Caveats: perPokemon. -/
-def sv6_48 : Card := .pokemon
-  { name := "Crawdaunt", stage := .stage1, evolvesFrom := some "Corphish",
-    hp := 13, type := .water, retreat := 3, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Snip Snip", cost := [.water, .colorless], damage := 4,
-        effect := .choice .skip (.choice (.move .opp (.top 1) .discard .any .all) (.seq (.move .opp (.top 1) .discard .any .all) (.move .opp (.top 1) .discard .any .all))),
-        gx := false },
-      { name := "Rampaging Hammer", cost := [.water, .water, .colorless], damage := 18,
-        effect := .linger .own .after (.lock .attack),
-        gx := false }] }
-
-/-- Feebas (sv6-49). Records: sv6-49. -/
-def sv6_49 : Card := .pokemon
-  { name := "Feebas", stage := .basic, evolvesFrom := none,
-    hp := 3, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flail", cost := [.water], damage := 0,
-        effect := .damage (.per .own 1),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1876,6 +1862,7 @@ def cards : List Card := [
   sv5_53,
   sv5_54,
   sv5_55,
+  sv5_56,
   sv5_57,
   sv5_58,
   sv5_59,
@@ -1901,6 +1888,7 @@ def cards : List Card := [
   sv5_93,
   sv5_94,
   sv5_95,
+  sv5_98,
   sv5_100,
   sv5_101,
   sv5_102,
@@ -1909,6 +1897,7 @@ def cards : List Card := [
   sv5_106,
   sv5_108,
   sv5_110,
+  sv5_112,
   sv5_113,
   sv5_116,
   sv5_117,
@@ -1921,6 +1910,8 @@ def cards : List Card := [
   sv5_134,
   sv5_139,
   sv5_144,
+  sv5_145,
+  sv5_147,
   sv5_148,
   sv5_152,
   sv5_153,
@@ -1950,12 +1941,7 @@ def cards : List Card := [
   sv6_37,
   sv6_38,
   sv6_40,
-  sv6_41,
-  sv6_42,
-  sv6_45,
-  sv6_47,
-  sv6_48,
-  sv6_49]
+  sv6_41]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1982,9 +1968,9 @@ theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).m
 /-- Every printed HP in this part is at most 38 counters (the largest over the imported pool). -/
 theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ 38)) = true := by decide +kernel
 
-/-- The HP units of every card's static effects in this part (`Card.hpGain`) are at most 10 counters
+/-- The HP units of every card's static effects in this part (`Card.hpGain`) are at most 25 counters
 (the largest over the imported pool). -/
-theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ 10)) = true := by decide +kernel
+theorem cards_hpGain : cards.all (fun c => decide (c.hpGain ≤ 25)) = true := by decide +kernel
 
 /-- The static damage reduction units of every card in this part (`Card.reduceGain`) are at most 5
 counters (the largest over the imported pool). -/
