@@ -7,7 +7,7 @@ Pokémon, the Pokémon Trading Card Game, the names of cards, and the text of ca
 rulebook belong to their respective owners (Nintendo, Creatures Inc., GAME FREAK inc. and The
 Pokémon Company). They are not covered by the MIT licence. Where this repository reproduces card
 names or short passages of card or rulebook text (the generated card files under
-PokemonCards/Standard/, the importer's output tables under tools/importer/out/, docstrings and
+PokemonCards/, including the list of cards not imported, the importer's output tables under tools/importer/out/, docstrings and
 comments), they are quoted for research and commentary, and no licence to them is granted or
 implied.
 
