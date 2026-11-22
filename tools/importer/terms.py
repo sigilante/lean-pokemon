@@ -130,9 +130,10 @@ def test_on_own(t):
     if t[0] in ('atLeast', 'exactly', 'cond', 'marked', 'isType'):
         return t[1] == OWN
     if t[0] == 'countGe':
-        return t[1][0] == 'energy' and t[1][1] == OWN
-    if t[0] in ('top', 'hasTool', 'movedUp', 'evolved'):
-        # milestone MV2 (`Test.onOwn`)
+        # milestone MV4 `conds .own`, milestone MV6 `retreat .own` (`Test.onOwn`)
+        return t[1][0] in ('energy', 'conds', 'retreat') and t[1][1] == OWN
+    if t[0] in ('top', 'hasTool', 'movedUp', 'evolved', 'usedLast'):
+        # milestone MV2 (`Test.onOwn`); `usedLast` milestone MV6
         return t[1] == OWN
     return False
 
@@ -152,6 +153,9 @@ def own_free(e):
     if h == 'moveEnergy' and e[1] == OWN:
         return False
     if h == 'moveCounter':
+        return False
+    if h == 'look' and e[1] == OWN and e[5][0] == 'attach':
+        # milestone MV6: a window attached to the player's Pokémon may attach to the Active Pokémon
         return False
     if h == 'ite':
         return not test_on_own(e[1]) and own_free(e[2]) and own_free(e[3])
@@ -181,7 +185,8 @@ def attack_wf(damage, effect):
 
 
 def mod_is_amt(m):
-    return m[0] in ('bonus', 'reduce')
+    # `Mod.isAmt`; milestone MV6 adds the step-2 penalty `weaken` and the step-5 increase `expose`
+    return m[0] in ('bonus', 'reduce', 'weaken', 'expose')
 
 
 def writes(e):
@@ -218,6 +223,10 @@ def lingers(e):
 def rec_filters(e):
     if e[0] == 'move' and e[2] == ('discard',):
         return [e[4]]
+    if e[0] == 'look' and e[2] == ('discard',):
+        # milestone MV6 (`Effect.recFilters`): a window on a discard pile recycles its filter when the other cards
+        # go back to the discard pile, and any card otherwise
+        return [e[3]] if e[6] == ('discard',) else [('any',)]
     out = []
     for s in subs(e):
         out += rec_filters(s)

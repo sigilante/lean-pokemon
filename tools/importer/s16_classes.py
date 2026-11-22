@@ -46,6 +46,11 @@ c('M', 'tests on a Pokémon chosen in the effect (not an Active Pokémon)', r'co
 c('I', 'rule: "all of your Pokémon in play are F" (no Pokémon in play outside F)',
   r'condition not expressible: all of your Pokémon in play are')
 c('M', 'Trainer played as a Pokémon (Fossils)', '', r'^Play this card as if it were|can\'t be affected by any Special Conditions and can\'t retreat|discard this card from play')
+# importer 0.12.0 (milestone MV6)
+c('D', 'Count.retreat on a card whose own static effect changes the Retreat Cost: the printed count is off by that effect '
+       'whenever the card is in play', r'^count of the Retreat Cost on a card whose own static effect')
+c('M', 'draw by a count of the state', r'^revealed hand: clause not expressible', r'draw a card for each')
+c('M', "copy an attack or a Supporter's effect", r'^revealed hand: clause not expressible', r'effect of a Supporter card')
 c('M', 'data defect or out-of-range stage/Resistance (record)', r'^evolution card with no evolves-from|^stage not Basic|^Resistance not|^rule box kind without')
 c('M', 'static effects: prevention or immunity (effects, Special Conditions, healing, thresholds, Bench)', r'static, prevent')
 c('M', 'static effects: Ability/Tool/Item/Stadium/attack locks', r'static, lock')
@@ -171,6 +176,10 @@ c('I', 'rule: Rule-Box reminder in a filter sentence', UH, r'^\(Pokémon ex, Pok
 
 # ---------------------------------------------------------------- unhandled sentences: class D
 c('D', 'heal 20 and remove ONE Special Condition: `cure` removes all (forbids keeping the others; no listed departure)', UH, r'remove a Special Condition|recover from a Special Condition')
+# importer 0.12.0: `Effect.look` reads a fixed window, so the moving-window reason of importer 0.8.0 is gone; what is left of
+# the row (Grimsley's Move, refused by its first-turn rule) is a window rule not written, class I
+c('I', 'rule: window, a mandatory card onto the Bench (written for no card: Grimsley\'s Move has a first-turn rule)', UH,
+  r'^Look at the top \d+ cards of your deck and put a Darkness')
 c('D', 'look at the top N and attach / bench "any number" from it: repeated primitives read a moving window (top N of the current deck)', UH,
   r'^Look at the top \d+ cards of your deck(,)? (and attach|and you may put any number|and put a Darkness)|^You may put any number of Pokémon you find there onto your Bench')
 
