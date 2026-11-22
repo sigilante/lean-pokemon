@@ -55,8 +55,8 @@ CAVEATS = {
     'mayFail': "an attach or Bench placement may do nothing in the model (`attach` and `putBench` always allow "
                "nothing), a superset of the printed 'attach a …' from the hand or discard pile, and of 'if you can' "
                "(Known gaps)",
-    'upTo0': "'up to N' in a Trainer or an Ability allows 0 in the model; today's rule asks for at least 1 outside "
-             "attacks (Known gaps, S8 PP26)",
+    'upTo0': "'up to N' in a Trainer or an Ability allows 0 in the model; the rulebook asks for at least 1 outside "
+             "attacks (2026 rulebook p. 21; Known gaps, zone moves item)",
     'hiddenInfo': "a sentence that only reveals or looks at cards is a no-op (hidden information is not "
                   "modelled, Known gaps)",
     'aceSpec': "the ACE SPEC deck-building limit is not modelled (no deck construction in the model)",
@@ -125,8 +125,9 @@ CAVEATS = {
                    "no resolution",
     'abilityByTool': "'Pokémon that have an Ability' is `Filter.hasAbility`, which reads the printed Abilities and ignores an "
                      "Ability a Tool gives in the model (Known gaps, filters: whether print counts a Tool's effect as the "
-                     "Pokémon's Ability is not settled); if it does, an attacker whose Ability comes from a Tool is not "
-                     "prevented in the model where print prevents its damage",
+                     "Pokémon's Ability is not settled); if it does, a Pokémon whose Ability comes from a Tool is not "
+                     "counted where print counts it, and an attacker with such an Ability is not prevented where print "
+                     "prevents its damage",
 }
 
 
@@ -169,7 +170,8 @@ CAVEAT_DIRECTION = {
     'ignFxStadium': 'both',        # if print keeps a Stadium's reduction, the model's damage is larger (and the
                                    # printed smaller damage is absent)
     'anyAmount60': 'forbids some', # more than 60 cards cannot be discarded
-    'abilityByTool': 'allows more',  # damage print may prevent
+    'abilityByTool': 'both',       # a Tool-given Ability is not read: a smaller count than print may give (the
+                                   # printed amount is absent), or damage that print may prevent (allows more)
 }
 
 
@@ -2316,6 +2318,15 @@ def norm(s):
 
 
 def translate_card(c):
+    """Translate a card record (`_translate_card`), then add the caveat `abilityByTool` to every imported term that
+    reads `Filter.hasAbility` (wherever it occurs: a count, a test, a static prevention)."""
+    res = _translate_card(c)
+    if res['ok'] and 'hasAbility' in repr(res['term']):
+        res['caveats'].add('abilityByTool')
+    return res
+
+
+def _translate_card(c):
     """Translate a card record. Returns a dict with keys: ok (bool), term (Lean-ready Python term),
     caveats (set), blockers (list of (reason, sentence)), used (list of (rule, sentence))."""
     res = {'ok': False, 'term': None, 'caveats': set(), 'blockers': [], 'used': []}
@@ -3030,8 +3041,6 @@ def static_caveats(ss):
             cv.add('staticBench')
         if s['eff'][0] == 'prevent' and s['tgt'] != ('some', ('active',)):
             cv.add('staticPreventBench')
-        if s['eff'][0] == 'prevent' and 'hasAbility' in repr(s['eff'][1]):
-            cv.add('abilityByTool')
     return cv
 
 

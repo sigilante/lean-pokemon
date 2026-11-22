@@ -1536,7 +1536,7 @@ def me6_4 : Card := .pokemon
         effect := .choice (.damage (.const 2)) (.damage (.const 1)),
         gx := false }] }
 
-/-- Cacturne (me6-5). Records: me6-5. Caveats: benchMods. -/
+/-- Cacturne (me6-5). Records: me6-5. Caveats: abilityByTool, benchMods. -/
 def me6_5 : Card := .pokemon
   { name := "Cacturne", stage := .stage1, evolvesFrom := some "Cacnea",
     hp := 13, type := .grass, retreat := 2, weakness := some .fire,

@@ -285,8 +285,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `Filter.ptype` reads the printed type and ignores a Coloring counter, and `Filter.hasAbility`
   reads the printed Abilities and ignores one a Tool gives (the first cannot arise among the
   imported Standard cards, none of which places a Coloring counter; the second can: one imported
-  attack counts the opponent's Pokémon that have Abilities, and imported Tools give triggered
-  ones — whether print counts a Tool's effect as the Pokémon's Ability is not settled here);
+  attack counts the opponent's Pokémon that have Abilities, one imported static Ability prevents
+  damage from them, and imported Tools give triggered ones — whether print counts a Tool's effect
+  as the Pokémon's Ability is not settled here, and every imported term that reads
+  `Filter.hasAbility` carries the importer's caveat `abilityByTool`);
   there are no other reads of the damage on Benched Pokémon (no tests or counts of it), none of
   Poison strength, of HP ("if it has full
   HP", "remaining HP"), of the lingering modifiers in effect, or of the turn's history beyond
