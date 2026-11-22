@@ -288,7 +288,21 @@ for decks with no Special Energy card. Witnesses in `Pokemon/Special.lean`. Chan
 No theorem statement changed in text; `Move.attach`, `Move.attachBench`, `ZStep.attachActive` and
 `ZStep.attachBench` now range over Special Energy too (their `t` is an `EnergyCard`). The
 measurement for idea A (attachments as one kind) found 3 to 4 of the 19 riders expressible by an
-existing mechanism (S18 §A3), so the generalisation was not made.
+existing mechanism (S18 §A3), so the generalisation was not made. Part B tested triggers as
+observations (the Poet's ideas 1 and 2): `Pokemon/Observe.lean` defines `OMove ev obs`, a `Move`
+followed by firing the triggers `obs` reads off the skeletons (`GameState.skel`: damage, Poison
+strength and stores erased) of the move's two end states, for a move from a `Settled` state that
+leaves the game going, and proves, for every `ev` and `obs`, the counterparts of `Move.clamp_sim`,
+`Reach.finite`, `Move.xclamp_sim`, `Reach.xclamp_bisim`, `StoreSafe.reach_boundedStores`,
+`StoreSafe.xfinite`, `Move.exists_move`, `Move.wellFormed` and `Move.unsettled_acc`, from the
+existing theorems and the existing `Fire` lemmas; the side conditions are that the triggers are in
+the fragment (existence) and, for the store bound, recycle nothing. `Pokemon/ObserveT3.lean`
+instantiates it for "your opponent's Active Pokémon moves to the Bench during their turn"
+(`TrigEvent.oppBenched`, Magcargo sv5-29), about 45 lines of definitions and proofs beyond the
+generic result, with witnesses (a retreat and a Switch fire it, an attachment does not, the trigger
+cannot be declined). `Move` and `Reach` are unchanged: the integration was not done (S18 §B3), so
+the model's play fires no such trigger (Known gaps). `TrigEvent` gained the constructor
+`oppBenched`; no theorem statement changed.
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

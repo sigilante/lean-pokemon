@@ -1059,6 +1059,12 @@ opponent's Active Pokémon (`counters`, `inflict`, `discardEnergy .opp .active`)
 inductive TrigEvent where
   | damaged
   | koByAttack
+  /-- (milestone MV5, Part B; survey S17 T3, S18 §B) "Whenever your opponent's Active Pokémon moves
+  to the Bench during their turn, …" (Magcargo sv5-29, Mismagius ex me2-36 with `spot = some
+  .active`). `Move` never fires it; the experimental relation `OMove` of `Pokemon/Observe.lean` does,
+  on an observation of a whole move (`obsT3`), not at a place in the rules. "This Pokémon" is not
+  referred to. -/
+  | oppBenched
   deriving DecidableEq
 
 /-- Where "this Pokémon" is when a trigger on the event resolves: in the Active Spot for `damaged`;
@@ -1066,6 +1072,7 @@ nowhere in play for `koByAttack` (it has been Knocked Out), so an effect on it i
 def TrigEvent.place : TrigEvent → Option Spot
   | .damaged => some .active
   | .koByAttack => none
+  | .oppBenched => none
 
 /-- The use limit of an Ability (survey S9 part 2, `ability_kind`): "Once during your turn, you
 may …" (`once`: once per turn for each Pokémon in play that has it); "As often as you like during

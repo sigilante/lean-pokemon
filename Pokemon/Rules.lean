@@ -749,6 +749,24 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   printed condition (`cond`) or an effect outside the fragment never fires. The trigger chains end
   (`KOMove.acc`, `Move.unsettled_acc`): every Knock Out takes a Prize card, and nothing returns
   one; with Prize-changing triggers (absent) that argument fails;
+* triggers of other events as observations (milestone MV5, Part B; survey S18 §B): `Move` fires no
+  trigger on "your opponent's Active Pokémon moves to the Bench during their turn" (`TrigEvent.oppBenched`;
+  Magcargo sv5-29, Mismagius ex me2-36): an Ability with that use is never used by `Move`. The
+  experiment of `Pokemon/Observe.lean` defines a separate relation, `OMove` (a `Move` followed by
+  firing the triggers an observation reads off the move's two end states), proves for every
+  observation of the states' skeletons the counterparts of the simulation, finiteness, store-bound,
+  existence and Knock Out termination theorems, and instantiates it for this event
+  (`Pokemon/ObserveT3.lean`, `obsT3`). `Reach` does not use `OMove`: the integration into `Move` is
+  not done (S18 §B3). Departures of the observation, if integrated: one firing per move however often
+  the Active Pokémon moved (a subset of print where it matters; no Standard effect moves the same
+  player's Active Pokémon twice in one resolution); without Pokémon identity, a Pokémon that moved
+  up earlier in the turn and is swapped for a copy (same top card, cards under it and Tools) fires
+  nothing (a subset), and an Active Pokémon Knocked Out in mid-effect and replaced by a copy that
+  moved up earlier in the turn, with another copy on the Bench, fires (a superset); the trigger
+  resolves after the whole move, not at the switch (a different order of the same effects);
+  "place 2 damage counters on that Pokémon" (Team Rocket's Dugtrio me2pt5-101) is not expressible
+  (no Bench counters in the fragment); and the store bound needs no `oppBenched` trigger to recycle
+  (`GameState.T3Quiet`, a clause 3 (a) `StoreSafe` does not have);
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
   is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that
