@@ -41,9 +41,7 @@ theorem dealtBy_resist_anti {n : Nat} {w : Bool} {r r' : Nat} (h : r ≤ r') (c 
   · exact Nat.le_refl _
   · split
     · exact Nat.le_refl _
-    · split
-      · exact Nat.le_refl _
-      · cases w <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
+    · cases w <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
 
 /-- Effects on the defender that do not raise the damage never raise it: the empty store (no
 reduction, no prevention) gives at least as much as any store with no step-5 increase (milestone
@@ -63,10 +61,8 @@ theorem dealtBy_le_empty (n : Nat) (w : Bool) (r : Nat) (c o : Store) (s : Nat)
     rw [e1, e2, e3, e4]
     split
     · exact Nat.zero_le _
-    · simp only [Bool.false_eq_true, ↓reduceIte, Nat.sub_zero, Nat.add_zero]
-      split
-      · exact Nat.zero_le _
-      · exact Nat.sub_le _ _
+    · simp only [Nat.sub_zero, Nat.add_zero]
+      exact Nat.sub_le _ _
 
 /-- **Switching off Resistance or the effects on the defender never lowers the damage** (with
 Weakness kept), when no step-5 increase is in effect on the defender (milestone MV6: switching off

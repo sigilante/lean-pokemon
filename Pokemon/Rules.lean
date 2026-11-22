@@ -369,7 +369,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   printed Item, Iron Defender; the model over-approximates them).
   Modifiers belong to a player, not to one Pokémon: "this Pokémon takes 30 less damage during
   your opponent's next turn" protects whichever Pokémon that player has Active, and does not
-  end when the Pokémon leaves the Active Spot or follow it to the Bench. Damage done by an
+  end when the Pokémon leaves the Active Spot or follow it to the Bench, nor end when it evolves
+  (print: "if an Active Pokémon moves to the Bench, all effects of attacks go away", 2026 p. 20;
+  "Any effects of attacks … end when it evolves", 2026 p. 11). Damage done by an
   attack is computed once per attack, by the rulebook's steps (`dealtBy`, 2023 p. 20): nothing
   if the base damage `n` is 0; otherwise `n` plus the attacker's bonus (step 2), doubled under
   Weakness (step 3), less Resistance (step 4), less the defender's reduction (step 5), each
@@ -381,19 +383,21 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   step-5 increase of the damage to the player's Pokémon (`Mod.expose`, `Mods.more`) are stored
   amounts too, added up without limit, bounded by the clauses of `StoreSafe` like the bonus and the
   reduction (`Mod.isAmt`), capped by the capped clamp and excluded from tame decks (`Mod.plain`).
-  A departure: a penalty that brings the damage after step 2 to 0 stops the calculation, so a
-  step-5 increase then adds nothing. The rulebook says "Stop if the base damage is 0" (2026 p. 20)
-  and defines base damage in step 1 as the number printed on the attack (or computed by its text),
-  so read literally a penalised attack with positive base damage goes on to step 5: an attack for
-  30 under a 30 penalty against a Pokémon that takes 50 more does 0 here and 50 by the literal
-  text. The model does less damage than print in that case and agrees elsewhere. Readings: inside step 5 the increase is added before the reduction is subtracted (the rulebook
-  gives no order; the other order gives more damage when the reduction exceeds the damage after
-  Resistance); each subtraction stops at 0, so a Resistance larger than the damage leaves 0 to which
-  the increase is added (carrying a negative value over, which step 6's "If the damage is 0 or less"
-  may suggest, would give less). Like every lingering modifier they belong to a player: "attacks used
-  by the Defending Pokémon do 30 less damage" also weakens the Pokémon that replaces it in the Active
-  Spot, and "the Defending Pokémon takes 50 more damage" also exposes its replacement (more damage
-  than print in the second case, less in the first: the departure in both directions listed above).
+  The stop test is on the base damage as the rulebook defines it ("Stop if the base damage is 0",
+  2026 p. 20, where step 1's base damage is the number printed on the attack or computed by its
+  text): a penalty that brings the damage after step 2 to 0 does not stop the calculation, so an
+  attack for 30 under a 30 penalty against a Pokémon that takes 50 more does 50
+  (`Defender.cancelled_exposed`). Readings: inside step 5 the increase is added before the reduction
+  is subtracted (the rulebook gives no order; the other order gives more damage when the reduction
+  exceeds the damage after Resistance); each subtraction stops at 0, so a penalty or a Resistance
+  larger than the damage leaves 0 to which the increase is added (carrying a negative value over,
+  which step 6's "If the damage is 0 or less" may suggest, would give less). Like every lingering
+  modifier they belong to a player: "attacks used by the Defending Pokémon do 30 less damage" also
+  weakens the Pokémon that replaces it in the Active Spot, and "the Defending Pokémon takes 50 more
+  damage" also exposes its replacement; both also survive the evolution of the Pokémon they were
+  written against, where print ends "any effects of attacks" on a Pokémon that evolves (2026 p. 11)
+  or moves to the Bench (2026 p. 20). The model does more damage than print in the second case and
+  less in the first: the departure in both directions listed above.
   An attack whose damage "isn't affected
   by any effects on your opponent's Active Pokémon" (milestone MV3, `Ign.fx`) reads the defender's
   store as empty and its static reduction as 0: no reduction and no prevention apply to it,

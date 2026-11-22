@@ -160,10 +160,6 @@ CAVEATS = {
                      "owner's next turn, so it cannot evolve then (Known gaps, item on Pokémon put onto the opponent's Bench: "
                      "whether that turn is its first turn in play is not settled; if it is not, the model forbids an "
                      "evolution print allows)",
-    'stopAfterPenalty': "a step-2 penalty (`Mod.weaken`) that brings an attack's damage to 0 stops the calculation in the "
-                        "model, so a step-5 increase (`Mod.expose`) then adds nothing, where the rulebook's base damage is "
-                        "the printed number and the literal text goes on to step 5 (Known gaps, lingering modifiers: 'A "
-                        "departure: a penalty that brings the damage after step 2 to 0 stops the calculation')",
     'failToFind': "a mandatory take from a private window ('a Basic Energy card you find there' among the top cards of the "
                   "player's own deck) is `Qty.most`, which must take a passing card when there is one: fewer outcomes than "
                   "the usual practice of failing to find in a private window, which the 2026 rulebook does not state "
@@ -215,7 +211,6 @@ CAVEAT_DIRECTION = {
     'printedRetreat': 'both',      # a static increase is not counted (less damage than print for "more", more for
                                    # "less"); a static decrease the other way
     'oppBenchFresh': 'forbids some',  # an evolution in the owner's next turn, if print allows it
-    'stopAfterPenalty': 'forbids some',  # the literal damage of a cancelled attack against an exposed Pokémon
     'failToFind': 'forbids some',  # declining to take a card the player found in a private window
     'abilityByTool': 'both',       # a Tool-given Ability is not read: a smaller count than print may give (the
                                    # printed amount is absent), or damage that print may prevent (allows more)
@@ -2715,7 +2710,7 @@ class Parser:
 # Defender modifiers (Pokemon/Defender.lean): "attacks used by the Defending Pokémon do N less damage (before …)" is
 # `linger .opp .next (.weaken n)`; "the Defending Pokémon takes N more damage from attacks (after …)" during your next
 # turn is `linger .opp .after (.expose n)`; "this Pokémon takes N more damage" during the opponent's next turn is
-# `linger .own .next (.expose n)`. All carry `perPokemon` (modifiers belong to a player) and `stopAfterPenalty`; the
+# `linger .own .next (.expose n)`. All carry `perPokemon` (modifiers belong to a player); the
 # penalty also `benchMods` (print weakens the Defending Pokémon's attack damage to Benched Pokémon too).
 
 def look(w, src, f, q, into, rest):
@@ -3018,19 +3013,19 @@ def chain_or(fs):
 @rule('ling-weaken-defending', r"During your opponent's next turn, attacks used by the Defending Pokémon do (\d+) less damage "
       r"\(before applying Weakness and Resistance\)\.", 'A', 'linger opp next (weaken n)')
 def _(m, ctx):
-    return Eff(('linger', OPP, ('next',), ('weaken', counters(m.group(1)))), {'perPokemon', 'benchMods', 'stopAfterPenalty'})
+    return Eff(('linger', OPP, ('next',), ('weaken', counters(m.group(1)))), {'perPokemon', 'benchMods'})
 
 
 @rule('ling-expose-defending', r"During your next turn, the Defending Pokémon takes (\d+) more damage from attacks "
       r"\(after applying Weakness and Resistance\)\.", 'A', 'linger opp after (expose n)')
 def _(m, ctx):
-    return Eff(('linger', OPP, ('after',), ('expose', counters(m.group(1)))), {'perPokemon', 'stopAfterPenalty'})
+    return Eff(('linger', OPP, ('after',), ('expose', counters(m.group(1)))), {'perPokemon'})
 
 
 @rule('ling-expose-self', r"During your opponent's next turn, this Pokémon takes (\d+) more damage from attacks "
       r"\(after applying Weakness and Resistance\)\.", 'A', 'linger own next (expose n)')
 def _(m, ctx):
-    return Eff(('linger', OWN, ('next',), ('expose', counters(m.group(1)))), {'perPokemon', 'stopAfterPenalty'})
+    return Eff(('linger', OWN, ('next',), ('expose', counters(m.group(1)))), {'perPokemon'})
 
 
 # milestone MV6: "During your next turn, this Pokémon's X attack does N more damage (before applying Weakness and

@@ -201,7 +201,7 @@ def me55_109 : Card := .pokemon
         effect := .move .own (.top 2) .discard .any .all,
         gx := false }] }
 
-/-- Jangmo-o (me55-110). Records: me55-110. Caveats: perPokemon, stopAfterPenalty. -/
+/-- Jangmo-o (me55-110). Records: me55-110. Caveats: perPokemon. -/
 def me55_110 : Card := .pokemon
   { name := "Jangmo-o", stage := .basic, evolvesFrom := none,
     hp := 7, type := .dragon, retreat := 1, weakness := none,

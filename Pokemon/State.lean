@@ -538,7 +538,7 @@ def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
 
-/-- **The damage calculation** (rulebook 2023 p. 20, "Figuring out how many damage counters to
+/-- **The damage calculation** (rulebook 2026 p. 20; the 2023 edition has the same steps on p. 20, "Figuring out how many damage counters to
 place"; the same in the 2024 rulebook, survey S8 F2), for an attack whose base damage is `n`
 counters, against a Defending Pokémon that is weak to the attacker (`weak`) and has Resistance
 `resist` to it:
@@ -547,13 +547,13 @@ counters, against a Defending Pokémon that is weak to the attacker (`weak`) and
    next to it, the attack text will tell you how much damage to do." That is `n` (`Amt`).
 2. "Figure out damage effects on your Active Pokémon based on Trainer cards or any other
    relevant effects. … Stop if the base damage is 0 (or if the attack does not do any damage at
-   all). Otherwise, keep going." If `n = 0` the result is 0; otherwise the attacker's damage
-   bonus is added and (milestone MV6) its step-2 penalty (`Mod.weaken`, "attacks used by the
-   Defending Pokémon do 30 less damage (before applying Weakness and Resistance)") subtracted,
-   stopping at 0; if that leaves 0, the calculation stops (a departure, listed in the Known gaps: the model
-   applies "Stop if the base damage is 0" after step 2's effects, where the rulebook's base damage
-   is the printed number, so a penalty that cancels the damage also
-   cancels the defender's step-5 increase).
+   all). Otherwise, keep going." The base damage is the number of step 1, `n`, so the stop test is
+   on `n` alone (2026 p. 20): if `n = 0` the result is 0. Otherwise the attacker's damage bonus is
+   added and (milestone MV6) its step-2 penalty (`Mod.weaken`, "attacks used by the Defending
+   Pokémon do 30 less damage (before applying Weakness and Resistance)") subtracted, stopping at 0:
+   the running damage is `max 0 (n + bonus - minus)`. A penalty that brings it to 0 does not stop
+   the calculation, since the base damage is not 0: the later steps still apply, so a step-5
+   increase on the defender is still added.
 3. "Increase the damage by the amount next to your opponent's Active Pokémon's Weakness, if it
    has Weakness to your Active Pokémon's type." Weakness ×2 doubles.
 4. "Reduce the damage by the amount next to your opponent's Active Pokémon's Resistance, if it
@@ -564,22 +564,23 @@ counters, against a Defending Pokémon that is weak to the attacker (`weak`) and
    reduction subtracted; damage prevention makes it 0. The rulebook gives no order among step-5
    effects; adding the increase before the reduction is the model's reading (the other order
    differs only when the reduction exceeds the damage after Resistance).
-6. "For each 10 damage of the final attack, put 1 damage counter on the affected Pokémon. If
-   the damage is 0 or less, don't put on any damage counters!" Amounts are in counters, and
-   subtraction stops at 0.
+6. "For each 10 damage of the final attack, place 1 damage counter on the affected Pokémon. If
+   the damage is 0 or less, don't place any damage counters!" (2026 p. 20). Amounts are in
+   counters. From this step the model takes only that a final damage of 0 places nothing; it is
+   not a second stop test, so a running damage of 0 before step 5 is still increased there.
 
 Units: one counter is 10 damage, so Resistance −30 is 3. Prevention ("prevent all damage done
-to this Pokémon by attacks") is read in step 5, as an effect on the Defending Pokémon. Step 2's
-stop is applied to the base damage as the text computes it (`n`), so an attack whose text gives
-0 ("10× the number of heads", no heads) also stops. Truncation: steps 4 and 5 each stop at 0, so
-a Resistance larger than the damage leaves nothing for step 5 to remove. The rulebook does not
-say whether a negative intermediate damage carries over; with only subtractions after step 4 the
-result is 0 either way (since milestone MV6 an increase can follow Resistance: a Resistance larger
-than the damage then leaves 0, to which the increase is added, where carrying a negative value over
-would give less). -/
+to this Pokémon by attacks") is read in step 5, as an effect on the Defending Pokémon; since it
+makes the result 0 whatever the other step-5 effects, it is tested first. Step 2's stop is
+applied to the base damage as the text computes it (`n`), so an attack whose text gives 0 ("10×
+the number of heads", no heads) also stops. Flooring (a documented reading): each subtraction (the
+step-2 penalty, Resistance at step 4, the reduction at step 5) stops at 0, so a penalty or a
+Resistance larger than the damage leaves 0, to which a later increase (Weakness doubles 0 to 0; the
+step-5 increase) is added. Step 6's "0 or less" may suggest that a negative intermediate damage
+carries over, which would give less where an increase follows a subtraction that went below 0; with
+only subtractions after it the result is 0 either way. -/
 def dealtBy (n : Nat) (weak : Bool) (resist : Nat) (own opp : Store) : Nat :=
   if n = 0 then 0 else if opp.live.prevent then 0 else
-    if n + own.live.bonus - own.live.minus = 0 then 0 else
     (((if weak then 2 * (n + own.live.bonus - own.live.minus)
       else n + own.live.bonus - own.live.minus) - resist) + opp.live.more) - opp.live.reduce
 

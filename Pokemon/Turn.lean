@@ -62,7 +62,10 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
 
-/-- **Base damage 0 does no damage**, whatever the bonuses, reductions and prevention, and
+/-- **Base damage 0 does no damage**, whatever the bonuses, reductions and prevention (the
+rulebook's stop sentence follows "add that in", so a bonus on the attacker does not rescue an attack
+whose base damage is 0; a reading in which the bonus counted before the stop test would give the
+bonus as damage), and
 whatever the Weakness and Resistance. -/
 theorem dealtBy_zero (weak : Bool) (resist : Nat) (own opp : Store) :
     dealtBy 0 weak resist own opp = 0 := rfl

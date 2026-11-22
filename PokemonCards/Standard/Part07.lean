@@ -867,7 +867,7 @@ def me1_104 : Card := .pokemon
         effect := .damage (.add (.const 20) (.many (.const 5))),
         gx := false }] }
 
-/-- Buneary (me1-107). Records: me1-107. Caveats: benchMods, perPokemon, stopAfterPenalty. -/
+/-- Buneary (me1-107). Records: me1-107. Caveats: benchMods, perPokemon. -/
 def me1_107 : Card := .pokemon
   { name := "Buneary", stage := .basic, evolvesFrom := none,
     hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
@@ -1213,7 +1213,7 @@ def me2_31 : Card := .pokemon
         effect := .choice (.damage (.const 14)) (.damage (.const 7)),
         gx := false }] }
 
-/-- Pawmi (me2-32). Records: me2-32. Caveats: benchMods, perPokemon, stopAfterPenalty. -/
+/-- Pawmi (me2-32). Records: me2-32. Caveats: benchMods, perPokemon. -/
 def me2_32 : Card := .pokemon
   { name := "Pawmi", stage := .basic, evolvesFrom := none,
     hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,

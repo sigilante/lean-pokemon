@@ -354,7 +354,7 @@ def sv9_132 : Card := .pokemon
         effect := .move .own (.top 2) .hand .any .all,
         gx := false }] }
 
-/-- Hop's Rookidee (sv9-133). Records: sv9-133. Caveats: benchMods, perPokemon, stopAfterPenalty. -/
+/-- Hop's Rookidee (sv9-133). Records: sv9-133. Caveats: benchMods, perPokemon. -/
 def sv9_133 : Card := .pokemon
   { name := "Hop's Rookidee", stage := .basic, evolvesFrom := none,
     hp := 6, type := .colorless, retreat := 1, weakness := some .lightning,
