@@ -78,8 +78,9 @@ theorem Src.count_set (src : Src) (r : List Card) (s : PlayerState) (x : Card) :
     List.count x (src.set r s).allCards + List.count x (src.get s) =
       List.count x s.allCards + List.count x r := by
   have := count_take_drop (match src with | .top n => n | _ => 0) s.deck x
+  have h2 := count_take_drop (match src with | .bottom n => s.deck.length - n | _ => 0) s.deck x
   cases src <;>
-    simp only [Src.set, Src.get, PlayerState.allCards, List.count_append] at this ⊢ <;> omega
+    simp only [Src.set, Src.get, PlayerState.allCards, List.count_append] at this h2 ⊢ <;> omega
 
 /-- Putting cards at a destination adds them to the player's cards. -/
 theorem Put.count {d : Dst} {t : List Card} {s s' : PlayerState} (h : Put d t s s') (x : Card) :
@@ -114,6 +115,11 @@ theorem ZStep.setZones {e : Effect} {s s' : PlayerState} (h : ZStep e s s') : s.
   | @attachActive w src f tf s r t a hs ha ht => cases src <;> rfl
   | @attachBench w src f tf s r t q b₁ b₂ hs hb ht => cases src <;> rfl
   | @putBench w src f s r p hs hst hhp hb => cases src <;> rfl
+  | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
+      cases hp with
+      | put hp => cases hp <;> cases hr <;> cases src <;> rfl
+      | bench _ _ => cases hr <;> cases src <;> rfl
+      | attach _ => cases hr <;> cases src <;> rfl
   | _ => rfl
 
 /-- The counts of the cards in a Pokémon's card list. -/
@@ -128,6 +134,44 @@ theorem count_benchCardList_append (a b : List InPlay) (x : Card) :
   induction a with
   | nil => simp only [List.nil_append, benchCardList, List.count_nil, Nat.zero_add]
   | cons p ps ih => simp only [List.cons_append, benchCardList, List.count_append, ih]; omega
+
+/-! ## Windows (milestone MV6) -/
+
+/-- Dealing Energy cards onto Pokémon adds them to the cards of the Pokémon in play. -/
+theorem Deal.count {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : List InPlay}
+    (h : Deal tf t a b a' b') (x : Card) :
+    List.count x (optCardList a') + List.count x (benchCardList b') =
+      List.count x (optCardList a) + List.count x (benchCardList b) + List.count x t := by
+  induction h with
+  | nil => simp only [List.count_nil, Nat.add_zero]
+  | active _ _ ih =>
+      simp only [optCardList, InPlay.count_cardList, InPlay.addEnergy, List.count_cons] at ih ⊢
+      omega
+  | bench _ _ ih =>
+      simp only [count_benchCardList_append, benchCardList, List.count_append,
+        InPlay.count_cardList, InPlay.addEnergy, List.count_cons] at ih ⊢
+      omega
+
+theorem benchCardList_ofBasic : ∀ l : List PokemonCard,
+    benchCardList (l.map InPlay.ofBasic) = l.map Card.pokemon
+  | [] => rfl
+  | p :: l => by
+      simp only [List.map_cons, benchCardList, benchCardList_ofBasic l]
+      rfl
+
+/-- Placing the cards taken from a window adds them to the player's cards. -/
+theorem Place.count {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s')
+    (x : Card) : List.count x s'.allCards = List.count x s.allCards + List.count x t := by
+  cases h with
+  | put h => exact h.count x
+  | bench _ _ =>
+      simp only [PlayerState.allCards, List.count_append, count_benchCardList_append,
+        benchCardList_ofBasic]
+      omega
+  | attach hd =>
+      have := hd.count x
+      simp only [PlayerState.allCards, List.count_append] at this ⊢
+      omega
 
 /-- **A zone step permutes the player's cards**: every count is unchanged. -/
 theorem ZStep.count {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (x : Card) :
@@ -203,6 +247,13 @@ theorem ZStep.count {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (x : Ca
         benchCardList, InPlay.count_cardList, List.count_nil]
       omega
   | toolsNone => rfl
+  | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
+      have h1 := hs.count x
+      have h2 := Src.count_set src [] s x
+      have h3 := hr.count x
+      have h4 := hp.count x
+      simp only [List.count_nil, Nat.add_zero] at h2
+      omega
 
 theorem ZStep.perm {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
     s'.allCards.Perm s.allCards :=

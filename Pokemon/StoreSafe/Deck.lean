@@ -362,9 +362,13 @@ theorem Card.amt_tw : TrainerWeight Card.amt := ⟨fun _ => rfl, fun _ => rfl⟩
 
 /-- The filters of an effect's zone moves out of a discard pile: what it can recycle to the hand
 or the deck. (Attaching Energy or benching a Basic Pokémon from a discard pile moves an Energy or
-a Pokémon card, which carries no Trainer amount.) -/
+a Pokémon card, which carries no Trainer amount.) A window on a discard pile (`Effect.look`,
+milestone MV6) takes the whole pile off: with the other cards put back in the discard pile it
+recycles what its filter admits; with them put anywhere else it may recycle any card (`Filter.any`).
+A window on a deck or a hand recycles nothing. -/
 def Effect.recFilters : Effect → List Filter
   | .move _ .discard _ f _ => [f]
+  | .look _ .discard f _ _ rest => if rest = .discard then [f] else [.any]
   | .ite _ a b => a.recFilters ++ b.recFilters
   | .seq a b => a.recFilters ++ b.recFilters
   | .choice a b => a.recFilters ++ b.recFilters
@@ -389,6 +393,13 @@ theorem Effect.recOk_nil {w : Card → Nat} {C : List Card} {e : Effect} (h : e.
 theorem Put.wsum_discard (w : Card → Nat) {d : Dst} {t : List Card} {x y : PlayerState}
     (h : Put d t x y) : wsum w x.discard ≤ wsum w y.discard := by
   cases h <;> first | exact Nat.le_refl _ | (simp only [wsum_append]; omega)
+
+theorem Place.wsum_discard (w : Card → Nat) {i : Into} {t : List Card} {x y : PlayerState}
+    (h : Place i t x y) : wsum w x.discard ≤ wsum w y.discard := by
+  cases h with
+  | put hp => exact hp.wsum_discard w
+  | bench _ _ => exact Nat.le_refl _
+  | attach _ => exact Nat.le_refl _
 
 /-- **A zone step lowers the weight of its player's discard pile only by recycling**: if every
 card its recycling filters admit in that discard pile has weight 0, the weight does not drop. -/
@@ -426,6 +437,26 @@ theorem ZStep.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {e : Effect} {
   | discardBench => simp only [wsum_append]; omega
   | toolsActive => simp only [wsum_append]; omega
   | toolsBench => simp only [wsum_append]; omega
+  | @look _ src f q i rest _ s₁ _ t r hs hq hput hp =>
+      have hP := hp.wsum_discard w
+      cases src with
+      | discard =>
+          have he := hs.wsum_eq w
+          simp only [Src.get] at he
+          by_cases hrd : rest = .discard
+          · subst hrd
+            have ht0 : wsum w t = 0 := wsum_zero w fun x hx =>
+              hr f (by simp [Effect.recFilters]) x (hs.mem x hx) (hs.taken x hx)
+            cases hput
+            simp only [Src.set, wsum_append, wsum] at hP
+            omega
+          · have h0 : wsum w s.discard = 0 := wsum_zero w fun y hy =>
+              hr .any (by simp [Effect.recFilters, hrd]) y hy rfl
+            omega
+      | _ =>
+          have h1 := hput.wsum_discard w
+          simp only [Src.set] at h1
+          omega
   | _ => exact Nat.le_refl _
 
 theorem GameState.mem_allCards_of_cur_discard {g : GameState} {x : Card} (hx : x ∈ g.cur.discard) :
@@ -1191,6 +1222,47 @@ theorem PlayerState.abPot_congr {s s' : PlayerState}
     s'.abPot = s.abPot := by
   simp only [PlayerState.abPot]; omega
 
+/-- Dealing Energy cards keeps the weights and the number of the Pokémon in play (milestone MV6). -/
+theorem Deal.abW {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : List InPlay}
+    (h : Deal tf t a b a' b') :
+    abWo a' + abWs b' = abWo a + abWs b ∧ optN a' + b'.length = optN a + b.length := by
+  induction h with
+  | nil => exact ⟨rfl, rfl⟩
+  | @active e xs p b a' b' ht _ ih =>
+      have e' : (p.addEnergy (.energy e)).abW = p.abW := rfl
+      simp only [abWo, optN, e'] at ih ⊢
+      exact ih
+  | @bench e xs a q b₁ b₂ a' b' ht _ ih =>
+      rw [abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := q.addEnergy (.energy e)) rfl] at ih
+      simp only [List.length_append, List.length_cons] at ih ⊢
+      exact ih
+
+/-- Placing the cards taken from a window never raises the potential (milestone MV6): a Pokémon
+put onto the Bench fills a place with an unused Pokémon. -/
+theorem Place.abPot_le {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s') :
+    s'.abPot ≤ s.abPot := by
+  cases h with
+  | put hp =>
+      obtain ⟨_, ha, hb⟩ := hp.fields
+      exact Nat.le_of_eq (PlayerState.abPot_congr (by rw [ha, hb]) (by rw [ha, hb]))
+  | @bench ps s hb hl =>
+      have h1 := optN_le s.active
+      have hw : ∀ l : List PokemonCard, abWs (l.map InPlay.ofBasic) = l.length := by
+        intro l
+        induction l with
+        | nil => rfl
+        | cons p l ih =>
+            simp only [List.map_cons, abWs, ih, List.length_cons]
+            have : (InPlay.ofBasic p).abW = 1 := rfl
+            omega
+      simp only [benchLimit] at hl
+      simp only [PlayerState.abPot, abWs_append, hw, List.length_append, List.length_map,
+        benchLimit]
+      omega
+  | attach hd =>
+      obtain ⟨h1, h2⟩ := hd.abW
+      exact Nat.le_of_eq (PlayerState.abPot_congr h1 h2)
+
 /-- **A zone step never raises its player's potential**; putting a Basic Pokémon onto the Bench
 fills a place with an unused Pokémon. -/
 theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
@@ -1257,6 +1329,11 @@ theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
         (by simp only [hb, abWs_split (b₁ := b₁) (b₂ := b₂) (q := p) (q' := { p with tools := [] })
               rfl])
         (by simp [hb]))
+  | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
+      obtain ⟨_, ha, hb⟩ := hr.fields
+      have e : s₁.abPot = s.abPot := PlayerState.abPot_congr
+        (by rw [ha, hb, Src.set_active, Src.set_bench]) (by rw [ha, hb, Src.set_active, Src.set_bench])
+      exact e ▸ hp.abPot_le
   | toolsNone => exact Nat.le_refl _
 
 /-- Moving a damage counter keeps the weights and the number of Pokémon in play. -/

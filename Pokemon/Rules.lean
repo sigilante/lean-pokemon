@@ -777,7 +777,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   deck or shuffled into it, "up to `n`", exactly `n` or all of them; Energy is attached from a
   zone to the Active Pokémon or a Benched one, Basic Pokémon are put onto the Bench from a zone,
   Energy is discarded from a Pokémon or moved between a player's Pokémon. Simplifications and
-  departures: "up to `n`" (`Qty.upTo n`, `Qty.ok`: any number of cards from 0 to `n`) allows 0 in
+  departures (since milestone MV6 also the bottom `n` cards of the deck, `Src.bottom`, and "`n`, or
+  all that pass if fewer", `Qty.most`): "up to `n`" (`Qty.upTo n`, `Qty.ok`: any number of cards
+  from 0 to `n`) allows 0 in
   every effect, attacks, Item and Supporter cards, Abilities, Stadiums and triggers alike, whereas
   the rulebook allows 0 only in attacks ("For effects of attacks … between 0 and the maximum. For
   other effects (such as the effects of Trainer cards and Abilities), you can choose any number
@@ -831,6 +833,32 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Dudunsparce, Misty's Psyduck in S10), devolution, evolution by effect, switching a card in play
   with one in the discard pile (Transformation Tome, Ogre's Mask), Prize-card moves other than
   taking them, the Lost Zone, and "attach to each of" a varying set;
+* windows (milestone MV6, survey S19 §A, `Pokemon/Look.lean`): `Effect.look w src f q i rest` takes
+  the whole window `src.get` off its source at once (the top or bottom `n` cards of the deck as they
+  are when the effect starts, `Src.bottom` being new; or a whole deck, hand or discard pile), takes
+  from it cards passing `f`, as many as `q` says (`Qty.most n`, new: `n`, or all that pass if fewer,
+  "discard a card you find there"), puts the other cards at `rest` and then places the taken cards
+  (`Into`: a zone, the Bench, attached to the player's Pokémon "in any way you like"). Proved exact
+  in the sense of this model (no hidden information; a shuffle and "any order" are any permutation;
+  a random choice is a nondeterministic one): every resolution partitions the window as it was when
+  the effect started (`ZStep.look_window`) and every such partition is a resolution
+  (`ZStep.look_complete`). It closes the moving-window refusals: a sequence of one-card `putBench` or
+  `attach` on `.top n` reads the top `n` of the deck as it is at each step (`moving_window`), the
+  window does not (`fixed_window`). Departures and limits: the other cards are put first and the
+  taken cards second (so "Search your deck for a card. Shuffle your deck, then put that card on top
+  of it", Crobat me4-51, is exact; no printed card needs the other order); `Into.bench` takes Basic
+  Pokémon cards only and all of them must fit on the Bench (with `upTo` the player takes fewer, which
+  is "you may put any number"; with `Qty.most` and a full Bench the effect has no resolution, where
+  print would put nothing: an importer writes `upTo` there); `Into.attach tf` attaches to any of the
+  player's Pokémon passing `tf`, so "attach … to this Pokémon" from an on-play Ability (Mega Rayquaza
+  ex me6-84) is a superset; "up to" allows 0 here as everywhere (item above); the player chooses
+  where print lets the opponent choose ("Your opponent shuffles the other cards back into their
+  deck": any permutation either way). A window on a discard pile is a recycler (`Effect.recFilters`:
+  its filter when the other cards go back to the discard pile, `Filter.any` otherwise); on a deck or a
+  hand it is not. Not expressible: one card of each of two kinds ("a Pokémon and a Trainer card",
+  Drayton sv8-174), swaps ("Switch a card from your hand with the top card of your deck", Gumshoos
+  me1-110), a number of cards read from the state ("draw a card for each …"), and the Future and
+  Ancient subtypes;
 * one-turn history (milestone MV2, survey S13 §A, `Pokemon/History.lean`): a per-player Knock Out
   record (`KOHist`, read by `Count.koLast`), a per-Pokémon "moved from the Bench to the Active
   Spot this turn" flag (`InPlay.movedUp`, `Test.movedUp`) and "evolved this turn" (`Test.evolved`,

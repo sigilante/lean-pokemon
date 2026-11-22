@@ -535,6 +535,22 @@ theorem CMove.active_pokemonCards {f : Filter} {noKO : Bool} {a a' : Option InPl
     a'.map InPlay.pokemonCards = a.map InPlay.pokemonCards := by
   cases h <;> rfl
 
+/-- Dealing Energy cards leaves the same Pokémon in the Active Spot (milestone MV6). -/
+theorem Deal.active_pokemonCards {tf : Filter} {t : List Card} {a a' : Option InPlay}
+    {b b' : List InPlay} (h : Deal tf t a b a' b') :
+    a'.map InPlay.pokemonCards = a.map InPlay.pokemonCards := by
+  induction h with
+  | nil => rfl
+  | active _ _ ih => exact ih
+  | bench _ _ ih => exact ih
+
+theorem Place.active_pokemonCards {i : Into} {t : List Card} {s s' : PlayerState}
+    (h : Place i t s s') : s'.active.map InPlay.pokemonCards = s.active.map InPlay.pokemonCards := by
+  cases h with
+  | put hp => rw [hp.fields.2.1]
+  | bench _ _ => rfl
+  | attach hd => exact hd.active_pokemonCards
+
 /-- A zone step leaves the same Pokémon (top card and the cards under it) in its player's Active
 Spot; it may attach or discard Energy there. -/
 theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
@@ -548,6 +564,8 @@ theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e
   | toolsActive ha => rw [ha]; rfl
   | moveAB ha => rw [ha]; rfl
   | moveBA ha => rw [ha]; rfl
+  | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
+      rw [hp.active_pokemonCards, hr.fields.2.1, Src.set_active]
   | _ => rfl
 
 /-- An effect that does not switch the player's own Active Pokémon leaves the same Pokémon in the

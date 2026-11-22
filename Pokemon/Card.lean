@@ -369,6 +369,10 @@ inductive Src where
   | top (n : Nat)
   | hand
   | discard
+  /-- the bottom `n` cards of the deck (milestone MV6: "Look at the bottom 7 cards of your deck", Dusk
+  Ball sv8-175; "Draw 3 cards from the bottom of your deck", Rabsca ex sv10-25); all of them if fewer
+  are left -/
+  | bottom (n : Nat)
   deriving DecidableEq
 
 /-- Where a zone move puts the cards it takes: the hand, the discard pile, the top or the bottom
@@ -389,6 +393,22 @@ inductive Qty where
   | upTo (n : Nat)
   | exactly (n : Nat)
   | all
+  /-- (milestone MV6) `n` cards, or every card that passes if fewer pass: "Discard a card you find
+  there" (Luxray ex sv6-68, after "Your opponent reveals their hand"), "reveal an Energy card you find
+  there, and put it into your hand" (Delibird me6-79), "Search your deck for a card" in an Ability
+  (at least 1, 2026 p. 21). It always has a resolution (`Qty.canFail` is false), unlike `exactly` -/
+  | most (n : Nat)
+  deriving DecidableEq
+
+/-- Where the cards taken from a window go (milestone MV6, `Effect.look`): to a zone (`put d`, as a
+zone move's destination); onto the player's Bench (`bench`: each card a Basic Pokémon card, as many as
+the Bench has room for: "You may put any number of Pokémon you find there onto your Bench", Reuniclus
+sv5-72); or attached, each card an Energy card, to any of the player's Pokémon in play whose card
+passes `tf`, one card at a time, "in any way you like" (`attach tf`: Lapras ex svp-164). -/
+inductive Into where
+  | put (d : Dst)
+  | bench
+  | attach (tf : Filter)
   deriving DecidableEq
 
 /-- Which of a player's Pokémon in play an effect acts on: the Active Pokémon, or one Benched
@@ -683,6 +703,21 @@ inductive Effect where
   Active Pokémon among the targets ("120 damage to 2 of your opponent's Pokémon") it is a derived
   form, `Effect.hitSome`. Only attacks may use the damage form (`benchHitFree`) -/
   | benchSome (w : Whose) (m : Nat) (f : Filter) (dmg : Bool) (n : Nat)
+  /-- **look at a fixed window and choose** (milestone MV6): take the whole window `src.get` of the
+  `w` player's zones off its source at once (the top or bottom `n` cards of the deck as they are when
+  the effect starts, the whole deck, hand or discard pile), take from it cards that pass `f`, as many
+  as `q` says, put the other cards of the window at `rest`, and then put the taken cards `into` their
+  place (`Into`: a zone, the Bench, or attached to Pokémon). "Look at the top 6 cards of your deck,
+  reveal an Energy card you find there, and put it into your hand. Shuffle the other cards and put
+  them on the bottom of your deck" (Delibird me6-79) is `look .own (.top 6) .energy (.most 1) (.put
+  .hand) .bottom`; "Look at the top 5 cards of your deck and discard any number of them. Put the other
+  cards back in any order" (Raifort sv6-161) is `look .own (.top 5) .any (.upTo 5) (.put .discard)
+  .top`; "Look at the top 4 cards of your deck and attach any number of Basic Metal Energy cards you
+  find there to your Pokémon in any way you like. Shuffle the other cards and put them on the bottom of
+  your deck" (Metang svp-90) is `look .own (.top 4) (.energyOf .metal) (.upTo 4) (.attach .any)
+  .bottom`. Unlike a sequence of one-card primitives on `.top n`, each of which reads the top `n` of
+  the deck as it is then, the window is read once (semantics `ZStep.look`; `Pokemon/Look.lean`) -/
+  | look (w : Whose) (src : Src) (f : Filter) (q : Qty) (into : Into) (rest : Dst)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -769,7 +804,7 @@ def Test.onOwn : Test → Bool
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
 `selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
 moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
-milestone MV), no test on the player's own Active Pokémon,
+milestone MV; `look .own … (.attach _)`, milestone MV6), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/
@@ -786,6 +821,7 @@ def Effect.ownFree : Effect → Bool
   | .discardEnergy .own .active _ _ => false
   | .moveEnergy .own _ => false
   | .moveCounter _ _ => false
+  | .look .own _ _ _ (.attach _) _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
   | .seq a b => a.ownFree && b.ownFree
   | .choice a b => a.ownFree && b.ownFree
@@ -842,7 +878,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -931,7 +967,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

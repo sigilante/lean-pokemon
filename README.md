@@ -12,8 +12,8 @@ The deck condition `StoreSafe` was called `Faithful` before 2026-11-22; it was r
 the old name read as "faithful to the printed cards", which it never meant (it only keeps the
 stored damage modifiers bounded).
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 39 constructors) of
-thirty-five primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 40 constructors) of
+thirty-six primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`, milestone MV6 `look`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
@@ -289,6 +289,28 @@ No theorem statement changed in text; `Move.attach`, `Move.attachBench`, `ZStep.
 `ZStep.attachBench` now range over Special Energy too (their `t` is an `EnergyCard`). The
 measurement for idea A (attachments as one kind) found 3 to 4 of the 19 riders expressible by an
 existing mechanism (S18 §A3), so the generalisation was not made.
+Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
+`Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
+(the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
+`Src.bottom`; or a whole deck, hand or discard pile), takes cards passing `f`, as many as `q` says
+(new: `Qty.most n`, "`n`, or all that pass if fewer": "Discard a card you find there"), puts the
+other cards at `rest` (the hand, the discard pile, the top or bottom of the deck in any order, or
+shuffled in) and places the taken cards (`Into`: a zone, onto the Bench, or attached to the player's
+Pokémon "in any way you like"). "Look at the top 6 cards of your deck, reveal an Energy card you find
+there, and put it into your hand. Shuffle the other cards and put them on the bottom of your deck"
+(Delibird me6-79) is `look .own (.top 6) .energy (.most 1) (.put .hand) .bottom`. With no hidden
+information in the model and a shuffle read as any permutation, it is exact: every resolution
+partitions the window as it was when the effect started and every partition is a resolution
+(`ZStep.look_window`, `ZStep.look_complete`, `Pokemon/Look.lean`); unlike one-card primitives on
+`.top n`, which read a window that moves down as cards are taken (`moving_window`, `fixed_window`).
+The derived form "take … into your hand, shuffle the other cards back" of milestone MV is proved
+equal to it (`Run.look_hand_shuffle_iff`). A window is a zone step (`ZStep.look`), so both clamps
+keep it with no new hypothesis (`Place.sim`, `Deal.sim`), it permutes the cards (`ZStep.count`), and
+a window on a discard pile is a recycler for clause 3 of `StoreSafe` (`Effect.recFilters`).
+Witnesses: attacks of Delibird's, Reuniclus's and Metang's shapes as legal moves. Changed
+definitions: `Src`, `Qty`, `Effect` (a constructor each), `Src.get`, `Src.set`, `Qty.ok`,
+`Effect.zSide`, `Effect.ownFree`, `Effect.recFilters`, `ZStep` (a constructor); new `Into`,
+`Place`, `Deal`. No theorem statement changed in text.
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the
