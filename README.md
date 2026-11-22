@@ -654,4 +654,15 @@ the two lists is established by the importer, not by Lean. The
 library lives outside `Pokemon/` because `Pokemon/Audit.lean` requires every module under
 `Pokemon/` to be imported by it.
 
-Licence: MIT (see `LICENSE`).
+## Licence and trademarks
+
+The MIT licence (`LICENSE`) covers the original code, proofs and documentation written for this
+project. Pokémon, the Pokémon Trading Card Game, card names and the text of cards and of the
+rulebook belong to their respective owners (Nintendo, Creatures Inc., GAME FREAK inc. and The
+Pokémon Company) and are not covered by that licence. Where the repository reproduces card names
+or short passages of card or rulebook text (the generated card files, the importer's output
+tables, comments), they are quoted for research and commentary, and no licence to them is granted
+or implied. The project is not affiliated with, sponsored by or endorsed by those owners. The card
+data the importer reads (pokemon-tcg-data) is not distributed here; it comes from that third-party
+dataset under its own terms. This is the authors' statement of intent, not legal advice; see
+`NOTICE`.

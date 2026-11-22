@@ -1,0 +1,21 @@
+lean-pokemon: licence and trademark notice
+
+The MIT licence in LICENSE covers the original code, proofs and documentation written for this
+project. It covers nothing else.
+
+Pokémon, the Pokémon Trading Card Game, the names of cards, and the text of cards and of the
+rulebook belong to their respective owners (Nintendo, Creatures Inc., GAME FREAK inc. and The
+Pokémon Company). They are not covered by the MIT licence. Where this repository reproduces card
+names or short passages of card or rulebook text (the generated card files under
+PokemonCards/Standard/, the importer's output tables under tools/importer/out/, docstrings and
+comments), they are quoted for research and commentary, and no licence to them is granted or
+implied.
+
+This project is not affiliated with, sponsored by or endorsed by Nintendo, Creatures Inc.,
+GAME FREAK inc. or The Pokémon Company.
+
+The card data the importer (tools/importer/) reads is not distributed in this repository. It comes
+from a third-party dataset, pokemon-tcg-data (https://github.com/PokemonTCG/pokemon-tcg-data),
+which is available under its own terms.
+
+This notice is the authors' statement of intent. It is not legal advice.
