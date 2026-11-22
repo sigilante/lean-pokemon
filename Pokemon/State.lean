@@ -538,7 +538,7 @@ def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
 
-/-- **The damage calculation** (rulebook 2023 p. 20, "Figuring out how many damage counters to
+/-- **The damage calculation** (rulebook 2026 p. 20; the 2023 edition has the same steps on p. 20, "Figuring out how many damage counters to
 place"; the same in the 2024 rulebook, survey S8 F2), for an attack whose base damage is `n`
 counters, against a Defending Pokémon that is weak to the attacker (`weak`) and has Resistance
 `resist` to it:
