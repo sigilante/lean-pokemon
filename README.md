@@ -655,9 +655,10 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,320 are imported (966 exactly, 354 with
-caveats) as 1,314 distinct terms, and 841 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.9.0, survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
+damage reduction). Of the pool's 2,161 cards, 1,377 are imported (1,020 exactly, 357 with
+caveats) as 1,370 distinct terms, and 784 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.10.0, which writes the MV4 name filters, counts
+and per-Pokémon attack locks; survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
 turn", "as often as you like") and on-play Abilities are translated when every sentence has a
 rule, since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
 the model's `Static`, and since importer 0.6.0 (milestone M8b) triggered Abilities and Tool text
