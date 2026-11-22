@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.11.0'
+VERSION = '0.12.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -320,7 +320,8 @@ def run(data, out, survey=None):
            + ', '.join(pn + '.cards_nodup' for pn in part_names) + ',\n      '
            + ', '.join('cross_%d_%d' % (i + 1, j + 1) for j in range(len(part_names)) for i in range(j))
            + ', Bool.and_self])\n',
-           '/-- The imported cards that write a lingering damage bonus or reduction (`Effect.writes`), by name. -/',
+           '/-- The imported cards that write a stored amount (`Effect.writes`, `Mod.isAmt`: a damage bonus or reduction, and since\n'
+           'milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`), by name. -/',
            'theorem writers : (all.filter Card.writesAmt).map Card.label = ' + T.lean([recs[0]['name'] for recs, _ in writers])
            + ' := by decide +kernel\n',
            '/-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/',
@@ -424,11 +425,11 @@ def run(data, out, survey=None):
     files['PokemonCards/Standard.lean'] = '\n'.join(src)
 
     # ---------------------------------------------------------------- TSVs
-    rows = [('id', 'name', 'kind', 'status', 'caveats', 'records', 'lean_name', 'static_kinds')]
+    rows = [('id', 'name', 'kind', 'status', 'caveats', 'records', 'lean_name', 'static_kinds', 'vacuous_parts')]
     for recs, r in all_imported:
         rows.append((recs[0]['id'], recs[0]['name'], kind_of(recs[0]), status_of(r), ','.join(sorted(r['caveats'])),
                      ' '.join(x['id'] for x in recs), emit.ident(term_of[id(recs)][0]),
-                     ','.join(static_kinds(r['term']))))
+                     ','.join(static_kinds(r['term'])), '; '.join(vacuous_parts(r['term']))))
     files['tools/importer/out/imported.tsv'] = tsv(rows)
     rows = [('id', 'name', 'kind', 'mechanisms', 'reasons', 'records')]
     for recs, r in not_imp:
@@ -870,9 +871,37 @@ def reduce_gain(term):
     return sum(x['eff'][1] for x in card_statics(term) if x['eff'][0] == 'reduce')
 
 
+def reads_special(x):
+    """Does the term read a Special Energy card (`specialEnergy`, or the name of a Special Energy card)?"""
+    if isinstance(x, tuple):
+        if x[:1] == ('specialEnergy',):
+            return True
+        if len(x) == 2 and x[0] == 'named' and TR.KNOWN_NAMES.get(x[1]) == {'Special Energy'}:
+            return True
+        return any(reads_special(y) for y in x)
+    if isinstance(x, list):
+        return any(reads_special(y) for y in x)
+    if isinstance(x, dict):
+        return any(reads_special(y) for y in x.values())
+    return False
+
+
+def vacuous_parts(term):
+    """The parts of an imported card (attacks, Abilities, a Trainer's effect) that read Special Energy cards. No imported
+    card is a Special Energy card, so in a game of imported cards such a part never finds one: S11 §15's vacuous effects
+    (they are counted as exact; a part may also do other things, e.g. Mow Rotom's damage)."""
+    if term[0] == 'trainer':
+        return ['(card)'] if reads_special(term) else []
+    if term[0] != 'pokemon':
+        return []
+    f = term[1]
+    return [x['name'] for x in f['attacks'] + f['abilities'] if reads_special(x)]
+
+
 def effect_tame(e):
-    """`Effect.tame`: no `drain` and no stored damage reduction (`linger _ _ (.reduce _)`)."""
-    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] == 'reduce'):
+    """`Effect.tame`: no `drain` and no modifier that is not `Mod.plain` (a stored damage reduction, and since
+    milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`)."""
+    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] in ('reduce', 'weaken', 'expose')):
         return False
     return all(effect_tame(x) for x in T.subs(e))
 
@@ -1011,6 +1040,13 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
     L.append('By records: imported exactly %d, with caveats %d, not imported %d (of %d).' % (
         rc['imported exactly'], rc['imported with caveats'], rc['not imported'], recs_n))
     L.append('')
+    vac = [(recs, r) for recs, r in results if r['ok'] and vacuous_parts(r['term'])]
+    L.append('Vacuous in the imported pool (column `vacuous_parts` of imported.tsv): %d imported cards have a part that '
+             'reads Special Energy cards, which no imported card is, so in a game of imported cards that part never finds '
+             'one (counted by status as usual; S11 §15): %s.' % (
+                 len(vac), '; '.join('%s %s (%s, %s)' % (recs[0]['id'], recs[0]['name'], ', '.join(vacuous_parts(r['term'])),
+                                                        status_of(r)) for recs, r in vac)))
+    L.append('')
     cav = collections.Counter()
     for recs, r in results:
         if r['ok']:
@@ -1072,11 +1108,17 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
     for k, v in sc.most_common(40):
         L.append('| %d | %s | %s |' % (v, k.replace('|', '/'), exs[k]))
     L.append('')
-    L.append('Imported cards that write a lingering damage bonus or reduction (%d): %s.' % (
+    L.append('Imported cards that write a stored amount (a damage bonus or reduction, or since milestone MV6 a step-2 '
+             'penalty `weaken` or a step-5 increase `expose`; `Mod.isAmt`) (%d): %s.' % (
         len(writers), ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in writers)))
     L.append('')
     L.append('Imported cards that write any lingering modifier (%d).' % len(lingerers))
     L.append('')
+    for mod in ('weaken', 'expose'):
+        ws = [(recs, r) for recs, r in writers if ("('%s'," % mod) in repr(r['term'])]
+        L.append('Imported cards that write `Mod.%s` (%d): %s.' % (mod, len(ws), ', '.join(
+            '%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in ws) or 'none'))
+        L.append('')
     if rs_pairs:
         L.append('RecycleSafe FAILS over the imported pool; violating (recycler, filter, writer, clause):')
         for x, f, y, cl in rs_pairs:

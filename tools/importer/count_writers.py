@@ -4,13 +4,16 @@ recyclers can return which writers.
 Reads the generated `PokemonCards/Standard/Part*.lean` (not the translator), so it is a second count
 beside the Lean listings of `PokemonCards/Standard.lean` (`writers`, `freeRecyclers`, ...): survey S11
 quotes its output. Text-level: each `def X : Card := ...` of a part is one term; a writer is a term with
-a `linger` of a `bonus` or `reduce` anywhere in it; a recycler is a term with a `move .w .discard ...`
-(a card from a discard pile to the hand, deck or elsewhere; `attach` from the discard pile takes Energy
-only, and no Energy card writes, so it is not counted). Whether a recycler can return a writer is
+a `linger` of a stored amount anywhere in it (`Mod.isAmt`: `bonus`, `reduce`, and since milestone MV6 the
+step-2 penalty `weaken` and the step-5 increase `expose`); a recycler is a term with a `move .w .discard ...`
+or (milestone MV6) a window `look .w .discard ...` (a card from a discard pile to the hand, deck or
+elsewhere; `attach` from the discard pile takes Energy only, and no Energy card writes, so it is not
+counted). A window on a discard pile recycles its filter if the other cards go back to the discard pile
+and any card otherwise (`Effect.recFilters`). Whether a recycler can return a writer is
 `Filter.eval` (Pokemon/Card.lean) mirrored on the parsed terms; an unknown filter stops the script.
 
 Usage: python3 -I tools/importer/count_writers.py [PokemonCards/Standard]
-(first written for the paper as a scratch script, 2026-11-22; importer 0.11.0 took it in.)
+(first written for the paper as a scratch script, 2026-11-22; importer 0.11.0 took it in; 0.12.0 added the MV6 kinds.)
 """
 import collections
 import os
@@ -158,8 +161,10 @@ def ev(f, c):
     raise ValueError('filter not mirrored: %r' % (f,))
 
 
-LIN = re.compile(r'linger \.(own|opp) \.(now|next|after|always) \(?\.(bonus|reduce|prevent|lock)')
+LIN = re.compile(r'linger \.(own|opp) \.(now|next|after|always) \(?\.(bonus|reduce|weaken|expose|prevent|lock)')
+AMT = ('bonus', 'reduce', 'weaken', 'expose')
 REC = re.compile(r'move \.(own|opp) \.discard \.(\w+) ')
+LOOK = re.compile(r'look \.(own|opp) \.discard ')
 
 
 def main(d):
@@ -170,19 +175,38 @@ def main(d):
         hits = []
         for mm in LIN.finditer(t['body']):
             w, slot, mod = mm.groups()
-            if mod in ('bonus', 'reduce'):
+            if mod in AMT:
                 sec = t['kind'] if t['ctor'] == 'trainer' else section(t['body'], mm.start(), t['ctor'])
-                hits.append((slot, mod, sec))
+                if sec == 'ability':
+                    sec += ':' + (ability_use(t['body'], mm.start()) or '?')
+                hits.append((w, slot, mod, sec))
         if hits:
             writers.append((t, hits))
-    print('terms writing a lingering bonus or reduction:', len(writers),
+    print('terms writing a stored amount (bonus, reduce, weaken, expose):', len(writers),
           dict(sorted(collections.Counter(t['kind'] for t, _ in writers).items())))
-    print('  by (slot, modifier):', dict(sorted(collections.Counter((h[0], h[1]) for _, hs in writers for h in hs).items())))
+    print('  by modifier (terms):', dict(sorted(collections.Counter(m for _, hs in writers for m in {h[2] for h in hs}).items())))
+    print('  by (store, slot, modifier):', dict(sorted(collections.Counter((h[0], h[1], h[2]) for _, hs in writers for h in hs).items())))
+    print('  by place (attack, ability:use, item, supporter, stadium, tool):',
+          dict(sorted(collections.Counter(h[3] for _, hs in writers for h in hs).items())))
+    print('  rest-of-game writes:', [t['name'] for t, hs in writers if any(h[1] == 'always' for h in hs)])
     print('  names:', [t['name'] for t, _ in writers])
+    for mod in ('weaken', 'expose'):
+        print('  %s writers:' % mod, [t['name'] for t, hs in writers if any(h[2] == mod for h in hs)])
     recyclers = collections.OrderedDict()
     for t in terms:
         for mm in REC.finditer(t['body']):
             fa, _ = parse_filter(t['body'], mm.end())
+            sec = t['kind'] if t['ctor'] == 'trainer' else section(t['body'], mm.start(), t['ctor'])
+            if sec == 'ability':
+                sec += ':' + (ability_use(t['body'], mm.start()) or '?')
+            recyclers.setdefault(t['id'], (t, []))[1].append((sec, fa))
+        for mm in LOOK.finditer(t['body']):
+            fa, j = parse_filter(t['body'], mm.end())          # the filter (the source `.discard` is matched)
+            q, j = parse_filter(t['body'], j)
+            into, j = parse_filter(t['body'], j)
+            rest, j = parse_filter(t['body'], j)
+            if rest != ('discard',):
+                fa = ('any',)
             sec = t['kind'] if t['ctor'] == 'trainer' else section(t['body'], mm.start(), t['ctor'])
             if sec == 'ability':
                 sec += ':' + (ability_use(t['body'], mm.start()) or '?')
