@@ -1137,6 +1137,17 @@ def sv10_125 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Team Rocket's Weezing (sv10-126). Records: sv10-126, sv10-199. -/
+def sv10_126 : Card := .pokemon
+  { name := "Team Rocket's Weezing", stage := .stage1, evolvesFrom := some "Team Rocket's Koffing",
+    hp := 13, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Explode Together Now", cost := [.darkness, .colorless], damage := 0,
+        effect := .damage (.add (.count (.inPlay .own (.and .pokemon (.or (.nameHas "Koffing") (.nameHas "Weezing")))) 4) (.count (.inPlay .opp (.and .pokemon (.or (.nameHas "Koffing") (.nameHas "Weezing")))) 4)),
+        gx := false }] }
+
 /-- Marnie's Purrloin (sv10-130). Records: sv10-130. -/
 def sv10_130 : Card := .pokemon
   { name := "Marnie's Purrloin", stage := .basic, evolvesFrom := none,
@@ -1778,20 +1789,6 @@ def rsv10pt5_25 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Swanna (rsv10pt5-26). Records: rsv10pt5-26, rsv10pt5-110. -/
-def rsv10pt5_26 : Card := .pokemon
-  { name := "Swanna", stage := .stage1, evolvesFrom := some "Ducklett",
-    hp := 12, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flap", cost := [.colorless], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Air Slash", cost := [.colorless, .colorless, .colorless], damage := 12,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   sv9_136,
@@ -1885,6 +1882,7 @@ def cards : List Card := [
   sv10_121,
   sv10_124,
   sv10_125,
+  sv10_126,
   sv10_130,
   sv10_131,
   sv10_132,
@@ -1942,8 +1940,7 @@ def cards : List Card := [
   rsv10pt5_21,
   rsv10pt5_22,
   rsv10pt5_23,
-  rsv10pt5_25,
-  rsv10pt5_26]
+  rsv10pt5_25]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

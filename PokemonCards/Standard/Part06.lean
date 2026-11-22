@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part06
 open Pokemon
 
+/-- Swanna (rsv10pt5-26). Records: rsv10pt5-26, rsv10pt5-110. -/
+def rsv10pt5_26 : Card := .pokemon
+  { name := "Swanna", stage := .stage1, evolvesFrom := some "Ducklett",
+    hp := 12, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Flap", cost := [.colorless], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Air Slash", cost := [.colorless, .colorless, .colorless], damage := 12,
+        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
+        gx := false }] }
+
 /-- Vanillite (rsv10pt5-27). Records: rsv10pt5-27, rsv10pt5-111. -/
 def rsv10pt5_27 : Card := .pokemon
   { name := "Vanillite", stage := .basic, evolvesFrom := none,
@@ -1851,22 +1865,9 @@ def me1_67 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Sandshrew (me1-68). Records: me1-68. -/
-def me1_68 : Card := .pokemon
-  { name := "Sandshrew", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Dig Claws", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Mud-Slap", cost := [.fighting, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  rsv10pt5_26,
   rsv10pt5_27,
   rsv10pt5_28,
   rsv10pt5_30,
@@ -2015,8 +2016,7 @@ def cards : List Card := [
   me1_62,
   me1_64,
   me1_65,
-  me1_67,
-  me1_68]
+  me1_67]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

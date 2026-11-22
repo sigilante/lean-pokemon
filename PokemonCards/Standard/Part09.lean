@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part09
 open Pokemon
 
+/-- Litwick (me5-36). Records: me5-36. -/
+def me5_36 : Card := .pokemon
+  { name := "Litwick", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Will-O-Wisp", cost := [.psychic], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
 /-- Primeape (me5-43). Records: me5-43. -/
 def me5_43 : Card := .pokemon
   { name := "Primeape", stage := .stage1, evolvesFrom := some "Mankey",
@@ -1871,22 +1882,9 @@ def me6_62 : Card := .pokemon
         effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
         gx := false }] }
 
-/-- Darkrai (me6-63). Records: me6-63. -/
-def me6_63 : Card := .pokemon
-  { name := "Darkrai", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Shadow-Clad", cost := [.darkness], damage := 0,
-        effect := .seq (.seq (.attach .own .deck (.energyOf .darkness) .active .any) (.attach .own .deck (.energyOf .darkness) .active .any)) .shuffle,
-        gx := false },
-      { name := "Dark Cutter", cost := [.darkness, .darkness, .colorless], damage := 11,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me5_36,
   me5_43,
   me5_44,
   me5_45,
@@ -2035,8 +2033,7 @@ def cards : List Card := [
   me6_56,
   me6_57,
   me6_61,
-  me6_62,
-  me6_63]
+  me6_62]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

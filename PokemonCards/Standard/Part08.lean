@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part08
 open Pokemon
 
+/-- Pancham (me2pt5-115). Records: me2pt5-115. Caveats: recoil. -/
+def me2pt5_115 : Card := .pokemon
+  { name := "Pancham", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Reckless Charge", cost := [.colorless], damage := 2,
+        effect := .selfDamage 1,
+        gx := false }] }
+
 /-- Rolycoly (me2pt5-118). Records: me2pt5-118. -/
 def me2pt5_118 : Card := .pokemon
   { name := "Rolycoly", stage := .basic, evolvesFrom := none,
@@ -1761,19 +1772,9 @@ def me5_30 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Litwick (me5-36). Records: me5-36. -/
-def me5_36 : Card := .pokemon
-  { name := "Litwick", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Will-O-Wisp", cost := [.psychic], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me2pt5_115,
   me2pt5_118,
   me2pt5_119,
   me2pt5_120,
@@ -1922,8 +1923,7 @@ def cards : List Card := [
   me5_23,
   me5_25,
   me5_27,
-  me5_30,
-  me5_36]
+  me5_30]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 10 of 10 (19 cards).
+Imported Standard cards, part 10 of 10 (20 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.10.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,20 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part10
 open Pokemon
+
+/-- Darkrai (me6-63). Records: me6-63. -/
+def me6_63 : Card := .pokemon
+  { name := "Darkrai", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Shadow-Clad", cost := [.darkness], damage := 0,
+        effect := .seq (.seq (.attach .own .deck (.energyOf .darkness) .active .any) (.attach .own .deck (.energyOf .darkness) .active .any)) .shuffle,
+        gx := false },
+      { name := "Dark Cutter", cost := [.darkness, .darkness, .colorless], damage := 11,
+        effect := .skip,
+        gx := false }] }
 
 /-- Purrloin (me6-64). Records: me6-64. -/
 def me6_64 : Card := .pokemon
@@ -245,6 +259,7 @@ def me6_89 : Card := .trainer "Aarune" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me6_63,
   me6_64,
   me6_65,
   me6_66,

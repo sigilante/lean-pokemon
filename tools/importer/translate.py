@@ -510,6 +510,12 @@ def parse_count(x, ctx):
         return lambda k: ('count', ('prizesTaken', OWN), k)
     if x == "Special Condition affecting your opponent's Active Pokémon":
         return lambda k: ('count', ('conds', OPP), k)
+    # "Pokémon in play that has \"Koffing\" or \"Weezing\" in its name (both yours and your opponent's)": both players'
+    # Pokémon in play whose top card passes the name filter (`Count.inPlay`)
+    m = re.match(r"^Pokémon in play that (?:has|have) (.+ in (?:its|their) names?) \(both yours and your opponent's\)$", x)
+    if m:
+        f = parse_filter('Pokémon that has ' + m.group(1), ctx)
+        return lambda k: ('add', ('count', ('inPlay', OWN, f), k), ('count', ('inPlay', OPP, f), k))
     if x == 'type of Basic Energy attached to all of your Pokémon':
         return lambda k: ('count', ('energyTypes', OWN), k)
     x = re.sub(r'^Basic Energy attached', 'Energy attached', x)

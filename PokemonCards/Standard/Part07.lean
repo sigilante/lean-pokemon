@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part07
 open Pokemon
 
+/-- Sandshrew (me1-68). Records: me1-68. -/
+def me1_68 : Card := .pokemon
+  { name := "Sandshrew", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Dig Claws", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Mud-Slap", cost := [.fighting, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
 /-- Onix (me1-70). Records: me1-70. -/
 def me1_70 : Card := .pokemon
   { name := "Onix", stage := .basic, evolvesFrom := none,
@@ -1783,19 +1797,9 @@ def me2pt5_114 : Card := .pokemon
         effect := .ite (.atLeast .own 1) (.damage (.const 20)) (.damage (.const 10)),
         gx := false }] }
 
-/-- Pancham (me2pt5-115). Records: me2pt5-115. Caveats: recoil. -/
-def me2pt5_115 : Card := .pokemon
-  { name := "Pancham", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fighting, retreat := 2, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Reckless Charge", cost := [.colorless], damage := 2,
-        effect := .selfDamage 1,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_68,
   me1_70,
   me1_71,
   me1_72,
@@ -1944,8 +1948,7 @@ def cards : List Card := [
   me2pt5_103,
   me2pt5_104,
   me2pt5_108,
-  me2pt5_114,
-  me2pt5_115]
+  me2pt5_114]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

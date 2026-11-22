@@ -8,7 +8,7 @@ reminder	skip (the model never applies Weakness or Resistance to the Bench)	71	1
 search-to-hand	move own deck hand F (upTo n)	67	76	svp-123 Teal Mask Ogerpon	Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand.
 recoil	selfDamage n	66	80	sv5-23 Rellor	This Pokémon also does 10 damage to itself.
 draw	move own (top n) hand any all	64	79	svp-114 Picnicker	Draw 4 cards.
-damage-for-each	damage (count C k)	58	81	sv5-12 Torterra ex	This attack does 30 damage for each of your Grass Pokémon in play.
+damage-for-each	damage (count C k)	59	82	sv5-12 Torterra ex	This attack does 30 damage for each of your Grass Pokémon in play.
 flip-n-coins-damage	choice over 0..N heads of damage (const (h * k)) [+ base]	46	54	sv5-4 Nuzleaf	Flip 3 coins. This attack does 30 damage for each heads.
 more-damage-for-each	damage (add (const B) (count C k))	43	59	svp-123 Teal Mask Ogerpon	This attack does 20 more damage for each of your opponent's Benched Pokémon.
 heal-self	heal n	39	42	svp-87 Sprigatito ex	Heal 30 damage from this Pokémon.

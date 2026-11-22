@@ -269,7 +269,7 @@ def main(argv):
     TR.set_names(cards)
     TR_now.set_names(cards)
     G = pool.group(pool.standard_pool(cards))
-    rows = [('id', 'name', 'kind', 'class', 'card_class', 'missing construct or rule', 'reason', 'sentence', 'imported_0.9.0')]
+    rows = [('id', 'name', 'kind', 'class', 'card_class', 'missing construct or rule', 'reason', 'sentence', 'imported_' + IM.VERSION)]
     per_card = []
     for recs in G:
         r = TR.translate_card(recs[0])
