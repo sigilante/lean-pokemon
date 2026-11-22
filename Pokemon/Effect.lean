@@ -76,6 +76,9 @@ inductive Amt.Val : Amt → GameState → Nat → Prop where
   | manyCons {a : Amt} {g : GameState} {x y : Nat} :
       Amt.Val a g x → Amt.Val (.many a) g y → Amt.Val (.many a) g (x + y)
   | count (c : Count) (k : Nat) (g : GameState) : Amt.Val (.count c k) g (k * c.val g)
+  /-- (milestone MV6) `k` for each heads among `n` coins: any number of heads `m` up to `n` -/
+  | heads {a : Amt} {g : GameState} {n m : Nat} (k : Nat) :
+      Amt.Val a g n → m ≤ n → Amt.Val (.heads a k) g (k * m)
 
 /-- An amount evaluates the same in a state whose Active Pokémon have the same damage and whose
 counts are the same. -/
@@ -93,6 +96,7 @@ theorem Amt.Val.congr {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val g�
   | manyNil a g => exact .manyNil a g₂
   | manyCons _ _ ih₁ ih₂ => exact .manyCons (ih₁ hv hc) (ih₂ hv hc)
   | count c k g => rw [← hv c]; exact .count c k g₂
+  | heads k _ hm ih => exact .heads k (ih hv hc) hm
 
 /-- An amount that has a value in one state has one in every state with Active Pokémon where
 the first has them (the values may differ). -/
@@ -114,6 +118,9 @@ theorem Amt.Val.transfer {a : Amt} {g₁ g₂ : GameState} {n : Nat} (h : a.Val 
   | manyNil a g => exact ⟨0, .manyNil a g₂⟩
   | manyCons _ _ _ _ => exact ⟨0, .manyNil _ g₂⟩
   | count c k g => exact ⟨_, .count c k g₂⟩
+  | heads k _ _ ih =>
+      obtain ⟨x, hx⟩ := ih hc
+      exact ⟨_, .heads (m := 0) k hx (Nat.zero_le _)⟩
 
 /-- A printed number evaluates to itself. -/
 theorem Amt.Val.const_inv {n m : Nat} {g : GameState} (h : (Amt.const n).Val g m) : m = n := by
@@ -133,6 +140,7 @@ def Src.get : Src → PlayerState → List Card
   | .top n, s => s.deck.take n
   | .hand, s => s.hand
   | .discard, s => s.discard
+  | .bottom n, s => s.deck.drop (s.deck.length - n)
 
 /-- Replace the cards of a source by `r` (the cards not taken, in their order). -/
 def Src.set : Src → List Card → PlayerState → PlayerState
@@ -140,6 +148,7 @@ def Src.set : Src → List Card → PlayerState → PlayerState
   | .top n, r, s => { s with deck := r ++ s.deck.drop n }
   | .hand, r, s => { s with hand := r }
   | .discard, r, s => { s with discard := r }
+  | .bottom n, r, s => { s with deck := s.deck.take (s.deck.length - n) ++ r }
 
 /-- `Split f l t r`: the cards `t` are taken from `l`, each passing `f`, and `r` are the others;
 both keep the order of `l`. -/
@@ -155,6 +164,7 @@ def Qty.ok : Qty → Filter → List Card → List Card → Prop
   | .upTo n, _, t, _ => t.length ≤ n
   | .exactly n, _, t, _ => t.length = n
   | .all, f, _, r => ∀ x ∈ r, f.eval x = false
+  | .most n, f, t, r => t.length ≤ n ∧ (t.length < n → ∀ x ∈ r, f.eval x = false)
 
 /-- `Put d t s s'`: the cards `t` are put at the destination `d` of the state `s`. -/
 inductive Put : Dst → List Card → PlayerState → PlayerState → Prop where
@@ -177,6 +187,7 @@ def Effect.zSide : Effect → Option Whose
   | .discardEnergy w _ _ _ => some w
   | .moveEnergy w _ => some w
   | .discardTools w _ => some w
+  | .look w _ _ _ _ _ => some w
   | _ => none
 
 /-- `s` with the five zones (deck, hand, discard pile, Active Spot, Bench) of `z`; every other
@@ -191,6 +202,32 @@ def InPlay.addEnergy (c : Card) (p : InPlay) : InPlay := { p with energy := c ::
 /-- Draw the top `k` cards (all of them if fewer are left). -/
 def PlayerState.drawK (k : Nat) (s : PlayerState) : PlayerState :=
   { s with deck := s.deck.drop k, hand := s.deck.take k ++ s.hand }
+
+/-- `Deal tf t a b a' b'` (milestone MV6, `Into.attach`): the Energy cards `t` are attached one at a
+time, each to the Active Pokémon or to one Benched Pokémon whose card passes `tf` ("in any way you
+like"), turning the Active Spot `a` and the Bench `b` into `a'` and `b'`. Every card of `t` must be an
+Energy card. -/
+inductive Deal (tf : Filter) : List Card → Option InPlay → List InPlay → Option InPlay →
+    List InPlay → Prop where
+  | nil (a : Option InPlay) (b : List InPlay) : Deal tf [] a b a b
+  | active {e : EnergyCard} {xs : List Card} {p : InPlay} {b : List InPlay} {a' : Option InPlay}
+      {b' : List InPlay} (ht : tf.eval (.pokemon p.top) = true) :
+      Deal tf xs (some (p.addEnergy (.energy e))) b a' b' → Deal tf (.energy e :: xs) (some p) b a' b'
+  | bench {e : EnergyCard} {xs : List Card} {a : Option InPlay} {q : InPlay} {b₁ b₂ : List InPlay}
+      {a' : Option InPlay} {b' : List InPlay} (ht : tf.eval (.pokemon q.top) = true) :
+      Deal tf xs a (b₁ ++ q.addEnergy (.energy e) :: b₂) a' b' →
+        Deal tf (.energy e :: xs) a (b₁ ++ q :: b₂) a' b'
+
+/-- `Place i t s s'` (milestone MV6): the cards `t` taken from a window go where `i` says: to a zone
+(`Put`), onto the Bench (each a Basic Pokémon card with HP, all of them fitting on the Bench), or
+attached to the player's Pokémon (`Deal`). -/
+inductive Place : Into → List Card → PlayerState → PlayerState → Prop where
+  | put {d : Dst} {t : List Card} {s s' : PlayerState} (h : Put d t s s') : Place (.put d) t s s'
+  | bench {ps : List PokemonCard} {s : PlayerState} (hb : ∀ p ∈ ps, p.stage = .basic ∧ 0 < p.hp)
+      (hl : s.bench.length + ps.length ≤ benchLimit) :
+      Place .bench (ps.map Card.pokemon) s { s with bench := s.bench ++ ps.map InPlay.ofBasic }
+  | attach {tf : Filter} {t : List Card} {s : PlayerState} {a : Option InPlay} {b : List InPlay}
+      (h : Deal tf t s.active s.bench a b) : Place (.attach tf) t s { s with active := a, bench := b }
 
 /-- The semantics of the zone-move primitives on one player's state. -/
 inductive ZStep : Effect → PlayerState → PlayerState → Prop where
@@ -258,6 +295,13 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
         { s with bench := b₁ ++ { p with tools := [] } :: b₂, discard := p.tools ++ s.discard }
   | toolsNone {w : Whose} {s : PlayerState} (hb : s.bench = []) :
       ZStep (.discardTools w .bench) s s
+  /-- look at a fixed window and choose (milestone MV6): the window `src.get s` is taken off its
+  source whole (`src.set []`), split into the cards taken `t` and the others `r`, the others are put
+  at `rest`, and then the taken cards are placed (`Place`) -/
+  | look {w : Whose} {src : Src} {f : Filter} {q : Qty} {i : Into} {rest : Dst}
+      {s s₁ s' : PlayerState} {t r : List Card} (hs : Split f (src.get s) t r) (hq : q.ok f t r)
+      (hr : Put rest r (src.set [] s) s₁) (hp : Place i t s₁ s') :
+      ZStep (.look w src f q i rest) s s'
 
 /-- `CMove f noKO a b a' b'` (milestone M8a): one damage counter moves from one of the player's
 Pokémon in play (Active Pokémon `a`, Bench `b`) whose card passes `f` to another of them, giving

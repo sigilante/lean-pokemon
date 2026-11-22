@@ -292,6 +292,7 @@ def Test.whose : Test → Whose
   | .hasTool w => w
   | .movedUp w => w
   | .evolved w => w
+  | .usedLast w => w
 
 def optCards : Option InPlay → Nat
   | none => 0
@@ -335,16 +336,21 @@ structure Mods where
   noAttack : Bool
   noRetreat : Bool
   noItem : Bool
+  /-- (milestone MV6) the step-2 penalty on the player's attacks (`Mod.weaken`) -/
+  minus : Nat
+  /-- (milestone MV6) the step-5 increase of the damage done to the player's Pokémon
+  (`Mod.expose`) -/
+  more : Nat
   deriving DecidableEq
 
 namespace Mods
 
-def empty : Mods := ⟨0, 0, false, false, false, false⟩
+def empty : Mods := ⟨0, 0, false, false, false, false, 0, 0⟩
 
 /-- Two sets of modifiers in effect together: amounts add, flags combine. -/
 def merge (a b : Mods) : Mods :=
   ⟨a.bonus + b.bonus, a.reduce + b.reduce, a.prevent || b.prevent, a.noAttack || b.noAttack,
-    a.noRetreat || b.noRetreat, a.noItem || b.noItem⟩
+    a.noRetreat || b.noRetreat, a.noItem || b.noItem, a.minus + b.minus, a.more + b.more⟩
 
 /-- Add one modifier. -/
 def addMod : Mod → Mods → Mods
@@ -354,6 +360,8 @@ def addMod : Mod → Mods → Mods
   | .lock .attack, m => { m with noAttack := true }
   | .lock .retreat, m => { m with noRetreat := true }
   | .lock .item, m => { m with noItem := true }
+  | .weaken n, m => { m with minus := m.minus + n }
+  | .expose n, m => { m with more := m.more + n }
 
 end Mods
 
@@ -540,13 +548,22 @@ counters, against a Defending Pokémon that is weak to the attacker (`weak`) and
 2. "Figure out damage effects on your Active Pokémon based on Trainer cards or any other
    relevant effects. … Stop if the base damage is 0 (or if the attack does not do any damage at
    all). Otherwise, keep going." If `n = 0` the result is 0; otherwise the attacker's damage
-   bonus is added.
+   bonus is added and (milestone MV6) its step-2 penalty (`Mod.weaken`, "attacks used by the
+   Defending Pokémon do 30 less damage (before applying Weakness and Resistance)") subtracted,
+   stopping at 0; if that leaves 0, the calculation stops (a departure, listed in the Known gaps: the model
+   applies "Stop if the base damage is 0" after step 2's effects, where the rulebook's base damage
+   is the printed number, so a penalty that cancels the damage also
+   cancels the defender's step-5 increase).
 3. "Increase the damage by the amount next to your opponent's Active Pokémon's Weakness, if it
    has Weakness to your Active Pokémon's type." Weakness ×2 doubles.
 4. "Reduce the damage by the amount next to your opponent's Active Pokémon's Resistance, if it
    has Resistance to your Active Pokémon's type."
 5. "Figure out damage effects of Trainer or Energy cards, or other effects on your opponent's
-   Active Pokémon." The defender's damage reduction is subtracted; damage prevention makes it 0.
+   Active Pokémon." The defender's step-5 increase (milestone MV6, `Mod.expose`, "takes 50 more
+   damage from attacks (after applying Weakness and Resistance)") is added and then its damage
+   reduction subtracted; damage prevention makes it 0. The rulebook gives no order among step-5
+   effects; adding the increase before the reduction is the model's reading (the other order
+   differs only when the reduction exceeds the damage after Resistance).
 6. "For each 10 damage of the final attack, put 1 damage counter on the affected Pokémon. If
    the damage is 0 or less, don't put on any damage counters!" Amounts are in counters, and
    subtraction stops at 0.
@@ -557,10 +574,14 @@ stop is applied to the base damage as the text computes it (`n`), so an attack w
 0 ("10× the number of heads", no heads) also stops. Truncation: steps 4 and 5 each stop at 0, so
 a Resistance larger than the damage leaves nothing for step 5 to remove. The rulebook does not
 say whether a negative intermediate damage carries over; with only subtractions after step 4 the
-result is 0 either way. -/
+result is 0 either way (since milestone MV6 an increase can follow Resistance: a Resistance larger
+than the damage then leaves 0, to which the increase is added, where carrying a negative value over
+would give less). -/
 def dealtBy (n : Nat) (weak : Bool) (resist : Nat) (own opp : Store) : Nat :=
   if n = 0 then 0 else if opp.live.prevent then 0 else
-    ((if weak then 2 * (n + own.live.bonus) else n + own.live.bonus) - resist) - opp.live.reduce
+    if n + own.live.bonus - own.live.minus = 0 then 0 else
+    (((if weak then 2 * (n + own.live.bonus - own.live.minus)
+      else n + own.live.bonus - own.live.minus) - resist) + opp.live.more) - opp.live.reduce
 
 /-- Is the opponent's Active Pokémon weak to the type of the player's Active Pokémon (its type
 as `InPlay.type` gives it, Coloring counter included)? False if either Spot is empty. -/
@@ -626,6 +647,8 @@ def Pile.get : Pile → PlayerState → List Card
   | .hand, s => s.hand
   | .deck, s => s.deck
   | .discard, s => s.discard
+  | .top n, s => s.deck.take n
+  | .bottom n, s => s.deck.drop (s.deck.length - n)
 
 /-- The nine Basic Energy cards, one of each type (milestone MV4: `Count.energyTypes`). -/
 def BasicEnergy.all : List BasicEnergy :=
@@ -663,6 +686,7 @@ def Count.val : Count → GameState → Nat
       energyTypeCount ((((g.side w).active.map InPlay.energy).getD []) ++
         ((g.side w).bench.map InPlay.energy).flatten)
   | .supporter w, g => if (g.side w).supporterPlayed then 1 else 0
+  | .retreat w, g => (((g.side w).active.map InPlay.top).map PokemonCard.retreat).getD 0
 
 /-- The value of a test in a state, on the Active Pokémon `p` it reads (a count test reads the
 state instead). -/
@@ -677,5 +701,6 @@ def Test.eval : Test → GameState → InPlay → Bool
   | .hasTool _, _, p => !p.tools.isEmpty
   | .movedUp _, _, p => p.movedUp
   | .evolved _, _, p => p.fresh && !p.under.isEmpty
+  | .usedLast _, _, p => decide (p.lk.on = .note)
 
 end Pokemon

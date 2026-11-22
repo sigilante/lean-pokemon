@@ -154,11 +154,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   "This attack's damage isn't affected by Weakness / Resistance / any effects on your opponent's
   Active Pokémon" and their combinations, 39 refused Standard cards in survey S15; exact: the
   rulebook's step 3, 4 or 5 is switched off, 2026 p. 20, and step 2, the attacker's bonuses, is
-  kept). Absent from the same family: a reduction of the Defending Pokémon's attacks before Weakness
-  ("attacks used by the Defending Pokémon do 30 less damage (before applying Weakness and
-  Resistance)", 10 cards), an increase after it ("the Defending Pokémon takes 50 more damage", 4),
-  per-attack bonuses ("this Pokémon's Meteor Mash attack does 60 more damage", 4), and the static
-  form on an Ability (Walking Wake ex svp-127, 1);
+  kept). Since milestone MV6 (survey S19 §B, `Pokemon/Defender.lean`) the same family has a penalty
+  on the Defending Pokémon's attacks before Weakness ("attacks used by the Defending Pokémon do 30
+  less damage (before applying Weakness and Resistance)", 11 cards: `Mod.weaken`, step 2), an
+  increase after it ("the Defending Pokémon takes 50 more damage", 4: `Mod.expose`, step 5), both
+  per player (lingering-modifiers item), and per-attack bonuses ("this Pokémon's Meteor Mash attack
+  does 60 more damage", "… Hyper Fang attack's base damage is 240", 5: per Pokémon, `AtkLock.note`
+  and `Test.usedLast`). Absent: Weakness changes ("has no Weakness", "Weakness is now …", 3: a stored
+  value with an order, not an amount), cost changes, and the static form on an Ability (Walking Wake
+  ex svp-127, 1);
 * Knock Outs (milestone batch-KO; before it, separate moves taken one at a time in any order, a
   DEPARTURE from the rulebook since milestone M6 that is now removed, see below): every Knock Out
   is taken by the batch Knock Out step (`KOBatch`, the move `Move.knockOuts`, and the steps of
@@ -310,13 +314,22 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`Count.conds`), of the Prize cards a player has taken (`Count.prizesTaken`, 6 less those left:
   exact for games set up with 6 Prize cards, rulebook 2026 p. 8; the model allows other start
   states, for which it is the shortfall from 6, at least 0), of the types of Basic Energy attached
-  (`Count.energyTypes`) and the per-player Supporter flag (`Count.supporter`: "this turn" for the player whose turn it
+  (`Count.energyTypes`), since milestone MV6 (survey S19 §C, `Pokemon/Coins.lean`) the cards in
+  the top or bottom `n` cards of a deck (`Pile.top`, `Pile.bottom`), the printed Retreat Cost of an
+  Active Pokémon (`Count.retreat`: the printed value, not the derived one, `GameState.retreatOf`,
+  since counts are defined before the static effects; a departure in both directions for a
+  Pokémon whose Retreat Cost a static effect in force changes, Air Balloon, Gravity Gemstone, N's
+  Castle, Paradise Resort; exact otherwise), and coins counted by the state as an amount
+  (`Amt.heads a k`: `k` times any number of heads up to the value of `a`; exact up to probability,
+  as every coin flip; also "reveal any number of … from your hand, … for each card revealed"), and the per-player Supporter flag (`Count.supporter`: "this turn" for the player whose turn it
   is; for the other player it reads their last turn, since the flag is cleared when its player's
   turn starts), all exact
   under both clamps; absent: counts of damage counters on several Pokémon ("for each damage counter
-  on all of your opponent's Pokémon", Azelf sv8-80; 4 refused Standard cards, S17 §B: not
-  clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (1),
-  of a Retreat Cost (7), of cards moved "in this way" (12), coins counted by the state (6), printed
+  on all of your opponent's Pokémon", Azelf sv8-80; 5 refused Standard cards in S19 §C: not
+  clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (2;
+  exact at every cap of at least 1, but the count theorems hold at every cap, 0 included), draws by a
+  count ("draw a card for each …", 5),
+  of cards moved "in this way" (12), printed
   subtypes the card terms lack (Ancient, Future: 13 with other kinds), reads of the defender's
   Retreat Cost or remaining HP (Special Energy cards are counted and filtered since milestone MV5:
   `Filter.basicEnergy`, `Filter.specialEnergy`); two filters read less than print does:
@@ -364,7 +377,24 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage) is not modified, as in the rulebook. The bonus is placed at step 2 and the reduction
   at step 5, which is what printed modifiers say ("… more damage … (before applying Weakness
   and Resistance)", "… less damage … (after applying Weakness and Resistance)", survey S9);
-  modifiers that name the other step are not expressible. An attack whose damage "isn't affected
+  since milestone MV6 a step-2 penalty on the player's attacks (`Mod.weaken`, `Mods.minus`) and a
+  step-5 increase of the damage to the player's Pokémon (`Mod.expose`, `Mods.more`) are stored
+  amounts too, added up without limit, bounded by the clauses of `StoreSafe` like the bonus and the
+  reduction (`Mod.isAmt`), capped by the capped clamp and excluded from tame decks (`Mod.plain`).
+  A departure: a penalty that brings the damage after step 2 to 0 stops the calculation, so a
+  step-5 increase then adds nothing. The rulebook says "Stop if the base damage is 0" (2026 p. 20)
+  and defines base damage in step 1 as the number printed on the attack (or computed by its text),
+  so read literally a penalised attack with positive base damage goes on to step 5: an attack for
+  30 under a 30 penalty against a Pokémon that takes 50 more does 0 here and 50 by the literal
+  text. The model does less damage than print in that case and agrees elsewhere. Readings: inside step 5 the increase is added before the reduction is subtracted (the rulebook
+  gives no order; the other order gives more damage when the reduction exceeds the damage after
+  Resistance); each subtraction stops at 0, so a Resistance larger than the damage leaves 0 to which
+  the increase is added (carrying a negative value over, which step 6's "If the damage is 0 or less"
+  may suggest, would give less). Like every lingering modifier they belong to a player: "attacks used
+  by the Defending Pokémon do 30 less damage" also weakens the Pokémon that replaces it in the Active
+  Spot, and "the Defending Pokémon takes 50 more damage" also exposes its replacement (more damage
+  than print in the second case, less in the first: the departure in both directions listed above).
+  An attack whose damage "isn't affected
   by any effects on your opponent's Active Pokémon" (milestone MV3, `Ign.fx`) reads the defender's
   store as empty and its static reduction as 0: no reduction and no prevention apply to it,
   including a Stadium's (Full Metal Lab's reduction, Neutralization Zone's prevention): the model
@@ -777,7 +807,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   deck or shuffled into it, "up to `n`", exactly `n` or all of them; Energy is attached from a
   zone to the Active Pokémon or a Benched one, Basic Pokémon are put onto the Bench from a zone,
   Energy is discarded from a Pokémon or moved between a player's Pokémon. Simplifications and
-  departures: "up to `n`" (`Qty.upTo n`, `Qty.ok`: any number of cards from 0 to `n`) allows 0 in
+  departures (since milestone MV6 also the bottom `n` cards of the deck, `Src.bottom`, and "`n`, or
+  all that pass if fewer", `Qty.most`): "up to `n`" (`Qty.upTo n`, `Qty.ok`: any number of cards
+  from 0 to `n`) allows 0 in
   every effect, attacks, Item and Supporter cards, Abilities, Stadiums and triggers alike, whereas
   the rulebook allows 0 only in attacks ("For effects of attacks … between 0 and the maximum. For
   other effects (such as the effects of Trainer cards and Abilities), you can choose any number
@@ -818,7 +850,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   primitive ("up to 2" is two of them; "to each of your Benched Pokémon" is written as one per
   Pokémon); the player chooses wherever the printed card lets the opponent choose; hidden
   information is not modelled (the state is public, so "reveal" and "look at" are no-ops, and a
-  search may take fewer cards than it could, which "up to" already allows); the model resolves a
+  search may take fewer cards than it could, which "up to" already allows; a window written
+  with `Qty.most` must take a passing card when there is one, which is right for a public window
+  such as a revealed hand and fewer outcomes than the usual practice of failing to find in a
+  private one such as the top cards of a deck, a practice the 2026 rulebook does not state); the model resolves a
   played Item or Supporter with the card already in the discard pile (the rulebook: "follow the
   instructions on the card and then discard it", 2023 glossary), so a card can recycle itself in
   the model; clause 3 of `StoreSafe` constrains that case like any other. For the same reason a
@@ -831,6 +866,32 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Dudunsparce, Misty's Psyduck in S10), devolution, evolution by effect, switching a card in play
   with one in the discard pile (Transformation Tome, Ogre's Mask), Prize-card moves other than
   taking them, the Lost Zone, and "attach to each of" a varying set;
+* windows (milestone MV6, survey S19 §A, `Pokemon/Look.lean`): `Effect.look w src f q i rest` takes
+  the whole window `src.get` off its source at once (the top or bottom `n` cards of the deck as they
+  are when the effect starts, `Src.bottom` being new; or a whole deck, hand or discard pile), takes
+  from it cards passing `f`, as many as `q` says (`Qty.most n`, new: `n`, or all that pass if fewer,
+  "discard a card you find there"), puts the other cards at `rest` and then places the taken cards
+  (`Into`: a zone, the Bench, attached to the player's Pokémon "in any way you like"). Proved exact
+  in the sense of this model (no hidden information; a shuffle and "any order" are any permutation;
+  a random choice is a nondeterministic one): every resolution partitions the window as it was when
+  the effect started (`ZStep.look_window`) and every such partition is a resolution
+  (`ZStep.look_complete`). It closes the moving-window refusals: a sequence of one-card `putBench` or
+  `attach` on `.top n` reads the top `n` of the deck as it is at each step (`moving_window`), the
+  window does not (`fixed_window`). Departures and limits: the other cards are put first and the
+  taken cards second (so "Search your deck for a card. Shuffle your deck, then put that card on top
+  of it", Crobat me4-51, is exact; no printed card needs the other order); `Into.bench` takes Basic
+  Pokémon cards only and all of them must fit on the Bench (with `upTo` the player takes fewer, which
+  is "you may put any number"; with `Qty.most` and a full Bench the effect has no resolution, where
+  print would put nothing: an importer writes `upTo` there); `Into.attach tf` attaches to any of the
+  player's Pokémon passing `tf`, so "attach … to this Pokémon" from an on-play Ability (Mega Rayquaza
+  ex me6-84) is a superset; "up to" allows 0 here as everywhere (item above); the player chooses
+  where print lets the opponent choose ("Your opponent shuffles the other cards back into their
+  deck": any permutation either way). A window on a discard pile is a recycler (`Effect.recFilters`:
+  its filter when the other cards go back to the discard pile, `Filter.any` otherwise); on a deck or a
+  hand it is not. Not expressible: one card of each of two kinds ("a Pokémon and a Trainer card",
+  Drayton sv8-174), swaps ("Switch a card from your hand with the top card of your deck", Gumshoos
+  me1-110), a number of cards read from the state ("draw a card for each …"), and the Future and
+  Ancient subtypes;
 * one-turn history (milestone MV2, survey S13 §A, `Pokemon/History.lean`): a per-player Knock Out
   record (`KOHist`, read by `Count.koLast`), a per-Pokémon "moved from the Bench to the Active
   Spot this turn" flag (`InPlay.movedUp`, `Test.movedUp`) and "evolved this turn" (`Test.evolved`,
@@ -879,8 +940,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   its owner's next turn and cannot evolve then. The rulebook allows evolving "a Pokémon you had in
   play at the beginning of your turn" but "Neither player can evolve a Pokémon on its first turn in
   play" (2026 p. 11); whether the owner's next turn is that Pokémon's "first turn in play" is not
-  settled there. If it is not, the model forbids an evolution print allows. No imported card uses
-  `putBench .opp`;
+  settled there. If it is not, the model forbids an evolution print allows. Since importer 0.12 five imported
+  cards use `putBench .opp` and carry the caveat `oppBenchFresh`;
 * deck construction is not modelled: "your deck must be exactly 60 cards", "except for Basic
   Energy, you can only have 4 cards with the same name in your deck" (2026 p. 22), "your deck can
   include only one total ACE SPEC card" (p. 26), one Radiant Pokémon (p. 29). The theorems

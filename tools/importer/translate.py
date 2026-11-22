@@ -152,6 +152,22 @@ CAVEATS = {
     'moveMayFail': "a move of Energy is `moveEnergy`, which may move nothing (`moveNone`; Known gaps, zone moves item: "
                    "'attach, putBench and moveEnergy may always do nothing, a superset of \"if you can\"'), where print moves "
                    "one Energy if one can be moved",
+    'printedRetreat': "'for each Colorless in your opponent's Active Pokémon's Retreat Cost' is `Count.retreat`, the printed "
+                      "Retreat Cost (milestone MV6): a static effect in force that changes the Retreat Cost (imported Tools, "
+                      "Stadiums and Abilities do) is not read (Known gaps, counts item: `Count.retreat`, a departure in both "
+                      "directions for such a Pokémon)",
+    'oppBenchFresh': "a Basic Pokémon an effect puts onto the opponent's Bench enters play `fresh` and stays so through its "
+                     "owner's next turn, so it cannot evolve then (Known gaps, item on Pokémon put onto the opponent's Bench: "
+                     "whether that turn is its first turn in play is not settled; if it is not, the model forbids an "
+                     "evolution print allows)",
+    'stopAfterPenalty': "a step-2 penalty (`Mod.weaken`) that brings an attack's damage to 0 stops the calculation in the "
+                        "model, so a step-5 increase (`Mod.expose`) then adds nothing, where the rulebook's base damage is "
+                        "the printed number and the literal text goes on to step 5 (Known gaps, lingering modifiers: 'A "
+                        "departure: a penalty that brings the damage after step 2 to 0 stops the calculation')",
+    'failToFind': "a mandatory take from a private window ('a Basic Energy card you find there' among the top cards of the "
+                  "player's own deck) is `Qty.most`, which must take a passing card when there is one: fewer outcomes than "
+                  "the usual practice of failing to find in a private window, which the 2026 rulebook does not state "
+                  "(Known gaps, zone moves item, hidden information)",
 }
 
 
@@ -196,6 +212,11 @@ CAVEAT_DIRECTION = {
     'ignFxStadium': 'both',        # if print keeps a Stadium's reduction, the model's damage is larger (and the
                                    # printed smaller damage is absent)
     'anyAmount60': 'forbids some', # more than 60 cards cannot be discarded
+    'printedRetreat': 'both',      # a static increase is not counted (less damage than print for "more", more for
+                                   # "less"); a static decrease the other way
+    'oppBenchFresh': 'forbids some',  # an evolution in the owner's next turn, if print allows it
+    'stopAfterPenalty': 'forbids some',  # the literal damage of a cancelled attack against an exposed Pokémon
+    'failToFind': 'forbids some',  # declining to take a card the player found in a private window
     'abilityByTool': 'both',       # a Tool-given Ability is not read: a smaller count than print may give (the
                                    # printed amount is absent), or damage that print may prevent (allows more)
 }
@@ -530,6 +551,9 @@ def parse_count(x, ctx):
         return lambda k: ('count', ('tools', OPP), k)
     if x == 'Pokémon Tool attached to all Pokémon':
         return lambda k: ('add', ('count', ('tools', OWN), k), ('count', ('tools', OPP), k))
+    if x == "Colorless in your opponent's Active Pokémon's Retreat Cost":
+        # milestone MV6: `Count.retreat`, the printed Retreat Cost (caveat `printedRetreat`, added in `translate_card`)
+        return lambda k: ('count', ('retreat', OPP), k)
     if x == 'Prize card your opponent has taken':
         return lambda k: ('count', ('prizesTaken', OPP), k)
     if x == 'Prize card you have taken':
@@ -2238,6 +2262,9 @@ class Parser:
             j = self.ability_step(S, i, nxt)
             if j is not None:
                 return j
+        j = mv6_step(self, S, i, nxt)
+        if j is not None:
+            return j
         if ctx['kind'] in ('attack', 'trainer'):
             j = self.mv3_step(S, i, nxt)
             if j is not None:
@@ -2666,6 +2693,357 @@ class Parser:
         raise Refuse('coin-flip consequences not expressible')
 
 
+# ------------------------------------------------------------------ milestone MV6 (importer 0.12.0)
+#
+# Windows (`Effect.look w src f q into rest`, Pokemon/Look.lean): the window is read once, when the effect starts
+# (`ZStep.look`: `src.get`, the top or bottom n cards of the deck as they are then, all of them if fewer are left, as
+# the rulebook says: "If a card tells you to draw or look at more cards from your deck than you have left, draw or look
+# at the cards you have and continue play as normal", 2026 p. 21), the cards taken pass the filter in the number the
+# quantity says, the other cards go where print puts them (`rest`) and then the taken cards go to their place (`Into`).
+# Quantities, by the rulebook's p. 21 and the Known gaps' hidden-information entry:
+#   * "you may … any number of" / "any number of": `upTo N` (N the window's size; "any number" allows 0, p. 21);
+#   * "you may reveal a X": `upTo 1` (the print lets the player decline);
+#   * "up to k" outside attacks (1 to k, p. 21) on a public window: the union over j = 1..k of `most j` (exactly the
+#     numbers 1..min(k, m) when m cards pass, and 0 when none does); in attacks `upTo k`;
+#   * a mandatory "a X you find there": `most 1`. On a public window (a revealed hand, revealed deck cards) that is
+#     exact. On a private window (the top or bottom cards of the player's own deck, which the opponent does not see) the
+#     rulebook states no rule on failing to find (2026 p. 21 speaks only of "up to", "any number" and of searches "for
+#     any card you want", which must take at least 1); `most` follows the printed text and carries `failToFind` (the
+#     usual practice lets the player fail to find; Known gaps, hidden information);
+#   * onto a Bench: `upTo`, or for a mandatory single card `ite (countGe (bench w pokemon) 5) skip (look … (most 1))`
+#     (with a full Bench `most` would have no resolution; print puts nothing then; `benchLimit` is 5).
+# Defender modifiers (Pokemon/Defender.lean): "attacks used by the Defending Pokémon do N less damage (before …)" is
+# `linger .opp .next (.weaken n)`; "the Defending Pokémon takes N more damage from attacks (after …)" during your next
+# turn is `linger .opp .after (.expose n)`; "this Pokémon takes N more damage" during the opponent's next turn is
+# `linger .own .next (.expose n)`. All carry `perPokemon` (modifiers belong to a player) and `stopAfterPenalty`; the
+# penalty also `benchMods` (print weakens the Defending Pokémon's attack damage to Benched Pokémon too).
+
+def look(w, src, f, q, into, rest):
+    return ('look', w, src, f, q, into, rest)
+
+
+OWN_REST = {
+    'Shuffle the other cards back into your deck.': ('shuffle',),
+    'Shuffle the other cards and put them on the bottom of your deck.': ('bottom',),
+    'Put the other cards back in any order.': ('top',),
+    'Discard the other cards.': ('discard',),
+}
+OPP_REST = {
+    'Your opponent shuffles the other cards back into their deck.': ('shuffle',),
+}
+WIN_HEAD = r"^(Look at|Reveal) the (top|bottom) (\d+) cards of (your|your opponent's) deck"
+
+
+def chain_choice(alts):
+    out = alts[-1]
+    for a in reversed(alts[:-1]):
+        out = choice(a, out)
+    return out
+
+
+def up_to_from_1(k, mk):
+    """'up to k' outside attacks on a public window (1..k, or 0 when nothing passes): `most 1` | … | `most k`."""
+    return chain_choice([mk(('most', j)) for j in range(1, k + 1)])
+
+
+def attach_into(tgt, n, ctx):
+    """The `Into` of 'attach … you find there to TGT', and caveats."""
+    if tgt in ('your Pokémon in any way you like', '1 of your Pokémon'):
+        if tgt == '1 of your Pokémon' and n != 1:
+            raise Refuse('several cards to one chosen Pokémon')
+        return ('attach', ('any',)), set()
+    m = re.match(r'^your (' + TYPE_RE + r') Pokémon in any way you like$', tgt)
+    if m:
+        return ('attach', ('ptype', etype(m.group(1)))), set()
+    if tgt == 'this Pokémon' and ctx['kind'] == 'ability' and ctx.get('spot') is None and n == 1:
+        # "this Pokémon" not tracked (on-play Ability): any of the player's Pokémon (`SelfOp.at` none reads the same)
+        return ('attach', ('any',)), {'selfBench'}
+    raise Refuse('window: attach target not expressible: ' + tgt)
+
+
+def window_qty(qw, n, private, ctx, bench=False):
+    """(quantity, caveats) for 'any number of' / 'a' / 'an' / 'up to k' in a window of size n."""
+    if qw == 'any number of':
+        return ('upTo', n), set()
+    if qw in ('a', 'an'):
+        if bench:
+            return None, set()      # the caller writes the full-Bench test
+        return ('most', 1), ({'failToFind'} if private else set())
+    m = re.match(r'^up to (\d+)$', qw)
+    if m:
+        if ctx['kind'] == 'attack':
+            return ('upTo', num(m.group(1))), set()
+        raise Refuse('window: "up to" outside an attack on a private window')
+    raise Refuse('window quantity not expressible: ' + qw)
+
+
+def opp_hand_clause(c, ctx):
+    """A clause on the cards 'you find there' after "Your opponent reveals their hand" (a public window): an `Eff` or a
+    `Dmg`."""
+    c = c.rstrip('.')
+    c = c[0].lower() + c[1:]
+    m = re.match(r'^this attack does (\d+) damage for each (.+?) you find there$', c)
+    if m and ctx['kind'] == 'attack':
+        k = counters(m.group(1))
+        f = parse_filter(m.group(2), ctx)
+        return Dmg('set', ('count', ('pile', OPP, ('hand',), f), k), k, reads=True)
+    m = re.match(r"^discard all (.+?) cards and (.+?) cards you find there$", c)
+    if m:
+        f = ('or', parse_filter(m.group(1), ctx), parse_filter(m.group(2), ctx))
+        return Eff(('move', OPP, ('hand',), ('discard',), f, ('all',)))
+    m = re.match(r"^(discard|choose|put) (an?|up to \d+|any number of) (.+?) (?:that )?you find there"
+                 r"(?: and put (?:it|them))?(?: (on the bottom of (?:their|your opponent's) deck|onto (?:their|your "
+                 r"opponent's) Bench))?$", c)
+    if not m:
+        raise Refuse('revealed hand: clause not expressible', c)
+    verb, qw, np_, where = m.groups()
+    f = parse_filter(np_, ctx)
+    if verb == 'discard' and where is None:
+        dst = ('put', ('discard',))
+    elif where and where.startswith('on the bottom') and verb in ('choose', 'put'):
+        dst = ('put', ('bottom',))
+    elif where and where.startswith('onto') and verb == 'put':
+        dst = ('bench',)
+    else:
+        raise Refuse('revealed hand: clause not expressible', c)
+    if dst == ('bench',):
+        bench_filter_ok(f)
+        mk = lambda q: look(OPP, ('hand',), f, q, ('bench',), ('hand',))  # noqa: E731
+        if qw == 'any number of':
+            return Eff(mk(('upTo', 5)))
+        if qw in ('a', 'an'):
+            return Eff(ite(('countGe', ('bench', OPP, ('pokemon',)), 5), SKIP, mk(('most', 1))))
+        k = num(qw.split()[-1])
+        if ctx['kind'] == 'attack':
+            return Eff(mk(('upTo', k)))
+        raise Refuse('revealed hand: "up to" onto a Bench outside an attack', c)
+    mk = lambda q: ('move', OPP, ('hand',), dst[1], f, q)  # noqa: E731
+    if qw in ('a', 'an'):
+        return Eff(mk(('most', 1)))
+    if qw == 'any number of':
+        raise Refuse('revealed hand: "any number" to a zone', c)
+    k = num(qw.split()[-1])
+    if ctx['kind'] == 'attack':
+        return Eff(mk(('upTo', k)))
+    return Eff(up_to_from_1(k, mk))
+
+
+def mv6_step(P, S, i, nxt):
+    """Multi-sentence and window forms of milestone MV6 (importer 0.12.0); None if none applies."""
+    s = S[i]
+    ctx = P.ctx
+    kind = ctx['kind']
+    nx2 = S[i + 2] if i + 2 < len(S) else ''
+
+    def emit(j, rule, it, n_used):
+        P.used.append((rule, ' '.join(S[i:i + n_used])))
+        P.items.append((i, it))
+        return i + n_used
+
+    # ---- Bug Out: a count over the bottom window, then its Pokémon shuffled back and the others discarded
+    m = re.match(r'^Reveal the bottom (\d+) cards of your deck, and this attack does (\d+) damage for each Pokémon you find '
+                 r'there that has the (.+) attack\.$', s)
+    if m and kind == 'attack' and nxt == 'Then, shuffle any revealed Pokémon back into your deck.' and \
+            nx2 == 'Discard the other cards.':
+        n, k = int(m.group(1)), counters(m.group(2))
+        f = ('and', ('pokemon',), has_attack(m.group(3)))
+        P.used.append(('bottom-count-then-sort', ' '.join(S[i:i + 3])))
+        P.items.append((i, Dmg('set', ('count', ('pile', OWN, ('bottom', n), f), k), k, reads=True)))
+        P.items.append((i + 1, Eff(look(OWN, ('bottom', n), ('pokemon',), ('all',), ('put', ('shuffle',)), ('discard',)))))
+        return i + 3
+
+    # ---- windows on a deck
+    m = re.match(WIN_HEAD + r'(.*)$', s)
+    if m:
+        verb, end, n, whose, tail = m.groups()
+        n = int(n)
+        w = OWN if whose == 'your' else OPP
+        src = ('top', n) if end == 'top' else ('bottom', n)
+        private = verb == 'Look at' and w == OWN
+        rests = OWN_REST if w == OWN else OPP_REST
+        # the existing importer 0.9.0 form for Trainers (top of the own deck, two sentences) keeps its term
+        if (tail == '.' and end == 'top' and w == OWN and kind == 'trainer' and
+                re.match(r'^You may reveal (up to \d+|an?|any number of) (.+?) you find there and put', nxt)):
+            return None
+        # "… and put them back in any order."
+        if tail == ' and put them back in any order.':
+            return emit(i, 'look-reorder', Eff(look(w, src, ('any',), ('exactly', 0), ('put', ('top',)), ('top',))), 1)
+        # "… and put them back in any order, or shuffle them and put them on the bottom of your deck."
+        if tail == ' and put them back in any order, or shuffle them and put them on the bottom of your deck.' and w == OWN:
+            a = look(w, src, ('any',), ('exactly', 0), ('put', ('top',)), ('top',))
+            b = look(w, src, ('any',), ('exactly', 0), ('put', ('top',)), ('bottom',))
+            return emit(i, 'look-reorder-or-bottom', Eff(choice(a, b)), 1)
+        # "… and discard any number of them." + "Put the other cards back in any order."
+        if tail == ' and discard any number of them.' and nxt in rests:
+            return emit(i, 'look-discard-any', Eff(look(w, src, ('any',), ('upTo', n), ('put', ('discard',)), rests[nxt])), 2)
+        # one sentence, or the head and the next sentence joined
+        if tail == '.':
+            body, k0 = nxt, 2
+        elif tail.startswith(', and '):
+            body, k0 = tail[6:], 1
+        elif tail.startswith(', '):
+            body, k0 = tail[2:], 1
+        elif tail.startswith(' and '):
+            body, k0 = tail[5:], 1
+        else:
+            return None
+        body = body[0].lower() + body[1:] if body else body
+        rest_s = S[i + k0] if i + k0 < len(S) else ''
+        if rest_s not in rests:
+            return None     # earlier rules, or their refusals
+        rest = rests[rest_s]
+        cv = set()
+        # to the hand
+        mm = re.match(r'^(you may )?reveal (any number of|an?|up to \d+) (.+?) you find there,? and put (?:it|them) into '
+                      r'your hand\.$', body)
+        if mm:
+            may, qw, np_ = mm.groups()
+            f = parse_filter(np_, ctx)
+            if may and qw in ('a', 'an'):
+                q = ('upTo', 1)
+            elif may and qw.startswith('up to'):
+                if kind != 'attack':
+                    cv.add('upTo0')
+                q = ('upTo', num(qw.split()[-1]))
+            else:
+                q, cv2 = window_qty(qw, n, private, ctx)
+                cv |= cv2
+            P.used.append(('look-take-hand', ' '.join(S[i:i + k0 + 1])))
+            P.items.append((i, Eff(look(w, src, f, q, ('put', ('hand',)), rest), cv)))
+            return i + k0 + 1
+        # onto the Bench
+        mm = re.match(r'^(?:you may )?(?:put|choose) any number of (.+?) you find there (?:and put those Pokémon )?onto '
+                      r'(your|their) Bench\.$', body)
+        if mm:
+            f = parse_filter(mm.group(1), ctx)
+            if (mm.group(2) == 'your') != (w == OWN):
+                raise Refuse('window: Bench of the other player', body)
+            bench_filter_ok(f)
+            P.used.append(('look-bench', ' '.join(S[i:i + k0 + 1])))
+            P.items.append((i, Eff(look(w, src, f, ('upTo', n), ('bench',), rest), cv)))
+            return i + k0 + 1
+        # attached
+        mm = re.match(r'^attach (any number of|an?) (.+?) you find there to (.+)\.$', body)
+        if mm and w == OWN:
+            qw, np_, tgt = mm.groups()
+            f = parse_filter(np_, ctx)
+            if not is_energy_filter(f):
+                raise Refuse('attach a non-Energy card')
+            q, cv2 = window_qty(qw, n, private, ctx)
+            into, cv3 = attach_into(tgt, q[1] if q[0] == 'most' else n, ctx)
+            P.used.append(('look-attach', ' '.join(S[i:i + k0 + 1])))
+            P.items.append((i, Eff(look(w, src, f, q, into, rest), cv | cv2 | cv3)))
+            return i + k0 + 1
+        return None
+
+    # ---- draws from the bottom
+    m = re.match(r'^Draw (\d+) cards from the bottom of your deck\.$', s)
+    if m:
+        return emit(i, 'draw-bottom', Eff(('move', OWN, ('bottom', int(m.group(1))), ('hand',), ('any',), ('all',))), 1)
+
+    # ---- "Search your deck for a card. Shuffle your deck, then put that card on top of it." (any card: at least 1, p. 21)
+    if s == 'Search your deck for a card.' and nxt == 'Shuffle your deck, then put that card on top of it.':
+        return emit(i, 'search-to-top', Eff(look(OWN, ('deck',), ('any',), ('most', 1), ('put', ('top',)), ('shuffle',))), 2)
+
+    # ---- the opponent's revealed hand (a public window)
+    if s == 'Your opponent reveals their hand.' and 'you find there' in nxt:
+        it = opp_hand_clause(nxt, ctx)
+        P.used.append(('revealed-hand', s + ' ' + nxt))
+        P.items.append((i + 1, it))
+        return i + 2
+    m = re.match(r'^(?:Your opponent reveals their hand|Have your opponent reveal their hand),? and (?:you )?(.+ you find '
+                 r'there.*)$', s)
+    if m:
+        it = opp_hand_clause(m.group(1), ctx)
+        return emit(i, 'revealed-hand', it, 1)
+    # "Flip 3 coins. If any of them are heads, your opponent reveals their hand. For each heads, choose a card you find
+    # there and shuffle it into your opponent's deck."
+    m = re.match(r'^Flip (\d+) coins\.$', s)
+    if m and nxt == 'If any of them are heads, your opponent reveals their hand.' and \
+            nx2 == "For each heads, choose a card you find there and shuffle it into your opponent's deck.":
+        k = int(m.group(1))
+        mk = lambda h: ('move', OPP, ('hand',), ('shuffle',), ('any',), ('most', h))  # noqa: E731
+        return emit(i, 'coins-revealed-hand-shuffle', Eff(chain_choice([SKIP] + [mk(h) for h in range(1, k + 1)])), 3)
+    # random cards of the opponent's hand, one per heads (random is a nondeterministic choice)
+    if nxt == "For each heads, choose a random card from your opponent's hand." and \
+            nx2 == 'Your opponent reveals those cards and shuffles them into their deck.':
+        mv = lambda h: ('move', OPP, ('hand',), ('shuffle',), ('any',), ('most', h))  # noqa: E731
+        m = re.match(r'^Flip (\d+|two|three) coins\.$', s)
+        if m:
+            k = num(m.group(1))
+            return emit(i, 'coins-random-hand-shuffle', Eff(chain_choice([SKIP] + [mv(h) for h in range(1, k + 1)])), 3)
+        if s == 'Flip a coin until you get tails.':
+            return emit(i, 'until-tails-random-hand-shuffle', Eff(('iter', mv(1))), 3)
+
+    # ---- coins counted by the state (`Amt.heads`)
+    m = re.match(r'^Flip a coin for each (.+)\.$', s)
+    mm = re.match(r'^This attack does (\d+) damage for each heads\.$', nxt)
+    if m and mm and kind == 'attack':
+        x = m.group(1)
+        m2 = re.match(r'^(.+) you have in play$', x)
+        if m2:
+            x = 'of your ' + m2.group(1) + ' in play'
+        c = parse_count(x, ctx)(1)
+        k = counters(mm.group(1))
+        return emit(i, 'coins-for-each-damage', Dmg('set', ('heads', c, k), k, reads=True), 2)
+    m = re.match(r"^Your opponent flips a coin for each of their Benched Pokémon\.$", s)
+    mm = re.match(r"^This attack does (\d+) damage to your opponent's Active Pokémon for each tails\.$", nxt)
+    if m and mm and kind == 'attack':
+        k = counters(mm.group(1))
+        # tails among the coins has the distribution of heads; coin flips are nondeterministic choices
+        return emit(i, 'coins-for-each-damage',
+                    Dmg('set', ('heads', ('count', ('bench', OPP, ('pokemon',)), 1), k), k, reads=True), 2)
+    # "Reveal any number of X, Y, and Z from your hand, and this attack does N damage for each card you revealed in this
+    # way.": any number up to the count (`Amt.heads` over a hand count)
+    m = re.match(r'^Reveal any number of (.+?) from your hand, and this attack does (\d+) damage for each card you '
+                 r'revealed in this way\.$', s)
+    if m and kind == 'attack':
+        names = re.split(r', and |, | and ', m.group(1))
+        if not all(KNOWN_NAMES.get(x) == {'Pokémon'} for x in names):
+            raise Refuse('reveal from the hand: not a list of Pokémon names', s)
+        f = chain_or([('named', x) for x in names])
+        k = counters(m.group(2))
+        return emit(i, 'reveal-hand-count-damage',
+                    Dmg('set', ('heads', ('count', ('pile', OWN, ('hand',), f), 1), k), k, reads=True), 1)
+    return None
+
+
+def chain_or(fs):
+    out = fs[-1]
+    for f in reversed(fs[:-1]):
+        out = ('or', f, out)
+    return out
+
+
+@rule('ling-weaken-defending', r"During your opponent's next turn, attacks used by the Defending Pokémon do (\d+) less damage "
+      r"\(before applying Weakness and Resistance\)\.", 'A', 'linger opp next (weaken n)')
+def _(m, ctx):
+    return Eff(('linger', OPP, ('next',), ('weaken', counters(m.group(1)))), {'perPokemon', 'benchMods', 'stopAfterPenalty'})
+
+
+@rule('ling-expose-defending', r"During your next turn, the Defending Pokémon takes (\d+) more damage from attacks "
+      r"\(after applying Weakness and Resistance\)\.", 'A', 'linger opp after (expose n)')
+def _(m, ctx):
+    return Eff(('linger', OPP, ('after',), ('expose', counters(m.group(1)))), {'perPokemon', 'stopAfterPenalty'})
+
+
+@rule('ling-expose-self', r"During your opponent's next turn, this Pokémon takes (\d+) more damage from attacks "
+      r"\(after applying Weakness and Resistance\)\.", 'A', 'linger own next (expose n)')
+def _(m, ctx):
+    return Eff(('linger', OWN, ('next',), ('expose', counters(m.group(1)))), {'perPokemon', 'stopAfterPenalty'})
+
+
+# milestone MV6: "During your next turn, this Pokémon's X attack does N more damage (before applying Weakness and
+# Resistance)." / "… X attack's base damage is N." (Pokemon/Defender.lean): the attack that prints it records its use
+# (`Attack.selfLock := .note`) and X tests the record (`Test.usedLast .own`) and does N more (or N) in that branch.
+# Per Pokémon: the record ends when the Pokémon moves to the Bench or evolves, as print says of effects of attacks
+# (2026 pp. 11, 20). Written only when X is an attack of the same card with a positive printed damage (a plain number;
+# for "does N more" also a printed "+"), the sentence stands alone in its attack, that attack has no lock sentence, and
+# the card ends with at most one attack whose `selfLock` is not `none` (`Test.usedLast` reads the one record).
+NOTE_RX = re.compile(r"^During your next turn, this Pokémon's (.+?) attack(?: does (\d+) more damage \(before applying "
+                     r"Weakness and Resistance\)|'s base damage is (\d+))\.$")
+
+
 # ------------------------------------------------------------------ damage trees
 
 def amt_add(a, b):
@@ -2821,6 +3199,13 @@ def build_attack(base, suffix, items, cost):
                 if suffix != '+' or tree in (None, 'X'):
                     raise Refuse('conditional damage without a printed "+"')
                 tree = tmap(tree, lambda x: tbranch(tests, neg, ('L', amt_add(x, ('const', n))), ('L', x)))
+            elif op == 'lastUse':
+                # milestone MV6: N more when this Pokémon's record of the writing attack is in force (`Test.usedLast`)
+                (n,) = a
+                if tree in (None, 'X'):
+                    raise Refuse('a bonus of a named attack on an attack with no printed damage')
+                tree = tmap(tree, lambda x: tbranch([('usedLast', OWN)], False, ('L', amt_add(x, ('const', n))), ('L', x)))
+                continue
             elif op == 'flipadd':
                 (n,) = a
                 if suffix != '+' or tree in (None, 'X'):
@@ -2991,7 +3376,31 @@ def translate_card(c):
         res['caveats'].add('abilityByTool')
     if res['ok'] and 'prizesTaken' in repr(res['term']):
         res['caveats'].add('prizes6')
+    if res['ok'] and "('retreat', (" in repr(res['term']):
+        if re.search(r"'(retreatPlus|retreatMinus)'", repr(res['term'])):
+            # the card's own static effect changes the Retreat Cost its count reads: the printed count would be off by
+            # that effect whenever the card is in play (Ariados sv6-5, Mega Chandelure ex me5-38)
+            res['ok'] = False
+            res['term'] = None
+            res['blockers'].append(("count of the Retreat Cost on a card whose own static effect changes it "
+                                    "(Count.retreat reads the printed cost)", ''))
+            return res
+        res['caveats'].add('printedRetreat')
+    if res['ok'] and has_look_opp_bench(res['term']):
+        res['caveats'].add('oppBenchFresh')
     return res
+
+
+def has_look_opp_bench(x):
+    if isinstance(x, tuple):
+        if x and x[0] == 'look' and len(x) == 7 and x[1] == OPP and x[5] == ('bench',):
+            return True
+        return any(has_look_opp_bench(y) for y in x)
+    if isinstance(x, (list,)):
+        return any(has_look_opp_bench(y) for y in x)
+    if isinstance(x, dict):
+        return any(has_look_opp_bench(y) for y in x.values())
+    return False
 
 
 def _translate_card(c):
@@ -4403,10 +4812,22 @@ def translate_pokemon(c, res):
     if tera and not any(r in TERA_TEXTS for r in rules):
         B.append(('Tera without the printed Tera rule', ''))
     attacks = []
+    plan = note_plan(c, res)
+    if plan is False:
+        return res
     for a in c.get('attacks') or []:
-        at = translate_attack(c, a, res)
+        nm = norm(a.get('name'))
+        kw = {}
+        if plan and nm == plan['writer']:
+            kw['drop'], kw['note'] = plan['sentence'], True
+        if plan and nm == plan['reader']:
+            kw['bonus'] = plan['bonus']
+        at = translate_attack(c, a, res, **kw)
         if at is not None:
             attacks.append(at)
+    if plan and sum(1 for at in attacks if at.get('selfLock')) > 1:
+        B.append(('use record (AtkLock.note) on a Pokémon with another attack that sets a lock (Test.usedLast reads one '
+                  'record)', ''))
     if sum(1 for at in attacks if at.get('selfLock') == ('this',)) > 1:
         B.append(('per-attack lock: two attacks with a lock on themselves (the lock flag forbids both)', ''))
     if B:
@@ -4419,7 +4840,46 @@ def translate_pokemon(c, res):
     return res
 
 
-def translate_attack(c, a, res):
+def note_plan(c, res):
+    """Milestone MV6 (`NOTE_RX`): None, False (refused, a blocker appended), or the writer, the reader and the bonus."""
+    hits = []
+    for a in c.get('attacks') or []:
+        for x in split_sentences(a.get('text')):
+            m = NOTE_RX.match(x)
+            if m:
+                hits.append((norm(a.get('name')), x, m))
+    if not hits:
+        return None
+    if len(hits) > 1:
+        res['blockers'].append(('named-attack bonus: several sentences', ''))
+        return False
+    writer, sent, m = hits[0]
+    reader = m.group(1)
+    rs = [a for a in c.get('attacks') or [] if norm(a.get('name')) == reader]
+    if len(rs) != 1:
+        res['blockers'].append(('named-attack bonus on an attack this card does not have', sent))
+        return False
+    d = (rs[0].get('damage') or '').strip()
+    md = re.match(r'^(\d+)(\+?)$', d)
+    if not md or int(md.group(1)) <= 0:
+        res['blockers'].append(('named-attack bonus on an attack with no positive printed damage', sent))
+        return False
+    base = counters(md.group(1))
+    if m.group(2):
+        bonus = counters(m.group(2))
+    else:
+        if md.group(2):
+            res['blockers'].append(('"base damage is N" on an attack whose damage text adds more', sent))
+            return False
+        bonus = counters(m.group(3)) - base
+        if bonus <= 0:
+            res['blockers'].append(('"base damage is N" not above the printed damage', sent))
+            return False
+    res['used'].append(('named-attack-bonus', sent))
+    return {'writer': writer, 'reader': reader, 'sentence': sent, 'bonus': bonus}
+
+
+def translate_attack(c, a, res, drop=None, note=False, bonus=None):
     B = res['blockers']
     cost = []
     for s in [x for x in a.get('cost') or [] if x != 'Free']:
@@ -4446,10 +4906,19 @@ def translate_attack(c, a, res):
     ctx = {'kind': 'attack', 'name': c['name'], 'base': base, 'cost': cost,
            'evolvesFrom': norm(c.get('evolvesFrom')) or None}
     sents = split_sentences(a.get('text'))
+    if drop is not None:
+        sents = [x for x in sents if x != drop]
     lock, sents = self_lock(sents, norm(a.get('name')), res)
     if lock is False:
         return None
+    if note:
+        if lock:
+            B.append(('a lock and a use record on one attack (one AtkLock)', norm(a.get('text'))))
+            return None
+        lock = 'note'
     p = Parser(ctx).run(sents)
+    if bonus is not None:
+        p.items.append((len(sents), Dmg('lastUse', bonus)))
     res['used'] += p.used
     if p.blockers:
         B += p.blockers

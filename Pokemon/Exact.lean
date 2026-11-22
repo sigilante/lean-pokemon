@@ -161,6 +161,7 @@ theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState
   | energyTypes w =>
       cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t2, t3]
   | supporter w => cases w <;> rfl
+  | retreat w => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t4]
 
 theorem GameState.count_of_xclampAt {co cp cb : Cap} {g₁ g₂ : GameState}
     (h : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) (c : Count) : c.val g₂ = c.val g₁ := by

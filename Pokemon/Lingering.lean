@@ -21,7 +21,7 @@ turn is in effect in that turn, one for the turn after is in effect two turns on
 the rest of the game stays. The between-turns phase and `startTurn` belong to the new turn.
 
 What is proved about finiteness.
-* For decks whose cards are *tame* (no stored damage reduction, no `drain`) and a start with no
+* For decks whose cards are *tame* (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`)) and a start with no
   damage reduction stored, the damage bonus can be capped: the clamp `GameState.clamp k`, which caps
   every bonus at `2 * k` with `k = bound` (more than every derived HP, every Resistance plus the
   static damage reduction bound, and every test constant in the cards), is a bisimulation (`Move.clamp_sim`, `Reach.clamp_sim`, under `GameState.Fit k`; `Fit` holds
@@ -150,7 +150,7 @@ theorem bonusNow_cap (k : Nat) :
   refine ⟨?_, rfl, rfl, rfl⟩
   rw [Mods.cap_iff]
   exact ⟨show min (0 + (2 * k + 1)) (2 * k) = min (0 + (2 * k + 2)) (2 * k) by omega, rfl, rfl,
-    rfl, rfl, rfl⟩
+    rfl, rfl, rfl, rfl, rfl⟩
 
 /-! ## Damage reduction breaks the cap -/
 
@@ -228,7 +228,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
       ∃ g₁ g₂ g₁', Reach g₀ g₁ ∧ Reach g₀ g₂ ∧ g₁.clamp k = g₂.clamp k ∧ Move g₁ g₁' ∧
         ∀ g₂', Move g₂ g₂' → g₁'.clamp k ≠ g₂'.clamp k := by
   refine ⟨red₀ k, wellFormed_st _ _ _ _ _ _, settled_st _ _ _ _ _ _ (by decide) (by decide),
-    ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_red₀ hk, tmax_red₀ hk,
+    ⟨Store.NoReduce.empty, Store.NoReduce.empty⟩, hpLe_red₀ hk, tmax_red₀ hk,
     red k (2 * k + 1), red k (2 * k + 2), _, reach_red k true, reach_red k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
     .attack (hlk := rfl) (atk := ⟨"Hit", [], 1, .skip, false, .none⟩) rfl (.head _) (.nil _) rfl rfl rfl
@@ -387,7 +387,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       ∃ g₁ g₂ g₁', Reach g₀ g₁ ∧ Reach g₀ g₂ ∧ g₁.clamp k = g₂.clamp k ∧ Move g₁ g₁' ∧
         ∀ g₂', Move g₂ g₂' → g₁'.clamp k ≠ g₂'.clamp k := by
   refine ⟨dr₀ k, wellFormed_st _ _ _ _ _ _, settled_st _ _ _ _ _ _ (drainer_ok k) (by decide),
-    ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_dr₀ hk, tmax_dr₀ hk,
+    ⟨Store.NoReduce.empty, Store.NoReduce.empty⟩, hpLe_dr₀ hk, tmax_dr₀ hk,
     dr k (2 * k + 1), dr k (2 * k + 2), _, reach_dr k true, reach_dr k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
     .attack (hlk := rfl) (atk := ⟨"Hit", [], 0, .seq (.selfDamage (2 * k + 3)) (.drain (.const 1)), false, .none⟩)

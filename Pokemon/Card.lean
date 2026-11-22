@@ -253,7 +253,25 @@ inductive Mod where
   | prevent
   /-- the player cannot attack, retreat, or play Item cards -/
   | lock (l : Lock)
+  /-- (milestone MV6) the player's attacks do `n` less damage, at step 2 of the damage calculation,
+  before Weakness and Resistance: "During your opponent's next turn, attacks used by the Defending
+  Pokémon do 30 less damage (before applying Weakness and Resistance)" (Pawmi me2-32) is
+  `linger .opp .next (.weaken 3)`; repeated uses add up -/
+  | weaken (n : Nat)
+  /-- (milestone MV6) attacks do `n` more damage to the player's Pokémon, at step 5 of the damage
+  calculation, after Weakness and Resistance and before the player's damage reduction: "During your
+  next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and
+  Resistance)" (Vibrava sv8-105) is `linger .opp .after (.expose 5)`; repeated uses add up -/
+  | expose (n : Nat)
   deriving DecidableEq
+
+/-- A modifier the capped clamp can absorb (milestone MV6): every modifier but a damage reduction,
+a step-2 penalty (`weaken`) and a step-5 increase (`expose`). `Effect.tame` admits only these. -/
+def Mod.plain : Mod → Bool
+  | .reduce _ => false
+  | .weaken _ => false
+  | .expose _ => false
+  | _ => true
 
 /-! ## Card filters and zone moves (milestone MV) -/
 
@@ -369,6 +387,10 @@ inductive Src where
   | top (n : Nat)
   | hand
   | discard
+  /-- the bottom `n` cards of the deck (milestone MV6: "Look at the bottom 7 cards of your deck", Dusk
+  Ball sv8-175; "Draw 3 cards from the bottom of your deck", Rabsca ex sv10-25); all of them if fewer
+  are left -/
+  | bottom (n : Nat)
   deriving DecidableEq
 
 /-- Where a zone move puts the cards it takes: the hand, the discard pile, the top or the bottom
@@ -389,6 +411,22 @@ inductive Qty where
   | upTo (n : Nat)
   | exactly (n : Nat)
   | all
+  /-- (milestone MV6) `n` cards, or every card that passes if fewer pass: "Discard a card you find
+  there" (Luxray ex sv6-68, after "Your opponent reveals their hand"), "reveal an Energy card you find
+  there, and put it into your hand" (Delibird me6-79), "Search your deck for a card" in an Ability
+  (at least 1, 2026 p. 21). It always has a resolution (`Qty.canFail` is false), unlike `exactly` -/
+  | most (n : Nat)
+  deriving DecidableEq
+
+/-- Where the cards taken from a window go (milestone MV6, `Effect.look`): to a zone (`put d`, as a
+zone move's destination); onto the player's Bench (`bench`: each card a Basic Pokémon card, as many as
+the Bench has room for: "You may put any number of Pokémon you find there onto your Bench", Reuniclus
+sv5-72); or attached, each card an Energy card, to any of the player's Pokémon in play whose card
+passes `tf`, one card at a time, "in any way you like" (`attach tf`: Lapras ex svp-164). -/
+inductive Into where
+  | put (d : Dst)
+  | bench
+  | attach (tf : Filter)
   deriving DecidableEq
 
 /-- Which of a player's Pokémon in play an effect acts on: the Active Pokémon, or one Benched
@@ -400,6 +438,13 @@ inductive Spot where
 /-- A zone of one player that a count reads (milestone MV). -/
 inductive Pile where
   | hand | deck | discard
+  /-- (milestone MV6) the top `n` cards of the deck ("Reveal the top 5 cards of your deck. This
+  attack does 70 damage for each … you find there", Iron Thorns svp-98) -/
+  | top (n : Nat)
+  /-- (milestone MV6) the bottom `n` cards of the deck ("Reveal the bottom 7 cards of your deck, and
+  this attack does 50 damage for each Pokémon you find there that has the Bug Out attack",
+  Sizzlipede me5-9) -/
+  | bottom (n : Nat)
   deriving DecidableEq
 
 /-- A number read from the state (milestone MV), for amounts ("30 damage for each card in your
@@ -449,6 +494,14 @@ inductive Count where
   is cleared when its player's turn starts, so for the player whose turn it is it means "this
   turn", and for the other player it means "during their last turn" -/
   | supporter (w : Whose)
+  /-- the printed Retreat Cost of the `w` player's Active Pokémon, 0 with no Active Pokémon
+  (milestone MV6: "This attack does 30 more damage for each Colorless in your opponent's Active
+  Pokémon's Retreat Cost", Ariados sv6-5). The printed card's, not the derived Retreat Cost
+  (`GameState.retreatOf`, which static effects change): counts are defined before the static
+  effects, so for a Pokémon whose Retreat Cost a static effect changes (Air Balloon, Gravity
+  Gemstone, N's Castle, …) the count reads the printed value (Known gaps). It reads the printed card,
+  which both clamps keep -/
+  | retreat (w : Whose)
   deriving DecidableEq
 
 /-- A test an effect can make on one Active Pokémon, or (since milestone MV) on a count. Milestone
@@ -485,6 +538,15 @@ inductive Test where
   `fresh` is cleared at the end of its owner's turn; the printed "from X" is the card's own
   pre-evolution, the only way the model evolves it -/
   | evolved (w : Whose)
+  /-- (milestone MV6) it used an attack whose `Attack.selfLock` is `AtkLock.note` during its owner's
+  last turn (the record in force in `InPlay.lk`). "During your next turn, this Pokémon's Meteor Mash
+  attack does 60 more damage (before applying Weakness and Resistance)" (Metagross sv5-115) is
+  Meteor Mash with `selfLock := .note` and the effect `ite (usedLast .own) (damage (const 12))
+  (damage (const 6))`; "this Pokémon's Hyper Fang attack's base damage is 240" (Watchog
+  rsv10pt5-73) puts the record on Focus Energy and the test in Hyper Fang. Per Pokémon: the record
+  ends when the Pokémon moves to the Bench or evolves (2026 p. 20, p. 11), as print says. Exact for
+  a Pokémon with at most one attack whose `selfLock` is not `none` -/
+  | usedLast (w : Whose)
   deriving DecidableEq
 
 /-- The amount of damage an attack's text computes, in counters: its base damage "as printed, or
@@ -507,6 +569,15 @@ inductive Amt where
   /-- `k` for each unit of the count `c` ("30 damage for each Energy attached to this Pokémon" is
   `count (.energy .own .energy) 3`; milestone MV) -/
   | count (c : Count) (k : Nat)
+  /-- `k` for each heads among `a` coins (milestone MV6): any multiple `k · m` with `m` at most the
+  value of `a`. "Flip a coin for each Energy attached to this Pokémon. This attack does 80 damage for
+  each heads" (Larry's Dudunsparce ex me2pt5-164) is `heads (count (.energy .own .energy) 1) 8`;
+  "Flip 3 coins. This attack does 50 damage for each heads" is `heads (const 3) 5`; "Reveal any
+  number of Honedge … from your hand, and this attack does 60 damage for each card you revealed in
+  this way" (Doublade me3-57) is `heads (count (.pile .own .hand f) 1) 6`. Coin flips are
+  nondeterministic choices (the model is silent about probability), so each number of heads is one
+  value -/
+  | heads (a : Amt) (k : Nat)
   deriving DecidableEq
 
 /-- Which steps of the damage calculation an attack's damage step switches off (milestone MV3): the
@@ -683,6 +754,21 @@ inductive Effect where
   Active Pokémon among the targets ("120 damage to 2 of your opponent's Pokémon") it is a derived
   form, `Effect.hitSome`. Only attacks may use the damage form (`benchHitFree`) -/
   | benchSome (w : Whose) (m : Nat) (f : Filter) (dmg : Bool) (n : Nat)
+  /-- **look at a fixed window and choose** (milestone MV6): take the whole window `src.get` of the
+  `w` player's zones off its source at once (the top or bottom `n` cards of the deck as they are when
+  the effect starts, the whole deck, hand or discard pile), take from it cards that pass `f`, as many
+  as `q` says, put the other cards of the window at `rest`, and then put the taken cards `into` their
+  place (`Into`: a zone, the Bench, or attached to Pokémon). "Look at the top 6 cards of your deck,
+  reveal an Energy card you find there, and put it into your hand. Shuffle the other cards and put
+  them on the bottom of your deck" (Delibird me6-79) is `look .own (.top 6) .energy (.most 1) (.put
+  .hand) .bottom`; "Look at the top 5 cards of your deck and discard any number of them. Put the other
+  cards back in any order" (Raifort sv6-161) is `look .own (.top 5) .any (.upTo 5) (.put .discard)
+  .top`; "Look at the top 4 cards of your deck and attach any number of Basic Metal Energy cards you
+  find there to your Pokémon in any way you like. Shuffle the other cards and put them on the bottom of
+  your deck" (Metang svp-90) is `look .own (.top 4) (.energyOf .metal) (.upTo 4) (.attach .any)
+  .bottom`. Unlike a sequence of one-card primitives on `.top n`, each of which reads the top `n` of
+  the deck as it is then, the window is read once (semantics `ZStep.look`; `Pokemon/Look.lean`) -/
+  | look (w : Whose) (src : Src) (f : Filter) (q : Qty) (into : Into) (rest : Dst)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -693,6 +779,11 @@ the attacks of the Pokémon whose `Attack.selfLock` is `this`); or "this Pokémo
 (`all`). -/
 inductive AtkLock where
   | none | this | all
+  /-- (milestone MV6) no lock: the record that the Pokémon used an attack whose `selfLock` is
+  `note`, read during its owner's next turn by `Test.usedLast` ("During your next turn, this
+  Pokémon's Meteor Mash attack does 60 more damage", Metagross sv5-115; "If this Pokémon used
+  [attack] during your last turn") -/
+  | note
   deriving DecidableEq
 
 structure Attack where
@@ -723,6 +814,7 @@ def AtkLock.allows : AtkLock → Attack → Bool
   | .none, _ => true
   | .this, atk => !decide (atk.selfLock = .this)
   | .all, _ => false
+  | .note, _ => true
 
 /-- No damage step (`damage` or `drain`) anywhere in the effect. -/
 def Effect.hitFree : Effect → Bool
@@ -763,13 +855,14 @@ def Test.onOwn : Test → Bool
   | .atLeast .own _ | .exactly .own _ | .cond .own _ | .marked .own _ | .isType .own _ => true
   | .countGe (.energy .own _) _ => true
   | .countGe (.conds .own) _ => true
-  | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own => true
+  | .countGe (.retreat .own) _ => true
+  | .top .own _ | .hasTool .own | .movedUp .own | .evolved .own | .usedLast .own => true
   | _ => false
 
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
 `selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
 moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
-milestone MV), no test on the player's own Active Pokémon,
+milestone MV; `look .own … (.attach _)`, milestone MV6), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/
@@ -786,6 +879,7 @@ def Effect.ownFree : Effect → Bool
   | .discardEnergy .own .active _ _ => false
   | .moveEnergy .own _ => false
   | .moveCounter _ _ => false
+  | .look .own _ _ _ (.attach _) _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
   | .seq a b => a.ownFree && b.ownFree
   | .choice a b => a.ownFree && b.ownFree
@@ -842,7 +936,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -931,7 +1025,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by
@@ -1507,9 +1601,11 @@ def Effect.tmax : Effect → Nat
   | _ => 0
 
 /-- No damage reduction and no `drain`: the effects for which the damage bonus can be capped
-(`Pokemon/Lingering.lean` shows that each of the two breaks the cap). -/
+(`Pokemon/Lingering.lean` shows that each of the two breaks the cap); since milestone MV6 also no
+step-2 penalty (`Mod.weaken`, a subtraction like the reduction) and no step-5 increase
+(`Mod.expose`), the modifiers that are not `Mod.plain`. -/
 def Effect.tame : Effect → Bool
-  | .linger _ _ (.reduce _) => false
+  | .linger _ _ m => m.plain
   | .drain _ => false
   | .ite _ a b => a.tame && b.tame
   | .seq a b => a.tame && b.tame

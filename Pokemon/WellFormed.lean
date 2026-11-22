@@ -50,6 +50,29 @@ theorem BenchOk.map {b : List InPlay} {U : InPlay → InPlay} (hb : BenchOk b)
   obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
   exact hU q (hb q hq)
 
+/-- Dealing Energy cards keeps every Benched Pokémon `Benched` (milestone MV6). -/
+theorem Deal.benchOk {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : List InPlay}
+    (h : Deal tf t a b a' b') (hb : BenchOk b) : BenchOk b' := by
+  induction h with
+  | nil => exact hb
+  | active _ _ ih => exact ih hb
+  | @bench e xs a q b₁ b₂ a' b' ht _ ih =>
+      exact ih (benched_update rfl hb ((hb q (List.mem_append_right _ (.head _))).of_eq
+        rfl rfl rfl rfl))
+
+/-- Placing the cards taken from a window keeps every Benched Pokémon `Benched` (milestone MV6). -/
+theorem Place.benchOk {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s')
+    (hb : BenchOk s.bench) : BenchOk s'.bench := by
+  cases h with
+  | put hp => rw [hp.fields.2.2]; exact hb
+  | bench _ _ =>
+      intro x hx
+      rcases List.mem_append.1 hx with hx | hx
+      · exact hb x hx
+      · obtain ⟨p, _, rfl⟩ := List.mem_map.1 hx
+        exact ⟨rfl, rfl, rfl, rfl⟩
+  | attach hd => exact hd.benchOk hb
+
 /-- A zone step keeps every Benched Pokémon `Benched`: it changes only attached Energy, and a
 Pokémon it puts onto the Bench is a Basic Pokémon just put into play. -/
 theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb : BenchOk s.bench) :
@@ -88,6 +111,9 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
   | @toolsBench w s p b₁ b₂ hb' =>
       exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
   | toolsNone => exact hb
+  | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
+      refine hp.benchOk ?_
+      rw [hr.fields.2.2, Src.set_bench]; exact hb
 
 /-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
 theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}

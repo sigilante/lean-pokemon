@@ -261,14 +261,15 @@ theorem reach_inv {g₀ g : GameState} (hL : g₀.LoopFree) (hG : g₀.GXOnly) (
 
 theorem modsLe_of {B : Nat} {m : Mods} (h : m.amt ≤ B) : Enum.ModsLe B m := by
   unfold Mods.amt at h
-  exact ⟨by omega, by omega⟩
+  -- One conjunct per `omega`: `omega` on a conjunction pulls in `Classical.choice`.
+  exact ⟨by omega, by omega, by omega, by omega⟩
 
 /-- **Without recycling, the bound of master.** From a start state `g₀` satisfying clauses 1 and
 2 whose cards recycle nothing (`NoRecycle`: no effect moves a card out of a discard pile to a hand
 or deck; every deck before milestone MV) and whose Abilities write nothing (`AbilityQuiet`, added
 by milestone M8a: an Ability writes every turn, so its amounts are not counted once per game) and
 whose Stadium effects write nothing (`StadiumQuiet`, added by milestone M5 for the same reason),
-every reachable state has every slot's bonus and reduction at most `storeBoundNR g₀`: each Trainer
+every reachable state has every slot's bonus and reduction (since milestone MV6 also its step-2 penalty and step-5 increase) at most `storeBoundNR g₀`: each Trainer
 card is then played at most once per game. This is the statement `reach_boundedStores` had before
 milestone MV, with its bound; for decks without Abilities and Stadiums the added hypotheses hold
 (`GameState.NoAbilities.quiet`, `GameState.NoStadiums.quiet`). -/

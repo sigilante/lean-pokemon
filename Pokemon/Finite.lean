@@ -4,7 +4,7 @@ import Pokemon.Sim
 # Finiteness
 
 `Reach.finite`, the headline: from any start state (well-formed or not) that is `Fit` at
-`k = bound g₀.allCards` (tame cards: no stored damage reduction, no `drain`; no reduction stored;
+`k = bound g₀.allCards` (tame cards: no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`); no reduction stored;
 static damage reductions are allowed, and `bound` accounts for them),
 the clamps `clamp k` of all reachable states lie in one finite list, and the kernel of the clamp
 is a bisimulation for moves along reachable states. `bound C` is larger than every HP a Pokémon
@@ -113,12 +113,13 @@ theorem mem_markss (k : Marks) : k ∈ markss := by
     mem_opts fun t _ => mem_etypes t, rfl⟩
 
 /-- Every attack lock (milestone MV4). -/
-def atkLocks : List AtkLock := [.none, .this, .all]
+def atkLocks : List AtkLock := [.none, .this, .all, .note]
 
 theorem mem_atkLocks : ∀ l : AtkLock, l ∈ atkLocks
   | .none => .head _
   | .this => .tail _ (.head _)
   | .all => .tail _ (.tail _ (.head _))
+  | .note => .tail _ (.tail _ (.tail _ (.head _)))
 
 /-- Every value of the attack locks of one Pokémon (milestone MV4): nine. -/
 def lockStates : List LockState :=
@@ -187,17 +188,22 @@ def bound (C : List Card) : Nat := hpBound C + maxResist C + sReduceBound C + ca
 /-- Every value of one turn's modifiers with amounts at most `M`. -/
 def modss (M : Nat) : List Mods :=
   (List.range (M + 1)).flatMap fun b => (List.range (M + 1)).flatMap fun r =>
-  bools.flatMap fun p => bools.flatMap fun a => bools.flatMap fun t => bools.map fun i =>
-  ⟨b, r, p, a, t, i⟩
+  bools.flatMap fun p => bools.flatMap fun a => bools.flatMap fun t => bools.flatMap fun i =>
+  (List.range (M + 1)).flatMap fun u => (List.range (M + 1)).map fun v =>
+  ⟨b, r, p, a, t, i, u, v⟩
 
-/-- The amounts in one turn's modifiers are at most `M`. -/
-def ModsLe (M : Nat) (m : Mods) : Prop := m.bonus ≤ M ∧ m.reduce ≤ M
+/-- The amounts in one turn's modifiers are at most `M` (since milestone MV6 the step-2 penalty and
+the step-5 increase too). -/
+def ModsLe (M : Nat) (m : Mods) : Prop :=
+  m.bonus ≤ M ∧ m.reduce ≤ M ∧ m.minus ≤ M ∧ m.more ≤ M
 
 theorem mem_modss {M : Nat} {m : Mods} (h : ModsLe M m) : m ∈ modss M := by
-  obtain ⟨b, r, p, a, t, i⟩ := m
+  obtain ⟨b, r, p, a, t, i, u, v⟩ := m
+  obtain ⟨h1, h2, h3, h4⟩ := h
   simp only [modss, List.mem_flatMap, List.mem_map]
-  exact ⟨b, List.mem_range.2 (Nat.lt_succ_of_le h.1), r, List.mem_range.2 (Nat.lt_succ_of_le h.2),
-    p, mem_bools _, a, mem_bools _, t, mem_bools _, i, mem_bools _, rfl⟩
+  exact ⟨b, List.mem_range.2 (Nat.lt_succ_of_le h1), r, List.mem_range.2 (Nat.lt_succ_of_le h2),
+    p, mem_bools _, a, mem_bools _, t, mem_bools _, i, mem_bools _,
+    u, List.mem_range.2 (Nat.lt_succ_of_le h3), v, List.mem_range.2 (Nat.lt_succ_of_le h4), rfl⟩
 
 /-- Every store with amounts at most `M`. -/
 def stores (M : Nat) : List Store :=
@@ -212,9 +218,11 @@ theorem mem_stores {M : Nat} {t : Store} (h : StoreLe M t) : t ∈ stores M := b
   simp only [stores, List.mem_flatMap, List.mem_map]
   exact ⟨a, mem_modss h.1, b, mem_modss h.2.1, c, mem_modss h.2.2.1, d, mem_modss h.2.2.2, rfl⟩
 
+theorem modsLe_cap (M : Nat) (m : Mods) : ModsLe M (m.cap M) :=
+  ⟨Nat.min_le_right _ _, Nat.min_le_right _ _, Nat.min_le_right _ _, Nat.min_le_right _ _⟩
+
 theorem storeLe_cap (M : Nat) (t : Store) : StoreLe M (t.cap M) :=
-  ⟨⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩, ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩,
-    ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩, ⟨Nat.min_le_right _ _, Nat.min_le_right _ _⟩⟩
+  ⟨modsLe_cap _ _, modsLe_cap _ _, modsLe_cap _ _, modsLe_cap _ _⟩
 
 /-- A finite list containing every Pokémon in play made of cards from `C` with damage and
 Poison strength at most `bound C`. -/
@@ -381,7 +389,7 @@ theorem Reach.clamp_mem {g₀ : GameState} :
   refine ⟨states g₀.allCards, fun g h => mem_states ?_ h.clamp_bounded⟩
   rw [GameState.allCards_clamp]; exact h.perm
 
-/-- A start state with tame cards (no stored damage reduction, no `drain`) and no damage reduction
+/-- A start state with tame cards (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`)) and no damage reduction
 stored is `Fit` at `bound`, so `Reach.finite` applies to it. Static damage reductions are allowed
 (milestone M6: `bound` includes their bound `sReduceBound`). -/
 theorem GameState.fit_bound {g₀ : GameState} (ht : ∀ x ∈ g₀.allCards, x.tame = true)

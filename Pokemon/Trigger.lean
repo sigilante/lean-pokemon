@@ -151,6 +151,25 @@ theorem Split.takeAll (f : Filter) :
           | head => exact hx
           | tail _ hy => exact hr y hy
 
+/-- Take the first `n` cards that pass the filter, or all of them if fewer pass (milestone MV6,
+`Qty.most`). -/
+theorem Split.takeMost (f : Filter) : ∀ (n : Nat) (l : List Card),
+    ∃ t r, Split f l t r ∧ t.length ≤ n ∧ (t.length < n → ∀ x ∈ r, f.eval x = false)
+  | _, [] => ⟨[], [], .nil, Nat.zero_le _, fun _ _ h => nomatch h⟩
+  | 0, l => ⟨[], l, Split.keepAll f l, Nat.le_refl _, fun h => absurd h (Nat.not_lt_zero _)⟩
+  | n + 1, x :: l => by
+      cases hx : f.eval x with
+      | true =>
+          obtain ⟨t, r, hs, h1, h2⟩ := Split.takeMost f n l
+          refine ⟨x :: t, r, .take hx hs, by simp only [List.length_cons]; omega, fun h => h2 ?_⟩
+          simp only [List.length_cons] at h; omega
+      | false =>
+          obtain ⟨t, r, hs, h1, h2⟩ := Split.takeMost f (n + 1) l
+          refine ⟨t, x :: r, .keep hs, h1, fun h y hy => ?_⟩
+          cases hy with
+          | head => exact hx
+          | tail _ hy => exact h2 h y hy
+
 /-- A quantity that cannot fail can always be taken. -/
 theorem Qty.exists_ok {q : Qty} (hq : q.canFail = false) (f : Filter) (l : List Card) :
     ∃ t r, Split f l t r ∧ q.ok f t r := by
@@ -160,6 +179,9 @@ theorem Qty.exists_ok {q : Qty} (hq : q.canFail = false) (f : Filter) (l : List 
   | all =>
       obtain ⟨t, r, hs, hr⟩ := Split.takeAll f l
       exact ⟨t, r, hs, hr⟩
+  | most n =>
+      obtain ⟨t, r, hs, h1, h2⟩ := Split.takeMost f n l
+      exact ⟨t, r, hs, h1, h2⟩
 
 theorem Put.exists (d : Dst) (t : List Card) (s : PlayerState) : ∃ s', Put d t s s' := by
   cases d with
@@ -210,6 +232,7 @@ theorem ZStep.exists_of_trigOk {e : Effect} {w : Whose} (hw : e.zSide = some w)
         cases hb : s.bench with
         | nil => exact ⟨_, .toolsNone (w := w') hb, ha⟩
         | cons p b => exact ⟨_, .toolsBench (w := w') (b₁ := []) (by rw [hb]; rfl), ha⟩
+  case look => simp [Effect.trigOk] at hk
 
 /-- Both Active Spots are filled. -/
 def GameState.BothActive (g : GameState) : Prop :=

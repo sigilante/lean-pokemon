@@ -12,15 +12,16 @@ The deck condition `StoreSafe` was called `Faithful` before 2026-11-22; it was r
 the old name read as "faithful to the printed cards", which it never meant (it only keeps the
 stored damage modifiers bounded).
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 39 constructors) of
-thirty-five primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 40 constructors) of
+thirty-six primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`, milestone MV6 `look`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
 type; placed on any Pokémon in play, removed from all of a player's Pokémon, Char damaging its
 Active Pokémon at Checkup), lingering modifiers (per player, for this turn, the next turn, the
 turn after, or the rest of the game, shifted at the end of every turn: a damage bonus, a damage
-reduction, damage prevention, and locks on attacking, retreating and playing Items; bonuses and
-reductions add up without limit, and enter the damage calculation described below), and effects
+reduction, since milestone MV6 a step-2 penalty and a step-5 increase, damage prevention, and locks
+on attacking, retreating and playing Items; the amounts add up without limit, and enter the damage
+calculation described below), and effects
 that read the state: a test on either
 Active Pokémon (at least `n` damage counters, exactly `n`, a Special Condition, a marker, a
 type), placing `k`
@@ -249,7 +250,7 @@ damage is computed from a Tool count, a Special Condition count and a Prize coun
 Stage 2 added per-Pokémon attack locks (S17 §C: "During your next turn, this Pokémon can't use
 [this attack]", 27 refused Standard cards; "… can't use attacks"): `Attack.selfLock` (`AtkLock`:
 none, this attack, all attacks; a defaulted field, so the generated library builds unchanged) and
-`InPlay.lk` (`LockState`: the lock set this turn and the lock in force, nine values per Pokémon, in
+`InPlay.lk` (`LockState`: the lock set this turn and the lock in force, nine values per Pokémon (sixteen since milestone MV6's `AtkLock.note`), in
 the enumeration `Enum.lockStates`, kept exactly by both clamps). `Move.attack` sets the attacker's
 lock (its result is now `GameState.afterAttack`), `InPlay.unfresh` brings it into force at the end
 of its owner's turn and ends it a turn later, `Move.attack` and `Move.attackConfused` refuse an
@@ -289,6 +290,74 @@ No theorem statement changed in text; `Move.attach`, `Move.attachBench`, `ZStep.
 `ZStep.attachBench` now range over Special Energy too (their `t` is an `EnergyCard`). The
 measurement for idea A (attachments as one kind) found 3 to 4 of the 19 riders expressible by an
 existing mechanism (S18 §A3), so the generalisation was not made.
+Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
+`Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
+(the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
+`Src.bottom`; or a whole deck, hand or discard pile), takes cards passing `f`, as many as `q` says
+(new: `Qty.most n`, "`n`, or all that pass if fewer": "Discard a card you find there"), puts the
+other cards at `rest` (the hand, the discard pile, the top or bottom of the deck in any order, or
+shuffled in) and places the taken cards (`Into`: a zone, onto the Bench, or attached to the player's
+Pokémon "in any way you like"). "Look at the top 6 cards of your deck, reveal an Energy card you find
+there, and put it into your hand. Shuffle the other cards and put them on the bottom of your deck"
+(Delibird me6-79) is `look .own (.top 6) .energy (.most 1) (.put .hand) .bottom`. With no hidden
+information in the model and a shuffle read as any permutation, it is exact: every resolution
+partitions the window as it was when the effect started and every partition is a resolution
+(`ZStep.look_window`, `ZStep.look_complete`, `Pokemon/Look.lean`); unlike one-card primitives on
+`.top n`, which read a window that moves down as cards are taken (`moving_window`, `fixed_window`).
+The derived form "take … into your hand, shuffle the other cards back" of milestone MV is proved
+equal to it (`Run.look_hand_shuffle_iff`). A window is a zone step (`ZStep.look`), so both clamps
+keep it with no new hypothesis (`Place.sim`, `Deal.sim`), it permutes the cards (`ZStep.count`), and
+a window on a discard pile is a recycler for clause 3 of `StoreSafe` (`Effect.recFilters`).
+Witnesses: attacks of Delibird's, Reuniclus's and Metang's shapes as legal moves. Changed
+definitions: `Src`, `Qty`, `Effect` (a constructor each), `Src.get`, `Src.set`, `Qty.ok`,
+`Effect.zSide`, `Effect.ownFree`, `Effect.recFilters`, `ZStep` (a constructor); new `Into`,
+`Place`, `Deal`. No theorem statement changed in text.
+Stage 2 (S19 §B) added the defender modifiers outside steps 2 and 5. Two new stored amounts, per
+player like every lingering modifier: `Mod.weaken n` ("During your opponent's next turn, attacks used
+by the Defending Pokémon do 30 less damage (before applying Weakness and Resistance)", 11 refused
+Standard cards; `Mods.minus`, subtracted at step 2) and `Mod.expose n` ("During your next turn, the
+Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance)", 4;
+`Mods.more`, added at step 5 before the reduction). `dealtBy` reads them (and stops when the damage
+after step 2 is 0, the rulebook's "Stop if the base damage is 0" read after step 2's effects). They
+are amounts (`Mod.isAmt`, `Mods.amt`), so `StoreSafe`'s five clauses govern their writers with no
+change to the clauses' text, and the store bound, `BoundedStores` (`Enum.ModsLe`) and the
+enumerations cover them; `LoopFreeNeeded.iter_weaken_breaks_bound` is the negative theorem for clause
+1's reading of the new kind. The exact-store clamp keeps them; the capped clamp caps them at `2 · k`,
+and tame decks may not write them (`Mod.plain`; `Store.NoReduce` now asks for no reduction, penalty
+or increase, and `dealtBy_cap`, `dealtBy_cap_reduce`, `dealtBy_cap_ign` gained the premise that the
+attacker's store has none). "During your next turn, this Pokémon's [attack] does 60 more damage" (5)
+needs no store: the attack records its use on its Pokémon (`AtkLock.note`, in the MV4 lock state, now
+sixteen values per Pokémon) and the named attack tests it (`Test.usedLast`), per Pokémon and exact.
+Witnesses in `Pokemon/Defender.lean`. Changed definitions: `Mod`, `AtkLock`, `Test` (a constructor
+each), `Mods` (fields `minus`, `more`), `Mods.empty`, `Mods.merge`, `Mods.addMod`, `dealtBy`,
+`Mods.cap`, `Store.NoReduce` (now per slot `Mods.NoReduce`), `Effect.tame` (`Mod.plain`), `Mod.amt`,
+`Mod.isAmt`, `Mods.amt`, `Enum.modss`, `Enum.ModsLe`, `Enum.atkLocks`, `Test.eval`, `Test.whose`,
+`Test.onOwn`, `AtkLock.allows`. Changed statements, each spelling out a changed definition or adding
+the premise the new kinds need: `Mods.cap_iff` (two conjuncts), `Store.NoReduce.add` (premise
+`m.plain = true` for `∀ n, m ≠ .reduce n`), `dealtBy_of_noReduce`, `dealtBy_cap`,
+`dealtBy_cap_reduce`, `dealtBy_cap_ign` (premise: the attacker's store `NoReduce`),
+`dealtBy_le_empty` and `GameState.dealt_le_dealtI` (premise: no step-5 increase in effect on the
+defender; switching off "effects on your opponent's Active Pokémon" removes an increase, so without
+it the old statements are false). Weakness changes ("has no Weakness", 3) are left out (a stored
+value with an order, not an amount). `Counter.universal`, `Counter.simulate`,
+`Counter.halts_of_haltMarked` and `Counter.Encodes` are unchanged in text (the encoded stores fix the
+new fields at 0).
+Stage 3 (S19 §C) added counts that read no damage: `Amt.heads a k` ("Flip a coin for each Energy
+attached to this Pokémon. This attack does 80 damage for each heads": `k` times any number of heads
+up to the value of `a`, `Amt.Val.heads_iff`; 7 refused cards, and "reveal any number … for each card
+revealed"), counts over the top or bottom `n` cards of a deck (`Pile.top`, `Pile.bottom`: Bug Out,
+"reveal the bottom 7 cards … for each Pokémon you find there"), and the printed Retreat Cost of an
+Active Pokémon (`Count.retreat`, 7 cards; printed, not derived: a listed departure when a static
+effect changes it). Both clamps keep them, so `Count.val_clampAt`, `Count.val_xclampAt`,
+`Amt.Val.congr` and `Amt.Val.transfer` gained a case each with unchanged statements. Left out, with
+the argument in S19 §C: sums of damage over several Pokémon (not kept by either clamp: the sum of
+capped values is not the capped sum, and under the in-attack clamp a capped excess on the opponent's
+Bench would reach the Active Pokémon's damage through Resistance) and the number of Pokémon with
+damage counters (exact at every cap of at least 1, but the count theorems hold at the cap 0 too).
+Witnesses in `Pokemon/Coins.lean` (Work Rush does 0, 80 or 160 with two Energy and nothing else;
+String Bind against a Retreat Cost of 1; Bug Out as one attack: a count over the bottom 2 cards, then
+a window that shuffles the counted Pokémon back and discards the rest). Changed definitions: `Amt`,
+`Pile`, `Count` (constructors), `Amt.Val`, `Pile.get`, `Count.val`, `Test.onOwn`.
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the
@@ -376,7 +445,7 @@ came with milestone MV3), cost changes and every triggered effect
   HP a Pokémon can have (`hpBound`, since milestone M6, when HP became derived; before it the clamp
   capped at the printed HP), every Resistance plus the bound `sReduceBound` on static damage
   reductions (M6), and every test constant; the factor 2 absorbs Resistance, which is
-  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no stored damage reduction, no
+  subtracted after the bonus, `dealtBy_cap`; Weakness, which doubles, needs no larger cap). From any start (well-formed or not) whose cards are *tame* (no stored damage reduction (since milestone MV6 also no step-2 penalty or step-5 increase), no
   `drain`; static reductions are allowed) and with no reduction stored (`GameState.Fit` at
   `bound`, which `GameState.fit_bound` gives from those two hypotheses alone), the clamps of all reachable states lie in one finite list, and
   the kernel of the clamp is a bisimulation for moves along reachable states (`Move.clamp_sim`,
@@ -483,7 +552,7 @@ finiteness; the deck condition `StoreSafe` buys it back:
 * **finiteness on bounded stores** (`Reach.xfinite_bounded`, `Pokemon/Bounded.lean`): from
   any start, for every `B` one finite list (depending only on the start and `B`)
   contains the `xclamp` of every reachable state satisfying `BoundedStores B` (every slot's
-  bonus and reduction at most `B`). The bounded part is not closed under moves, so on its own
+  bonus and reduction, and since milestone MV6 step-2 penalty and step-5 increase, at most `B`). The bounded part is not closed under moves, so on its own
   this gives a finite set of classes and a bisimulation that may leave that set, not a finite
   quotient; the finite quotient is `StoreSafe.xfinite`;
 * **finiteness for store-safe decks** (`StoreSafe.xfinite`, `Pokemon/StoreSafe/Invariant.lean`, imported by `Pokemon/StoreSafe.lean`): a start is
@@ -580,7 +649,7 @@ finiteness; the deck condition `StoreSafe` buys it back:
   not store-safe, and some of them are finite (tame decks that violate `GXOnly` are covered by
   `Reach.finite`).
 
-Which theorem applies. `Reach.finite` needs tame cards (no stored damage reduction, no `drain`;
+Which theorem applies. `Reach.finite` needs tame cards (no stored damage reduction, step-2 penalty or step-5 increase, no `drain`;
 static reductions are allowed) and no reduction stored at the start; it allows bonus writes under `iter` and rest-of-game bonuses
 in attacks that are not GX attacks, and recycling of every kind (milestone MV), and gives a
 coarser quotient (the clamp caps stored bonuses). `StoreSafe.xfinite` allows damage reduction,
@@ -676,11 +745,13 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,386 are imported (1,027 exactly, 359 with
-caveats) as 1,379 distinct terms, and 775 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.11.0, which writes the MV5 Energy filters as printed:
-`basicEnergy` for "Basic Energy", `energy` for "Energy", `specialEnergy` for "Special Energy";
-survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
+damage reduction). Of the pool's 2,161 cards, 1,448 are imported (1,063 exactly, 385 with
+caveats) as 1,441 distinct terms, and 713 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.12.0, which writes the MV6 vocabulary: fixed windows
+`Effect.look`, `Qty.most`, the defender modifiers `Mod.weaken` and `Mod.expose`, named-attack bonuses
+with `AtkLock.note` and `Test.usedLast`, `Amt.heads` and `Count.retreat`; since 0.11.0 the MV5 Energy
+filters as printed: `basicEnergy` for "Basic Energy", `energy` for "Energy", `specialEnergy` for
+"Special Energy"; survey S16 classifies the refusals). Since importer version 0.3.0 activated ("once during your
 turn", "as often as you like") and on-play Abilities are translated when every sentence has a
 rule, since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
 the model's `Static`, and since importer 0.6.0 (milestone M8b) triggered Abilities and Tool text
@@ -690,7 +761,8 @@ imported trigger fires wherever its place allows, with an effect satisfying `Eff
 passive Abilities, triggered text of other shapes, static text in other shapes, and the other
 forms the model lacks are refused with a reason. The tame-deck theorem `Reach.finite`
 does not cover imported decks in general: `Standard.untame` lists the imported cards that are
-not tame (a `drain` attack or a stored damage reduction); its clause on static reductions holds
+not tame (a `drain` attack, a stored damage reduction, or since milestone MV6 a step-2 penalty or
+step-5 increase); its clause on static reductions holds
 for every game (`reduceLe_bound`), and `Standard.sReduce_le` bounds the static reduction in force. Regenerate with
 `python3 -I tools/importer/importer.py <path to pokemon-tcg-data>` (`--check` re-generates in
 memory and diffs; `tools/importer/count_writers.py` recounts writers and recyclers from the

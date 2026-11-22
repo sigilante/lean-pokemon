@@ -255,7 +255,8 @@ is the printed text depends on A.
   `ZStep` rules): always `skip`, `iter` (zero rounds), `attach` (`attachNone`), `putBench`
   (`putBenchNone`), `moveEnergy` (`moveNone`), a `move` or `discardEnergy` with `upTo n` (taking
   no card) or `exactly 0`; in some states `draw` (empty deck, `drawEmpty`), `drawTo` (hand already
-  full enough), `move … .all` (no card passes), `discardEnergy`, `discardTools`, `benchCounters`,
+  full enough), `move … .all` or `… (.most n)` (no card passes), `look` (milestone MV6: taking
+  no card, the other cards put back as they were), `discardEnergy`, `discardTools`, `benchCounters`,
   `benchDamage`, `benchHeal` and `switch` on an empty Bench (`discardNone`, `toolsNone`, the
   `…None` rules), `spreadCounters`, `spreadDamage` and `benchSome` with no Pokémon hit,
   `poisonUp` on a Pokémon that is not Poisoned (`poisonUpSkip`), `shuffle` (the same order),
