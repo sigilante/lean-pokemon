@@ -428,7 +428,7 @@ def me3_70 : Card := .tool "Core Memory"
 
 /-- Crushing Hammer (me3-71). Records: me3-71, me5-105. -/
 def me3_71 : Card := .trainer "Crushing Hammer" .item
-    (.choice (.ite (.countGe (.energyAll .opp .energy) 1) (.choice (.discardEnergy .opp .active .energy (.exactly 1)) (.ite (.countGe (.bench .opp .pokemon) 1) (.discardEnergy .opp .bench .energy (.exactly 1)) (.move .own (.top 0) .hand .any (.exactly 1)))) (.move .own (.top 0) .hand .any (.exactly 1))) .skip)
+    (.ite (.countGe (.energyAll .opp .energy) 1) (.choice (.choice (.discardEnergy .opp .active .energy (.exactly 1)) (.ite (.countGe (.bench .opp .pokemon) 1) (.discardEnergy .opp .bench .energy (.exactly 1)) (.move .own (.top 0) .hand .any (.exactly 1)))) .skip) (.move .own (.top 0) .hand .any (.exactly 1)))
 
 /-- Energy Search (me3-72). Records: me3-72. -/
 def me3_72 : Card := .trainer "Energy Search" .item

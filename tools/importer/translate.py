@@ -1502,8 +1502,10 @@ def _(m, ctx):
 #
 # Rules for refused sentences that the model already expresses (survey S16, class I), each read against the `Run` /
 # `ZStep` rule of the primitives it writes (Pokemon/Effect.lean). Appended after the earlier rules, so a sentence an
-# earlier rule matched keeps its translation; the rules marked "before search-to-hand" are moved in front of that rule
-# below (they match only sentences that rule refused).
+# earlier rule matched keeps its translation; the two several-kind search rules are moved in front of the one-kind search
+# rules (they match only sentences those refused). `parse_test_s16` and `parse_count_s16` are consulted first in
+# `parse_test` and `parse_count`; they match no condition or count an earlier branch translated (checked: every term of
+# importer 0.8.0 is reproduced unchanged).
 
 def parse_test_s16(c, ctx):
     """Tests of importer 0.9.0; None if none applies."""
@@ -1693,6 +1695,7 @@ def _(m, ctx):
                    ('discardEnergy', OPP, ('bench',), ENERGY_F, ('exactly', 1)), NO_PLAY))
     if ctx['kind'] == 'ability':
         ctx['_cavs'].add('noopUse')
+    ctx['_s16coin'] = True
     return Eff(ite(('countGe', ('energyAll', OPP, ENERGY_F), 1), e, NO_PLAY if ctx['kind'] == 'trainer' else SKIP))
 
 
@@ -2473,6 +2476,13 @@ class Parser:
             if H.op != 'add' or H.args[0][0] != 'const':
                 raise Refuse('coin-flip damage not expressible')
             self.items.append((i, Dmg('flipadd', H.args[0][1])))
+            return
+        if (self.ctx['kind'] == 'trainer' and isinstance(H, Eff) and Tl is None and H.e[0] == 'ite'
+                and H.e[3] == NO_PLAY and H.e[2] != NO_PLAY and self.ctx.get('_s16coin')):
+            # importer 0.9.0 (review of Crushing Hammer): "Flip a coin. If heads, X" where X cannot happen in some states
+            # (`ite t X' none`): the Trainer cannot be played there, whatever the flip, so the test is taken outside the
+            # flip (min_take's convention applied to the whole card): `ite t (choice X' skip) none`
+            self.items.append((i, Eff(ite(H.e[1], choice(H.e[2], SKIP), NO_PLAY), H.cavs)))
             return
         if (H is None or isinstance(H, Eff)) and (Tl is None or isinstance(Tl, Eff)):
             a = H.e if H else SKIP
