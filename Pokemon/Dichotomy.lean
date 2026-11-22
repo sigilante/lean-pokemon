@@ -1,10 +1,10 @@
-import Pokemon.Faithful
+import Pokemon.StoreSafe
 
 /-!
-# The two sides together: faithful decks are finite, the two-counter decks are not faithful
+# The two sides together: store-safe decks are finite, the two-counter decks are not store-safe
 
-`Pokemon/Faithful.lean` proves finiteness up to the exact-store clamp for decks satisfying
-`GameState.Faithful`, which has five clauses: `LoopFree` (no damage bonus or reduction under
+`Pokemon/StoreSafe.lean` proves finiteness up to the exact-store clamp for decks satisfying
+`GameState.StoreSafe`, which has five clauses: `LoopFree` (no damage bonus or reduction under
 `iter`), `GXOnly` (rest-of-game bonuses and reductions only in GX attacks), since milestone MV
 `RecycleSafe` (no free recycler, an Item or Supporter effect or an "as often as you like" Ability,
 returns an Item modifier writer; no effect returns an Item or Supporter rest-of-game writer),
@@ -18,26 +18,26 @@ instruction is not `halt`), and simulate every two-counter machine. (That clause
 dropped either is `Recycle.recycling_breaks_bound`; clause 1,
 `LoopFreeNeeded.iter_writer_breaks_bound`; clause 4, `Abilities.unlimited_writer_breaks_bound`;
 clause 5, `Stadiums.stadium_writer_breaks_bound`.) It is a sharpness result for clause 2, not a
-classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
+classification of decks: store-safe decks are finite up to a two-way bisimulation; some decks
 that violate only clause 2 (the two-counter starts) are universal; nothing is proved here about
-other non-faithful decks, and some of them are finite (for instance tame decks that violate
+other decks that are not store-safe, and some of them are finite (for instance tame decks that violate
 clause 2, covered by `Reach.finite`).
 
-* `Faithful.counter_loopFree`: every two-counter start `Counter.start M a b` satisfies clause 1.
-* `Faithful.counter_recycleSafe` (milestone MV): it satisfies clause 3 (`counter_noRecycle`: no
+* `StoreSafe.counter_loopFree`: every two-counter start `Counter.start M a b` satisfies clause 1.
+* `StoreSafe.counter_recycleSafe` (milestone MV): it satisfies clause 3 (`counter_noRecycle`: no
   effect of its cards moves a card out of a discard pile).
-* `Faithful.counter_abilitySafe` (milestone M8a): it satisfies clause 4 (no Abilities).
-* `Faithful.counter_stadiumSafe` (milestone M5): it satisfies clause 5 (no Stadium).
-* `Faithful.counter_not_gxOnly`: it violates clause 2 whenever the machine's initial
+* `StoreSafe.counter_abilitySafe` (milestone M8a): it satisfies clause 4 (no Abilities).
+* `StoreSafe.counter_stadiumSafe` (milestone M5): it satisfies clause 5 (no Stadium).
+* `StoreSafe.counter_not_gxOnly`: it violates clause 2 whenever the machine's initial
   instruction is not `halt`: the Clock's or the Tape's attack, neither a GX attack, writes a
   rest-of-game damage bonus or reduction (an increment writes a reduction, a decrement a bonus;
   the Clock runs every instruction except tests of counter two, which the Tape runs).
-* `Faithful.xclamp_not_finite`: for `Counter.start Counter.countUp 0 0` (a clause-2 violator)
+* `StoreSafe.xclamp_not_finite`: for `Counter.start Counter.countUp 0 0` (a clause-2 violator)
   the `xclamp`s of the reachable states lie in no finite list, so `Reach.xfinite_bounded`
-  needs its bound on the stores, and the finiteness of `Faithful.xfinite` fails once clause 2
+  needs its bound on the stores, and the finiteness of `StoreSafe.xfinite` fails once clause 2
   is dropped. (As for `Counter.not_finite_up_to`, this is about representation: `countUp`
   never reads its counter. The behavioural statement is `Counter.universal`.)
-* `Faithful.dichotomy`: finiteness with a two-way bisimulation for every well-formed faithful
+* `StoreSafe.dichotomy`: finiteness with a two-way bisimulation for every well-formed store-safe
   deck; for every two-counter machine whose initial instruction is not `halt`, a well-formed
   start that satisfies clause 1, violates clause 2, and reaches the halt mark exactly when the
   machine halts.
@@ -47,7 +47,7 @@ clause 2 (the Clock's attack still contains the instructions of other states), a
 claimed about it here.
 -/
 
-namespace Pokemon.Faithful
+namespace Pokemon.StoreSafe
 
 open Counter
 
@@ -253,12 +253,12 @@ theorem xclamp_not_finite :
 
 /-- **The dichotomy** (a sharpness result for clause 2, `GXOnly`, not a partition of decks).
 Items 2 and 3 show that clause 2 cannot be dropped from item 1. They concern the two-counter
-starts only: a deck that is not `Faithful` need not be universal or infinite (tame decks that
+starts only: a deck that is not `StoreSafe` need not be universal or infinite (tame decks that
 violate clause 2 are finite by `Reach.finite`), and nothing is claimed about other
-non-faithful decks.
+decks that are not store-safe.
 
-1. *Finite side.* For every well-formed start whose cards satisfy `Faithful` (well-formedness is
-   not used: `Faithful.xfinite` holds from any start; the premise is kept so the statement is
+1. *Finite side.* For every well-formed start whose cards satisfy `StoreSafe` (well-formedness is
+   not used: `StoreSafe.xfinite` holds from any start; the premise is kept so the statement is
    unchanged) (clause 1,
    `LoopFree`: no damage bonus or reduction under `iter`; clause 2, `GXOnly`: rest-of-game
    bonuses and reductions only in GX attacks, which are once per player per game; clause 3,
@@ -277,7 +277,7 @@ non-faithful decks.
 With Minsky's theorem (prose, not formalised), item 2 makes reachability of the halt mark
 undecidable over the family of two-counter starts, each of which violates clause 2 only. -/
 theorem dichotomy :
-    (∀ g₀ : GameState, WellFormed g₀ → g₀.Faithful →
+    (∀ g₀ : GameState, WellFormed g₀ → g₀.StoreSafe →
       (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧
       ∀ g₁ g₂, Reach g₀ g₁ → g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →
         (∀ g₁', Move g₁ g₁' → ∃ g₂', Move g₂ g₂' ∧ g₁'.xclamp (Enum.bound g₀.allCards) = g₂'.xclamp (Enum.bound g₀.allCards)) ∧
@@ -294,4 +294,4 @@ theorem dichotomy :
       (universal M a b).2.2.2⟩,
     xclamp_not_finite⟩
 
-end Pokemon.Faithful
+end Pokemon.StoreSafe

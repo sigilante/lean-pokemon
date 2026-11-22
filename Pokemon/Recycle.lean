@@ -4,11 +4,11 @@ import Pokemon.Trainer
 /-!
 # Recycling breaks the per-game store bound (milestone MV)
 
-Before milestone MV the faithful bound (`Faithful.reach_boundedStores`) counted each Trainer
+Before milestone MV the store-safe bound (`StoreSafe.reach_boundedStores`) counted each Trainer
 card's modifier writes once per game, because nothing left a discard pile. With recycling a
 Trainer card can be played again, and the per-game count is false. This file proves that the
-first two clauses of `GameState.Faithful` (`LoopFree`, `GXOnly`, which were the whole of
-`Faithful` before milestone MV) no longer bound the stores; clause 3 (`RecycleSafe`) is what the
+first two clauses of `GameState.StoreSafe` (`LoopFree`, `GXOnly`, which were the whole of
+`StoreSafe` before milestone MV) no longer bound the stores; clause 3 (`RecycleSafe`) is what the
 restored theorem adds.
 
 **The witness** (`recycling_breaks_bound`). The player to move has, in hand, `ironDefender`
@@ -133,13 +133,13 @@ def red (g : GameState) : Nat := g.cur.mods.next.reduce
 theorem red_xclamp (g : GameState) : red (g.xclamp K) = red g := rfl
 
 /-- **Recycling breaks the store bound** (milestone MV). There is a well-formed start satisfying
-clauses 1, 2, 4 and 5 of `Faithful` (`LoopFree`, `GXOnly`: the whole of `Faithful` before milestone
+clauses 1, 2, 4 and 5 of `StoreSafe` (`LoopFree`, `GXOnly`: the whole of `StoreSafe` before milestone
 MV; `AbilitySafe`, `StadiumSafe`, added later and satisfied: the deck has no Ability and no Stadium)
 and violating clause 3 (`RecycleSafe`), whose reachable states have unbounded stores, and whose
 reachable states' `xclamp`s lie in no finite list. The recycling shape is two Items each returning
 the other and the writer `ironDefender` from the discard pile within one turn (see the module
 docstring). So clause 3, or some other condition on recycling, is needed for
-`Faithful.reach_boundedStores` and the finiteness half of `Faithful.xfinite`. -/
+`StoreSafe.reach_boundedStores` and the finiteness half of `StoreSafe.xfinite`. -/
 theorem recycling_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ ¬ g₀.RecycleSafe ∧
       g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧

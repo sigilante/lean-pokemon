@@ -9,23 +9,23 @@ use its effect once in each of their turns (`Move.stadiumUse`), without the card
 again. Within one turn the uses are few: the Stadium in play once, and, after the one Stadium play
 of the turn (`Move.stadium`), the new Stadium once (`GameState.stPot`, at most 2). So a Stadium's
 effect is paid for per use, like a once-per-turn Ability (`Card.stQ`: what it writes, plus `P` if
-it recycles), and the per-turn count of `Faithful.TInv` covers it. Across turns nothing is paid:
+it recycles), and the per-turn count of `StoreSafe.TInv` covers it. Across turns nothing is paid:
 
-* `stadium_writer_breaks_bound`: a well-formed start satisfying clauses 1–4 of `Faithful` and
+* `stadium_writer_breaks_bound`: a well-formed start satisfying clauses 1–4 of `StoreSafe` and
   violating clause 5 (`StadiumSafe`), with a Stadium in play whose effect writes a rest-of-game
   damage bonus, has reachable states with unbounded stores and `xclamp`s in no finite list: each
   player uses the Stadium in each of their turns, and the rest-of-game bonus never expires. (The
   effect also puts the player's hand on the bottom of the deck, so that the draw at the start of
   each turn never empties the deck: without some return to the deck the game ends, since every
   turn draws a card.) So clause 5 is needed.
-* `stadium_recycler_faithful`: a Stadium whose effect returns an Iron Defender-like Item (a
+* `stadium_recycler_storeSafe`: a Stadium whose effect returns an Iron Defender-like Item (a
   modifier writer) from the discard pile to the hand, usable by both players every turn, is
-  faithful, so `Faithful.xfinite` applies: the Item is played at most once per Stadium use, and the
+  store-safe, so `StoreSafe.xfinite` applies: the Item is played at most once per Stadium use, and the
   uses are at most two in a turn. Before milestone M5 clause 3 (a) counted every Trainer card's
   effect as a free recycler; this deck fails that clause (`stadium_recycler_not_M8a`), so clause 3
   is weaker than before for Stadiums, which survey S10's property P had listed with the free
   recyclers ("no Stadium in either deck may return a modifier writer"). The proof of
-  `Faithful.reach_boundedStores` shows that the per-turn limit is enough.
+  `StoreSafe.reach_boundedStores` shows that the per-turn limit is enough.
 
 As for `Recycle.recycling_breaks_bound`, the negative result is about representation: nothing
 reads the stored bonus (no attack is made), so the unboundedly many states are not shown to
@@ -122,12 +122,12 @@ def bon (g : GameState) : Nat := g.cur.mods.always.bonus
 theorem bon_xclamp (g : GameState) : bon (g.xclamp K) = bon g := rfl
 
 /-- **A Stadium whose effect writes a rest-of-game bonus breaks the store bound** (milestone M5).
-There is a well-formed start satisfying clauses 1 to 4 of `Faithful` and violating clause 5
+There is a well-formed start satisfying clauses 1 to 4 of `StoreSafe` and violating clause 5
 (`StadiumSafe`), whose reachable states have unbounded stores and whose reachable states'
 `xclamp`s lie in no finite list: both players use the Stadium in play in every turn, and the
 rest-of-game bonus it writes never expires. So clause 5, or some other condition on Stadium
-effects, is needed for `Faithful.reach_boundedStores` and the finiteness half of
-`Faithful.xfinite`. -/
+effects, is needed for `StoreSafe.reach_boundedStores` and the finiteness half of
+`StoreSafe.xfinite`. -/
 theorem stadium_writer_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧
       g₀.AbilitySafe ∧ ¬ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
@@ -147,7 +147,7 @@ theorem stadium_writer_breaks_bound :
     simp only [bon, S, spl, ab, n] at this
     omega
 
-/-! ## A Stadium that recycles a modifier writer is faithful -/
+/-! ## A Stadium that recycles a modifier writer is store-safe -/
 
 /-- "Once during each player's turn, that player may put an Iron Defender from their discard pile
 into their hand": no printed card has it (Levincia sv10-244 returns Basic Lightning Energy). -/
@@ -159,9 +159,9 @@ def D : GameState :=
   ⟨spl 0 [ironDefender] [.energy .metal], spl 0 [] [.energy .metal], true, false, false, false,
     none, some (true, depot), false, false⟩
 
-/-- **A Stadium that returns a modifier-writing Item every turn, to both players, is faithful**
-(milestone M5), so `Faithful.xfinite` applies to `D`. -/
-theorem stadium_recycler_faithful : D.Faithful := by
+/-- **A Stadium that returns a modifier-writing Item every turn, to both players, is store-safe**
+(milestone M5), so `StoreSafe.xfinite` applies to `D`. -/
+theorem stadium_recycler_storeSafe : D.StoreSafe := by
   refine ⟨by unfold GameState.LoopFree; decide, GameState.GXOnly.of_noAttacks (by decide),
     by unfold GameState.RecycleSafe; decide, by unfold GameState.AbilitySafe; decide,
     by unfold GameState.StadiumSafe; decide⟩

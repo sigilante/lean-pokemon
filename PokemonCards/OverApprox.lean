@@ -17,7 +17,7 @@ player's Pokémon. That is an over-approximation of the card's *write* (it write
 to a wider set of Pokémon), and these terms are not translations of the printed cards; the imported
 pool (`Standard.all`) does not contain them.
 
-`recSafe_withOverItems` says clause 3 of `Faithful` (`RecycleSafe`, through `recSafeB`) still holds
+`recSafe_withOverItems` says clause 3 of `StoreSafe` (`RecycleSafe`, through `recSafeB`) still holds
 for the imported pool with the two terms added. Clause 3 asks that no Item or Supporter and no "as
 often as you like" Ability (`Card.freeRec`) recycle an Item that writes a bonus or reduction
 (`Card.wAmt`), and that nothing, attacks, Abilities and Stadium effects included (`Card.allRec`),
@@ -27,7 +27,7 @@ like" Abilities, so the check covers them: no recycling filter of an Item, a Sup
 as you like" Ability of the imported pool admits either Item (`Standard.freeRecyclers` lists the cards
 those filters come from). Since milestone M5 a Stadium's effect is not a free recycler (its uses are
 at most two in a turn, `Card.stQ`), so clause 3 (a) does not ask it to leave the two Items alone.
-`faithful_withOverItems` adds the per-card checks and gives all five clauses for every game whose
+`storeSafe_withOverItems` adds the per-card checks and gives all five clauses for every game whose
 cards come from the pool with the two terms added.
 
 Stadiums (importer 0.4.0). The pool now has Stadiums whose effect recycles (`Standard.stadiumRecyclers`:
@@ -40,7 +40,7 @@ It is evidence that a recycling loop through these two Items needs a recycler ou
 pool: whether a filter admits a Trainer card depends only on the card's name and kind
 (`Filter.eval`), which the over-approximated terms share with the printed cards. It is NOT evidence
 that today's Standard satisfies `RecycleSafe` (refused recyclers, Abilities, Tools and Stadiums are not
-here), nor that games with the printed cards are `Faithful`, nor anything about how much damage the
+here), nor that games with the printed cards are `StoreSafe`, nor anything about how much damage the
 printed cards do.
 -/
 
@@ -76,10 +76,10 @@ theorem overItems_ok : [ironDefenderOver, premiumPowerProOver].all Card.importOk
   decide +kernel
 
 /-- **Probe, over-approximated, all five clauses.** Every game whose cards come from the imported
-pool and the two over-approximated Items is `Faithful`, so `Faithful.xfinite` applies to it. -/
-theorem faithful_withOverItems (g : GameState)
+pool and the two over-approximated Items is `StoreSafe`, so `StoreSafe.xfinite` applies to it. -/
+theorem storeSafe_withOverItems (g : GameState)
     (hg : ∀ x ∈ g.allCards, x ∈ Standard.all ++ [ironDefenderOver, premiumPowerProOver]) :
-    g.Faithful :=
-  faithful_of (by rw [List.all_append, Standard.all_ok, overItems_ok]; rfl) recSafe_withOverItems g hg
+    g.StoreSafe :=
+  storeSafe_of (by rw [List.all_append, Standard.all_ok, overItems_ok]; rfl) recSafe_withOverItems g hg
 
 end PokemonCards.OverApprox

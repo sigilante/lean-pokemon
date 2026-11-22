@@ -85,8 +85,8 @@ legal play.
    an attack that grants the *opponent* a rest-of-game damage reduction
    (`linger .opp .always (reduce 1)`). Printed cards give rest-of-game modifiers only through
    once-per-game attacks (GX attacks; survey S7 §C). Neither attack here is a GX attack
-   (`Attack.gx = false`); this is exactly the clause `GXOnly` of `GameState.Faithful` that the
-   construction violates (`Faithful.counter_not_gxOnly`, in `Pokemon/Dichotomy.lean`).
+   (`Attack.gx = false`); this is exactly the clause `GXOnly` of `GameState.StoreSafe` that the
+   construction violates (`StoreSafe.counter_not_gxOnly`, in `Pokemon/Dichotomy.lean`).
 2. The damage placed by an attack read by a test later in the same attack (`ite (exactly opp
    v)` after the damage step `damage (const 1)`). The rulebook places damage and "then do[es]
    all other effects" (2023 p. 20, step F), so reading it afterwards is in order; what is

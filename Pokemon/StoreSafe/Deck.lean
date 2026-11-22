@@ -1,8 +1,8 @@
 import Pokemon.Turn
 import Pokemon.WellFormed
 
-/-! Part of `Pokemon/Faithful.lean` (see its module documentation): the amounts written by
-effects, the deck condition `GameState.Faithful` and its clauses, and the counting of Ability
+/-! Part of `Pokemon/StoreSafe.lean` (see its module documentation): the amounts written by
+effects, the deck condition `GameState.StoreSafe` and its clauses, and the counting of Ability
 uses within a turn. It needs neither the damage clamps nor finiteness, so it builds alongside
 those files. -/
 
@@ -797,7 +797,7 @@ than a rest-of-game one (clause 5) and is paid per use through `Card.stQ`, at mo
 `koByAttack` trigger fires only after the turn's attack (`GameState.batchTrigs`), when the per-turn
 part of the invariant no longer applies, and a `damaged` trigger fires inside the attack; both are
 bound by (b) like every effect. (A first M8b version counted them in (a); that was not needed, and
-the class of faithful decks is now larger.) Decidable (a finite check over pairs of a recycling
+the class of store-safe decks is now larger.) Decidable (a finite check over pairs of a recycling
 filter and a card of the game). For a deck without Abilities, Stadiums or Tools it is the clause of
 milestone MV. -/
 def GameState.RecycleSafe (g : GameState) : Prop :=
@@ -995,12 +995,12 @@ theorem stQ_le_cardsStQ {P : Nat} {x : Card} : ∀ {cs : List Card}, x ∈ cs �
           have := stQ_le_cardsStQ (P := P) h
           simp only [cardsStQ]; omega
 
-/-- **Faithful decks** (milestone MV: three clauses; milestone M8a: four; milestone M5: five, the
+/-- **Store-safe decks** (milestone MV: three clauses; milestone M8a: four; milestone M5: five, the
 fifth `StadiumSafe`, which every deck without Stadium cards satisfies). For a deck with no
 recycling (every deck before milestone MV) clause 3 holds (`GameState.NoRecycle.recycleSafe`), and
 for a deck without Abilities clause 4 holds and clauses 1 and 3 say what they said before, so for
-a deck with neither `Faithful` means what it meant before milestone MV: `LoopFree ∧ GXOnly`. -/
-def GameState.Faithful (g : GameState) : Prop :=
+a deck with neither `StoreSafe` means what it meant before milestone MV: `LoopFree ∧ GXOnly`. -/
+def GameState.StoreSafe (g : GameState) : Prop :=
   g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe ∧ g.AbilitySafe ∧ g.StadiumSafe
 
 /-- A recycling filter of an attack of a card (a Pokémon card's, or one a Tool gives) is one of

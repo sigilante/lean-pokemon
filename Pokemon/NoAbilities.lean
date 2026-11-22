@@ -1,10 +1,10 @@
-import Pokemon.Faithful
+import Pokemon.StoreSafe
 
 /-!
 # Decks without Abilities
 
-For a game in which no Pokémon card has an Ability, the Ability clauses of `Faithful` hold
-trivially, the Ability term of the store bound vanishes, and `Faithful` is the three-clause
+For a game in which no Pokémon card has an Ability, the Ability clauses of `StoreSafe` hold
+trivially, the Ability term of the store bound vanishes, and `StoreSafe` is the three-clause
 condition it was before Abilities entered the model. These lemmas make that explicit, so that
 the results for such decks are visibly as strong as they were.
 -/
@@ -22,7 +22,7 @@ theorem GameState.NoAbilities.quiet {g : GameState} (h : g.NoAbilities) : g.Abil
   have e : p.abilities = [] := h _ hp
   rw [e] at hab; nomatch hab
 
-/-- Without Abilities, clause 4 of `Faithful` (`AbilitySafe`) holds. -/
+/-- Without Abilities, clause 4 of `StoreSafe` (`AbilitySafe`) holds. -/
 theorem GameState.NoAbilities.safe {g : GameState} (h : g.NoAbilities) : g.AbilitySafe := by
   intro x hx
   cases x with
@@ -45,15 +45,15 @@ theorem cardsAbQ_zero (P : Nat) : ∀ C : List Card, (∀ x ∈ C, x.abilities =
 the model before Abilities (milestone MV) and, since milestone M5, the Stadium term, which is 0
 for a deck without Stadium cards (`GameState.NoStadiums.storeBound_noAbilities`). -/
 theorem GameState.NoAbilities.storeBound {g : GameState} (h : g.NoAbilities) :
-    Faithful.storeBound g =
+    StoreSafe.storeBound g =
       g.storeTotal + 6 * cardsAmt g.allCards + 6 * cardsStQ (cardsAmt g.allCards) g.allCards +
         3 * cardsAtkAmt g.allCards := by
-  simp [Faithful.storeBound, cardsAbQ_zero _ _ h]
+  simp [StoreSafe.storeBound, cardsAbQ_zero _ _ h]
 
-/-- Without Abilities, `Faithful` is its clauses other than clause 4 (milestone M5 added clause 5,
+/-- Without Abilities, `StoreSafe` is its clauses other than clause 4 (milestone M5 added clause 5,
 `StadiumSafe`; before it this lemma read "its first three clauses"). -/
-theorem GameState.NoAbilities.faithful_iff {g : GameState} (h : g.NoAbilities) :
-    g.Faithful ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe ∧ g.StadiumSafe :=
+theorem GameState.NoAbilities.storeSafe_iff {g : GameState} (h : g.NoAbilities) :
+    g.StoreSafe ↔ g.LoopFree ∧ g.GXOnly ∧ g.RecycleSafe ∧ g.StadiumSafe :=
   ⟨fun ⟨a, b, c, _, d⟩ => ⟨a, b, c, d⟩, fun ⟨a, b, c, d⟩ => ⟨a, b, c, h.safe, d⟩⟩
 
 end Pokemon

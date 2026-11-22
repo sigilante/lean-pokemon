@@ -7,7 +7,10 @@ English card pool (S3) found no unbounded store that play can both write and rea
 generalises some card text beyond what printed cards do (for instance, lingering damage
 modifiers add up without limit); with those generalisations the model does have unbounded
 stores, and the finiteness results below need a hypothesis on the deck: tame decks
-(`Reach.finite`) or faithful decks (`Faithful.xfinite`); neither class contains the other.
+(`Reach.finite`) or store-safe decks (`StoreSafe.xfinite`); neither class contains the other.
+The deck condition `StoreSafe` was called `Faithful` before 2026-11-22; it was renamed because
+the old name read as "faithful to the printed cards", which it never meant (it only keeps the
+stored damage modifiers bounded).
 
 Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 39 constructors) of
 thirty-five primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
@@ -136,7 +139,7 @@ triggered Ability nothing changed (`Pokemon/NoTriggers.lean`). A chain of trigge
 ends (`KOMove.acc`, `Move.unsettled_acc`): every batch that Knocks Out a Pokémon takes Prize cards,
 which nothing returns, and a batch that Knocks Out none fires no trigger and fills an Active Spot;
 the Prize-changing triggers of the card pool, which would break this, are not modelled. The store
-bound needs no new clause of `Faithful`: triggered Abilities write no store (the fragment has no
+bound needs no new clause of `StoreSafe`: triggered Abilities write no store (the fragment has no
 `linger`), their recycling is bound by clause 3 (b) like every effect's, and they are not free
 recyclers in clause 3 (a), since a `koByAttack` trigger fires only after the turn's attack, when the
 per-turn part of the invariant is vacuous (`TInv.same'`). Witnesses (`Pokemon/TriggerWitness.lean`):
@@ -391,7 +394,7 @@ every `k ≥ 2`). Expiry follows the turn structure:
 each kind of modifier is in effect. Printed rest-of-game bonuses and reductions come only from
 once-per-game attacks (survey S7), and same-turn ones are bounded by copies of their cards times
 printed constants provided no recycling replays them within a turn; since milestone MV this is
-clause 3 of `Faithful` (`RecycleSafe`), a decidable hypothesis on the two decks together. Survey
+clause 3 of `StoreSafe` (`RecycleSafe`), a decidable hypothesis on the two decks together. Survey
 S10 found no Item or Supporter card in today's Standard pool whose discard-pile filter admits a
 modifier-writing Item, and no rest-of-game Trainer writer there, so the model's
 encodings of those Trainers and attacks satisfy clause 3 for every pairing of decks (a reading
@@ -399,7 +402,7 @@ of the card pool, not a theorem; static text outside the language of `Static` (m
 text and returns from play are outside the model, so this does not say Standard decks are covered). A reduction carried into the opponent's turn does exist on a printed Item (Iron
 Defender: "During your opponent's next turn, all of your Metal Pokémon take 30 less
 damage…"), so printed decks are not all tame. The model over-approximates modifiers on purpose;
-`Reach.finite` covers only the tame decks, and `Faithful.xfinite` (next paragraph) covers decks
+`Reach.finite` covers only the tame decks, and `StoreSafe.xfinite` (next paragraph) covers decks
 with reductions such as Iron Defender's.
 
 Exact stores. Both clamp counterexamples reach two states whose stores differ only above the
@@ -415,7 +418,7 @@ kept exact on every Pokémon in play (every attack starts with no pending Knock 
 determines the damage; before milestone M4 the opponent's was capped, which a damage step that
 reads it and `drain` that writes the amount to the attacker would break); damage done needs no
 cap, however large in either direction, since it is computed from equal values. What the exact clamp gives up is boundedness of the stores, and with it
-finiteness; the deck condition `Faithful` buys it back:
+finiteness; the deck condition `StoreSafe` buys it back:
 
 * **exact-store bisimulation, every deck** (`Move.xclamp_sim`, `Reach.xclamp_bisim`,
   `GameState.xclamp_bisim`): the kernel of `xclamp` is a two-way bisimulation, with no
@@ -427,16 +430,16 @@ finiteness; the deck condition `Faithful` buys it back:
   contains the `xclamp` of every reachable state satisfying `BoundedStores B` (every slot's
   bonus and reduction at most `B`). The bounded part is not closed under moves, so on its own
   this gives a finite set of classes and a bisimulation that may leave that set, not a finite
-  quotient; the finite quotient is `Faithful.xfinite`;
-* **finiteness for faithful decks** (`Faithful.xfinite`, `Pokemon/Faithful/Invariant.lean`, imported by `Pokemon/Faithful.lean`): a start is
-  `Faithful` if no card's effect has a damage bonus or reduction under `iter` (`LoopFree`), only
+  quotient; the finite quotient is `StoreSafe.xfinite`;
+* **finiteness for store-safe decks** (`StoreSafe.xfinite`, `Pokemon/StoreSafe/Invariant.lean`, imported by `Pokemon/StoreSafe.lean`): a start is
+  `StoreSafe` if no card's effect has a damage bonus or reduction under `iter` (`LoopFree`), only
   GX attacks write rest-of-game bonuses or reductions (`GXOnly`), and, since milestone MV, no
   Item or Supporter effect can return from a discard pile an Item card that writes a bonus or
   reduction, and no effect at all an Item or Supporter card that writes a rest-of-game amount
   (`RecycleSafe`, decidable; a Stadium's once-per-turn effect is not restricted this way, and is
   paid for per use;
   attacks may recycle every other card, because an attack ends the turn; every deck with no
-  recycling satisfies it, so for such decks `Faithful` means what it meant before), and, since
+  recycling satisfies it, so for such decks `StoreSafe` means what it meant before), and, since
   milestone M8a, clauses 1 and 3 read Abilities too ("as often as you like" Abilities count with
   Trainer effects in clause 3 (a)) and a fourth clause holds: no "as often as you like" Ability writes
   a bonus or reduction and no Ability a rest-of-game one (`AbilitySafe`, decidable; every deck without
@@ -446,14 +449,14 @@ finiteness; the deck condition `Faithful` buys it back:
   and its effect is not a free recycler: its uses are bounded per turn), and for a deck without
   Stadiums clauses 3 and 5 are what they were (`Pokemon/NoStadiums.lean`). Then every reachable
   state satisfies `BoundedStores (storeBound g₀)`
-  (`Faithful.reach_boundedStores`), where `storeBound` adds the start stores, six times the Trainer
+  (`StoreSafe.reach_boundedStores`), where `storeBound` adds the start stores, six times the Trainer
   amounts of the cards, three times `Q · potBound |C|` for Abilities (`Q` what one bounded Ability use
   can write and recycle, 0 for a deck without Abilities), six times `cardsStQ` for Stadium effects
   (at most two uses a turn, each writing and recycling at most `cardsStQ`, 0 for a deck without
-  Stadiums) and three times the largest amount of one attack; so from any faithful start (well-formed or not) the `xclamp`s of all reachable states lie
+  Stadiums) and three times the largest amount of one attack; so from any store-safe start (well-formed or not) the `xclamp`s of all reachable states lie
   in one finite list, with the two-way bisimulation. Once-per-turn and on-play Abilities may write
-  modifiers (Feraligatr sv5-41: `Abilities.feraligatr_faithful`) and recycle writers
-  (`Abilities.once_recycler_faithful`): their uses in one turn are bounded by a potential of the
+  modifiers (Feraligatr sv5-41: `Abilities.feraligatr_storeSafe`) and recycle writers
+  (`Abilities.once_recycler_storeSafe`): their uses in one turn are bounded by a potential of the
   player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`), which no move of the
   turn raises; this rests on the model having no return of a Pokémon from play to the hand or deck. The bound is per turn:
   within a turn, before its attack, each writer Item is played at most once unless a Stadium use returns it (clause 3) and
@@ -465,14 +468,14 @@ finiteness; the deck condition `Faithful` buys it back:
   nothing and (since milestone M8a, a new hypothesis that every deck without Abilities satisfies)
   whose Abilities write nothing, and (since milestone M5, a hypothesis that every deck without
   Stadiums satisfies) whose Stadium effects write nothing
-  (`Faithful.reach_boundedStores_noRecycle`). Faithful decks may use damage reduction,
+  (`StoreSafe.reach_boundedStores_noRecycle`). Store-safe decks may use damage reduction,
   `drain`, carried bonuses and reductions in attacks and Trainers (Iron Defender), rest-of-game
   modifiers in GX attacks and Trainer cards, and recycling within clause 3 (Energy Retrieval,
   Night Stretcher, Dedenne's "Put a Trainer card from your discard pile into your hand" attack:
   `Recycle.printed_shapes_recycleSafe`);
 * **recycling breaks the per-game bound** (`Recycle.recycling_breaks_bound`,
   `Pokemon/Recycle.lean`): a well-formed start satisfying `LoopFree` and `GXOnly` (all of
-  `Faithful` before milestone MV) but not `RecycleSafe` has reachable states with unbounded stores
+  `StoreSafe` before milestone MV) but not `RecycleSafe` has reachable states with unbounded stores
   and `xclamp`s in no finite list. Its loop, within one turn and with no attack: play an Item
   modelled on Iron Defender (a carried reduction of 3), play Item A ("put up to 2 Item cards from
   your discard pile into your hand"), which returns Iron Defender and Item B, play Iron Defender,
@@ -501,7 +504,7 @@ finiteness; the deck condition `Faithful` buys it back:
   players use the Stadium every turn, and the effect also puts the hand on the bottom of the deck,
   without which the draw of each turn would end the game); so clause 5 is needed. A Stadium whose
   effect returns an Iron Defender-like Item from the discard pile every turn, to both players, is
-  faithful (`Stadiums.stadium_recycler_faithful`): the Item is replayed at most once per Stadium
+  store-safe (`Stadiums.stadium_recycler_storeSafe`): the Item is replayed at most once per Stadium
   use, and a turn has at most two uses (`GameState.stPot`); the clause 3 of milestone M8a refused
   this deck (`Stadiums.stadium_recycler_not_M8a`). No Standard Stadium's activated ("once during each player's turn") effect writes a lingering modifier; static ones (Postwick, Full Metal Lab, …) are not modelled (see Known gaps);
 * **the rule change**: `Attack` has a field `gx`, and `Move.attack` lets a player use a GX
@@ -509,29 +512,29 @@ finiteness; the deck condition `Faithful` buys it back:
   unused before); `Move.attackConfused` (a Confused Pokémon's failed attempt) has the same
   premise and does not record it (an unverified ruling, listed in the Known gaps of `Pokemon/Rules.lean`). Every earlier
   theorem was re-proved; `Counter.universal` is unchanged;
-* **the dichotomy** (`Faithful.dichotomy`, `Pokemon/Dichotomy.lean`): the two-counter starts
-  satisfy `LoopFree` (`Faithful.counter_loopFree`) and `RecycleSafe` (`Faithful.counter_recycleSafe`:
+* **the dichotomy** (`StoreSafe.dichotomy`, `Pokemon/Dichotomy.lean`): the two-counter starts
+  satisfy `LoopFree` (`StoreSafe.counter_loopFree`) and `RecycleSafe` (`StoreSafe.counter_recycleSafe`:
   they recycle nothing) and violate `GXOnly` whenever the machine's
-  first instruction is not `halt` (`Faithful.counter_not_gxOnly`: their attacks, not GX attacks,
+  first instruction is not `halt` (`StoreSafe.counter_not_gxOnly`: their attacks, not GX attacks,
   write rest-of-game amounts); for `start countUp 0 0` the `xclamp`s of the reachable states lie
-  in no finite list (`Faithful.xclamp_not_finite`, a statement about representation, as for
+  in no finite list (`StoreSafe.xclamp_not_finite`, a statement about representation, as for
   `Counter.not_finite_up_to`). This is a sharpness result for the `GXOnly` clause, not a
-  classification of decks: faithful decks are finite up to a two-way bisimulation; some decks
+  classification of decks: store-safe decks are finite up to a two-way bisimulation; some decks
   that violate only `GXOnly` (the two-counter starts) simulate every two-counter machine, so
   that clause cannot be dropped from the theorem; nothing is proved about other decks that are
-  not faithful, and some of them are finite (tame decks that violate `GXOnly` are covered by
+  not store-safe, and some of them are finite (tame decks that violate `GXOnly` are covered by
   `Reach.finite`).
 
 Which theorem applies. `Reach.finite` needs tame cards (no stored damage reduction, no `drain`;
 static reductions are allowed) and no reduction stored at the start; it allows bonus writes under `iter` and rest-of-game bonuses
 in attacks that are not GX attacks, and recycling of every kind (milestone MV), and gives a
-coarser quotient (the clamp caps stored bonuses). `Faithful.xfinite` allows damage reduction,
+coarser quotient (the clamp caps stored bonuses). `StoreSafe.xfinite` allows damage reduction,
 `drain`, carried modifiers and Trainer modifiers; it forbids amounts written under `iter`,
 rest-of-game amounts written by attacks that are not GX attacks, and recycling of modifier-writing Items
 by Item and Supporter effects and unlimited Abilities (`RecycleSafe`), and gives a finer quotient (the stores are kept exact). Neither class
 contains the other; for decks in both, both theorems apply.
 
-Not covered by `Faithful`, or not in the model: recycling outside clause 3 (an Item that returns
+Not covered by `StoreSafe`, or not in the model: recycling outside clause 3 (an Item that returns
 a modifier-writing Item, as in `Recycle.recycling_breaks_bound`, or an "as often as you like"
 Ability that does, `Abilities.unlimited_recycler_breaks_bound`); "as often as you like" Abilities
 that write a modifier (outside clause 4); static and triggered Abilities and Stadium effects
@@ -579,7 +582,7 @@ computed, depends on the start state, and gives no size bound. For tame decks, t
 quotient with the same moves (`Reach.finite`) means that reachability questions that depend only
 on the clamp could be decided by exploring it, given a computable successor function for the
 quotient; neither that function nor the decision procedure is formalized. The same holds for
-faithful decks with the exact-store quotient (`Faithful.xfinite`). For the two-counter starts,
+store-safe decks with the exact-store quotient (`StoreSafe.xfinite`). For the two-counter starts,
 which violate `GXOnly` only, no such procedure exists uniformly: by the reduction of `Pokemon/Counter.lean` and
 Minsky's theorem, reachability of the halt mark, as a problem over the family of its start
 states, is undecidable in the generalised model (the reduction is proved; the appeal to
@@ -614,12 +617,12 @@ Imported cards (library `PokemonCards`, not a default target): `tools/importer/`
 today's Standard pool (survey S9's pool B: regulation marks H, I, J plus Basic Energy) into
 `Card` terms, conservatively, and writes them to `PokemonCards/Standard/Part*.lean` with
 per-card checks, plus `PokemonCards/Standard.lean` (the count of imported cards, the named
-list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.faithful`:
-every game whose cards all come from the imported pool is `Faithful`, all five clauses, and
-`PokemonCards.Standard.xfinite`, `Faithful.xfinite` for those games, both stated with the clamp
+list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.storeSafe`:
+every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
+`PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,192 are imported (893 exactly, 299 with
-caveats) as 1,188 distinct terms, and 969 are refused, each with a reason
+damage reduction). Of the pool's 2,161 cards, 1,233 are imported (910 exactly, 323 with
+caveats) as 1,227 distinct terms, and 928 are refused, each with a reason
 (`tools/importer/out/coverage.md`). Since importer version 0.3.0 activated ("once during your
 turn", "as often as you like") and on-play Abilities are translated when every sentence has a
 rule, since milestone M6 static text (of an Ability, a Tool or a Stadium) in the shapes of
@@ -651,4 +654,15 @@ the two lists is established by the importer, not by Lean. The
 library lives outside `Pokemon/` because `Pokemon/Audit.lean` requires every module under
 `Pokemon/` to be imported by it.
 
-Licence: MIT (see `LICENSE`).
+## Licence and trademarks
+
+The MIT licence (`LICENSE`) covers the original code, proofs and documentation written for this
+project. Pokémon, the Pokémon Trading Card Game, card names and the text of cards and of the
+rulebook belong to their respective owners (Nintendo, Creatures Inc., GAME FREAK inc. and The
+Pokémon Company) and are not covered by that licence. Where the repository reproduces card names
+or short passages of card or rulebook text (the generated card files, the importer's output
+tables, comments), they are quoted for research and commentary, and no licence to them is granted
+or implied. The project is not affiliated with, sponsored by or endorsed by those owners. The card
+data the importer reads (pokemon-tcg-data) is not distributed here; it comes from that third-party
+dataset under its own terms. This is the authors' statement of intent, not legal advice; see
+`NOTICE`.

@@ -20,7 +20,7 @@ Survey S13 §A. The commonest history shapes of today's Standard that the model 
 one of the player's Pokémon in the current turn, the same after an attack, and both for the
 previous turn) and one flag per Pokémon in play (`InPlay.movedUp`). Nothing is counted, so no new
 quantity needs a bound: the record takes `2⁴` values per player (`Enum.mem_kohists`) and two per
-Pokémon, and the finite lists of `Reach.clamp_mem` and `Faithful.xfinite` enumerate them (`Enum.players`,
+Pokémon, and the finite lists of `Reach.clamp_mem` and `StoreSafe.xfinite` enumerate them (`Enum.players`,
 `Enum.inPlays`, and their counterparts in `Pokemon/Bounded.lean`). Neither clamp touches a flag:
 the clamps change damage, Poison strength and (the capped clamp) the stores only, so both keep
 the record exactly (`Count.val_clampAt`, `Count.val_xclampAt` for `koLast`; `InPlay.Agree.movedUp`

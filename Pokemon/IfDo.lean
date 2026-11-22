@@ -35,7 +35,7 @@ primitive and no record of what happened: the consequence reads the branch the r
   rulebook p. 22), but the model does not require legal decks.
 
 These are derived forms: every function on effects (`hitFree`, `oneHit`, `switchSafe`, `trigOk`,
-`tame`, `tmax`, the clauses of `Faithful`, `LoopFree`, `RecycleSafe`'s writers and recyclers) reads
+`tame`, `tmax`, the clauses of `StoreSafe`, `LoopFree`, `RecycleSafe`'s writers and recyclers) reads
 them through their `choice`, `seq`, `ite` and `skip`, so no theorem needed a new case. A predicate
 that treats `choice` as a conjunction holds of `forUpTo f N` when it holds of every branch
 (`forUpTo_all`); a consequence that recycles or writes a modifier is a branch like any other and is

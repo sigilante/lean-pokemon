@@ -1,8 +1,8 @@
-import Pokemon.Faithful.Deck
+import Pokemon.StoreSafe.Deck
 import Pokemon.Bounded
 import Pokemon.Counter
 
-/-! Part of `Pokemon/Faithful.lean` (see its module documentation): the bound on the Ability
+/-! Part of `Pokemon/StoreSafe.lean` (see its module documentation): the bound on the Ability
 potential, the invariant that bounds the stores, and the per-turn invariant. -/
 
 namespace Pokemon
@@ -24,7 +24,7 @@ theorem GameState.abPot_le_bound (g : GameState) : g.abPot ≤ potBound g.allCar
 
 /-! ## The invariant -/
 
-namespace Faithful
+namespace StoreSafe
 
 /-- `A` if the player to move has attacked this turn, else 0. -/
 def atkT (A : Nat) (g : GameState) : Nat := if g.attacked then A else 0
@@ -930,7 +930,7 @@ def storeBound (g₀ : GameState) : Nat :=
     6 * cardsStQ (cardsAmt g₀.allCards) g₀.allCards +
     3 * cardsAtkAmt g₀.allCards
 
-theorem reach_tinv {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach g₀ g) :
+theorem reach_tinv {g₀ g : GameState} (hF : g₀.StoreSafe) (h : Reach g₀ g) :
     ∃ X₀ X₁ X₂ D E, TInv g₀.storeTotal (cardsAtkAmt g₀.allCards) (cardsAmt g₀.allCards)
       (cardsAbQ (cardsAmt g₀.allCards) g₀.allCards) (potBound g₀.allCards.length)
       (cardsStQ (cardsAmt g₀.allCards) g₀.allCards) g X₀ X₁ X₂ D E := by
@@ -947,8 +947,8 @@ theorem reach_tinv {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach g₀ g) 
         (fun x hx => stQ_le_cardsStQ (hp.mem_iff.1 hx))
         (by rw [hp.length_eq]; exact Nat.le_refl _) hn
 
-/-- **For a faithful deck the stores stay bounded.** From a start state `g₀` satisfying
-`Faithful` (clauses 1–5), every reachable state has, in both players' stores, every slot's damage
+/-- **For a store-safe deck the stores stay bounded.** From a start state `g₀` satisfying
+`StoreSafe` (clauses 1–5), every reachable state has, in both players' stores, every slot's damage
 bonus and damage reduction at most `storeBound g₀`, which is computed from the start state's stores
 and cards. Milestone MV changed the hypothesis (clause 3, `RecycleSafe`, which every deck without
 recycling satisfies) and the bound (`storeBound` counts six times the Trainer amounts, a per-turn
@@ -956,7 +956,7 @@ count; the per-game bound of master is `reach_boundedStores_noRecycle`). Milesto
 clause 4 (`AbilitySafe`) to the hypothesis and the Ability term to the bound; for a deck without
 Abilities both changes are void. Milestone M5 added clause 5 (`StadiumSafe`) and the Stadium term;
 for a deck without Stadium cards both are void (`Pokemon/NoStadiums.lean`). -/
-theorem reach_boundedStores {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach g₀ g) :
+theorem reach_boundedStores {g₀ g : GameState} (hF : g₀.StoreSafe) (h : Reach g₀ g) :
     g.BoundedStores (storeBound g₀) := by
   obtain ⟨X₀, X₁, X₂, D, E, hi⟩ := reach_tinv hF h
   have hd : g.discW Card.alAmt ≤ cardsAmt g₀.allCards :=
@@ -976,8 +976,8 @@ theorem reach_boundedStores {g₀ g : GameState} (hF : g₀.Faithful) (h : Reach
     ⟨modsLe_of (ho .now), modsLe_of (ho .next), modsLe_of (ho .after), modsLe_of (ho .always)⟩⟩
 
 
-/-- **Finiteness for faithful decks.** Let `g₀` be any start state (well-formed or not) whose
-cards satisfy `Faithful`, its five clauses:
+/-- **Finiteness for store-safe decks.** Let `g₀` be any start state (well-formed or not) whose
+cards satisfy `StoreSafe`, its five clauses:
 1. `LoopFree`: no damage bonus or reduction is written under `iter`;
 2. `GXOnly`: an attack writes a rest-of-game bonus or reduction only if it is a GX attack, which
    the rules make once per player per game;
@@ -1005,7 +1005,7 @@ states with equal `xclamp` (`GameState.xclamp_bisim`). Since milestone M6 the cl
 `Enum.bound g₀.allCards`, which bounds every derived HP; before it the clamp capped at the printed HP
 and had no parameter. The list is not computed and the quotient's moves are not shown
 computable. -/
-theorem xfinite {g₀ : GameState} (hF : g₀.Faithful) :
+theorem xfinite {g₀ : GameState} (hF : g₀.StoreSafe) :
     (∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp (Enum.bound g₀.allCards) ∈ L) ∧
       ∀ g₁ g₂, Reach g₀ g₁ →
         g₁.xclamp (Enum.bound g₀.allCards) = g₂.xclamp (Enum.bound g₀.allCards) →
@@ -1017,6 +1017,6 @@ theorem xfinite {g₀ : GameState} (hF : g₀.Faithful) :
   exact ⟨⟨L, fun g h => hL g h (reach_boundedStores hF h)⟩,
     fun _ _ h hc => Reach.xclamp_bisim h hc⟩
 
-end Faithful
+end StoreSafe
 
 end Pokemon

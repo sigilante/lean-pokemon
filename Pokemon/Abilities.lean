@@ -5,7 +5,7 @@ import Pokemon.Recycle
 
 An "as often as you like" Ability (`AbilityUse.unlimited`) is a free, repeatable effect within a
 turn: an `iter` at the level of moves rather than inside one effect. Clause 1 of
-`GameState.Faithful` (`LoopFree`) forbids writing a damage bonus or reduction under `iter`
+`GameState.StoreSafe` (`LoopFree`) forbids writing a damage bonus or reduction under `iter`
 inside one effect; it says nothing about repeating a whole move. This file proves that a further
 condition is needed, and that the one chosen, clause 4 (`AbilitySafe`) with clause 3
 (`RecycleSafe`) extended to "as often as you like" Abilities, is not vacuous:
@@ -18,8 +18,8 @@ condition is needed, and that the one chosen, clause 4 (`AbilitySafe`) with clau
   violating clause 3 (a), whose Pokémon has an "as often as you like" Ability that returns an
   Item modelled on Iron Defender from the discard pile to the hand, has the same: play the Item,
   return it with the Ability, play it again.
-* `once_recycler_faithful`: the same deck with the Ability limited to "once during your turn" is
-  faithful, so `Faithful.xfinite` applies to it: a once-per-turn recycler of a modifier writer is
+* `once_recycler_storeSafe`: the same deck with the Ability limited to "once during your turn" is
+  store-safe, so `StoreSafe.xfinite` applies to it: a once-per-turn recycler of a modifier writer is
   allowed, because the uses of such Abilities in one turn are bounded by the potential
   `GameState.abPot` (each use returns at most `P`, the Trainer amounts of all the cards, which
   `storeBound` pays for through `Ability.q`).
@@ -105,11 +105,11 @@ def red (g : GameState) : Nat := g.cur.mods.next.reduce
 theorem red_xclamp (g : GameState) : red (g.xclamp K) = red g := rfl
 
 /-- **An "as often as you like" Ability that writes a damage reduction breaks the store bound**
-(milestone M8a). There is a well-formed start satisfying clauses 1, 2, 3 and 5 of `Faithful` and
+(milestone M8a). There is a well-formed start satisfying clauses 1, 2, 3 and 5 of `StoreSafe` and
 violating clause 4 (`AbilitySafe`), whose reachable states have unbounded stores and whose
 reachable states' `xclamp`s lie in no finite list. Its one Pokémon uses the Ability again and
 again in one turn. So clause 4, or some other condition on unlimited Abilities, is needed for
-`Faithful.reach_boundedStores` and the finiteness half of `Faithful.xfinite`. -/
+`StoreSafe.reach_boundedStores` and the finiteness half of `StoreSafe.xfinite`. -/
 theorem unlimited_writer_breaks_bound :
     ∃ g₀ : GameState, WellFormed g₀ ∧ g₀.LoopFree ∧ g₀.GXOnly ∧ g₀.RecycleSafe ∧
       ¬ g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
@@ -203,7 +203,7 @@ theorem kgs_gxOnly (u : AbilityUse) : (kgs u [ironDefender] [] 0 false).GXOnly :
     rcases hc with rfl | rfl | rfl | rfl | rfl <;> rfl
 
 /-- **An "as often as you like" Ability that recycles a modifier writer breaks the store bound**
-(milestone M8a). There is a well-formed start satisfying clauses 1, 2, 4 and 5 of `Faithful` and
+(milestone M8a). There is a well-formed start satisfying clauses 1, 2, 4 and 5 of `StoreSafe` and
 violating clause 3 (its Ability, an "as often as you like" one, can return `ironDefender`, a
 non-Supporter writer), whose reachable states have unbounded stores and whose reachable states'
 `xclamp`s lie in no finite list: within one turn, play `ironDefender`, return it with the
@@ -232,11 +232,11 @@ theorem unlimited_recycler_breaks_bound :
     simp only [red, kgs, kpl, store, n] at this
     omega
 
-/-- **A once-per-turn recycler of a modifier writer is faithful** (milestone M8a): the deck of
+/-- **A once-per-turn recycler of a modifier writer is store-safe** (milestone M8a): the deck of
 `unlimited_recycler_breaks_bound` with the Ability limited to "once during your turn" satisfies
 all five clauses (milestone M5 added clause 5, which it satisfies: it has no Stadium), so
-`Faithful.xfinite` applies to it. -/
-theorem once_recycler_faithful : (kgs .once [ironDefender] [] 0 false).Faithful :=
+`StoreSafe.xfinite` applies to it. -/
+theorem once_recycler_storeSafe : (kgs .once [ironDefender] [] 0 false).StoreSafe :=
   ⟨by unfold GameState.LoopFree; rw [kgs_allCards]; decide, kgs_gxOnly _,
     by unfold GameState.RecycleSafe; rw [kgs_allCards]; decide,
     by unfold GameState.AbilitySafe; rw [kgs_allCards]; decide⟩
@@ -358,7 +358,7 @@ Mega Venusaur ex me1-3, Solar Transfer: "As often as you like during your turn, 
 Ability. Move a Basic Grass Energy from 1 of your Pokémon to another of your Pokémon." Moving one
 Grass Energy to a Benched Pokémon and back returns to the same state, so a state is reachable from
 itself by Ability moves, as often as the player likes: play need not terminate. That is why the
-finiteness theorems (`Reach.finite`, `Faithful.xfinite`) are about the state space (a finite
+finiteness theorems (`Reach.finite`, `StoreSafe.xfinite`) are about the state space (a finite
 quotient, with a bisimulation), not about the length of play. Nothing accumulates: the loop
 changes no store, card zone or flag. Team Rocket's Orbeetle sv10-89 does the same with a damage
 counter (`Effect.moveCounter`). -/
@@ -488,12 +488,12 @@ def feraligatr : PokemonCard :=
   ⟨"Feraligatr", .stage2, some "Croconaw", 18, .water, [], 3, some .lightning, none, .none, false,
     [torrentialHeart]⟩
 
-/-- A deck with Feraligatr and the Iron Defender-like Item is faithful: a once-per-turn Ability may
+/-- A deck with Feraligatr and the Iron Defender-like Item is store-safe: a once-per-turn Ability may
 write a damage bonus. -/
-theorem feraligatr_faithful :
+theorem feraligatr_storeSafe :
     (⟨⟨[], [ironDefender], [], [.energy .water], [], some (InPlay.ofBasic feraligatr), [], false,
       false, false, false, false, Store.empty, true, KOHist.empty⟩, Recycle.pl [] [] 0, true, false, false,
-      false, none, none, false, false⟩ : GameState).Faithful := by
+      false, none, none, false, false⟩ : GameState).StoreSafe := by
   refine ⟨by unfold GameState.LoopFree; decide, GameState.GXOnly.of_noAttacks (by decide),
     by unfold GameState.RecycleSafe; decide, by unfold GameState.AbilitySafe; decide, by decide⟩
 

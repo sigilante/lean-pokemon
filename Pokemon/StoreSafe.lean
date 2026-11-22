@@ -1,18 +1,18 @@
 import Pokemon.Bounded
 import Pokemon.Counter
 import Pokemon.Turn
-import Pokemon.Faithful.Deck
-import Pokemon.Faithful.Invariant
+import Pokemon.StoreSafe.Deck
+import Pokemon.StoreSafe.Invariant
 
 /-!
-# Faithful decks: the stores stay bounded, so the exact-store quotient is finite
+# Store-safe decks: the stores stay bounded, so the exact-store quotient is finite
 
 `Pokemon/Bounded.lean` proves finiteness up to `xclamp` on the reachable states whose stores are
 bounded. This file gives a condition on the deck under which every reachable state has bounded
 stores, at a bound computed from the start state, and so finiteness for those decks without
 further hypothesis.
 
-**The deck condition** (`GameState.Faithful`, on the cards of the start state; play only
+**The deck condition** (`GameState.StoreSafe`, on the cards of the start state; play only
 permutes cards, so it holds all game):
 * `LoopFree` (clause 1): no effect, of an attack, a Trainer card or (milestone M8a) an Ability,
   contains a damage bonus or damage reduction (`linger … (bonus n)`, `linger … (reduce n)`) under
@@ -32,12 +32,12 @@ permutes cards, so it holds all game):
   every other card (an attack ends the turn), and Energy and Pokémon cards may be recycled by any
   effect (they write nothing when played). A Stadium's once-per-turn effect may recycle a writer
   and write itself; it is paid per use through `Card.stQ`, at most two uses a turn. Decidable. A deck with no recycling satisfies it
-  (`GameState.NoRecycle.recycleSafe`), so for such decks `Faithful` means what it meant before
+  (`GameState.NoRecycle.recycleSafe`), so for such decks `StoreSafe` means what it meant before
   milestone MV. Survey S10 §5 proposes property P ("no in-turn effect may return a non-Supporter
   modifier writer from the discard pile or from play to hand or deck; no Stadium of either deck
   either"); in the model's vocabulary (no return from play) clause 3 (a) is P for Item and
   Supporter effects, quantified over the cards of both decks together, without P's Stadium part
-  (a Stadium's uses are counted per turn instead, `Stadiums.stadium_recycler_faithful`), extended to
+  (a Stadium's uses are counted per turn instead, `Stadiums.stadium_recycler_storeSafe`), extended to
   "as often as you like" Abilities but not to once-per-turn or on-play ones, which P covers and
   which the potential `abPot` bounds per turn instead (clause 4 only forbids their rest-of-game
   writes); clause 3 (b), which P lacks, is vacuous for every deck with no
@@ -89,42 +89,42 @@ that recycle nothing (`reach_boundedStores_noRecycle`). With recycling the per-g
 `Recycle.recycling_breaks_bound` gives a deck satisfying clauses 1, 2, 4 and 5, violating clause 3, with
 unbounded stores and infinitely many `xclamp` classes.
 
-The per-turn invariant (`Faithful.TInv`) has as witnesses the Trainer and Ability amounts written
+The per-turn invariant (`StoreSafe.TInv`) has as witnesses the Trainer and Ability amounts written
 this turn, last turn and the turn before, the writer weight of the discard piles at the start of the
-turn, and (milestone M8a) the potential at the start of the turn. `Faithful.reach_boundedStores`
+turn, and (milestone M8a) the potential at the start of the turn. `StoreSafe.reach_boundedStores`
 concludes `BoundedStores (storeBound g₀)` for every reachable state, with `storeBound g₀ =
 storeTotal g₀ + 6 · cardsAmt C + 3 · (Q · potBound |C|) + 6 · cardsStQ (cardsAmt C) C +
 3 · cardsAtkAmt C` (`C` the cards of `g₀`, `Q = cardsAbQ (cardsAmt C) C`, which is 0 for a deck
 without Abilities; the Stadium term, milestone M5, is 0 for a deck without Stadiums).
 
 **Results.**
-* `Faithful.reach_boundedStores`: for a start satisfying `Faithful`, every reachable state has
+* `StoreSafe.reach_boundedStores`: for a start satisfying `StoreSafe`, every reachable state has
   stores bounded by `storeBound g₀`.
-* `Faithful.reach_boundedStores_noRecycle`: for a start satisfying clauses 1 and 2 whose cards
+* `StoreSafe.reach_boundedStores_noRecycle`: for a start satisfying clauses 1 and 2 whose cards
   recycle nothing and (milestone M8a) whose Abilities write nothing (`AbilityQuiet`), the bound of
   master, `storeBoundNR g₀ = storeTotal g₀ + cardsAmt C + 3 · cardsAtkAmt C`.
-* `Faithful.xfinite`: from any `Faithful` start (well-formed or not), the `xclamp`s of all reachable states
+* `StoreSafe.xfinite`: from any `StoreSafe` start (well-formed or not), the `xclamp`s of all reachable states
   lie in one finite list, and the kernel of `xclamp` is a two-way bisimulation along reachable
   states. No tameness: damage reduction (Iron Defender), `drain`, carried bonuses and
   reductions, rest-of-game modifiers from GX attacks, and recycling within clause 3 are allowed.
 * `Pokemon/Dichotomy.lean`: the two-counter starts of `Pokemon/Counter.lean` satisfy clauses 1
   and 3 and, when the machine's first instruction is not `halt`, violate clause 2
-  (`Faithful.counter_loopFree`, `Faithful.counter_recycleSafe`, `Faithful.counter_not_gxOnly`).
+  (`StoreSafe.counter_loopFree`, `StoreSafe.counter_recycleSafe`, `StoreSafe.counter_not_gxOnly`).
 * `Pokemon/Recycle.lean`: clause 3 cannot be dropped (`Recycle.recycling_breaks_bound`).
   `Pokemon/LoopFreeNeeded.lean`: nor can clause 1 (`LoopFreeNeeded.iter_writer_breaks_bound`).
 * `Pokemon/Abilities.lean` (milestone M8a): clause 4 cannot be dropped, nor clause 3 (a) for
   Abilities (`Abilities.unlimited_writer_breaks_bound`, `Abilities.unlimited_recycler_breaks_bound`);
-  a once-per-turn recycler of a writer is faithful (`Abilities.once_recycler_faithful`), and so is
-  a deck with Feraligatr's once-per-turn bonus (`Abilities.feraligatr_faithful`).
+  a once-per-turn recycler of a writer is store-safe (`Abilities.once_recycler_storeSafe`), and so is
+  a deck with Feraligatr's once-per-turn bonus (`Abilities.feraligatr_storeSafe`).
 * `Pokemon/Stadiums.lean` (milestone M5): clause 5 cannot be dropped
   (`Stadiums.stadium_writer_breaks_bound`); a Stadium that returns a modifier writer every turn,
-  to both players, is faithful (`Stadiums.stadium_recycler_faithful`). `Pokemon/NoStadiums.lean`:
+  to both players, is store-safe (`Stadiums.stadium_recycler_storeSafe`). `Pokemon/NoStadiums.lean`:
   for a deck without Stadiums, clauses 3 and 5 and the bound are those of milestone M8a.
 
 **Which theorem applies.** `Reach.finite` (`Pokemon/Finite.lean`) needs tame cards (no damage
 reduction, no `drain`) and no reduction in effect at the start; it allows bonus writes under
 `iter` and rest-of-game bonuses in attacks that are not GX attacks, and its quotient is coarser
-(the clamp caps stored bonuses). `Faithful.xfinite` allows damage reduction, `drain`, carried
+(the clamp caps stored bonuses). `StoreSafe.xfinite` allows damage reduction, `drain`, carried
 modifiers and Trainer modifiers; it forbids amounts written under `iter` and rest-of-game
 amounts written by attacks that are not GX attacks, and its quotient is finer (the stores are
 kept exact). Neither class contains the other; for decks in both, both theorems apply.
