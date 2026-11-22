@@ -17,7 +17,9 @@ def attack_src(a, ind):
     return (pad + '{ name := ' + lean_str(a['name']) + ', cost := ' + lean(a['cost'])
             + ', damage := ' + str(a['damage']) + ',\n'
             + pad + '  effect := ' + lean(a['effect']) + ',\n'
-            + pad + '  gx := ' + lean(a['gx']) + ' }')
+            + pad + '  gx := ' + lean(a['gx'])
+            # milestone MV4: a per-Pokémon attack lock (`Attack.selfLock`, default `.none`, not written)
+            + (', selfLock := ' + lean(a['selfLock']) if a.get('selfLock') else '') + ' }')
 
 
 def ability_src(ab, ind):
