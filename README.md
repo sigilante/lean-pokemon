@@ -162,9 +162,9 @@ discard a Stadium in play (`Effect.discardStadium`) and the Tools of a Pokémon
 milestone M6 (Bench size, locks, prevention, cost changes; HP, damage and Retreat Cost changes are
 expressed since M6, below), is not modelled: such a card is played as a card with no effect
 (`Card.inert`), which under-models it; the kinds and their counts
-in today's Standard are in the Known gaps. Of the 37 distinct Standard Stadiums, 3 are expressed
-with their effect (Academy at Night, Levincia, Prism Tower), 9 have an activated effect the model
-cannot express exactly, and 25 are static or triggered; of the 45 Tools, 1 is expressed (Core
+in today's Standard are in the Known gaps. Of the 37 distinct Standard Stadiums, 4 are expressed
+with their effect (Academy at Night, Levincia, Prism Tower; Spikemuth Gym since milestone MV4), 8 have
+an activated effect the model cannot express exactly, and 25 are static or triggered; of the 45 Tools, 1 is expressed (Core
 Memory), 2 grant attacks the model cannot express exactly, 41 are static (22), triggered (18) or change
 nothing in the model (Backtrack Badge), and 1 record (Adventure Lantern me6-90) is unclassified.
 Milestone MV2 (effect vocabulary 2; census in survey S13) added three families of card text. Tests
@@ -268,6 +268,27 @@ each spelling out a changed definition: `Move.attack_of_trigFree` (premise `hlk`
 `Counter.simulate`, `Counter.halts_of_haltMarked` are unchanged. The per-player `Mod.lock .attack`
 stays; "if this Pokémon used [attack] during your last turn", the named Supporter of the turn and
 Paralysis timing per Pokémon are not modelled (Known gaps; S17 §E).
+Milestone MV5 (survey S18) made Special Energy a card kind, the cheapest step of the Poet's idea B
+(S18 §A): `Card.energy` takes an `EnergyCard`, Basic (`basic t`) or Special (`special name prov`:
+the printed name and a fixed list of provided units, each of one or several types), and
+`EnergyCard.fire` and the like abbreviate `basic .fire`, so the generated `.energy .fire` and every
+existing match on `.energy _` are unchanged (a defaulted flag would not do: a Lean pattern fills in an
+omitted default, which would have narrowed every such match to Basic Energy; a new `Card`
+constructor would have broken `PokemonCards/Props.lean`). Two filters, `Filter.basicEnergy` and
+`Filter.specialEnergy` (`Filter`, now 24 constructors; `Filter.energy` passes both kinds,
+`Filter.energyOf` Basic Energy only), and the name filters read a Special Energy card's name. A
+Special Energy card is attached, pays costs (`Card.provides`, `Pays`), is discarded and counted as
+any Energy card. Nothing else of its text is modelled (riders, holder-dependent provision, holder
+restrictions, deck construction), so every Special Energy card is `Card.inert`; of the 19 in today's
+Standard none is exact, and an importer must refuse them or caveat them. What becomes expressible is
+text that mentions Special Energy (22 refused cards, S18 §A1), exact as far as this construct goes
+for decks with no Special Energy card. Witnesses in `Pokemon/Special.lean`. Changed definitions:
+`Card` (`energy` takes `EnergyCard`), `Card.provides` (through `EnergyCard.units`), `Card.name?`,
+`Card.inert`, `Filter`, `Filter.eval`, `energyTypeCount` (spelled `Card.energy (.basic t)`).
+No theorem statement changed in text; `Move.attach`, `Move.attachBench`, `ZStep.attachActive` and
+`ZStep.attachBench` now range over Special Energy too (their `t` is an `EnergyCard`). The
+measurement for idea A (attachments as one kind) found 3 to 4 of the 19 riders expressible by an
+existing mechanism (S18 §A3), so the generalisation was not made.
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

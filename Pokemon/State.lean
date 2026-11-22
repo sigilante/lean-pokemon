@@ -639,7 +639,7 @@ def InPlay.condCount (p : InPlay) : Nat :=
 
 /-- The number of distinct types among the Basic Energy cards of a list (milestone MV4). -/
 def energyTypeCount (l : List Card) : Nat :=
-  BasicEnergy.all.countP fun t => decide (Card.energy t ∈ l)
+  BasicEnergy.all.countP fun t => decide (Card.energy (.basic t) ∈ l)
 
 /-- The value of a count in a state. -/
 def Count.val : Count → GameState → Nat
