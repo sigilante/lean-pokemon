@@ -633,6 +633,13 @@ inductive Effect where
   | iter (a : Effect)
   deriving DecidableEq
 
+/-- A per-Pokémon attack lock (milestone MV4): none; "this Pokémon can't use [this attack]" (`this`:
+the attacks of the Pokémon whose `Attack.selfLock` is `this`); or "this Pokémon can't use attacks"
+(`all`). -/
+inductive AtkLock where
+  | none | this | all
+  deriving DecidableEq
+
 structure Attack where
   name : String
   /-- the Energy symbols of the cost, paid by matching (`Pays`) -/
@@ -645,7 +652,22 @@ structure Attack where
   /-- a GX attack: each player can use at most one GX attack in a game (`PlayerState.gxUsed`;
   "You can't use more than 1 GX attack in a game") -/
   gx : Bool
+  /-- (milestone MV4) the lock the attack puts on the attacking Pokémon for its owner's next turn:
+  "During your next turn, this Pokémon can't use [this attack]" (`this`; Feraligatr svp-89, 27
+  refused Standard cards, survey S17 §C) or "During your next turn, this Pokémon can't use attacks"
+  (`all`). The lock is per Pokémon (`InPlay.lk`): set by `Move.attack`, in force during the owner's
+  next turn, and gone when the Pokémon moves to the Bench or evolves (rulebook 2026 p. 20: "if an
+  Active Pokémon moves to the Bench, all effects of attacks go away"; p. 11: "Any effects of attacks
+  … end when it evolves"). `this` is exact for a Pokémon with at most one attack whose `selfLock` is
+  `this`, which is every card record in the data (S17 §E). Default `none` -/
+  selfLock : AtkLock := .none
   deriving DecidableEq
+
+/-- Does a lock in force allow the attack? (milestone MV4) -/
+def AtkLock.allows : AtkLock → Attack → Bool
+  | .none, _ => true
+  | .this, atk => !decide (atk.selfLock = .this)
+  | .all, _ => false
 
 /-- No damage step (`damage` or `drain`) anywhere in the effect. -/
 def Effect.hitFree : Effect → Bool
@@ -812,6 +834,19 @@ step: this is how an attack writes damage computed by its text ("×", "+", "–"
 depends on a coin flip or a choice made in the same effect, or effects before the damage. -/
 def Attack.script (atk : Attack) : Effect :=
   if atk.damage = 0 then atk.effect else .seq (.damage (.const atk.damage)) atk.effect
+
+/-- The lock an attack sets on the attacker (milestone MV4): its `selfLock`, unless its script may
+switch the attacker to the Bench (`Effect.switchesOwn`), where the lock would land on another
+Pokémon; no printed self-locking attack switches (survey S17 §E), and for such an attack the model
+sets no lock (an under-model, Known gaps). -/
+def Attack.lockSet (atk : Attack) : AtkLock :=
+  if atk.script.switchesOwn then .none else atk.selfLock
+
+/-- An attack whose text sets no lock sets none. -/
+theorem Attack.lockSet_of_none {atk : Attack} (h : atk.selfLock = .none) : atk.lockSet = .none := by
+  unfold Attack.lockSet; split
+  · rfl
+  · exact h
 
 /-- A well-formed attack: at most one damage step on each line of resolution, none in the
 text when a printed base damage is done first, and nothing that reads or writes the player's own

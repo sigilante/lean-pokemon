@@ -246,6 +246,28 @@ turn's Supporter flag (`supporter`). None reads damage, so both clamps keep them
 `Count.val_clampAt`, `Count.val_xclampAt` gained one case each; counts of damage counters on several
 Pokémon are left out (not clamp-exact; S17 §B). Witnesses in `Pokemon/Vocab4.lean` (attacks whose
 damage is computed from a Tool count, a Special Condition count and a Prize count, as legal moves).
+Stage 2 added per-Pokémon attack locks (S17 §C: "During your next turn, this Pokémon can't use
+[this attack]", 27 refused Standard cards; "… can't use attacks"): `Attack.selfLock` (`AtkLock`:
+none, this attack, all attacks; a defaulted field, so the generated library builds unchanged) and
+`InPlay.lk` (`LockState`: the lock set this turn and the lock in force, nine values per Pokémon, in
+the enumeration `Enum.lockStates`, kept exactly by both clamps). `Move.attack` sets the attacker's
+lock (its result is now `GameState.afterAttack`), `InPlay.unfresh` brings it into force at the end
+of its owner's turn and ends it a turn later, `Move.attack` and `Move.attackConfused` refuse an
+attack the lock forbids, and moving to the Bench (`Move.retreat`, `Effect.switch` through
+`InPlay.unlock`) or evolving clears it (rulebook 2026 p. 20, p. 11). Witnesses in
+`Pokemon/Lock.lean`: from a well-formed, `Settled` start, Giant Wave is used, every attack in its
+user's next turn is the other one (`g3_no_wave`, over all moves), a retreat in that turn clears the
+lock, and two turns later Giant Wave is legal again (`trace`). Changed definitions: `InPlay` (field
+`lk`), `Attack` (field `selfLock`), `InPlay.unfresh`, `InPlay.Agree` (field `lk`), `Move.attack`,
+`Move.attackConfused`, `Move.retreat`, `Move.evolve`, `Move.evolveBench`, `PlayFromHand`, `Run.switch`,
+`Enum.inPlays`, and internal ones (`Counter.Fits` gained the conjunct that the Active Pokémon carries
+no lock, so `Counter.Encodes` requires it; `Counter.onPlay`, `StoreSafe` `atkRes`). Changed statements,
+each spelling out a changed definition: `Move.attack_of_trigFree` (premise `hlk`, conclusion
+`afterAttack`), `Counter.move_shape` (its attack disjunct is `afterAttack`) and `Counter.attack_move`
+(premise `atk.selfLock = .none`). No other theorem statement changed in text; `Counter.universal`,
+`Counter.simulate`, `Counter.halts_of_haltMarked` are unchanged. The per-player `Mod.lock .attack`
+stays; "if this Pokémon used [attack] during your last turn", the named Supporter of the turn and
+Paralysis timing per Pokémon are not modelled (Known gaps; S17 §E).
 Witnesses: `Pokemon/Stadiums.lean` (Levincia played and used by the first player, refused a
 second time in the turn, used by the second player in their turn, replaced by Academy at Night,
 which goes to the first player's discard pile, and the new Stadium used in the same turn; the

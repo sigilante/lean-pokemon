@@ -108,8 +108,7 @@ theorem Inv.endTurn {S A : Nat} {g g' : GameState} (hi : Inv S A g)
   exact ⟨by omega, by omega, by omega, by omega⟩
 
 /-- The state after an attack whose resolution ended in `g`. -/
-def atkRes (atk : Attack) (g : GameState) : GameState :=
-  { g with attacked := true, cur := { g.cur with gxUsed := atk.gx || g.cur.gxUsed } }
+def atkRes (atk : Attack) (g : GameState) : GameState := g.afterAttack atk.lockSet atk.gx
 
 theorem atkRes_slotAmt (atk : Attack) (g : GameState) (s : Slot) :
     (atkRes atk g).slotAmt s = g.slotAmt s := rfl
@@ -117,12 +116,12 @@ theorem atkRes_slotAmt (atk : Attack) (g : GameState) (s : Slot) :
 theorem atkRes_gxT_false {A : Nat} {atk : Attack} {g g'' : GameState} (hgv : atk.gx = false)
     (h₁ : g''.cur.gxUsed = g.cur.gxUsed) (h₂ : g''.opp.gxUsed = g.opp.gxUsed) :
     gxT A (atkRes atk g'') = gxT A g := by
-  simp only [gxT, atkRes, hgv, Bool.false_or, h₁, h₂]
+  simp only [gxT, atkRes, GameState.afterAttack, hgv, Bool.false_or, h₁, h₂]
 
 theorem atkRes_gxT_true {A : Nat} {atk : Attack} {g g'' : GameState} (hgv : atk.gx = true)
     (hu : g.cur.gxUsed = false) (h₂ : g''.opp.gxUsed = g.opp.gxUsed) :
     gxT A (atkRes atk g'') = gxT A g + A := by
-  simp only [gxT, atkRes, hgv, Bool.true_or, h₂, hu, ite_true]
+  simp only [gxT, atkRes, GameState.afterAttack, hgv, Bool.true_or, h₂, hu, ite_true]
   simp only [Bool.false_eq_true, ite_false]
   omega
 
@@ -335,7 +334,7 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
       have : a.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
       have e : InPlay.abW { a with
           top := p, under := Card.pokemon a.top :: a.under, rot := .none,
-          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false, lk := {} } = 1 :=
         rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
   | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb =>
@@ -347,13 +346,14 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
       have : q.abW ≥ 2 := by unfold InPlay.abW; rw [hfr]; split <;> simp
       have e : InPlay.abW { q with
           top := p, under := Card.pokemon q.top :: q.under, rot := .none,
-          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false } = 1 :=
+          poisoned := false, burned := false, poisonUp := 0, fresh := true, used := false, lk := {} } = 1 :=
         rfl
       simp only [GameState.abPot, PlayerState.abPot, hb, abWs_append, abWs, e,
         List.length_append, List.length_cons]; omega
   | @retreat a q b₁ b₂ paid rest ha hb =>
       have e : InPlay.abW { a with
-          energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } =
+          energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0,
+          lk := {} } =
           a.abW := rfl
       have e2 : q.moveUp.abW = q.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs, e, e2,
@@ -376,7 +376,8 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
   | onPlay hp _ _ _ _ _ hr =>
       have := hp.abPot
       exact Nat.le_trans (hr.abPot_le hw) (by omega)
-  | attack _ _ _ _ _ _ _ _ hr _ _ _ _ ht => exact Nat.le_trans ht.abPot_le hr.abPot_le
+  | attack _ _ _ _ _ _ _ _ hr _ _ _ _ ht =>
+      rw [GameState.abPot_afterAttack]; exact Nat.le_trans ht.abPot_le hr.abPot_le
   | @attackConfused a atk ha =>
       have e : ({ a with damage := a.damage + 3 } : InPlay).abW = a.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
@@ -882,8 +883,8 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
             omega
       have h1 := hs' .after; have h2 := hs' .next; have h3 := hs' .now
       have := hi.after; have := hi.next; have := hi.now; have := hi.always
-      exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun h _ => absurd h (by simp [atkRes]),
-        fun h _ => absurd h (by simp [atkRes]), by omega, by omega, by omega, by omega⟩
+      exact ⟨X₀, X₁, X₂, D, E, hi.x0, hi.x1, hi.x2, hi.e, fun h _ => absurd h (by simp [atkRes, GameState.afterAttack]),
+        fun h _ => absurd h (by simp [atkRes, GameState.afterAttack]), by omega, by omega, by omega, by omega⟩
   | attackConfused =>
       exact ⟨_, _, _, _, _, hi.frame hwn (fun _ => Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
         (atkT_le A g) (fun h _ => absurd h (by simp)) (Nat.le_refl _)⟩

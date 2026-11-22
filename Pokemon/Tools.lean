@@ -131,7 +131,7 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
 /-! ## A Tool that gives an attack -/
 
 /-- "Hit": no cost, 10 damage. -/
-def hit : Attack := ⟨"Hit", [], 1, .skip, false⟩
+def hit : Attack := ⟨"Hit", [], 1, .skip, false, .none⟩
 
 /-- A Tool that gives `hit` to a Pokémon named "Small" only (as Core Memory gives its attack to
 Mega Zygarde ex only). -/
@@ -146,7 +146,7 @@ def G (t : List Card) (top : PokemonCard) : GameState :=
 `hit`, and the opponent's Active Pokémon takes a damage counter. -/
 theorem granted_attack : ∃ g, Move (G [memory] small) g ∧
     g.opp.active.map InPlay.damage = some 1 :=
-  ⟨_, .attack (atk := hit) rfl
+  ⟨_, .attack (hlk := rfl) (atk := hit) rfl
       (by simp [InPlay.attacks, memory, Card.grantAttacks, small, Filter.eval, InPlay.ofBasic])
       (.nil _) rfl rfl rfl rfl
       (Trainer.settled_of rfl rfl (show 0 < 1 by decide) (show 0 < 10 by decide)

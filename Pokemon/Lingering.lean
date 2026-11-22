@@ -99,7 +99,7 @@ namespace Lingering
 
 /-- A Basic Pokémon with `h` counters of HP and one free attack: base damage `d`, effect `e`. -/
 def mon (h d : Nat) (e : Effect) : PokemonCard :=
-  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false⟩], 0, none, none, .none, false, []⟩
+  ⟨"Mon", .basic, none, h, .colorless, [⟨"Hit", [], d, e, false, .none⟩], 0, none, none, .none, false, []⟩
 
 def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
   ⟨[.energy .grass], hand, discard, [.energy .fire], [], some a, [], false, false, false,
@@ -231,7 +231,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_red₀ hk, tmax_red₀ hk,
     red k (2 * k + 1), red k (2 * k + 2), _, reach_red k true, reach_red k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
-    .attack (atk := ⟨"Hit", [], 1, .skip, false⟩) rfl (.head _) (.nil _) rfl rfl rfl
+    .attack (hlk := rfl) (atk := ⟨"Hit", [], 1, .skip, false, .none⟩) rfl (.head _) (.nil _) rfl rfl rfl
       rfl (settled_st _ _ _ _ _ _ (by decide) (by decide))
       (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl
       (HitTrig.exists_nil (.seq (.damage (.const 1 _) rfl) (.skip _)) rfl) (.nil _),
@@ -285,7 +285,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
                     List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge, Store.add,
                     Mods.addMod, Store.empty, Mods.empty, bonusNow, InPlay.ofBasic, target,
-                    hitter, mon] at e <;> omega
+                    hitter, mon, GameState.afterAttack, InPlay.noteLock] at e <;> omega
               | touchActive he => simp [Effect.touch] at he
               | touchBench he => simp [Effect.touch] at he
               | zone hw => simp [Effect.zSide] at hw
@@ -306,7 +306,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
       | go hu => exact hu hs
   | endTurn =>
       have e := congrArg GameState.attacked heq
-      simp [GameState.clamp, GameState.clampAt] at e
+      simp [GameState.clamp, GameState.clampAt, GameState.afterAttack] at e
   | startTurn hbt => simp [red, st] at hbt
   | deckOut hbt => simp [red, st] at hbt
 
@@ -390,7 +390,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
     ⟨⟨rfl, rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl, rfl⟩⟩, hpLe_dr₀ hk, tmax_dr₀ hk,
     dr k (2 * k + 1), dr k (2 * k + 2), _, reach_dr k true, reach_dr k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
-    .attack (atk := ⟨"Hit", [], 0, .seq (.selfDamage (2 * k + 3)) (.drain (.const 1)), false⟩)
+    .attack (hlk := rfl) (atk := ⟨"Hit", [], 0, .seq (.selfDamage (2 * k + 3)) (.drain (.const 1)), false, .none⟩)
       rfl (.head _) (.nil _) rfl rfl rfl rfl
       (settled_st _ _ _ _ _ _ (drainer_ok k) (by decide))
       (.seq (.selfDamage _ rfl) (.drain (.const 1 _) rfl rfl)) rfl
@@ -447,7 +447,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
                     List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge,
                     Store.add, Mods.addMod, Store.empty, Mods.empty, bonusNow,
-                    InPlay.ofBasic, drainer, prey, mon] at e <;> omega
+                    InPlay.ofBasic, drainer, prey, mon, InPlay.noteLock, GameState.afterAttack] at e <;> omega
               | touchActive he => simp [Effect.touch] at he
               | touchBench he => simp [Effect.touch] at he
               | zone hw => simp [Effect.zSide] at hw
@@ -468,7 +468,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       | go hu => exact hu hs
   | endTurn =>
       have e := congrArg GameState.attacked heq
-      simp [GameState.clamp, GameState.clampAt] at e
+      simp [GameState.clamp, GameState.clampAt, GameState.afterAttack] at e
   | startTurn hbt => simp [dr, st] at hbt
   | deckOut hbt => simp [dr, st] at hbt
 

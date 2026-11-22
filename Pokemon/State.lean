@@ -69,6 +69,25 @@ def set (m : Marker) (b : Bool) (k : Marks) : Marks :=
 
 end Marks
 
+/-- The attack locks of one Pokémon in play (milestone MV4): `new`, the lock its attack set during
+its owner's current turn (`Attack.selfLock`); `on`, the lock in force, set during its owner's last
+turn. `InPlay.unfresh`, at the end of the owner's turn, moves `new` to `on`; so a lock set in turn
+`T` is in force during the owner's next turn `T + 2` and gone after it. Nine values. -/
+structure LockState where
+  new : AtkLock := .none
+  on : AtkLock := .none
+  deriving DecidableEq
+
+namespace LockState
+
+/-- No lock. -/
+def empty : LockState := {}
+
+/-- The end of the owner's turn: the lock set this turn comes into force, the old one ends. -/
+def shift (l : LockState) : LockState := { new := .none, on := l.new }
+
+end LockState
+
 /-- A Pokémon in play, with everything attached to it. -/
 structure InPlay where
   top : PokemonCard
@@ -105,6 +124,11 @@ structure InPlay where
   turn (by an Item or an Ability) is a move the printed card counts and the model does not (Known
   gaps) -/
   movedUp : Bool
+  /-- the attack locks on this Pokémon (milestone MV4, `LockState`, `Attack.selfLock`): set on the
+  attacker by `Move.attack`, shifted at the end of its owner's turn (`InPlay.unfresh`), read by
+  `Move.attack` and `Move.attackConfused`, and cleared when the Pokémon moves to the Bench (retreat,
+  `Effect.switch`: `InPlay.unlock`) or evolves -/
+  lk : LockState := {}
 
 namespace InPlay
 
@@ -171,12 +195,21 @@ theorem attacks_of_noTool {p : InPlay} (h : ∀ c ∈ p.tools, c.isTool = false)
 def ofBasic (p : PokemonCard) : InPlay :=
   { top := p, under := [], energy := [], tools := [], damage := 0,
     rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-    marks := Marks.empty, used := false, movedUp := false }
+    marks := Marks.empty, used := false, movedUp := false, lk := {} }
 
 /-- The end of its owner's turn for a Pokémon in play: it is no longer one put into play or evolved
-this turn, (milestone M8a) it has not used an Ability this turn, and (milestone MV2) it has not
-moved to the Active Spot this turn. -/
-def unfresh (p : InPlay) : InPlay := { p with fresh := false, used := false, movedUp := false }
+this turn, (milestone M8a) it has not used an Ability this turn, (milestone MV2) it has not
+moved to the Active Spot this turn, and (milestone MV4) the attack lock it set this turn comes into
+force for its owner's next turn (`LockState.shift`). -/
+def unfresh (p : InPlay) : InPlay :=
+  { p with fresh := false, used := false, movedUp := false, lk := p.lk.shift }
+
+/-- The Pokémon moves to the Bench (or evolves): every attack lock on it ends (milestone MV4). -/
+def unlock (p : InPlay) : InPlay := { p with lk := {} }
+
+/-- The attack `atk` was used by this Pokémon (milestone MV4): it sets the lock `l` for its owner's
+next turn. -/
+def noteLock (l : AtkLock) (p : InPlay) : InPlay := { p with lk := { p.lk with new := l } }
 
 /-- The Pokémon moves from the Bench to the Active Spot (milestone MV2). -/
 def moveUp (p : InPlay) : InPlay := { p with movedUp := true }
@@ -559,6 +592,25 @@ def GameState.cards (g : GameState) : Nat :=
 /-- Every physical card in the game, in both players' zones. -/
 def GameState.allCards (g : GameState) : List Card :=
   g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium
+
+/-- The state an attack leaves (`Move.attack`, milestone MV4 names it): the turn's attack is made, a
+GX attack (`x`) is recorded, and the attacker gets the lock `l` for its owner's next turn
+(`InPlay.noteLock`). -/
+def GameState.afterAttack (l : AtkLock) (x : Bool) (g : GameState) : GameState :=
+  { g with attacked := true, cur := { g.cur with
+      gxUsed := x || g.cur.gxUsed
+      active := g.cur.active.map (InPlay.noteLock l) } }
+
+/-- Setting an attack lock moves no card (milestone MV4). -/
+theorem optCardList_noteLock (l : AtkLock) (o : Option InPlay) :
+    optCardList (o.map (InPlay.noteLock l)) = optCardList o := by
+  cases o <;> rfl
+
+/-- The state after an attack (`Move.attack`) has the cards of the state before its flags are set
+(milestone MV4: the lock on the attacker moves no card). -/
+theorem GameState.allCards_afterAttack (g : GameState) (l : AtkLock) (b : Bool) :
+    (g.afterAttack l b).allCards = g.allCards := by
+  simp only [GameState.afterAttack, GameState.allCards, PlayerState.allCards, optCardList_noteLock]
 
 def benchLimit : Nat := 5
 

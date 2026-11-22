@@ -71,15 +71,15 @@ def band : Card := .tool "Band" ToolGrant.none
 
 /-- "This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon" (Mow Rotom
 sv10-9). -/
-def gadget : Attack := ⟨"Gadget Show", [], 0, .damage (.count (.tools .own) 3), false⟩
+def gadget : Attack := ⟨"Gadget Show", [], 0, .damage (.count (.tools .own) 3), false, .none⟩
 
 /-- "This attack does 100 damage for each Special Condition affecting your opponent's Active
 Pokémon" (Cradily sv7-6). -/
-def rootDrain : Attack := ⟨"Root Drain", [], 0, .damage (.count (.conds .opp) 10), false⟩
+def rootDrain : Attack := ⟨"Root Drain", [], 0, .damage (.count (.conds .opp) 10), false, .none⟩
 
 /-- "This attack does 60 damage for each Prize card your opponent has taken" (Pecharunt ex
 sv6pt5-39). -/
-def poisonChain : Attack := ⟨"Poison Chain", [], 0, .damage (.count (.prizesTaken .opp) 6), false⟩
+def poisonChain : Attack := ⟨"Poison Chain", [], 0, .damage (.count (.prizesTaken .opp) 6), false, .none⟩
 
 def rotom : PokemonCard := ⟨"Rotom", .basic, none, 10, .colorless, [gadget, rootDrain, poisonChain],
   1, none, none, .none, false, []⟩
@@ -122,7 +122,7 @@ theorem gadget_two_tools :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { sick with damage := 6 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (atk := gadget) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
+    .attack (hlk := rfl) (atk := gadget) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.count _ 3 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.count _ 3 _) rfl) rfl) (.nil _), rfl⟩
 
@@ -132,7 +132,7 @@ theorem rootDrain_three :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { sick with damage := 30 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (atk := rootDrain) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
+    .attack (hlk := rfl) (atk := rootDrain) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.count _ 10 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.count _ 10 _) rfl) rfl) (.nil _), rfl⟩
 
@@ -141,7 +141,7 @@ theorem poisonChain_five :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { sick with damage := 30 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (atk := poisonChain) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
+    .attack (hlk := rfl) (atk := poisonChain) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       start_settled (.damage (.count _ 6 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.count _ 6 _) rfl) rfl) (.nil _), rfl⟩
 

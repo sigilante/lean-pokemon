@@ -35,17 +35,19 @@ theorem Move.batch_of_not_settled_trigFree {g g' : GameState} (hm : Move g g') (
   rw [Move.eq_of_batchTrigs_nil hl ht (hf.batchTrigs g₁)]
   exact hb
 
-/-- With no triggered Ability, an attack with the premises of milestone M8a is a move to the state
-after its script with the attack recorded. -/
+/-- With no triggered Ability, an attack with the premises of milestone M8a (and, since milestone
+MV4, no attack lock against it) is a move to the state after its script with the attack recorded
+(`GameState.afterAttack`, which since milestone MV4 also sets the attacker's lock). -/
 theorem Move.attack_of_trigFree {g g' : GameState} {a : InPlay} {atk : Attack}
     (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
     (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
     (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
     (hst : Settled g) (hr : Run atk.script g g') (hl : g.cur.mods.live.noAttack = false)
-    (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) (htf : g.TrigFree) :
-    Move g { g' with attacked := true, cur := { g'.cur with gxUsed := atk.gx || g'.cur.gxUsed } } :=
+    (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) (htf : g.TrigFree)
+    (hlk : a.lk.on.allows atk = true) :
+    Move g (g'.afterAttack atk.lockSet atk.gx) :=
   .attack ha hm hc hs hn hf hbt hst hr hl hgx hw
-    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
+    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _) hlk
 
 /-- With no triggered Ability, an attack fires no trigger: its result is the state after its
 script with the attack recorded. -/

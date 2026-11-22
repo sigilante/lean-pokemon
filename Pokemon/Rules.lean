@@ -264,7 +264,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   tests on Benched Pokémon's markers ("Choose 1 of your opponent's Pokémon that has any
   Shock-wave markers", "any Pokémon with a Lightning Rod marker"), Dark Ivysaur bp-6's
   transient markers allocated by the opponent, and the marker-like states of S7 §3.3 (Poison
-  payloads, delayed triggers, attack locks bound to one Pokémon, history flags, face-up Prizes);
+  payloads, delayed triggers, history flags, face-up Prizes; attack locks bound to one Pokémon came
+  with milestone MV4, `InPlay.lk`);
 * effects read only the two Active Pokémon: their damage (threshold and exact tests,
   `Test.atLeast` and `Test.exactly`; the proportional write `scale`), their Special
   Conditions (`Test.cond`), their markers (`Test.marked`) and their type (`Test.isType`); the
@@ -317,7 +318,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   evolution, whereas "Any effects of attacks or Special Conditions affecting the Pokémon … end
   when it evolves" (2026 p. 11): a departure in both directions (a lock or a reduction that print
   ends stays in force and forbids or changes outcomes; a bonus that print ends stays and adds
-  damage), as for leaving the Active Spot below; per-Pokémon effects are milestone M7. Amounts add up
+  damage), as for leaving the Active Spot below; per-Pokémon effects are milestone M7. Since
+  milestone MV4 the attack locks "During your next turn, this Pokémon can't use [this attack]" and
+  "… can't use attacks" have a per-Pokémon form (`Attack.selfLock`, `InPlay.lk`, `Pokemon/Lock.lean`)
+  that ends when the Pokémon moves to the Bench or evolves, as print says; the per-player
+  `Mod.lock .attack` remains in the language, and a card written with it keeps the departure
+  (an importer that writes the per-Pokémon form closes it for that card). Amounts add up
   without limit: `linger` is a general primitive, usable any number of times and inside
   `iter` (printed same-turn bonuses and reductions are bounded by copies times a constant if no
   card-recycling loop replays them, an empirical claim about the card pool; rest-of-game ones
@@ -815,14 +821,29 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   after a Knock Out of the player's own Active Pokémon in their own turn does not set `movedUp`
   (an under-model). Absent, with the refused cards of today's Standard that need them (S13 §A;
   cards can need several): "if you played [named, Future, Ancient, Team Rocket] Supporter this
-  turn" (7), "if this Pokémon used [attack] during your last turn" (4) and "if 1 of your Pokémon
-  used [attack] during your last turn" (3), the per-Pokémon attack lock "during your next turn,
-  this Pokémon can't use [attack]" (36 in its own family), "healed this turn" (3), "damaged during
+  turn" (7; since milestone MV4 the unnamed "if they played a Supporter card from their hand this
+  turn" is `Count.supporter`, the existing flag), "if this Pokémon used [attack] during your last
+  turn" (4) and "if 1 of your Pokémon used [attack] during your last turn" (3) (both need a name
+  in the state, finite only under a reachability invariant the enumerations do not carry; survey
+  S17 §E), "healed this turn" (3), "damaged during
   your opponent's last turn … that much more damage" (2, an amount), next-turn per-Pokémon
   triggers (4), filtered "during this turn" bonuses (4), Prize and Knock Out consequences (8),
   "Prize cards your opponent took during their last turn" (1, the one counted quantity, at most 6);
   the name prefixes these tests needed ("any of your Ethan's Pokémon", 2 of the 10 Knock Out tests)
   are expressible since milestone MV4 (`Filter.namePrefix`);
+* per-Pokémon attack locks (milestone MV4, survey S17 §C, `Pokemon/Lock.lean`): "During your next
+  turn, this Pokémon can't use [this attack]" (27 refused Standard cards) is `Attack.selfLock :=
+  .this`, "… can't use attacks" is `.all`; the attack sets the lock on the attacker
+  (`GameState.afterAttack`), the end of its owner's turn brings it into force (`InPlay.unfresh`),
+  `Move.attack` and `Move.attackConfused` read it, and moving to the Bench (retreat, `switch`) or
+  evolving ends it (2026 p. 20, p. 11). Departures: `this` forbids every attack of the Pokémon
+  whose `selfLock` is `this`, exact when it has at most one (every card record in the data); an
+  attack that may switch its user out (`Effect.switchesOwn`) sets no lock (`Attack.lockSet`; no
+  printed self-locking attack switches), an under-model; a failed Confused attempt sets no lock (the
+  attack did not happen) but is refused while the attack is locked (`attackConfused` reads the
+  lock: print would refuse announcing a locked attack, p. 20 step A). Not modelled: Paralysis timing
+  per Pokémon (a Paralysis inflicted during its owner's own turn still ends at that turn's Checkup;
+  `Effect.trigOk` keeps excluding Paralysis);
 * a Pokémon that an effect puts onto the opponent's Bench (`putBench .opp`) enters play `fresh`,
   and `Move.endTurn` clears `fresh` only on the side whose turn ends, so it stays `fresh` through
   its owner's next turn and cannot evolve then. The rulebook allows evolving "a Pokémon you had in
@@ -1212,13 +1233,13 @@ inductive PlayFromHand : GameState → InPlay → PlayWay → GameState → Prop
       PlayFromHand g { a with
           top := p, under := Card.pokemon a.top :: a.under,
           rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-          used := false } .evolve
+          used := false, lk := {} } .evolve
         { g with cur := { g.cur with
           hand := l₁ ++ l₂,
           active := some { a with
             top := p, under := Card.pokemon a.top :: a.under,
             rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-            used := false } } }
+            used := false, lk := {} } } }
   | evolveBench {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard} {q : InPlay}
       {b₁ b₂ : List InPlay}
       (hh : g.cur.hand = l₁ ++ Card.pokemon p :: l₂) (hb : g.cur.bench = b₁ ++ q :: b₂)
@@ -1228,13 +1249,13 @@ inductive PlayFromHand : GameState → InPlay → PlayWay → GameState → Prop
       PlayFromHand g { q with
           top := p, under := Card.pokemon q.top :: q.under,
           rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-          used := false } .evolve
+          used := false, lk := {} } .evolve
         { g with cur := { g.cur with
           hand := l₁ ++ l₂,
           bench := b₁ ++ { q with
             top := p, under := Card.pokemon q.top :: q.under,
             rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-            used := false } :: b₂ } }
+            used := false, lk := {} } :: b₂ } }
 
 /-- Does an on-play trigger printed as `w` fire on a play of kind `how`? -/
 def PlayWay.fires : PlayWay → PlayWay → Bool
@@ -1531,7 +1552,7 @@ inductive Move : GameState → GameState → Prop where
         active := some { a with
           top := p, under := Card.pokemon a.top :: a.under,
           rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-          used := false } } }
+          used := false, lk := {} } } }
   /-- attach one Energy card from hand to one of the player's Benched Pokémon; the same
   once-per-turn attachment as `attach` ("Take an Energy card from your hand and put it under your
   Active Pokémon or one of your Benched Pokémon … You can attach Energy just once each turn!",
@@ -1558,7 +1579,7 @@ inductive Move : GameState → GameState → Prop where
         bench := b₁ ++ { q with
           top := p, under := Card.pokemon q.top :: q.under,
           rot := .none, poisoned := false, burned := false, poisonUp := 0, fresh := true,
-          used := false } :: b₂ } }
+          used := false, lk := {} } :: b₂ } }
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon. The
   player chooses which Energy to discard ("you must discard 1 Energy from your Active Pokémon for
   each [✱] listed in its Retreat Cost", rulebook 2026 p. 12): `paid` is any sub-multiset of the
@@ -1572,7 +1593,8 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with cur := { g.cur with
         active := some q.moveUp,
         bench := b₁ ++ { a with
-          energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0 } :: b₂,
+          energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0,
+          lk := {} } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } }
   /-- play an Item card: it goes to the discard pile and its effect resolves, with Knock Outs
   taken at once in mid-effect (`TRun`); not while an Item lock is in effect. Its effect has no
@@ -1693,7 +1715,9 @@ inductive Move : GameState → GameState → Prop where
   `dealtBy`), with nothing after a switch of the attacker that acts on the player's Active
   Pokémon (`Effect.switchSafe`, part of `Attack.wf`). The attack ends the turn (`attacked`): afterwards only Knock Outs and
   `endTurn` are legal. An Asleep or Paralyzed Pokémon cannot attack; a Confused one can, when
-  its coin flip is heads; nobody can attack while an attack lock is in effect on them. A GX
+  its coin flip is heads; nobody can attack while an attack lock is in effect on them, and (milestone
+  MV4) a Pokémon cannot use an attack its own lock forbids (`InPlay.lk`, `AtkLock.allows`); the
+  attack sets the attacker's lock for its owner's next turn (`GameState.afterAttack`). A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
   using it records that (`PlayerState.gxUsed`). Since milestone M8b the attack ends with the
   opponent's `damaged` triggers (`HitTrig`, `Fire`), resolved before the Knock Out check. -/
@@ -1705,8 +1729,9 @@ inductive Move : GameState → GameState → Prop where
       (hr : Run atk.script g g')
       (hl : g.cur.mods.live.noAttack = false)
       (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true)
-      {l : List Ability} {g'' : GameState} (hd : HitTrig atk g g' l) (ht : Fire .damaged l g' g'') :
-      Move g { g'' with attacked := true, cur := { g''.cur with gxUsed := atk.gx || g''.cur.gxUsed } }
+      {l : List Ability} {g'' : GameState} (hd : HitTrig atk g g' l) (ht : Fire .damaged l g' g'')
+      (hlk : a.lk.on.allows atk = true) :
+      Move g (g''.afterAttack atk.lockSet atk.gx)
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
   happen, and the attacker gets 3 damage counters; this still ends the turn (`attacked`). As for `attack`, a GX attack can be tried
   only by a player who has not used one in this game; the failed attempt does not use it up
@@ -1716,7 +1741,8 @@ inductive Move : GameState → GameState → Prop where
       (hc : Pays atk.cost a.units) (hs : a.rot = .confused)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g) (hl : g.cur.mods.live.noAttack = false)
-      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) :
+      (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true)
+      (hlk : a.lk.on.allows atk = true) :
       Move g { g with
         cur := { g.cur with active := some { a with damage := a.damage + 3 } },
         attacked := true }

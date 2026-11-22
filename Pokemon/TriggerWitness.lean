@@ -32,7 +32,7 @@ namespace Pokemon.TriggerWitness
 open Trainer
 
 /-- Base damage 5, no text. -/
-def strike : Attack := ⟨"Strike", [], 5, .skip, false⟩
+def strike : Attack := ⟨"Strike", [], 5, .skip, false, .none⟩
 
 /-- A 30-HP Basic Pokémon with `strike`. -/
 def striker : PokemonCard :=
@@ -95,7 +95,7 @@ theorem spikes_fire (opt : Bool) (pz : List Card) (hz : pz = two ∨ pz = one) :
       (hit opt pz).cur.active.map InPlay.damage = some 3 ∧
       (hit opt pz).opp.active.map InPlay.damage = some 5 := by
   refine ⟨?_, fun hk => ?_, rfl, rfl⟩
-  · have hm := Move.attack (g := start opt pz) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
+  · have hm := Move.attack (hlk := rfl) (g := start opt pz) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
       (start_settled opt pz hz) (.seq (.damage (.const 5 _) rfl) (.skip _)) rfl
       (fun h => nomatch h) rfl (l := [spikes])
       (.fire (.seq (.hit (b := true) rfl (.damage (.const 5 _) rfl) rfl (fun _ => by cases opt <;> rfl))
@@ -190,7 +190,7 @@ damaged, and could fail to fire those of the Pokémon it did; review of M8b, pro
 and `SwitchProbe2`). -/
 
 /-- "Switch out your opponent's Active Pokémon to the Bench": base damage 0, no damage. -/
-def gustAtk : Attack := ⟨"Gust", [], 0, .switch .opp, false⟩
+def gustAtk : Attack := ⟨"Gust", [], 0, .switch .opp, false, .none⟩
 
 /-- **An attack that only switches fires no `damaged` trigger**, in every state: the Pokémon it
 brings into the Active Spot (with damage from earlier turns, say) was not damaged by it. (The first
@@ -206,7 +206,7 @@ theorem gust_quiet {g g' : GameState} {l : List Ability} (h : HitTrig gustAtk g 
 
 /-- "Switch in 1 of your opponent's Benched Pokémon to the Active Spot. This attack does 30 damage
 to the new Active Pokémon." -/
-def pull : Attack := ⟨"Pull", [], 0, .seq (.switch .opp) (.damage (.const 3)), false⟩
+def pull : Attack := ⟨"Pull", [], 0, .seq (.switch .opp) (.damage (.const 3)), false, .none⟩
 
 def puller : PokemonCard :=
   ⟨"Puller", .basic, none, 3, .grass, [pull], 1, none, none, .none, false, []⟩
@@ -311,7 +311,7 @@ theorem pull_fires :
               | zone hw => simp [Effect.zSide] at hw
 
 /-- "This attack does 30 damage. Switch out your opponent's Active Pokémon to the Bench." -/
-def hitRun : Attack := ⟨"Hit and Run", [], 3, .switch .opp, false⟩
+def hitRun : Attack := ⟨"Hit and Run", [], 3, .switch .opp, false, .none⟩
 
 /-- On no resolution of `hitRun` from the start of `spikes_fire` is the Pokémon in the opponent's
 Active Spot at the end damaged by the attack. -/

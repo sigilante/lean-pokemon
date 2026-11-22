@@ -492,7 +492,7 @@ open Trainer InPlayTests
 /-- Klefki sv8-128, Stick 'n' Draw: "Discard a card from your hand. If you do, draw 2 cards." -/
 def stickDraw : Attack :=
   ⟨"Stick 'n' Draw", [], 0, .ifDone (.countGe (.pile .own .hand .any) 1)
-    (.move .own .hand .discard .any (.exactly 1)) (.move .own (.top 2) .hand .any .all), false⟩
+    (.move .own .hand .discard .any (.exactly 1)) (.move .own (.top 2) .hand .any .all), false, .none⟩
 
 def klefki : PokemonCard := ⟨"Klefki", .basic, none, 7, .psychic, [stickDraw], 1, none, none,
   .none, false, []⟩
@@ -524,7 +524,7 @@ theorem klefki_draws :
       (.seq (.zone rfl (.move (.take rfl .nil) rfl (.discard _ _)))
         (.zone rfl (.move (.take rfl (.take rfl .nil)) (fun _ h => nomatch h) (.hand _ _))))
   exact ⟨start_wellFormed _, start_settled_draws, _,
-    .attack (atk := stickDraw) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled_draws hr rfl
+    .attack (hlk := rfl) (atk := stickDraw) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled_draws hr rfl
       (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _), rfl, rfl⟩
 
 /-- **Witness: the consequence does not happen.** With an empty hand the attack is still a legal
@@ -536,7 +536,7 @@ theorem klefki_empty :
   have hr : Run stickDraw.script (start []) (start []) :=
     .iteF (p := InPlay.ofBasic klefki) rfl (by decide) (.skip _)
   refine ⟨start_wellFormed _, start_settled_empty, ⟨_,
-    .attack (atk := stickDraw) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled_empty hr rfl
+    .attack (hlk := rfl) (atk := stickDraw) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled_empty hr rfl
       (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _), rfl⟩, ?_⟩
   intro g' h
   obtain ⟨p, hp, ⟨ht, -⟩ | ⟨-, e⟩⟩ := Run.ifDone_iff.1 h

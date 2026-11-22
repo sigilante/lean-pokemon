@@ -112,6 +112,23 @@ theorem mem_markss (k : Marks) : k ∈ markss := by
   exact ⟨a, mem_bools _, b, mem_bools _, c, mem_bools _, d, mem_bools _, e,
     mem_opts fun t _ => mem_etypes t, rfl⟩
 
+/-- Every attack lock (milestone MV4). -/
+def atkLocks : List AtkLock := [.none, .this, .all]
+
+theorem mem_atkLocks : ∀ l : AtkLock, l ∈ atkLocks
+  | .none => .head _
+  | .this => .tail _ (.head _)
+  | .all => .tail _ (.tail _ (.head _))
+
+/-- Every value of the attack locks of one Pokémon (milestone MV4): nine. -/
+def lockStates : List LockState :=
+  atkLocks.flatMap fun a => atkLocks.map fun b => ⟨a, b⟩
+
+theorem mem_lockStates (l : LockState) : l ∈ lockStates := by
+  obtain ⟨a, b⟩ := l
+  simp only [lockStates, List.mem_flatMap, List.mem_map]
+  exact ⟨a, mem_atkLocks _, b, mem_atkLocks _, rfl⟩
+
 /-- Every value of a player's Knock Out history (milestone MV2): four flags. -/
 def kohists : List KOHist :=
   bools.flatMap fun a => bools.flatMap fun b => bools.flatMap fun c => bools.map fun d =>
@@ -207,13 +224,15 @@ def inPlays (C : List Card) : List InPlay :=
   (List.range (bound C + 1)).flatMap fun damage => rots.flatMap fun rot =>
   bools.flatMap fun poisoned => bools.flatMap fun burned =>
   (List.range (bound C + 1)).flatMap fun poisonUp => bools.flatMap fun fresh =>
-  markss.flatMap fun marks => bools.flatMap fun used => bools.map fun movedUp =>
-  ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used, movedUp⟩
+  markss.flatMap fun marks => bools.flatMap fun used => bools.flatMap fun movedUp =>
+  lockStates.map fun lk =>
+  ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used, movedUp,
+    lk⟩
 
 theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     (hd : p.damage ≤ bound C) (hu : p.poisonUp ≤ bound C) : p ∈ inPlays C := by
   obtain ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used,
-    movedUp⟩ := p
+    movedUp, lk⟩ := p
   have hw' : Within C (under ++ energy ++ tools) :=
     hw.of_sub (by simp [InPlay.cardList]) (fun _ hx => .tail _ hx)
   simp only [inPlays, List.mem_flatMap, List.mem_map]
@@ -221,7 +240,7 @@ theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     energy, mem_cardLists hw'.left.right, tools, mem_cardLists hw'.right,
     damage, List.mem_range.2 (Nat.lt_succ_of_le hd), rot, mem_rots _, poisoned, mem_bools _,
     burned, mem_bools _, poisonUp, List.mem_range.2 (Nat.lt_succ_of_le hu), fresh, mem_bools _,
-    marks, mem_markss _, used, mem_bools _, movedUp, mem_bools _, rfl⟩
+    marks, mem_markss _, used, mem_bools _, movedUp, mem_bools _, lk, mem_lockStates _, rfl⟩
 
 theorem length_le_benchCardList : ∀ b : List InPlay, b.length ≤ (benchCardList b).length
   | [] => Nat.le_refl _

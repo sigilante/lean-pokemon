@@ -289,9 +289,9 @@ def effB (M : Machine) : Effect :=
     (sel .opp (fun q => stepBOf (W M) q (M.instr q)) (List.range (V M))))
 
 /-- The Clock's only attack: no cost, base damage 0, effect `effA`. -/
-def atkA (M : Machine) : Attack := ⟨"Tick", [], 0, effA M, false⟩
+def atkA (M : Machine) : Attack := ⟨"Tick", [], 0, effA M, false, .none⟩
 /-- The Tape's only attack: no cost, base damage 0, effect `effB`. -/
-def atkB (M : Machine) : Attack := ⟨"Tock", [], 0, effB M, false⟩
+def atkB (M : Machine) : Attack := ⟨"Tock", [], 0, effB M, false, .none⟩
 
 theorem sel_hitFree {w : Whose} {f : Nat → Effect} : ∀ {l : List Nat},
     (∀ v ∈ l, (f v).hitFree = true) → (sel w f l).hitFree = true
@@ -403,7 +403,7 @@ structure Pk where
 no Bench; only Energy in deck and hand; only rest-of-game modifiers. -/
 structure Fits (k : Pk) (s : PlayerState) : Prop where
   active : ∃ p, s.active = some p ∧ p.top = k.top ∧ p.rot = .none ∧ p.poisoned = false ∧
-    p.burned = false ∧ p.damage = k.dmg ∧ p.marks = k.marks
+    p.burned = false ∧ p.damage = k.dmg ∧ p.marks = k.marks ∧ p.lk = {}
   bench : s.bench = []
   deck : ∀ c ∈ s.deck, isEnergy c = true
   hand : ∀ c ∈ s.hand, isEnergy c = true
@@ -426,6 +426,15 @@ theorem Fits.weak {k : Pk} {s : PlayerState} (h : Fits k s) : Fits k.weak s :=
 theorem Fits.setGx {k : Pk} {s : PlayerState} (h : Fits k s) (b : Bool) :
     Fits k { s with gxUsed := b } :=
   ⟨h.active, h.bench, h.deck, h.hand, h.mods, h.stocked, h.held⟩
+
+/-- `Fits` survives the state an attack leaves, for an attack that sets no lock (milestone MV4). -/
+theorem Fits.afterAttack {k : Pk} {s : PlayerState} (h : Fits k s) (b : Bool) {l : AtkLock}
+    (hl : l = .none) :
+    Fits k { s with gxUsed := b, active := s.active.map (InPlay.noteLock l) } := by
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := h.active
+  subst hl
+  exact ⟨⟨p.noteLock .none, by simp only [hp, Option.map_some], h1, h2, h3, h4, h5, h6,
+    by simp only [InPlay.noteLock, h7]⟩, h.bench, h.deck, h.hand, h.mods, h.stocked, h.held⟩
 
 /-- `e`, resolved as an attack's effect (`Run`) from any state of shape `(kc, ko)`, can be
 resolved, and every resolution ends in a state of shape `(kc', ko')`. -/
@@ -555,13 +564,13 @@ theorem Does.handToBottom (kc ko : Pk) :
 
 theorem Does.healAll (kc ko : Pk) : Does .healAll kc ko { kc with dmg := 0 } ko := by
   intro g hs _
-  obtain ⟨p, hp, h1, h2, h3, h4, _, h6⟩ := hs.cur.active
+  obtain ⟨p, hp, h1, h2, h3, h4, _, h6, h7⟩ := hs.cur.active
   refine ⟨⟨_, .healAll hp⟩, fun g' h => ?_⟩
   cases h with
   | healAll h' =>
       rw [hp] at h'; cases h'
       have hc := hs.cur
-      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, rfl, h6⟩, hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked,
+      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, rfl, h6, h7⟩, hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked,
         hc.held⟩, hs.opp⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
@@ -570,13 +579,13 @@ theorem Does.healAll (kc ko : Pk) : Does .healAll kc ko { kc with dmg := 0 } ko 
 theorem Does.selfDamage (n : Nat) (kc ko : Pk) :
     Does (.selfDamage n) kc ko { kc with dmg := kc.dmg + n } ko := by
   intro g hs _
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hs.cur.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := hs.cur.active
   refine ⟨⟨_, .selfDamage n hp⟩, fun g' h => ?_⟩
   cases h with
   | selfDamage _ h' =>
       rw [hp] at h'; cases h'
       have hc := hs.cur
-      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5], h6⟩, hc.bench, hc.deck, hc.hand,
+      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5], h6, h7⟩, hc.bench, hc.deck, hc.hand,
         hc.mods, hc.stocked, hc.held⟩, hs.opp⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
@@ -585,13 +594,13 @@ theorem Does.selfDamage (n : Nat) (kc ko : Pk) :
 theorem Does.counters (n : Nat) (kc ko : Pk) :
     Does (.counters n) kc ko kc { ko with dmg := ko.dmg + n } := by
   intro g hs _
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hs.opp.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := hs.opp.active
   refine ⟨⟨_, .counters n hp⟩, fun g' h => ?_⟩
   cases h with
   | counters _ h' =>
       rw [hp] at h'; cases h'
       have hc := hs.opp
-      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5], h6⟩, hc.bench, hc.deck,
+      exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5], h6, h7⟩, hc.bench, hc.deck,
         hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
@@ -623,7 +632,7 @@ theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
     Does (.damage (.const (n + 1))) kc ko kc
       { ko with dmg := ko.dmg + ((n + 1 + kc.bonus) - ko.reduce) } := by
   intro g hs hns
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hs.opp.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := hs.opp.active
   refine ⟨⟨_, .damage (.const (n + 1) g) hp⟩, fun g' h => ?_⟩
   cases h with
   | damage hv h' =>
@@ -631,7 +640,7 @@ theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
       rw [hp] at h'; cases h'
       have hc := hs.opp
       exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
-        simp only [h5, GameState.dealtI_none, dealt_shape hs hns hw hr], h6⟩,
+        simp only [h5, GameState.dealtI_none, dealt_shape hs hns hw hr], h6, h7⟩,
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
@@ -640,7 +649,7 @@ theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
 /-- An attack with base damage 0 does no damage, whatever the modifiers. -/
 theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := by
   intro g hs _
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hs.opp.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := hs.opp.active
   refine ⟨⟨_, .damage (.const 0 g) hp⟩, fun g' h => ?_⟩
   cases h with
   | damage hv h' =>
@@ -648,7 +657,7 @@ theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := 
       rw [hp] at h'; cases h'
       have hc := hs.opp
       exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
-        simp only [h5, GameState.dealtI_none, dealt_zero, Nat.add_zero], h6⟩,
+        simp only [h5, GameState.dealtI_none, dealt_zero, Nat.add_zero], h6, h7⟩,
         hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
@@ -696,7 +705,7 @@ theorem Does.reduceOpp (n : Nat) (kc ko : Pk) :
 theorem Does.markOwn (m : Marker) (kc ko : Pk) :
     Does (.mark .own m) kc ko { kc with marks := kc.marks.set m true } ko := by
   intro g hs _
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hs.cur.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := hs.cur.active
   refine ⟨⟨_, .touchActive (w := .own) rfl hp⟩, fun g' h => ?_⟩
   cases h with
   | touchActive he h' =>
@@ -705,7 +714,7 @@ theorem Does.markOwn (m : Marker) (kc ko : Pk) :
       simp only [GameState.side] at h'
       rw [hp] at h'; cases h'
       have hc := hs.cur
-      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, h5, by simp only [InPlay.setMarks, h6]⟩, hc.bench,
+      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, h5, by simp only [InPlay.setMarks, h6], h7⟩, hc.bench,
         hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩, hs.opp⟩
   | touchBench he h' =>
       simp only [Effect.touch, Option.some.injEq, Prod.mk.injEq] at he
@@ -1097,10 +1106,10 @@ theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
     Fits k { s with
       active := some (a.checkup o f sp c), bench := [], energyAttached := false,
       supporterPlayed := false, retreated := false, mods := s.mods.shift, ko := s.ko.shift } := by
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := h.active
   rw [ha] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm h2 h3 h4 (by rw [h6]; exact hc) o f sp c
-  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, rfl, h.deck, h.hand,
+  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6, h7⟩, rfl, h.deck, h.hand,
     by rw [h.mods]; rfl, h.stocked, h.held⟩
 
 theorem Fits.toOpp {k : Pk} {s : PlayerState} {b : InPlay} (h : Fits k s)
@@ -1108,11 +1117,12 @@ theorem Fits.toOpp {k : Pk} {s : PlayerState} {b : InPlay} (h : Fits k s)
     Fits k { s.unfresh with
       active := some (b.unfresh.checkup o f sp c), bench := [], mods := s.mods.shift,
       hadTurn := true, ko := s.ko.shift } := by
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := h.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := h.active
   rw [hb] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm (p := b.unfresh) h2 h3 h4 (by rw [← hc, ← h6]; rfl)
     o f sp c
-  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6⟩, rfl, h.deck, h.hand,
+  exact ⟨⟨_, rfl, h1, e2, h3, e3, e1.trans h5, h6,
+    by simp only [InPlay.checkup, InPlay.unfresh, h7]; rfl⟩, rfl, h.deck, h.hand,
     by rw [h.mods]; rfl, h.stocked, h.held⟩
 
 theorem not_mem_hand {k : Pk} {s : PlayerState} {l₁ l₂ : List Card} {c : Card} (h : Fits k s)
@@ -1128,17 +1138,16 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
     (hoc : ko.marks.char = false) (hab : kc.top.abilities = []) (hts : NoTS g) :
     Shape kc.weak ko.weak g' ∨ Shape ko.weak kc.weak g' ∨
       ∃ atk g'', atk ∈ kc.top.attacks ∧ Run atk.script g g'' ∧
-        g' = { g'' with
-          attacked := true, cur := { g''.cur with gxUsed := atk.gx || g''.cur.gxUsed } } := by
+        g' = g''.afterAttack atk.lockSet atk.gx := by
   have hC := hs.cur
   have hO := hs.opp
-  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6⟩ := hC.active
-  obtain ⟨p', hp', h1', h2', h3', h4', h5', h6'⟩ := hO.active
+  obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := hC.active
+  obtain ⟨p', hp', h1', h2', h3', h4', h5', h6', h7'⟩ := hO.active
   cases hm with
   | playBasic hh => exact (not_mem_hand hC hh rfl).elim
   | @attach l₁ l₂ t a hh hf ha =>
       rw [hp] at ha; cases ha
-      refine .inl ⟨⟨⟨_, rfl, h1, h2, h3, h4, h5, h6⟩, hC.bench, hC.deck, fun c hc' => ?_,
+      refine .inl ⟨⟨⟨_, rfl, h1, h2, h3, h4, h5, h6, h7⟩, hC.bench, hC.deck, fun c hc' => ?_,
         hC.mods, (fun e => by cases e), (fun e => by cases e)⟩, hO.weak⟩
       exact hC.hand c (by
         rw [hh]; rcases List.mem_append.1 hc' with h | h
@@ -1220,16 +1229,17 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
     (hD : Does atk.script kc ko kc' ko') (hns : g.NoStatics) (htf : g.TrigFree)
     (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) (hbt : g.between = false)
     (hn : g.attacked = false) (hf : g.firstTurn = false) (hgx : atk.gx = false)
-    (hw : atk.wf = true) :
+    (hw : atk.wf = true) (hsl : atk.selfLock = .none) :
     ∃ g', Move g g' ∧ Shape kc' ko' g' ∧ g'.between = false ∧ g'.firstTurn = false ∧
       g'.winner = g.winner := by
-  obtain ⟨p, hp, h1, h2, -⟩ := hs.cur.active
+  obtain ⟨p, hp, h1, h2, -, -, -, -, h7⟩ := hs.cur.active
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs hns
   have hfl := Run.flags hr
   refine ⟨_, .attack hp (List.mem_append_left _ (h1 ▸ hatk)) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
     hbt (hs.settled hns hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw
-    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _),
-    ⟨(hsh _ hr).cur.setGx _, (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
+    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
+    (by rw [h7]; rfl),
+    ⟨(hsh _ hr).cur.afterAttack _ (Attack.lockSet_of_none hsl), (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
 /-- Ending the turn from a state of known shape swaps the shape. -/
 theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.NoStatics)
@@ -1275,7 +1285,7 @@ theorem reach_trans {g₁ g₂ g₃ : GameState} (h₁ : Reach g₁ g₂) (h₂ 
 
 /-- A Basic Pokémon just set up as Active: no damage, no Energy, no markers. -/
 def onPlay (top : PokemonCard) : InPlay :=
-  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty, false, false⟩
+  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty, false, false, {}⟩
 
 /-- **The start state for machine `M` with inputs `a`, `b`.** The first player (to move, in
 the main phase of a turn after the draw) has the Clock Active, one Energy in hand, an empty
@@ -1327,13 +1337,13 @@ theorem start_encodes (M : Machine) (a b : Nat) : Encodes M (Machine.init a b) (
   refine ⟨⟨0, a, b, 0, 0, 0, 0, false⟩, rfl, ⟨M.span_pos, .inl rfl, Nat.zero_le _,
     (fun e => by cases e)⟩, rfl, rfl, ⟨?_, ?_⟩, rfl, rfl, rfl, rfl, (start_noTS M a b).noStatics,
     (start_noTS M a b).trigFree⟩
-  · refine ⟨⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, (fun _ h => by cases h), fun c h => ?_,
+  · refine ⟨⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, (fun _ h => by cases h), fun c h => ?_,
       (by show storeOf 0 b = storeOf 0 (0 + b); rw [Nat.zero_add]), (fun e => by cases e),
       (fun _ => List.cons_ne_nil _ _)⟩
     cases h with
     | head => rfl
     | tail _ h => cases h
-  · refine ⟨⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, fun c h => ?_, (fun _ h => by cases h),
+  · refine ⟨⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, fun c h => ?_, (fun _ h => by cases h),
       (by show storeOf 0 a = storeOf 0 (0 + a); rw [Nat.zero_add]), (fun _ => List.cons_ne_nil _ _),
       (fun e => by cases e)⟩
     cases h with
@@ -1371,7 +1381,7 @@ theorem simulate {M : Machine} {c c' : Config} {g : GameState} (hst : M.Step c c
   have hg₂ := (tockS_spec hg₁).1
   obtain ⟨g₁, m₁, s₁, b₁, f₁, w₁⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
     (Does.attackA hg false true true false) hns htf (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
-    (atkA_wf M)
+    (atkA_wf M) rfl
   have hns₁ := hns.of_perm m₁.perm
   have htf₁ := htf.of_perm m₁.perm
   obtain ⟨g₂, m₂, s₂, b₂, a₂, f₂, w₂⟩ := endTurn_move s₁ hns₁ (hg₁.hpA _ _) (hg₁.hpB _ _)
@@ -1383,7 +1393,7 @@ theorem simulate {M : Machine} {c c' : Config} {g : GameState} (hst : M.Step c c
   have htf₃ := htf₂.of_perm m₃.perm
   obtain ⟨g₄, m₄, s₄, b₄, f₄, w₄⟩ := attack_move (atk := atkB M) s₃ (.head _) rfl
     (Does.attackB hg₁ false true true false) hns₃ htf₃ (hg₁.hpB _ _) (hg₁.hpA _ _) b₃ (a₃.trans a₂)
-    (f₃.trans f₂) rfl (atkB_wf M)
+    (f₃.trans f₂) rfl (atkB_wf M) rfl
   have hns₄ := hns₃.of_perm m₄.perm
   have htf₄ := htf₃.of_perm m₄.perm
   obtain ⟨g₅, m₅, s₅, b₅, a₅, f₅, w₅⟩ := endTurn_move s₄ hns₄ (hg₂.hpB _ _) (hg₂.hpA _ _) rfl
@@ -1419,8 +1429,8 @@ theorem haltMarked_of_halted {M : Machine} {c : Config} {g : GameState} (he : En
   obtain ⟨s, rfl, hg, hb, -, hsh, hbt, hat, hft, hw, hns, htf⟩ := he
   obtain ⟨g₁, m₁, s₁, -⟩ := attack_move (atk := atkA M) hsh (.head _) rfl
     (Does.attackA hg false true true false) hns htf (hg.hpA _ _) (hg.hpB _ _) hbt hat hft rfl
-    (atkA_wf M)
-  obtain ⟨p, hp, -, -, -, -, -, hm⟩ := s₁.cur.active
+    (atkA_wf M) rfl
+  obtain ⟨p, hp, -, -, -, -, -, hm, -⟩ := s₁.cur.active
   refine ⟨g₁, .step (.refl _) hw m₁, p, .inl hp, ?_⟩
   rw [hm]; simp only [pkA, tickS_halted hb hH]; rfl
 
@@ -1458,7 +1468,7 @@ theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g
       subst ha
       have h := (Does.attackA hg false false false false g hs hns.noStatics).2 g'' hr'
       exact ⟨_, (tickS_spec hg).1, reaches_of_spec hr (tickS_spec hg).2,
-        .inl ⟨h.cur.setGx _, h.opp⟩, hns'⟩
+        .inl ⟨h.cur.afterAttack _ (Attack.lockSet_of_none rfl), h.opp⟩, hns'⟩
   · have hns' : NoTS g' := fun c hc => hns c (hm.perm.mem_iff.1 hc)
     rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) rfl hns with h | h | ⟨atk, g'', ha, hr', rfl⟩
     · exact ⟨s, hg, hr, .inr h, hns'⟩
@@ -1467,7 +1477,7 @@ theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g
       subst ha
       have h := (Does.attackB hg false false false false g hs hns.noStatics).2 g'' hr'
       exact ⟨_, (tockS_spec hg).1, reaches_of_spec hr (tockS_spec hg).2,
-        .inr ⟨h.cur.setGx _, h.opp⟩, hns'⟩
+        .inr ⟨h.cur.afterAttack _ (Attack.lockSet_of_none rfl), h.opp⟩, hns'⟩
 
 theorem reach_inv {M : Machine} {c₀ : Config} {g₀ g : GameState} (h₀ : Inv M c₀ g₀)
     (h : Reach g₀ g) : Inv M c₀ g := by
@@ -1490,7 +1500,7 @@ theorem Inv.halts {M : Machine} {c₀ : Config} {g : GameState} (hi : Inv M c₀
       have hk : ∀ (k : Pk) (st : PlayerState), Fits k st → k.marks = Marks.empty →
           st.active = some p → False := by
         intro k st hf he ha
-        obtain ⟨p', hp', -, -, -, -, -, hm'⟩ := hf.active
+        obtain ⟨p', hp', -, -, -, -, -, hm', -⟩ := hf.active
         rw [ha] at hp'; cases hp'
         rw [hm', he] at hi; cases hi
       rcases hS with hS | hS <;> rcases hp with hp | hp
