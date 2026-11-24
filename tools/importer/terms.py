@@ -316,7 +316,8 @@ def ability_scripts(ab):
             abeff_compile(None, ab['effect'])]
 
 
-TRIG_EVENTS = {'damaged': ACTIVE, 'koByAttack': None}   # `TrigEvent.place`
+TRIG_EVENTS = {'damaged': ACTIVE, 'koByAttack': None, 'oppBenched': None}   # `TrigEvent.place`
+TRIG_LATE = {'damaged': True, 'koByAttack': True, 'oppBenched': False}       # `TrigEvent.late`
 
 
 def trig_ok(e):

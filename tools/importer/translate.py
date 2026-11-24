@@ -80,7 +80,8 @@ CAVEATS = {
                   "modelled, Known gaps)",
     'aceSpec': "the ACE SPEC deck-building limit is not modelled (no deck construction in the model)",
     'poisonStrength': "a stronger Poison ('N damage counters instead of 1') is written as Poison plus "
-                      "poisonUp (N-1); the Known gaps list numbered Poison variants as absent",
+                      "poisonUp (N-1), which a later Poison resets and Croagunk's increase adds to (Known gaps, Special "
+                      "Conditions: a variant with a number has no constructor of its own)",
     'selfInDiscard': "the model resolves a Trainer with the card already in the discard pile, so its "
                      "recycling filter or discard count can see the card itself (Known gaps)",
     'searchAny': "a deck search for 'a card' (any card) may find nothing in the model, where print must take at least 1 "
@@ -101,7 +102,7 @@ CAVEATS = {
                "noopPlay for Abilities too, and states the precondition where public information decides it (noop.py; "
                "Known gaps, item on plays to no effect)",
     'selfBench': "'this Pokémon' on the Bench is one Benched Pokémon chosen when the effect resolves, and for an "
-                 "on-play Ability the Active Pokémon or a Benched one (Known gaps, M8a: SelfOp.at)",
+                 "on-play Ability the Active Pokémon or a Benched one (Known gaps, Abilities, M8a: `SelfOp`)",
     'moveAnyPair': "a move of Energy printed between particular Pokémon ('to this Pokémon', 'from 1 of your Benched "
                    "Pokémon to your Active Pokémon') is a move between any two of the player's Pokémon (moveEnergy)",
     'onePerName': "'You can't use more than 1 X Ability each turn' is not modelled: the use flag is per Pokémon, so "
@@ -146,7 +147,7 @@ CAVEATS = {
                    "cards of a legal deck (2026 rulebook p. 21): exact for every state in which the player has at most 60 "
                    "cards that could be discarded (`Run.forUpTo_complete`, `discardActive_le`); the model does not require "
                    "this of a start state, and beyond it a larger discard is forbidden (Known gaps, zone moves item: "
-                   "'exact once the bound covers the cards that can be taken'); for 'discard all' with more than 60 the attack has "
+                   "'exact for \"any amount\" once the bound covers the cards that can be taken'); for 'discard all' with more than 60 the attack has "
                    "no resolution",
     'abilityByTool': "'Pokémon that have an Ability' is `Filter.hasAbility`, which reads the printed Abilities and ignores an "
                      "Ability a Tool gives in the model (Known gaps, filters: whether print counts a Tool's effect as the "
@@ -171,6 +172,29 @@ CAVEATS = {
                   "player's own deck) is `Qty.most`, which must take a passing card when there is one: fewer outcomes than "
                   "the usual practice of failing to find in a private window, which the 2026 rulebook does not state "
                   "(Known gaps, zone moves item, hidden information)",
+    # importer 0.14.0 (milestones MV7, MV7b)
+    'trigBenched': "'Whenever your opponent's Active Pokémon moves to the Bench during their turn' (`TrigEvent.oppBenched`, "
+                   "milestone MV7) resolves when the event happens, before the Knock Outs it causes, on the holders marked at "
+                   "the event: a Pokémon switched in at or above its HP (a static HP change that reads its place or its "
+                   "Energy) gets the effect and is then Knocked Out, and its replacement gets nothing, where under a reading "
+                   "that takes the Knock Out first the effect falls on the replacement; and in a state no play is known to "
+                   "reach (a trigger pending with an Active Spot empty) a marked holder Knocked Out first fires nothing "
+                   "(Known gaps, triggers of the event 'your opponent's Active Pokémon moves to the Bench': the order item "
+                   "and the unreached states)",
+    'koCounters': "'… is Knocked Out' / 'Knock Out …' is written as 9999 damage counters on that Pokémon (`selfDamage`, "
+                  "`counters`, `benchCounters`, `benchSome`), which the batch Knock Out step takes as a Knock Out with its "
+                  "Prize cards and promotion (Known gaps, self-Knock-Out Abilities; `SelfKO.self_ko`): exact while every "
+                  "derived HP in the game is below 9999 counters (over the imported pool a Pokémon's derived HP is at most "
+                  "76 + 4E counters, E the Energy cards attached to it, so below in every game of two 60-card decks; the "
+                  "importer checks this bound, survey S11) and nothing prevents damage counters being placed on it (no "
+                  "such effect is modelled); above that the Pokémon survives where print Knocks it Out. A Knock Out written so inside an attack is one by the "
+                  "check after the attack, which the readers of 'Knocked Out by damage from an attack' count (their own "
+                  "caveats trigKO, koAttackWide)",
+    'selfKOTiming': "the Knock Outs of an Ability's resolution are checked after each step (`TRun`): when the step before "
+                    "'this Pokémon is Knocked Out' Knocks Out an opponent's Pokémon and so gives the player their last Prize "
+                    "card, the player wins before the self-Knock-Out step, where a check after the whole Ability would give "
+                    "both players their last Prize card at once, a tiebreaker (Known gaps, self-Knock-Out Abilities: "
+                    "timing)",
 }
 
 
@@ -219,6 +243,11 @@ CAVEAT_DIRECTION = {
                                    # "less"); a static decrease the other way
     'oppBenchFresh': 'forbids some',  # an evolution in the owner's next turn, if print allows it
     'failToFind': 'forbids some',  # declining to take a card the player found in a private window
+    'trigBenched': 'forbids some',  # the effect on the replacement of a switched-in Pokémon Knocked Out, if print
+                                    # takes the Knock Out first; a marked holder's trigger in unreached states
+    'koCounters': 'both',          # with a derived HP of 9999 counters or more the Pokémon survives (the printed Knock
+                                   # Out is absent, the survival is extra); vacuous in games of two 60-card decks
+    'selfKOTiming': 'both',        # the win before the self-Knock-Out step, where print may give a tiebreaker
     'abilityByTool': 'both',       # a Tool-given Ability is not read: a smaller count than print may give (the
                                    # printed amount is absent), or damage that print may prevent (allows more)
 }
@@ -1209,7 +1238,36 @@ def some_of(k, active, bench):
                seq(active, bench(k - 1)))
 
 
-@rule('recoil', r'This Pokémon also does (\d+) damage to itself\.', 'A', 'selfDamage n')
+# milestone MV7b (importer 0.14.0): an attack's "Knock Out …" / "… is Knocked Out" on the opponent's Pokémon is
+# `KO_COUNTERS` damage counters on it (Pokemon/SelfKO.lean: counters above every derived HP are a pending Knock Out,
+# taken by the batch Knock Out step after the attack, with its Prize cards and promotion; Known gaps, self-Knock-Out
+# Abilities), caveat koCounters. Damage counters are not damage (2023 rulebook p. 20, step 1), as a Knock Out is not:
+# no Weakness, Resistance, reduction or prevention applies to either (`counters` is unmodified, Known gaps).
+@rule('ko-opp-active', r"(?:Knock Out your opponent's Active Pokémon|Your opponent's Active Pokémon is Knocked Out)\.", 'A',
+      'counters 9999')
+def _(m, ctx):
+    return Eff(('counters', KO_COUNTERS), {'koCounters'})
+
+
+@rule('ko-opp-active-kind', r"Knock Out your opponent's Active (Basic Pokémon|Pokémon ex|Evolution Pokémon)\.", 'A',
+      'ite (top opp F) (counters 9999) skip')
+def _(m, ctx):
+    return Eff(ite(('top', OPP, TOP_KINDS[m.group(1)]), ('counters', KO_COUNTERS), SKIP), {'koCounters'})
+
+
+@rule('ko-opp-bench-kind', r"Knock Out 1 of your opponent's Benched (Basic Pokémon|Pokémon ex|Pokémon)\.", 'A',
+      'benchSome opp 1 F false 9999')
+def _(m, ctx):
+    f = {'Basic Pokémon': ('basic',), 'Pokémon ex': ('ex',), 'Pokémon': ('any',)}[m.group(1)]
+    return Eff(('benchSome', OPP, 1, f, False, KO_COUNTERS), {'koCounters'})
+
+
+@rule('ko-opp-1', r"Knock Out 1 of your opponent's Pokémon\.", 'A', 'one_of opp (counters 9999) (benchCounters opp 9999)')
+def _(m, ctx):
+    return Eff(one_of(OPP, ('counters', KO_COUNTERS), ('benchCounters', OPP, KO_COUNTERS)), {'koCounters'})
+
+
+@rule('recoil', r'This Pokémon (?:also )?does (\d+) damage to itself\.', 'A', 'selfDamage n')
 def _(m, ctx):
     return Eff(('selfDamage', counters(m.group(1))), {'recoil'})
 
@@ -1397,7 +1455,10 @@ def attach_item(parts, cv):
     return Eff(seq(*parts), cv)
 
 
-ATTACH_TGT = (r'(this Pokémon|1 of your Pokémon|1 of your Benched Pokémon|your Pokémon in any way you like|'
+# importer 0.14.0 (Magneton svp-153): "to your Lightning Pokémon in any way you like" is the target filter `ptype t` of
+# `attach` (Pokemon/Effect.lean `ZStep.attachActive`, `attachBench`: `tf.eval (.pokemon top)`), the printed type
+ATTACH_TGT = (r'(this Pokémon|1 of your Pokémon|1 of your Benched Pokémon|your (?:(?:Grass|Fire|Water|Lightning|Psychic|'
+              r'Fighting|Darkness|Metal|Fairy|Dragon|Colorless) )?Pokémon in any way you like|'
               r'your Benched Pokémon in any way you like)')
 
 
@@ -1410,6 +1471,10 @@ def attach_one(src, f, tgt, ctx):
         return ('attach', OWN, src, f, ('active',), ('any',))
     if tgt in ('1 of your Pokémon', 'your Pokémon in any way you like'):
         return choice(('attach', OWN, src, f, ('active',), ('any',)), ('attach', OWN, src, f, ('bench',), ('any',)))
+    mt = re.match(r'^your ' + TYPE_RE + r' Pokémon in any way you like$', tgt)
+    if mt:
+        tf = ('ptype', etype(mt.group(1)))
+        return choice(('attach', OWN, src, f, ('active',), tf), ('attach', OWN, src, f, ('bench',), tf))
     return ('attach', OWN, src, f, ('bench',), ('any',))
 
 
@@ -2344,6 +2409,10 @@ class Parser:
         # opponent's Active Pokémon of the condition
         sents = [re.sub(r"^If (your opponent's Active Pokémon [^,]+), it is now (" + COND_RE + r")\.$",
                         r"If \1, your opponent's Active Pokémon is now \2.", x) for x in sents]
+        # importer 0.14.0: "If your opponent's Active Pokémon …, it / that Pokémon is Knocked Out." (Haxorus, Mega Absol
+        # ex): the pronoun is the opponent's Active Pokémon of the condition
+        sents = [re.sub(r"^If (your opponent's Active Pokémon [^,]+), (?:it|that Pokémon) is Knocked Out\.$",
+                        r"If \1, your opponent's Active Pokémon is Knocked Out.", x) for x in sents]
         i = 0
         n = len(sents)
         while i < n:
@@ -4266,6 +4335,27 @@ def mk_static(sel, eff, filt=('any',), tgt=None, src=None, need=None):
             'need': ('some', ('pair', need[0], need[1])) if need else None, 'eff': eff}
 
 
+# milestone MV7b (importer 0.14.0): static changes of Pokémon Checkup, `SEff.condMore c n` (Pokemon/Card.lean `SEff`;
+# Pokemon/Static.lean `Static.condMoreFor`, `GameState.checkupMoreBy`; Pokemon/Rules.lean, Known gaps "static changes
+# of Pokémon Checkup"; witnesses in Pokemon/Checkup.lean). "During Pokémon Checkup, put N more damage counters on your
+# opponent's Burned / Poisoned Pokémon": `n` more counters, at every Checkup (`Move.endTurn`), on each Active Pokémon of
+# the selected players (`sel`) that has the Special Condition `c`. Exact: only an Active Pokémon has Special Conditions
+# in the model and in print ("your opponent's Burned Pokémon" can only be the Active one); each effect in force adds its
+# own counters (two Magmortars put 6 more, as two Abilities do in print); each is read before or after the Special
+# Conditions' block in every order the next player may choose (2026 rulebook p. 15; `CheckupW.two_sources`); the source
+# conditions are the static's: "as long as this Pokémon is in the Active Spot" is `src = some .active` (Pecharunt
+# svp-129), a Stadium's "each Poisoned non-Darkness Pokémon (both yours and your opponent's)" is `sel = all` with the
+# filter `not (ptype darkness)` on the affected Pokémon's printed type (Perilous Jungle sv5-156; `Filter.ptype` ignores a
+# Coloring counter, which no imported card places: Known gaps, filters).
+CHECKUP_MORE = re.compile(r'more damage counters on .+ during Pokémon Checkup|During Pokémon Checkup, put \d+ more damage '
+                          r'counters')
+CHECKUP_AB = re.compile(r"^(?:During Pokémon Checkup, put (\d+) more damage counters on your opponent's (Burned|Poisoned) "
+                        r"Pokémon|Put (\d+) more damage counters on your opponent's (Burned|Poisoned) Pokémon during Pokémon "
+                        r"Checkup)\.$")
+CHECKUP_ST = re.compile(r'^During Pokémon Checkup, put (\d+) more damage counters on each (Burned|Poisoned) (?:non-' + TYPE_RE
+                        + r' )?Pokémon' + r" \(both yours and your opponent's\)" + r'\.$')
+
+
 def static_ability_sentence(s, ctx, src=None, need=None):
     """One sentence of a static Ability to `Static`s; `src` and `need` from the prefixes."""
     m = re.match(r'^As long as this Pokémon is (in the Active Spot|on your Bench), (.+)$', s)
@@ -4286,6 +4376,12 @@ def static_ability_sentence(s, ctx, src=None, need=None):
                     + static_ability_sentence('Attacks used by this Pokémon ' + m2.group(2), ctx, src, nd))
         return static_ability_sentence('This Pokémon ' + rest, ctx, src, nd)
     S = lambda sel, eff, **kw: [mk_static(sel, eff, src=src, need=need, **kw)]  # noqa: E731
+    m = CHECKUP_AB.match(s)
+    if m:
+        if need is not None:
+            raise Refuse('other', s)
+        n, cnd = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        return S('opp', ('condMore', (CONDS[cnd],), int(n)))
     m = re.match(r'^This Pokémon gets \+(\d+) HP\.$', s)
     if m:
         return S('self', ('hpPlus', ('const', counters(m.group(1)))))
@@ -4371,6 +4467,10 @@ def static_tool_sentence(s, ctx):
 
 def static_stadium_sentence(s, ctx):
     """One sentence of a Stadium's static text to `Static`s (`all`: both players' Pokémon)."""
+    m = CHECKUP_ST.match(s)
+    if m:
+        f = ('not', ('ptype', etype(m.group(3)))) if m.group(3) else ('any',)
+        return [mk_static('all', ('condMore', (CONDS[m.group(2)],), int(m.group(1))), filt=f)]
     m = re.match(r'^Each (.+?) in play' + BOTH + r' gets ([+-])(\d+) HP\.$', s)
     if m:
         n = counters(m.group(3))
@@ -4605,10 +4705,26 @@ def translate_ability(c, a, res):
             return None
         r[0]['name'] = name
         return r[0]
+    mb = BENCHED_RX.match(t)
+    if mb:
+        return translate_benched(c, a, t, mb, res)
+    if CHECKUP_MORE.search(t):
+        # milestone MV7b: a static change of Pokémon Checkup (`SEff.condMore`), not a trigger
+        return translate_static_ability(c, a, res)
     if FLYGON_KO in t:
         # an on-play Ability that may also be used on a Knock Out (Flygon me2-53): the on-play Ability, and an
         # optional `koByAttack` trigger in the Active Spot with the same effect
         return translate_also_ko(c, a, t, res)
+    # milestone MV7b (importer 0.14.0): "If you use this Ability, this Pokémon is Knocked Out." ends the Ability's effect
+    # with 9999 damage counters on this Pokémon (`KO_COUNTERS`, `SelfOp.counters`), a pending Knock Out the batch step
+    # inside the Ability's resolution takes at once, with its Prize cards (the opponent's) and the promotion
+    # (Pokemon/SelfKO.lean `self_ko`; Known gaps, self-Knock-Out Abilities). It follows the rest of the effect, as
+    # printed, and "if you use this Ability" makes it unconditional. Caveats: koCounters (a constant above every derived
+    # HP), selfKOTiming (a Knock Out check after each step, when an earlier step places damage counters), and on the
+    # Bench selfBench (`SelfOp.counters` on one Benched Pokémon chosen at resolution, a superset).
+    selfko = t.endswith(' ' + SELF_KO)
+    if selfko:
+        t = t[:-len(SELF_KO) - 1]
     why = ability_refusal(t)
     if why == 'Ability: static or passive':
         return translate_static_ability(c, a, res)
@@ -4724,6 +4840,16 @@ def translate_ability(c, a, res):
         B.append((r.reason, t))
         return None
     eff = abseq(*parts)
+    pre_eff = eff
+    if selfko:
+        if use[0] not in ('once', 'unlimited') or cost is not None or wraps or cond is not None:
+            B.append(('Ability: self Knock Out with an on-play use, a cost or a condition', t))
+            return None
+        res['used'].append(('ab-self-ko', SELF_KO))
+        eff = abseq(eff, ('self', ('counters', KO_COUNTERS)))
+        cavs.add('koCounters')
+        if any(x[0] in PLACERS for e in T.ability_scripts({'effect': pre_eff}) for x in T.prims(e)):
+            cavs.add('selfKOTiming')
     for _, tests, neg in wraps:
         # a condition that is not one positive test: tested when the effect resolves, doing nothing
         # when it fails (a use to no effect, which the printed card forbids: allows more)
@@ -4762,6 +4888,8 @@ def translate_ability(c, a, res):
         if not (T.hit_free(e) and T.bench_hit_free(e)):
             B.append(('Ability effect with attack damage', t))
             return None
+    # the Knock Out check before the self-Knock-Out step is selfKOTiming's, not koBetweenSteps'
+    for e in T.ability_scripts(dict(ab, effect=pre_eff) if selfko else ab):
         if counters_then_more(e):
             cavs.add('koBetweenSteps')
     if not T.ability_safe(ab):
@@ -4770,6 +4898,12 @@ def translate_ability(c, a, res):
     cavs.discard('_needsPoison')
     res['caveats'] |= cavs
     return ab
+
+
+SELF_KO = 'If you use this Ability, this Pokémon is Knocked Out.'
+# The damage counters that write "is Knocked Out" (milestone MV7b, Pokemon/SelfKO.lean, whose witness uses the same
+# number): above every derived HP of a game of two 60-card decks of imported cards (survey S11 gives the bound).
+KO_COUNTERS = 9999
 
 
 def translate_also_ko(c, a, t, res):
@@ -4922,9 +5056,8 @@ def attacking_to_active(s):
              .replace('the Attacking Pokémon', "your opponent's Active Pokémon"))
 
 
-def trig_effect(c, body, ev, spot, opt, cavs, tool):
-    """Translate the effect sentences of a trigger; raise Refuse with a reason starting 'triggered (M8b shape), '."""
-    R = 'triggered (M8b shape), '
+def trig_effect(c, body, ev, spot, opt, cavs, tool, R='triggered (M8b shape), '):
+    """Translate the effect sentences of a trigger; raise Refuse with a reason starting with `R`."""
     place = T.TRIG_EVENTS[ev]
     deluxe = False
     if tool and body and body[-1] == DELUXE_DISCARD:
@@ -4950,6 +5083,8 @@ def trig_effect(c, body, ev, spot, opt, cavs, tool):
             parts.append(('fx', it.e))
         elif isinstance(it, AbItem):
             if place is None:
+                if ev == 'oppBenched':
+                    raise Refuse(R + 'effect on this Pokémon (`TrigEvent.place` is none: not tracked)')
                 raise Refuse(R + 'effect on the Knocked Out Pokémon or its cards (not tracked after the Knock Out)')
             cavs |= it.cavs
             parts.append(it.a)
@@ -4966,9 +5101,64 @@ def trig_effect(c, body, ev, spot, opt, cavs, tool):
     if not T.trig_ok(e):
         raise Refuse(R + 'effect outside the trigger fragment (Effect.trigOk: a test or coin flip, a switch, a heal, '
                      'an exact zone move, …)')
+    if not T.TRIG_LATE[ev] and T.rec_filters(e):
+        # `Ability.trigOn`: a trigger of an event that can fire before the attack and recycles never fires
+        raise Refuse(R + 'effect recycles a card from a discard pile (`Ability.trigOn`: such a trigger never fires)')
     if 'noopUse' in cavs or 'selfBench' in cavs or 'koBetweenSteps' in cavs:
         raise Refuse(R + 'effect needs a caveat of activated Abilities')
-    cavs.add('trigDamaged' if ev == 'damaged' else 'trigKO')
+    cavs.add({'damaged': 'trigDamaged', 'koByAttack': 'trigKO', 'oppBenched': 'trigBenched'}[ev])
+    return ab
+
+
+# ------------------------------------------------------------------ triggers on `TrigEvent.oppBenched` (milestone MV7)
+#
+# "[As long as this Pokémon is in the Active Spot, w]henever your opponent's Active Pokémon moves to the Bench during
+# their turn, E" (Magcargo sv5-29, Mismagius ex me2-36). The semantics relied on (Pokemon/Card.lean `TrigEvent`,
+# `Ability.trigOn`; Pokemon/Rules.lean, the triggers section above `Move` and the Known gaps entry "triggers of the
+# event 'your opponent's Active Pokémon moves to the Bench'"):
+# * the event is raised at its source, by the opponent's retreat (`Move.retreat`) and by a switch of their own Active
+#   Pokémon inside any effect of their turn (`Run.switch .own`), and only then: the trigger's owner's own gusts do not
+#   raise it ("during their turn" and "your opponent's Active Pokémon"). Exact (`Benched.retreat_fires`,
+#   `Benched.switch_fires`, `Promoted.switch_attack_fires`; `Benched.copy_quiet` for an identical copy Benched later);
+# * "as long as this Pokémon is in the Active Spot" is the Ability's `spot = some .active`, read on the holders marked
+#   where they are at the event (`GameState.noteBenched`, `InPlay.owe`; `Gust.gust_drops_holder`,
+#   `Gust.gust_adds_holder`). Exact;
+# * "their new Active Pokémon" is the opponent's Active Pokémon when the trigger resolves (from the owner's side
+#   `.opp`: `inflict`, `counters`), which is the Pokémon switched in, since a well-formed attack does nothing more to
+#   its user's Active Spot after the switch (`Effect.switchSafe`) and inside a Trainer or Ability the trigger
+#   resolves right after the step (`Resolve.trigger_first`). Exact, except the order item (caveat trigBenched);
+# * the effect must be in `Effect.trigOk` and recycle nothing (`TrigEvent.late = false`), or the trigger never fires:
+#   refused then. "That Pokémon" (the Pokémon moved to the Bench, Team Rocket's Dugtrio) has no target: refused.
+BENCHED_RX = re.compile(r"^(As long as this Pokémon is in the Active Spot, w|W)henever your opponent's Active Pokémon moves "
+                        r"to the Bench during their turn, (.+)$")
+BENCHED_R = 'triggered (MV7 oppBenched), '
+
+
+def translate_benched(c, a, t, m, res):
+    """A triggered Ability on `TrigEvent.oppBenched`; appends a blocker and returns None if it is refused."""
+    B = res['blockers']
+    spot = ('active',) if m.group(1).startswith('As long as') else None
+    rest = m.group(2)
+    opt = False
+    if rest.startswith('you may '):
+        opt, rest = True, rest[len('you may '):]
+    body = split_sentences(cap(rest))
+    cavs = set()
+    try:
+        if any(re.search(r'\b[Tt]hat Pokémon\b', x) for x in body):
+            raise Refuse('Ability: ' + BENCHED_R + "'that Pokémon' (the Pokémon moved to the Bench) has no target in the "
+                         "model's language (Known gaps)")
+        body = [x.replace('Their new Active Pokémon', "Your opponent's Active Pokémon")
+                 .replace('their new Active Pokémon', "your opponent's Active Pokémon") for x in body]
+        if any(re.search(r'\b[Tt]heir\b', x) for x in body):
+            raise Refuse('Ability: ' + BENCHED_R + "'their' other than 'their new Active Pokémon'")
+        ab = trig_effect(c, body, 'oppBenched', spot, opt, cavs, False, R='Ability: ' + BENCHED_R)
+    except Refuse as r:
+        B.append((r.reason, r.sentence or t))
+        return None
+    ab['name'] = a.get('name') or ''
+    res['used'].append(('trigger-oppBenched', t))
+    res['caveats'] |= cavs
     return ab
 
 
