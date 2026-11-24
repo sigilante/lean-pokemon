@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 3 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.13.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,78 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part03
 open Pokemon
+
+/-- Charcadet (sv7-29). Records: sv7-29. -/
+def sv7_29 : Card := .pokemon
+  { name := "Charcadet", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Flare", cost := [.fire, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Lapras (sv7-31). Records: sv7-31. -/
+def sv7_31 : Card := .pokemon
+  { name := "Lapras", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Water Gun", cost := [.water], damage := 2,
+        effect := .skip,
+        gx := false },
+      { name := "Surf", cost := [.water, .colorless, .colorless], damage := 8,
+        effect := .skip,
+        gx := false }] }
+
+/-- Marill (sv7-33). Records: sv7-33. -/
+def sv7_33 : Card := .pokemon
+  { name := "Marill", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Rollout", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Azumarill (sv7-34). Records: sv7-34. -/
+def sv7_34 : Card := .pokemon
+  { name := "Azumarill", stage := .stage1, evolvesFrom := some "Marill",
+    hp := 12, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bubble Beam", cost := [.water, .colorless], damage := 6,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false }] }
+
+/-- Finneon (sv7-35). Records: sv7-35. -/
+def sv7_35 : Card := .pokemon
+  { name := "Finneon", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Sprinkle Water", cost := [.water], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Lumineon (sv7-36). Records: sv7-36. -/
+def sv7_36 : Card := .pokemon
+  { name := "Lumineon", stage := .stage1, evolvesFrom := some "Finneon",
+    hp := 11, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Return", cost := [.colorless], damage := 2,
+        effect := .choice (.drawTo .own 6) .skip,
+        gx := false },
+      { name := "Razor Fin", cost := [.water, .colorless], damage := 7,
+        effect := .skip,
+        gx := false }] }
 
 /-- Tirtouga (sv7-37). Records: sv7-37. -/
 def sv7_37 : Card := .pokemon
@@ -1805,77 +1877,14 @@ def sv8_118 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Hydreigon ex (sv8-119). Records: sv8-119, sv8-223, sv8-240. Caveats: benchMods. -/
-def sv8_119 : Card := .pokemon
-  { name := "Hydreigon ex", stage := .stage2, evolvesFrom := some "Zweilous",
-    hp := 33, type := .darkness, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .ex, tera := true,
-    abilities := [],
-    attacks := [
-      { name := "Crashing Headbutt", cost := [.darkness, .colorless], damage := 20,
-        effect := .move .opp (.top 3) .discard .any .all,
-        gx := false },
-      { name := "Obsidian", cost := [.psychic, .darkness, .metal, .colorless], damage := 13,
-        effect := .benchSome .opp 2 .any true 13,
-        gx := false }] }
-
-/-- Shroodle (sv8-120). Records: sv8-120. -/
-def sv8_120 : Card := .pokemon
-  { name := "Shroodle", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .darkness, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Spray Fluid", cost := [.darkness], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Alolan Diglett (sv8-122). Records: sv8-122. -/
-def sv8_122 : Card := .pokemon
-  { name := "Alolan Diglett", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .metal, retreat := 1, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Surprise Attack", cost := [], damage := 0,
-        effect := .choice (.damage (.const 3)) .skip,
-        gx := false }] }
-
-/-- Alolan Dugtrio (sv8-123). Records: sv8-123, sv8-208. -/
-def sv8_123 : Card := .pokemon
-  { name := "Alolan Dugtrio", stage := .stage1, evolvesFrom := some "Alolan Diglett",
-    hp := 11, type := .metal, retreat := 2, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Trio-Cheehoo", cost := [], damage := 0,
-        effect := .ite (.countGe (.pile .own .hand .any) 3) (.ite (.countGe (.pile .own .hand .any) 4) .skip (.damage (.const 12))) .skip,
-        gx := false }] }
-
-/-- Skarmory (sv8-124). Records: sv8-124, sv8-209. Caveats: perPokemon. -/
-def sv8_124 : Card := .pokemon
-  { name := "Skarmory", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .metal, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Steel Wing", cost := [.metal, .colorless], damage := 5,
-        effect := .linger .own .next (.reduce 3),
-        gx := false }] }
-
-/-- Registeel (sv8-125). Records: sv8-125. -/
-def sv8_125 : Card := .pokemon
-  { name := "Registeel", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .metal, retreat := 3, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Raging Hammer", cost := [.metal, .colorless], damage := 0,
-        effect := .damage (.add (.const 6) (.per .own 1)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_29,
+  sv7_31,
+  sv7_33,
+  sv7_34,
+  sv7_35,
+  sv7_36,
   sv7_37,
   sv7_38,
   sv7_39,
@@ -2019,13 +2028,7 @@ def cards : List Card := [
   sv8_112,
   sv8_114,
   sv8_117,
-  sv8_118,
-  sv8_119,
-  sv8_120,
-  sv8_122,
-  sv8_123,
-  sv8_124,
-  sv8_125]
+  sv8_118]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2066,6 +2069,9 @@ theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.labe
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
 
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
+theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = [] := by decide +kernel
+
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel
 
@@ -2078,6 +2084,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Drifloon", "Tornadus", "Volcarona", "Donphan", "Vibrava", "Skarmory"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Drifloon", "Tornadus", "Volcarona", "Donphan", "Vibrava"] := by decide +kernel
 
 end PokemonCards.Standard.Part03

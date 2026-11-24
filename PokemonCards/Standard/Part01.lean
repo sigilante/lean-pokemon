@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.13.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -234,6 +234,20 @@ def svp_123 : Card := .pokemon
         effect := .damage (.add (.const 2) (.count (.bench .opp .pokemon) 2)),
         gx := false }] }
 
+/-- Pecharunt (svp-129). Records: svp-129, svp-149. Caveats: perPokemon. -/
+def svp_129 : Card := .pokemon
+  { name := "Pecharunt", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .darkness, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Toxic Subjugation", use := .static [{ sel := .opp, filt := .any, tgt := none, src := some .active, need := none, eff := .condMore .poisoned 5 }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Poison Chain", cost := [.darkness, .colorless], damage := 1,
+        effect := .seq (.inflict .poisoned) (.linger .opp .next (.lock .retreat)),
+        gx := false }] }
+
 /-- Kingdra ex (svp-131). Records: svp-131, sv6pt5-12, sv6pt5-80. -/
 def svp_131 : Card := .pokemon
   { name := "Kingdra ex", stage := .stage2, evolvesFrom := some "Seadra",
@@ -293,6 +307,20 @@ def svp_151 : Card := .pokemon
         gx := false },
       { name := "Blazing Charge", cost := [.fire, .fire, .colorless], damage := 0,
         effect := .ite (.countGe (.prizes .opp) 5) (.damage (.const 10)) (.damage (.const 17)),
+        gx := false }] }
+
+/-- Magneton (svp-153). Records: svp-153, svp-159, sv8-59. Caveats: koCounters, selfBench, upTo0. -/
+def svp_153 : Card := .pokemon
+  { name := "Magneton", stage := .stage1, evolvesFrom := some "Magnemite",
+    hp := 10, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Overvolt Discharge", use := .once,
+        spot := none, cond := none,
+        effect := .seq (.fx (.seq (.choice (.attach .own .discard .basicEnergy .active (.ptype .lightning)) (.attach .own .discard .basicEnergy .bench (.ptype .lightning))) (.seq (.choice (.attach .own .discard .basicEnergy .active (.ptype .lightning)) (.attach .own .discard .basicEnergy .bench (.ptype .lightning))) (.choice (.attach .own .discard .basicEnergy .active (.ptype .lightning)) (.attach .own .discard .basicEnergy .bench (.ptype .lightning)))))) (.self (.counters 9999)) }],
+    attacks := [
+      { name := "Electric Ball", cost := [.lightning, .colorless], damage := 4,
+        effect := .skip,
         gx := false }] }
 
 /-- Wooper (svp-155). Records: svp-155. -/
@@ -667,6 +695,20 @@ def sv5_28 : Card := .pokemon
     attacks := [
       { name := "Roasting Heat", cost := [.fire], damage := 0,
         effect := .ite (.cond .opp .burned) (.damage (.const 5)) (.damage (.const 1)),
+        gx := false }] }
+
+/-- Magcargo (sv5-29). Records: sv5-29. Caveats: trigBenched. -/
+def sv5_29 : Card := .pokemon
+  { name := "Magcargo", stage := .stage1, evolvesFrom := some "Slugma",
+    hp := 12, type := .fire, retreat := 4, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Lava Zone", use := .triggered .oppBenched false,
+        spot := none, cond := none,
+        effect := .fx (.inflict .burned) }],
+    attacks := [
+      { name := "Heat Blast", cost := [.fire, .colorless, .colorless], damage := 10,
+        effect := .skip,
         gx := false }] }
 
 /-- Victini (sv5-30). Records: sv5-30. -/
@@ -1646,6 +1688,11 @@ def sv5_154 : Card := .tool "Maximum Belt"
     statics := [
       { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
 
+/-- Perilous Jungle (sv5-156). Records: sv5-156. -/
+def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
+    .skip [
+      { sel := .all, filt := .not (.ptype .darkness), tgt := none, src := none, need := none, eff := .condMore .poisoned 2 }]
+
 /-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec. -/
 def sv5_157 : Card := .trainer "Prime Catcher" .item
     (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
@@ -1739,59 +1786,6 @@ def sv6_12 : Card := .pokemon
         effect := .heal 2,
         gx := false }] }
 
-/-- Trevenant (sv6-13). Records: sv6-13. -/
-def sv6_13 : Card := .pokemon
-  { name := "Trevenant", stage := .stage1, evolvesFrom := some "Phantump",
-    hp := 12, type := .grass, retreat := 3, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Giga Drain", cost := [.grass, .colorless], damage := 0,
-        effect := .drain (.const 5),
-        gx := false },
-      { name := "Forest Dump", cost := [.grass, .grass, .colorless], damage := 13,
-        effect := .skip,
-        gx := false }] }
-
-/-- Grookey (sv6-14). Records: sv6-14. -/
-def sv6_14 : Card := .pokemon
-  { name := "Grookey", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Smash Kick", cost := [.grass], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Branch Poke", cost := [.grass, .grass], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Applin (sv6-17). Records: sv6-17. -/
-def sv6_17 : Card := .pokemon
-  { name := "Applin", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tumbling Attack", cost := [.grass], damage := 0,
-        effect := .choice (.damage (.const 3)) (.damage (.const 1)),
-        gx := false }] }
-
-/-- Iron Leaves (sv6-19). Records: sv6-19. Caveats: koAttackWide. -/
-def sv6_19 : Card := .pokemon
-  { name := "Iron Leaves", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Recovery Net", cost := [.grass], damage := 0,
-        effect := .move .own .discard .hand .pokemon (.upTo 2),
-        gx := false },
-      { name := "Avenging Edge", cost := [.grass, .colorless, .colorless], damage := 0,
-        effect := .ite (.countGe (.koLast .own true) 1) (.damage (.const 16)) (.damage (.const 10)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1819,11 +1813,13 @@ def cards : List Card := [
   svp_118,
   svp_122,
   svp_123,
+  svp_129,
   svp_131,
   svp_141,
   svp_148,
   svp_150,
   svp_151,
+  svp_153,
   svp_155,
   svp_157,
   svp_162,
@@ -1852,6 +1848,7 @@ def cards : List Card := [
   sv5_26,
   sv5_27,
   sv5_28,
+  sv5_29,
   sv5_30,
   sv5_32,
   sv5_33,
@@ -1932,6 +1929,7 @@ def cards : List Card := [
   sv5_152,
   sv5_153,
   sv5_154,
+  sv5_156,
   sv5_157,
   sv6_1,
   sv6_2,
@@ -1939,11 +1937,7 @@ def cards : List Card := [
   sv6_6,
   sv6_7,
   sv6_8,
-  sv6_12,
-  sv6_13,
-  sv6_14,
-  sv6_17,
-  sv6_19]
+  sv6_12]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1984,6 +1978,9 @@ theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.labe
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
 
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
+theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = ["Magcargo"] := by decide +kernel
+
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel
 
@@ -1996,6 +1993,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle", "Trevenant"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle"] := by decide +kernel
 
 end PokemonCards.Standard.Part01

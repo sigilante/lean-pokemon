@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.13.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,59 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Trevenant (sv6-13). Records: sv6-13. -/
+def sv6_13 : Card := .pokemon
+  { name := "Trevenant", stage := .stage1, evolvesFrom := some "Phantump",
+    hp := 12, type := .grass, retreat := 3, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Giga Drain", cost := [.grass, .colorless], damage := 0,
+        effect := .drain (.const 5),
+        gx := false },
+      { name := "Forest Dump", cost := [.grass, .grass, .colorless], damage := 13,
+        effect := .skip,
+        gx := false }] }
+
+/-- Grookey (sv6-14). Records: sv6-14. -/
+def sv6_14 : Card := .pokemon
+  { name := "Grookey", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Smash Kick", cost := [.grass], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Branch Poke", cost := [.grass, .grass], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Applin (sv6-17). Records: sv6-17. -/
+def sv6_17 : Card := .pokemon
+  { name := "Applin", stage := .basic, evolvesFrom := none,
+    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Tumbling Attack", cost := [.grass], damage := 0,
+        effect := .choice (.damage (.const 3)) (.damage (.const 1)),
+        gx := false }] }
+
+/-- Iron Leaves (sv6-19). Records: sv6-19. Caveats: koAttackWide. -/
+def sv6_19 : Card := .pokemon
+  { name := "Iron Leaves", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Recovery Net", cost := [.grass], damage := 0,
+        effect := .move .own .discard .hand .pokemon (.upTo 2),
+        gx := false },
+      { name := "Avenging Edge", cost := [.grass, .colorless, .colorless], damage := 0,
+        effect := .ite (.countGe (.koLast .own true) 1) (.damage (.const 16)) (.damage (.const 10)),
+        gx := false }] }
 
 /-- Poltchageist (sv6-21). Records: sv6-21. -/
 def sv6_21 : Card := .pokemon
@@ -1273,6 +1326,34 @@ def sv6pt5_18 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Dusclops (sv6pt5-19). Records: sv6pt5-19, sv6pt5-69, sv8pt5-36. Caveats: koCounters, selfBench, selfKOTiming. -/
+def sv6pt5_19 : Card := .pokemon
+  { name := "Dusclops", stage := .stage1, evolvesFrom := some "Duskull",
+    hp := 9, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Cursed Blast", use := .once,
+        spot := none, cond := none,
+        effect := .seq (.fx (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 5) (.benchCounters .opp 5)) (.counters 5))) (.self (.counters 9999)) }],
+    attacks := [
+      { name := "Will-O-Wisp", cost := [.psychic, .psychic], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
+/-- Dusknoir (sv6pt5-20). Records: sv6pt5-20, sv6pt5-70, sv8pt5-37. Caveats: koCounters, perPokemon, selfBench, selfKOTiming. -/
+def sv6pt5_20 : Card := .pokemon
+  { name := "Dusknoir", stage := .stage2, evolvesFrom := some "Dusclops",
+    hp := 16, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Cursed Blast", use := .once,
+        spot := none, cond := none,
+        effect := .seq (.fx (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 13) (.benchCounters .opp 13)) (.counters 13))) (.self (.counters 9999)) }],
+    attacks := [
+      { name := "Shadow Bind", cost := [.psychic, .psychic, .colorless], damage := 15,
+        effect := .linger .opp .next (.lock .retreat),
+        gx := false }] }
+
 /-- Croagunk (sv6pt5-23). Records: sv6pt5-23. -/
 def sv6pt5_23 : Card := .pokemon
   { name := "Croagunk", stage := .basic, evolvesFrom := none,
@@ -1756,80 +1837,12 @@ def sv7_27 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Charcadet (sv7-29). Records: sv7-29. -/
-def sv7_29 : Card := .pokemon
-  { name := "Charcadet", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flare", cost := [.fire, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Lapras (sv7-31). Records: sv7-31. -/
-def sv7_31 : Card := .pokemon
-  { name := "Lapras", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .water, retreat := 2, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Water Gun", cost := [.water], damage := 2,
-        effect := .skip,
-        gx := false },
-      { name := "Surf", cost := [.water, .colorless, .colorless], damage := 8,
-        effect := .skip,
-        gx := false }] }
-
-/-- Marill (sv7-33). Records: sv7-33. -/
-def sv7_33 : Card := .pokemon
-  { name := "Marill", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rollout", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Azumarill (sv7-34). Records: sv7-34. -/
-def sv7_34 : Card := .pokemon
-  { name := "Azumarill", stage := .stage1, evolvesFrom := some "Marill",
-    hp := 12, type := .water, retreat := 2, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bubble Beam", cost := [.water, .colorless], damage := 6,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false }] }
-
-/-- Finneon (sv7-35). Records: sv7-35. -/
-def sv7_35 : Card := .pokemon
-  { name := "Finneon", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Sprinkle Water", cost := [.water], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Lumineon (sv7-36). Records: sv7-36. -/
-def sv7_36 : Card := .pokemon
-  { name := "Lumineon", stage := .stage1, evolvesFrom := some "Finneon",
-    hp := 11, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Return", cost := [.colorless], damage := 2,
-        effect := .choice (.drawTo .own 6) .skip,
-        gx := false },
-      { name := "Razor Fin", cost := [.water, .colorless], damage := 7,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_13,
+  sv6_14,
+  sv6_17,
+  sv6_19,
   sv6_21,
   sv6_26,
   sv6_27,
@@ -1933,6 +1946,8 @@ def cards : List Card := [
   sv6pt5_14,
   sv6pt5_16,
   sv6pt5_18,
+  sv6pt5_19,
+  sv6pt5_20,
   sv6pt5_23,
   sv6pt5_24,
   sv6pt5_25,
@@ -1973,13 +1988,7 @@ def cards : List Card := [
   sv7_24,
   sv7_25,
   sv7_26,
-  sv7_27,
-  sv7_29,
-  sv7_31,
-  sv7_33,
-  sv7_34,
-  sv7_35,
-  sv7_36]
+  sv7_27]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2020,6 +2029,9 @@ theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.labe
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
 
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
+theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = [] := by decide +kernel
+
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel
 
@@ -2032,6 +2044,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Torkoal", "Houndoom", "Varoom"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Trevenant", "Torkoal", "Houndoom", "Varoom"] := by decide +kernel
 
 end PokemonCards.Standard.Part02

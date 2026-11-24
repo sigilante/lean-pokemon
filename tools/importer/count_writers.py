@@ -13,7 +13,8 @@ and any card otherwise (`Effect.recFilters`). Whether a recycler can return a wr
 `Filter.eval` (Pokemon/Card.lean) mirrored on the parsed terms; an unknown filter stops the script.
 
 Usage: python3 -I tools/importer/count_writers.py [PokemonCards/Standard]
-(first written for the paper as a scratch script, 2026-11-22; importer 0.11.0 took it in; 0.12.0 added the MV6 kinds.)
+(first written for the paper as a scratch script, 2026-11-22; importer 0.11.0 took it in; 0.12.0 added the MV6 kinds;
+0.14.0 the triggered Abilities by event.)
 """
 import collections
 import os
@@ -165,6 +166,7 @@ LIN = re.compile(r'linger \.(own|opp) \.(now|next|after|always) \(?\.(bonus|redu
 AMT = ('bonus', 'reduce', 'weaken', 'expose')
 REC = re.compile(r'move \.(own|opp) \.discard \.(\w+) ')
 LOOK = re.compile(r'look \.(own|opp) \.discard ')
+TRIG = re.compile(r'use := \.triggered \.(\w+) ')
 
 
 def main(d):
@@ -230,6 +232,14 @@ def main(d):
           [x[0] for x in can if 'pokemon' in x[3]])
     print('  can return a Supporter writer:', [x[0] for x in can if 'supporter' in x[3]])
     print('  can return an Item writer:', [x[0] for x in can if 'item' in x[3]])
+    # importer 0.14.0: the triggered Abilities by event (`AbilityUse.triggered ev opt`; milestones M8b and MV7)
+    trig = collections.OrderedDict()
+    for t in terms:
+        for mm in TRIG.finditer(t['body']):
+            trig.setdefault(mm.group(1), []).append(t['name'])
+    print('triggered Abilities by event (terms):', dict((k, len(v)) for k, v in trig.items()))
+    for k, v in trig.items():
+        print('  %s:' % k, v)
 
 
 if __name__ == '__main__':
