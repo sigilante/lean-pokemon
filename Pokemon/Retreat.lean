@@ -25,7 +25,7 @@ def mon : InPlay := { InPlay.ofBasic big with energy := [.energy .water, .energy
 def start : GameState :=
   ⟨side [] [.energy .fire] mon [InPlay.ofBasic big],
     side [] [.energy .fire] (InPlay.ofBasic big) [], true, false, false, false, none, none, false,
-    false⟩
+    false, false⟩
 
 theorem start_settled : Settled start := (GameState.settled_iff _).2 (by decide)
 

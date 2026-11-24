@@ -62,7 +62,7 @@ def brute (rb : RuleBox) : PokemonCard := ⟨"Brute", .basic, none, 20, .dragon,
 def start (rb : RuleBox) : GameState :=
   ⟨side [] [.energy .fire] (InPlay.ofBasic (brute rb)) [],
     side [] [.energy .fire] (InPlay.ofBasic warden) [], true, false, false, false, none, none,
-    false, false⟩
+    false, false, false⟩
 
 theorem start_wellFormed (rb : RuleBox) : WellFormed (start rb) := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>

@@ -47,7 +47,7 @@ def punisher : PokemonCard := ⟨"Punisher", .basic, none, 10, .grass, [punish],
 def duel (opp : PokemonCard) : GameState :=
   ⟨side [] [.energy .fire] (InPlay.ofBasic punisher) [],
     side [] [.energy .fire] (InPlay.ofBasic opp) [],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem duel_wellFormed (opp : PokemonCard) : WellFormed (duel opp) := by
   refine ⟨fun _ => ⟨by simp [duel, side], by simp [duel, side]⟩, ?_, ?_⟩ <;>
@@ -90,7 +90,7 @@ def singer : PokemonCard := ⟨"Singer", .basic, none, 6, .water, [round], 1, no
 
 def choir : GameState :=
   ⟨side [] [] (InPlay.ofBasic singer) [InPlay.ofBasic big, InPlay.ofBasic singer],
-    side [] [] (InPlay.ofBasic big) [], true, false, false, false, none, none, false, false⟩
+    side [] [] (InPlay.ofBasic big) [], true, false, false, false, none, none, false, false, false⟩
 
 theorem choir_count : (Count.inPlay .own (.hasAttack "Round")).val choir = 2 := by decide
 

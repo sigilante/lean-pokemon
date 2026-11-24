@@ -415,6 +415,8 @@ structure Fits (k : Pk) (s : PlayerState) : Prop where
 structure Shape (kc ko : Pk) (g : GameState) : Prop where
   cur : Fits kc g.cur
   opp : Fits ko g.opp
+  /-- no trigger pending (milestone MV7; the decks have no triggered Ability, so none is ever set) -/
+  pend : g.pend = false
 
 /-- Forget what is known about deck and hand being nonempty. -/
 def Pk.weak (k : Pk) : Pk := { k with stocked := false, held := false }
@@ -547,7 +549,7 @@ theorem Does.handToBottom (kc ko : Pk) :
   | @handToBottom _ hs' hp =>
       have hc := hs.cur
       refine ⟨⟨hc.active, hc.bench, fun c hc' => ?_, (fun c hc' => by cases hc'), hc.mods,
-        fun e => ?_, (fun e => by cases e)⟩, hs.opp⟩
+        fun e => ?_, (fun e => by cases e)⟩, hs.opp, hs.pend⟩
       · rcases List.mem_append.1 hc' with h | h
         · exact hc.deck c h
         · exact hc.hand c (hp.mem_iff.1 h)
@@ -571,7 +573,7 @@ theorem Does.healAll (kc ko : Pk) : Does .healAll kc ko { kc with dmg := 0 } ko 
       rw [hp] at h'; cases h'
       have hc := hs.cur
       exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, rfl, h6, h7⟩, hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked,
-        hc.held⟩, hs.opp⟩
+        hc.held⟩, hs.opp, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -586,7 +588,7 @@ theorem Does.selfDamage (n : Nat) (kc ko : Pk) :
       rw [hp] at h'; cases h'
       have hc := hs.cur
       exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5], h6, h7⟩, hc.bench, hc.deck, hc.hand,
-        hc.mods, hc.stocked, hc.held⟩, hs.opp⟩
+        hc.mods, hc.stocked, hc.held⟩, hs.opp, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -601,7 +603,7 @@ theorem Does.counters (n : Nat) (kc ko : Pk) :
       rw [hp] at h'; cases h'
       have hc := hs.opp
       exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by simp only [h5], h6, h7⟩, hc.bench, hc.deck,
-        hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
+        hc.hand, hc.mods, hc.stocked, hc.held⟩, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -641,7 +643,7 @@ theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
       have hc := hs.opp
       exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
         simp only [h5, GameState.dealtI_none, dealt_shape hs hns hw hr], h6, h7⟩,
-        hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
+        hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -658,7 +660,7 @@ theorem Does.damageZero (kc ko : Pk) : Does (.damage (.const 0)) kc ko kc ko := 
       have hc := hs.opp
       exact ⟨hs.cur, ⟨⟨_, rfl, h1, h2, h3, h4, by
         simp only [h5, GameState.dealtI_none, dealt_zero, Nat.add_zero], h6, h7⟩,
-        hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩⟩
+        hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -671,7 +673,7 @@ theorem Does.bonusOwn (n : Nat) (kc ko : Pk) :
   | linger =>
       have hc := hs.cur
       exact ⟨⟨hc.active, hc.bench, hc.deck, hc.hand, by
-        simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩, hs.opp⟩
+        simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩, hs.opp, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -684,7 +686,7 @@ theorem Does.reduceOwn (n : Nat) (kc ko : Pk) :
   | linger =>
       have hc := hs.cur
       exact ⟨⟨hc.active, hc.bench, hc.deck, hc.hand, by
-        simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩, hs.opp⟩
+        simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩, hs.opp, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -697,7 +699,7 @@ theorem Does.reduceOpp (n : Nat) (kc ko : Pk) :
   | linger =>
       have hc := hs.opp
       exact ⟨hs.cur, ⟨hc.active, hc.bench, hc.deck, hc.hand, by
-        simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩⟩
+        simp only [GameState.updSide, hc.mods]; rfl, hc.stocked, hc.held⟩, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
   | zone hw => simp [Effect.zSide] at hw
@@ -715,7 +717,7 @@ theorem Does.markOwn (m : Marker) (kc ko : Pk) :
       rw [hp] at h'; cases h'
       have hc := hs.cur
       exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, h5, by simp only [InPlay.setMarks, h6], h7⟩, hc.bench,
-        hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩, hs.opp⟩
+        hc.deck, hc.hand, hc.mods, hc.stocked, hc.held⟩, hs.opp, hs.pend⟩
   | touchBench he h' =>
       simp only [Effect.touch, Option.some.injEq, Prod.mk.injEq] at he
       obtain ⟨rfl, rfl⟩ := he
@@ -1092,7 +1094,7 @@ theorem Shape.settled {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g
   obtain ⟨p, hp, -⟩ := hs.cur.active
   obtain ⟨p', hp', -⟩ := hs.opp.active
   exact ⟨hs.damageBounded hns hc ho, (by rw [hp]; exact fun e => by cases e),
-    (by rw [hp']; exact fun e => by cases e)⟩
+    (by rw [hp']; exact fun e => by cases e), hs.pend⟩
 
 /-- Checkup changes nothing on a Pokémon with no Special Condition and no Char counter. -/
 theorem checkup_calm {p : InPlay} (hr : p.rot = .none) (hp : p.poisoned = false)
@@ -1148,7 +1150,7 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | @attach l₁ l₂ t a hh hf ha =>
       rw [hp] at ha; cases ha
       refine .inl ⟨⟨⟨_, rfl, h1, h2, h3, h4, h5, h6, h7⟩, hC.bench, hC.deck, fun c hc' => ?_,
-        hC.mods, (fun e => by cases e), (fun e => by cases e)⟩, hO.weak⟩
+        hC.mods, (fun e => by cases e), (fun e => by cases e)⟩, hO.weak, hs.pend⟩
       exact hC.hand c (by
         rw [hh]; rcases List.mem_append.1 hc' with h | h
         · exact List.mem_append_left _ h
@@ -1185,7 +1187,7 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
   | knockOuts h =>
       have hs' : Settled g := by
         refine ⟨DamageBounded.intro' (fun q hq => ?_) (fun q hq => ?_) (fun q hq => ?_)
-          (fun q hq => ?_), by rw [hp]; simp, by rw [hp']; simp⟩
+          (fun q hq => ?_), by rw [hp]; simp, by rw [hp']; simp, hs.pend⟩
         · rw [hp] at hq; cases hq
           rw [g.hpOf_noStatics hts.noStatics (w := .own) (sp := .active) hp, h5, h1]; exact hc
         · rw [hC.bench] at hq; cases hq
@@ -1193,22 +1195,23 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
           rw [g.hpOf_noStatics hts.noStatics (w := .opp) (sp := .active) hp', h5', h1']; exact ho
         · rw [hO.bench] at hq; cases hq
       cases h with
-      | won hu => exact absurd hs' hu
-      | go hu => exact absurd hs' hu
+      | won hu => exact absurd hs'.calm hu
+      | go hu => exact absurd hs'.calm hu
+  | trigger _ hp₀ => rw [hs.pend] at hp₀; cases hp₀
   | endTurn fa sa ca fb sb cb ha hb _ _ hco hcc =>
       rw [hO.bench] at hco
       rw [hC.bench, List.map_nil] at hcc
       cases hco
       cases hcc
       exact .inr (.inl ⟨(hO.toCur ha hoc false fa sa ca).weak,
-        (hC.toOpp hb hcc true fb sb cb).weak⟩)
+        (hC.toOpp hb hcc true fb sb cb).weak, rfl⟩)
   | @startTurn a b c d _ _ _ _ hd =>
       refine .inl ⟨⟨hC.active, hC.bench, fun x hx => hC.deck x (by rw [hd]; exact .tail _ hx),
-        fun x hx => ?_, hC.mods, (fun e => by cases e), (fun e => by cases e)⟩, hO.weak⟩
+        fun x hx => ?_, hC.mods, (fun e => by cases e), (fun e => by cases e)⟩, hO.weak, hs.pend⟩
       cases hx with
       | head => exact hC.deck c (by rw [hd]; exact .head _)
       | tail _ hx => exact hC.hand x hx
-  | deckOut => exact .inl ⟨hC.weak, hO.weak⟩
+  | deckOut => exact .inl ⟨hC.weak, hO.weak, hs.pend⟩
 
 theorem mkOf_char (h : Bool) : (mkOf h).char = false := by cases h <;> rfl
 
@@ -1239,7 +1242,8 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
     hbt (hs.settled hns hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw
     (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
     (by rw [h7]; rfl),
-    ⟨(hsh _ hr).cur.afterAttack _ (Attack.lockSet_of_none hsl), (hsh _ hr).opp⟩, hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
+    ⟨(hsh _ hr).cur.afterAttack _ (Attack.lockSet_of_none hsl), (hsh _ hr).opp, (hsh _ hr).pend⟩,
+    hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩
 
 /-- Ending the turn from a state of known shape swaps the shape. -/
 theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.NoStatics)
@@ -1250,8 +1254,8 @@ theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.
   obtain ⟨p, hp, -⟩ := hs.cur.active
   obtain ⟨p', hp', -⟩ := hs.opp.active
   exact ⟨_, .endTurn false false false false false false hp' hp (hs.damageBounded hns hc ho) hbt
-      (by rw [hs.opp.bench]; exact .nil) (by rw [hs.cur.bench, List.map_nil]; exact .nil),
-    ⟨hs.opp.toCur hp' hoc false false false false, hs.cur.toOpp hp hcc true false false false⟩,
+      (by rw [hs.opp.bench]; exact .nil) (by rw [hs.cur.bench, List.map_nil]; exact .nil) hs.pend,
+    ⟨hs.opp.toCur hp' hoc false false false false, hs.cur.toOpp hp hcc true false false false, rfl⟩,
     rfl, rfl, rfl, rfl⟩
 
 /-- Drawing for the turn from a state of known shape whose deck is known to be nonempty. -/
@@ -1267,10 +1271,10 @@ theorem startTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : 
   match hd : g.cur.deck with
   | [] => exact absurd hd (hC.stocked hst)
   | c :: d =>
-      refine ⟨_, .startTurn hbt hp' hp (hs.damageBounded hns hc ho) hd,
+      refine ⟨_, .startTurn hbt hp' hp (hs.damageBounded hns hc ho) hd hs.pend,
         ⟨⟨hC.active, hC.bench, fun x hx => hC.deck x (by rw [hd]; exact .tail _ hx),
           fun x hx => ?_, hC.mods, (fun e => by cases e), (fun _ => List.cons_ne_nil _ _)⟩,
-          hs.opp⟩, rfl, rfl, rfl, rfl⟩
+          hs.opp, hs.pend⟩, rfl, rfl, rfl, rfl⟩
       cases hx with
       | head => exact hC.deck c (by rw [hd]; exact .head _)
       | tail _ hx => exact hC.hand x hx
@@ -1335,7 +1339,7 @@ theorem start_noTS (M : Machine) (a b : Nat) : NoTS (start M a b) := by
 
 theorem start_encodes (M : Machine) (a b : Nat) : Encodes M (Machine.init a b) (start M a b) := by
   refine ⟨⟨0, a, b, 0, 0, 0, 0, false⟩, rfl, ⟨M.span_pos, .inl rfl, Nat.zero_le _,
-    (fun e => by cases e)⟩, rfl, rfl, ⟨?_, ?_⟩, rfl, rfl, rfl, rfl, (start_noTS M a b).noStatics,
+    (fun e => by cases e)⟩, rfl, rfl, ⟨?_, ?_, rfl⟩, rfl, rfl, rfl, rfl, (start_noTS M a b).noStatics,
     (start_noTS M a b).trigFree⟩
   · refine ⟨⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, (fun _ h => by cases h), fun c h => ?_,
       (by show storeOf 0 b = storeOf 0 (0 + b); rw [Nat.zero_add]), (fun e => by cases e),
@@ -1447,7 +1451,7 @@ def Inv (M : Machine) (c₀ : Config) (g : GameState) : Prop :=
 theorem Encodes.inv {M : Machine} {c : Config} {g : GameState} (he : Encodes M c g)
     (hns : NoTS g) : Inv M c g := by
   obtain ⟨s, rfl, hg, -, -, hsh, -⟩ := he
-  exact ⟨s, hg, .refl, .inl ⟨hsh.cur.weak, hsh.opp.weak⟩, hns⟩
+  exact ⟨s, hg, .refl, .inl ⟨hsh.cur.weak, hsh.opp.weak, hsh.pend⟩, hns⟩
 
 theorem reaches_of_spec {M : Machine} {c₀ : Config} {s t : Abs} (hr : M.Reaches c₀ s.cfg)
     (h : t.cfg = s.cfg ∨ M.Step s.cfg t.cfg) : M.Reaches c₀ t.cfg := by
@@ -1468,7 +1472,7 @@ theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g
       subst ha
       have h := (Does.attackA hg false false false false g hs hns.noStatics).2 g'' hr'
       exact ⟨_, (tickS_spec hg).1, reaches_of_spec hr (tickS_spec hg).2,
-        .inl ⟨h.cur.afterAttack _ (Attack.lockSet_of_none rfl), h.opp⟩, hns'⟩
+        .inl ⟨h.cur.afterAttack _ (Attack.lockSet_of_none rfl), h.opp, h.pend⟩, hns'⟩
   · have hns' : NoTS g' := fun c hc => hns c (hm.perm.mem_iff.1 hc)
     rcases move_shape hm hs (hg.hpB _ _) (hg.hpA _ _) rfl (mkOf_char _) rfl hns with h | h | ⟨atk, g'', ha, hr', rfl⟩
     · exact ⟨s, hg, hr, .inr h, hns'⟩
@@ -1477,7 +1481,7 @@ theorem move_inv {M : Machine} {c₀ : Config} {g g' : GameState} (hm : Move g g
       subst ha
       have h := (Does.attackB hg false false false false g hs hns.noStatics).2 g'' hr'
       exact ⟨_, (tockS_spec hg).1, reaches_of_spec hr (tockS_spec hg).2,
-        .inr ⟨h.cur.afterAttack _ (Attack.lockSet_of_none rfl), h.opp⟩, hns'⟩
+        .inr ⟨h.cur.afterAttack _ (Attack.lockSet_of_none rfl), h.opp, h.pend⟩, hns'⟩
 
 theorem reach_inv {M : Machine} {c₀ : Config} {g₀ g : GameState} (h₀ : Inv M c₀ g₀)
     (h : Reach g₀ g) : Inv M c₀ g := by

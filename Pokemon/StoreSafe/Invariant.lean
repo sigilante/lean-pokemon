@@ -139,7 +139,7 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
   | evolveBench => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
   | retreat =>
       refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append]; omega
+      simp only [GameState.discAmt, cardsAmt_append, GameState.noteBenched]; omega
   | @item g' l₁ l₂ n e hh hbt hst hr hl =>
       have hx : Card.trainer n .item e ∈ g.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -237,6 +237,9 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         obtain ⟨c, hc, hmc, -⟩ := GameState.batchTrigs_card (hl.mem_iff.1 hab)
         exact abilitiesRec_nil (hN _ hc) hmc (ab.script_mem _)
       exact hi.keeps (h.keeps.1.trans hkf) fun s => Nat.le_of_eq ((ht.slotAmt s).trans (h.keeps.2 s))
+  | trigger _ _ hl ht =>
+      have k := ht.keeps fun ab hab => GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab)
+      exact hi.keeps ⟨k.disc, k.attacked, k.gxCur, k.gxOpp⟩ fun s => Nat.le_of_eq (ht.slotAmt s)
   | endTurn =>
       exact hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) rfl (Nat.add_comm _ _)
@@ -358,7 +361,7 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
           a.abW := rfl
       have e2 : q.moveUp.abW = q.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs, e, e2,
-        List.length_append, List.length_cons]; omega
+        List.length_append, List.length_cons, GameState.noteBenched]; omega
   | item _ _ _ hr => exact hr.abPot_le hw
   | supporter _ _ _ _ hr => exact hr.abPot_le hw
   | stadiumUse _ _ _ _ _ hr => exact hr.abPot_le hw
@@ -384,6 +387,7 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
       simp only [GameState.abPot, PlayerState.abPot, ha, abWo, optN, e]; omega
   | knockOuts h _ ht =>
       exact Nat.le_trans ht.abPot_le (h.abPot_le (ht.zoneOnly.winner.symm.trans hw))
+  | trigger _ _ _ ht => exact ht.abPot_le
   | endTurn => simp at hc
   | startTurn => exact Nat.le_refl _
   | deckOut => exact Nat.le_refl _
@@ -436,6 +440,8 @@ theorem _root_.Pokemon.Move.stPot_le {g g' : GameState} (hm : Move g g')
   | knockOuts h _ ht =>
       have e := GameState.stPot_congr ht.zoneOnly.stadiumPlayed ht.zoneOnly.stadiumUsed
       cases h <;> exact Nat.le_of_eq e
+  | trigger _ _ _ ht =>
+      exact Nat.le_of_eq (GameState.stPot_congr ht.zoneOnly.stadiumPlayed ht.zoneOnly.stadiumUsed)
   | _ => exact Nat.le_refl _
 
 /-- **The per-turn invariant.** The witnesses: `X₀`, `X₁`, `X₂` the amounts that Trainer cards,
@@ -646,8 +652,10 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
   | evolveBench => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
   | retreat =>
-      exact ⟨_, _, _, _, _, hi.same hwn (by simp only [GameState.discW, wsum_append]; omega)
-        (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl (fun _ => rfl)
+      exact ⟨_, _, _, _, _, hi.same hwn
+        (by simp only [GameState.discW, wsum_append, GameState.noteBenched]; omega)
+        (by simp only [GameState.discW, wsum_append, GameState.noteBenched]; omega) rfl rfl rfl rfl
+        (fun _ => rfl)
         (hpot rfl) (hstp rfl)⟩
   | stadium =>
       exact ⟨_, _, _, _, _, hi.same hwn (by simp only [GameState.discW, wsum_append]; omega)
@@ -907,6 +915,18 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
         (z.cur_supporterPlayed.trans h.sides.2.2.2.2.2.2.2.2.1) hf.gxCur hf.gxOpp
         (fun s => (ht.slotAmt s).trans (h.keeps.2 s)) (hpot (z.first.trans h.same.1))
         (hstp (z.first.trans h.same.1))⟩
+  | @trigger g' l _ _ hl ht =>
+      -- milestone MV7: the triggers recycle nothing (`Ability.trigOn`), so the discard weights stay
+      have hf := ht.flags_keep
+      have z := ht.zoneOnly
+      have hrec : ∀ ab ∈ l, (ab.script TrigEvent.oppBenched.place).recFilters = [] :=
+        fun ab hab => GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab)
+      have hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt :=
+        ht.disc_mono Card.wAmt_tw (fun ab hab => Effect.recOk_nil (hrec ab hab)) (fun _ hy => hy)
+      have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt :=
+        ht.disc_mono Card.alAmt_tw (fun ab hab => Effect.recOk_nil (hrec ab hab)) (fun _ hy => hy)
+      exact ⟨_, _, _, _, _, hi.same hwn hW hAl hf.attacked z.cur_supporterPlayed hf.gxCur hf.gxOpp
+        (fun s => ht.slotAmt s) (hpot z.first) (hstp z.first)⟩
   | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨_, _, _, _, _, hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) (Nat.add_comm _ _) rfl (Nat.add_comm _ _) ?_⟩

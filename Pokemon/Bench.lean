@@ -57,7 +57,7 @@ def hit5 : Card := .trainer "Hit5" .item (.counters 5)
 def exStart (prizes : List Card) : GameState :=
   ⟨side [hit5] prizes (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic exMon) [InPlay.ofBasic big],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem exStart_wellFormed (c : Card) (cs : List Card) : WellFormed (exStart (c :: cs)) := by
   refine ⟨fun _ => ⟨by simp [exStart, Trainer.side], by simp [exStart, Trainer.side]⟩,
@@ -116,7 +116,7 @@ def lowBenched : InPlay := { InPlay.ofBasic low with damage := 3, fresh := false
 def benchStart : GameState :=
   ⟨side [.energy .grass, .pokemon weak] [.energy .fire] (InPlay.ofBasic big) [lowBenched],
     side [] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem benchStart_wellFormed : WellFormed benchStart := by
   refine ⟨fun _ => ⟨by simp [benchStart, Trainer.side], by simp [benchStart, Trainer.side]⟩,
@@ -175,7 +175,7 @@ Prize cards and `spread5` in hand. -/
 def spreadStart : GameState :=
   ⟨side [spread5] [.energy .fire, .energy .fire, .energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low, InPlay.ofBasic low],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem spreadStart_wellFormed : WellFormed spreadStart := by
   refine ⟨fun _ => ⟨by simp [spreadStart, Trainer.side], by simp [spreadStart, Trainer.side]⟩,
@@ -219,7 +219,7 @@ def charred : InPlay := (InPlay.ofBasic tiny).setMarks (Marks.set .char true)
 def charStart : GameState :=
   ⟨side [] [.energy .fire] (InPlay.ofBasic big) [charred],
     side [] [.energy .fire] (InPlay.ofBasic big) [],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem charStart_wellFormed : WellFormed charStart := by
   refine ⟨fun _ => ⟨by simp [charStart, Trainer.side], by simp [charStart, Trainer.side]⟩,
@@ -261,7 +261,7 @@ def gust : Card := .trainer "Gust" .item (.seq (.switch .opp) (.counters 5))
 def gustStart : GameState :=
   ⟨side [gust] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem gustStart_wellFormed : WellFormed gustStart := by
   refine ⟨fun _ => ⟨by simp [gustStart, Trainer.side], by simp [gustStart, Trainer.side]⟩,
@@ -285,7 +285,7 @@ theorem gust_reachable :
       (.seq (.prim rfl rfl (.switch (b₁ := []) .opp rfl rfl)
           (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
             (fun p hp => by
-            simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
+            simp only [GameState.updSide, List.nil_append, List.mem_singleton, Whose.noteBenched] at hp
             subst hp; decide)))))
         (.prim rfl rfl (.counters 5 rfl)
           (.step rfl (.go (by decide) rfl .keep (.pick (b₁ := [])))
@@ -304,7 +304,7 @@ def switchStart : GameState :=
       { InPlay.ofBasic big with poisoned := true, burned := true, rot := .confused, poisonUp := 2 }
       [InPlay.ofBasic low],
     side [] [.energy .fire] (InPlay.ofBasic big) [],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem switchStart_wellFormed : WellFormed switchStart := by
   refine ⟨fun _ => ⟨by simp [switchStart, Trainer.side], by simp [switchStart, Trainer.side]⟩,
@@ -330,7 +330,8 @@ theorem switch_cures :
       (.prim rfl rfl (.switch (b₁ := []) .own rfl rfl)
         (.done (.inl (settled_of rfl rfl (by decide) (by decide)
           (fun p hp => by
-            simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
+            simp only [GameState.updSide, List.nil_append, List.mem_singleton, Whose.noteBenched,
+              GameState.noteBenched] at hp
             subst hp; decide)
           (fun p hp => by cases hp))))) rfl rfl rfl rfl
   exact ⟨switchStart_wellFormed, _, _, hm, rfl, rfl, ⟨rfl, rfl, rfl, rfl⟩, _, rfl, rfl, rfl, rfl,
@@ -345,7 +346,7 @@ def whirler : PokemonCard := ⟨"Whirler", .basic, none, 10, .grass, [whirl], 1,
 def whirlStart : GameState :=
   ⟨side [] [.energy .fire] (InPlay.ofBasic whirler) [],
     side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem whirlStart_wellFormed : WellFormed whirlStart := by
   refine ⟨fun _ => ⟨by simp [whirlStart, Trainer.side], by simp [whirlStart, Trainer.side]⟩,
@@ -385,7 +386,7 @@ def megaMon : PokemonCard := ⟨"MegaMon", .basic, none, 5, .grass, [], 1, none,
 def megaStart (prizes : List Card) : GameState :=
   ⟨side [hit5] prizes (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic megaMon) [InPlay.ofBasic big],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem megaStart_wellFormed (c : Card) (cs : List Card) : WellFormed (megaStart (c :: cs)) := by
   refine ⟨fun _ => ⟨by simp [megaStart, Trainer.side], by simp [megaStart, Trainer.side]⟩,
@@ -420,7 +421,7 @@ move has three Prize cards and `spread5` in hand. -/
 def exBenchStart : GameState :=
   ⟨side [spread5] [.energy .fire, .energy .fire, .energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic exMon],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem exBenchStart_wellFormed : WellFormed exBenchStart := by
   refine ⟨fun _ => ⟨by simp [exBenchStart, Trainer.side], by simp [exBenchStart, Trainer.side]⟩,
@@ -456,7 +457,7 @@ def healBench : Card := .trainer "HealBench" .item (.benchHeal 2)
 def healStart : GameState :=
   ⟨side [healBench] [.energy .fire] (InPlay.ofBasic big) [lowBenched],
     side [] [.energy .fire] (InPlay.ofBasic big) [],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem healStart_wellFormed : WellFormed healStart := by
   refine ⟨fun _ => ⟨by simp [healStart, Trainer.side], by simp [healStart, Trainer.side]⟩,
@@ -698,7 +699,7 @@ def teraMon : PokemonCard := ⟨"TeraMon", .basic, none, 5, .grass, [], 1, none,
 def snipeStart : GameState :=
   ⟨side [] [.energy .fire, .energy .fire] (InPlay.ofBasic sniper) [],
     side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low, InPlay.ofBasic teraMon],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem snipeStart_wellFormed : WellFormed snipeStart := by
   refine ⟨fun _ => ⟨by simp [snipeStart, Trainer.side], by simp [snipeStart, Trainer.side]⟩,
@@ -737,7 +738,7 @@ def poker : PokemonCard := ⟨"Poker", .basic, none, 10, .grass, [poke], 1, none
 def pokeStart : GameState :=
   ⟨side [] [.energy .fire, .energy .fire] (InPlay.ofBasic poker) [],
     side [] [.energy .fire] (InPlay.ofBasic big) [InPlay.ofBasic low, InPlay.ofBasic low],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem pokeStart_wellFormed : WellFormed pokeStart := by
   refine ⟨fun _ => ⟨by simp [pokeStart, Trainer.side], by simp [pokeStart, Trainer.side]⟩,
@@ -791,7 +792,7 @@ def bother : PokemonCard :=
 def lastStart (oppBench : List InPlay) : GameState :=
   ⟨side [] [.energy .fire] (InPlay.ofBasic bother) [InPlay.ofBasic big],
     side [] [.energy .fire] (InPlay.ofBasic Infinite.mon) oppBench,
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem lastStart_wellFormed (b : List InPlay) (hb : ∀ p ∈ b, Benched p) :
     WellFormed (lastStart b) := by
@@ -830,7 +831,7 @@ theorem suddenDeath_forced :
       ∀ g₂, Move (lastHit [InPlay.ofBasic big]) g₂ →
         g₂.winner = some .suddenDeath ∧ g₂.cur.prizes = [] ∧ g₂.opp.prizes = [] := by
   have hs : Settled (lastStart [InPlay.ofBasic big]) := by decide
-  have hu : ¬ Settled (lastHit [InPlay.ofBasic big]) := by decide
+  have hu : ¬ Calm (lastHit [InPlay.ofBasic big]) := by decide
   refine ⟨lastStart_wellFormed _ (fun p hp => by
       simp only [List.mem_singleton] at hp; subst hp; exact ⟨rfl, rfl, rfl, rfl⟩),
     hs, move_lastHit _ hs, fun hk => hu ⟨hk, by decide, by decide⟩, rfl, rfl, fun g₂ hm => ?_⟩
@@ -849,7 +850,7 @@ theorem bothWays_wins :
         g₂.winner = some (.win (lastHit []).curIsFirst) ∧ g₂.cur.prizes = [] ∧
           g₂.opp.prizes = [] ∧ g₂.opp.active = none ∧ g₂.opp.bench = [] := by
   have hs : Settled (lastStart []) := by decide
-  have hu : ¬ Settled (lastHit []) := by decide
+  have hu : ¬ Calm (lastHit []) := by decide
   refine ⟨lastStart_wellFormed _ (fun p hp => nomatch hp), hs, move_lastHit _ hs,
     fun hk => hu ⟨hk, by decide, by decide⟩, fun g₂ hm => ?_⟩
   have e := hm.eq_koStep_of_won hu (by decide)

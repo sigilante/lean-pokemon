@@ -22,9 +22,9 @@ def PlayerState.rest (s : PlayerState) :=
   (s.prizes, s.lost, s.energyAttached, s.supporterPlayed, s.retreated, s.gxUsed, s.vstarUsed,
     s.mods, s.hadTurn)
 
-/-- Everything of the game but the players and `curIsFirst`. -/
+/-- Everything of the game but the players and `curIsFirst` (milestone MV7: with `pend`). -/
 def GameState.rest (g : GameState) :=
-  (g.firstTurn, g.attacked, g.between, g.winner, g.stadium, g.stadiumPlayed, g.stadiumUsed)
+  (g.firstTurn, g.attacked, g.between, g.winner, g.stadium, g.stadiumPlayed, g.stadiumUsed, g.pend)
 
 /-- `g'` differs from `g` at most in the five zones of each player. -/
 structure GameState.ZoneOnly (g g' : GameState) : Prop where
@@ -59,7 +59,8 @@ theorem between : g'.between = g.between := congrArg (·.2.2.1) h.rest
 theorem winner : g'.winner = g.winner := congrArg (·.2.2.2.1) h.rest
 theorem stadium : g'.stadium = g.stadium := congrArg (·.2.2.2.2.1) h.rest
 theorem stadiumPlayed : g'.stadiumPlayed = g.stadiumPlayed := congrArg (·.2.2.2.2.2.1) h.rest
-theorem stadiumUsed : g'.stadiumUsed = g.stadiumUsed := congrArg (·.2.2.2.2.2.2) h.rest
+theorem stadiumUsed : g'.stadiumUsed = g.stadiumUsed := congrArg (·.2.2.2.2.2.2.1) h.rest
+theorem pend : g'.pend = g.pend := congrArg (·.2.2.2.2.2.2.2) h.rest
 theorem cur_prizes : g'.cur.prizes = g.cur.prizes := congrArg (·.1) h.cur
 theorem opp_prizes : g'.opp.prizes = g.opp.prizes := congrArg (·.1) h.opp
 theorem cur_lost : g'.cur.lost = g.cur.lost := congrArg (·.2.1) h.cur
@@ -114,7 +115,7 @@ theorem Run.zoneOnly {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchCountersNone w n h => intro _; exact ⟨rfl, rfl, rfl, rfl⟩
   | spreadCounters w n g => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | benchSome w _ _ _ _ _ => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
-  | switch w ha hb => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  | switch w ha hb => intro hk; simp [Effect.trigOk] at hk
   | switchNone w hb => intro _; exact ⟨rfl, rfl, rfl, rfl⟩
   | benchDamage w n h => intro _; cases w <;> exact ⟨rfl, rfl, rfl, rfl⟩
   | benchDamageNone w n h => intro _; exact ⟨rfl, rfl, rfl, rfl⟩
@@ -234,10 +235,6 @@ theorem ZStep.exists_of_trigOk {e : Effect} {w : Whose} (hw : e.zSide = some w)
         | cons p b => exact ⟨_, .toolsBench (w := w') (b₁ := []) (by rw [hb]; rfl), ha⟩
   case look => simp [Effect.trigOk] at hk
 
-/-- Both Active Spots are filled. -/
-def GameState.BothActive (g : GameState) : Prop :=
-  g.cur.active.isSome = true ∧ g.opp.active.isSome = true
-
 theorem GameState.BothActive.swap {g : GameState} (h : g.BothActive) : g.swap.BothActive :=
   ⟨h.2, h.1⟩
 
@@ -295,7 +292,18 @@ theorem Run.exists_of_trigOk : ∀ {e : Effect}, e.trigOk = true → ∀ {g : Ga
 theorem Ability.trigOk_of_trigOn {ev : TrigEvent} {sp : Spot} {ab : Ability}
     (h : ab.trigOn ev sp = true) : (ab.script ev.place).trigOk = true := by
   simp only [Ability.trigOn, Bool.and_eq_true] at h
+  exact h.1.2
+
+/-- A trigger that fires on an event that can come before the turn's attack recycles nothing
+(milestone MV7). -/
+theorem Ability.recFilters_of_trigOn {ev : TrigEvent} {sp : Spot} {ab : Ability}
+    (h : ab.trigOn ev sp = true) (hl : ev.late = false) : (ab.script ev.place).recFilters = [] := by
+  simp only [Ability.trigOn, Bool.and_eq_true, hl, Bool.false_or, List.isEmpty_iff] at h
   exact h.2
+
+theorem InPlay.recFilters_of_mem_trigs {ev : TrigEvent} {sp : Spot} {p : InPlay} {ab : Ability}
+    (h : ab ∈ p.trigs ev sp) (hl : ev.late = false) : (ab.script ev.place).recFilters = [] :=
+  Ability.recFilters_of_trigOn (List.mem_filter.1 h).2 hl
 
 theorem InPlay.trigOk_of_mem_trigs {ev : TrigEvent} {sp : Spot} {p : InPlay} {ab : Ability}
     (h : ab ∈ p.trigs ev sp) : (ab.script ev.place).trigOk = true :=
@@ -321,6 +329,26 @@ theorem GameState.batchTrigs_trigOk {g g₁ : GameState} {ab : Ability} (h : ab 
   · exact GameState.koTrigs_trigOk h
   · nomatch h
 
+theorem GameState.benchedTrigs_trigOk {g : GameState} {ab : Ability} (h : ab ∈ g.benchedTrigs) :
+    (ab.script TrigEvent.oppBenched.place).trigOk = true := by
+  rcases List.mem_append.1 h with h | h
+  · cases ha : g.opp.active with
+    | none => rw [ha] at h; nomatch h
+    | some p => rw [ha] at h; exact InPlay.trigOk_of_mem_trigs h
+  · obtain ⟨p, _, hp⟩ := List.mem_flatMap.1 h
+    exact InPlay.trigOk_of_mem_trigs hp
+
+/-- **An `oppBenched` trigger recycles nothing** (milestone MV7): it fires before the turn's attack,
+so `Ability.trigOn` admits only effects with no zone move out of a discard pile. -/
+theorem GameState.benchedTrigs_recFilters {g : GameState} {ab : Ability} (h : ab ∈ g.benchedTrigs) :
+    (ab.script TrigEvent.oppBenched.place).recFilters = [] := by
+  rcases List.mem_append.1 h with h | h
+  · cases ha : g.opp.active with
+    | none => rw [ha] at h; nomatch h
+    | some p => rw [ha] at h; exact InPlay.recFilters_of_mem_trigs h rfl
+  · obtain ⟨p, _, hp⟩ := List.mem_flatMap.1 h
+    exact InPlay.recFilters_of_mem_trigs hp rfl
+
 /-- **Every list of triggers of the fragment can be resolved** when both Active Spots are filled
 (every trigger resolving). -/
 theorem Fire.exists {ev : TrigEvent} : ∀ {l : List Ability},
@@ -331,5 +359,21 @@ theorem Fire.exists {ev : TrigEvent} : ∀ {l : List Ability},
       obtain ⟨g₁, hr, hb₁⟩ := Run.exists_of_trigOk (hl ab (.head _)) hb.swap
       obtain ⟨g₂, ht⟩ := Fire.exists (fun x hx => hl x (.tail _ hx)) (g := g₁.swap) hb₁.swap
       exact ⟨g₂, .run (hl ab (.head _)) hr ht⟩
+
+/-- A `Calm` state has both Active Spots filled. -/
+theorem Calm.bothActive {g : GameState} (h : Calm g) : g.BothActive :=
+  ⟨Option.isSome_iff_ne_none.2 h.2.1, Option.isSome_iff_ne_none.2 h.2.2⟩
+
+/-- **Pending triggers can always be resolved** (milestone MV7): from a state with both Active
+Spots filled, the opponent's `oppBenched` triggers have a resolution (every one resolving) on the
+state with the record cleared. -/
+theorem GameState.BothActive.trigs_exist {g : GameState} (h : g.BothActive) :
+    ∃ g', Fire .oppBenched g.benchedTrigs { g with pend := false } g' :=
+  Fire.exists (fun _ hab => GameState.benchedTrigs_trigOk hab) (g := { g with pend := false }) h
+
+/-- `GameState.BothActive.trigs_exist` from a `Calm` state. -/
+theorem Calm.trigs_exist {g : GameState} (h : Calm g) :
+    ∃ g', Fire .oppBenched g.benchedTrigs { g with pend := false } g' :=
+  h.bothActive.trigs_exist
 
 end Pokemon

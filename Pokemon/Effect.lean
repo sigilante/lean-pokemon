@@ -344,6 +344,56 @@ inductive Hits (U : InPlay → InPlay) (f : Filter) : Nat → List InPlay → Li
   | keep {x : InPlay} {k : Nat} {b b' : List InPlay} :
       Hits U f k b b' → Hits U f k (x :: b) (x :: b')
 
+/-- The triggered Abilities of a Pokémon in play at `sp` that fire on `ev` (`Ability.trigOn`), its
+own and those its Tools give it (`InPlay.abilities`). -/
+def InPlay.trigs (ev : TrigEvent) (sp : Spot) (p : InPlay) : List Ability :=
+  p.abilities.filter (Ability.trigOn ev sp)
+
+/-- The `ev` triggers of an optional Pokémon in the Active Spot. -/
+def optTrigs (ev : TrigEvent) : Option InPlay → List Ability
+  | none => []
+  | some p => p.trigs ev .active
+
+/-- The `oppBenched` triggers (milestone MV7) of the opponent of the player to move: those of the
+opponent's Active Pokémon and of their Benched Pokémon, which fire when the player's Active Pokémon
+moves to the Bench during their turn. -/
+def GameState.benchedTrigs (g : GameState) : List Ability :=
+  optTrigs .oppBenched g.opp.active ++ g.opp.bench.flatMap (InPlay.trigs .oppBenched .bench)
+
+/-- **Raise the `oppBenched` event** (milestone MV7): the player to move's Active Pokémon has just
+moved to the Bench (a retreat, or a switch of their own Active Pokémon). The record
+`GameState.pend` is set when the opponent has such a trigger in play, and left as it was otherwise,
+so a game without one is unchanged (`GameState.noteBenched_of_nil`; for play, `Reach.pend_false`). -/
+def GameState.noteBenched (g : GameState) : GameState :=
+  { g with pend := g.pend || !g.benchedTrigs.isEmpty }
+
+/-- The event of a switch of the `w` player's Active Pokémon: raised for the player's own (`.own`, in
+their turn); a switch of the opponent's Active Pokémon (`.opp`) is not "during their turn". -/
+def Whose.noteBenched : Whose → GameState → GameState
+  | .own, g => g.noteBenched
+  | .opp, g => g
+
+/-- The `oppBenched` triggers depend on the opponent's Pokémon in play only through their Abilities:
+a map of the Pokémon in play that keeps the Abilities (both clamps) keeps them. -/
+theorem GameState.benchedTrigs_of_map {f f' : InPlay → InPlay}
+    (hab : ∀ p, (f p).abilities = p.abilities) (hab' : ∀ p, (f' p).abilities = p.abilities)
+    {g g' : GameState} (ha : g'.opp.active = g.opp.active.map f)
+    (hb : g'.opp.bench = g.opp.bench.map f') : g'.benchedTrigs = g.benchedTrigs := by
+  have htr : ∀ sp p, (f p).trigs .oppBenched sp = p.trigs .oppBenched sp := fun sp p => by
+    simp only [InPlay.trigs, hab p]
+  have htr' : ∀ sp p, (f' p).trigs .oppBenched sp = p.trigs .oppBenched sp := fun sp p => by
+    simp only [InPlay.trigs, hab' p]
+  have hfl : ∀ (b : List InPlay), (b.map f').flatMap (InPlay.trigs .oppBenched .bench) =
+      b.flatMap (InPlay.trigs .oppBenched .bench) := fun b => by
+    induction b with
+    | nil => rfl
+    | cons p ps ih => simp only [List.map_cons, List.flatMap_cons, htr', ih]
+  unfold GameState.benchedTrigs
+  rw [ha, hb, hfl]
+  cases g.opp.active with
+  | none => rfl
+  | some p => simp only [Option.map_some, optTrigs, htr]
+
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g
   | draw {g : GameState} {c : Card} {d : List Card} (h : g.cur.deck = c :: d) :
@@ -431,11 +481,12 @@ inductive Run : Effect → GameState → GameState → Prop where
   retreated or got there some other way), some things do go away—Special Conditions and any
   effects from attacks", rulebook 2023 p. 12; since milestone MV4 its attack locks end too,
   `InPlay.unlock`); `q` has moved to the Active Spot, which is recorded when the switch is the
-  player's own (milestone MV2, `Whose.mover`) -/
+  player's own (milestone MV2, `Whose.mover`); a switch of the player's own Active Pokémon raises
+  the `oppBenched` event (milestone MV7, `Whose.noteBenched`) -/
   | switch {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} (w : Whose)
       (ha : (g.side w).active = some a) (hb : (g.side w).bench = b₁ ++ q :: b₂) :
-      Run (.switch w) g
-        (g.updSide w fun s => { s with active := some (w.mover q), bench := b₁ ++ a.cure.unlock :: b₂ })
+      Run (.switch w) g (w.noteBenched
+        (g.updSide w fun s => { s with active := some (w.mover q), bench := b₁ ++ a.cure.unlock :: b₂ }))
   | switchNone {g : GameState} (w : Whose) (hb : (g.side w).bench = []) : Run (.switch w) g g
   /-- attack damage to one of the `w` player's Benched Pokémon (milestone M3) -/
   | benchDamage {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)
@@ -558,5 +609,27 @@ theorem benchElig_congr {C : InPlay → InPlay} (ht : ∀ x y, C y = C x → y.t
       have ih := benchElig_congr ht f he.2
       simp only [benchElig, List.map_cons, List.countP_cons, ht _ _ he.1] at ih ⊢
       rw [ih]
+
+/-- The state as the opponent sees it: the two players exchanged (milestone M8b). Effects of the
+language act for the player to move (`.own`); a trigger of the other player resolves on the
+exchanged state. -/
+def GameState.swap (g : GameState) : GameState :=
+  { g with cur := g.opp, opp := g.cur, curIsFirst := !g.curIsFirst }
+
+@[simp] theorem GameState.swap_swap (g : GameState) : g.swap.swap = g := by
+  cases g; simp only [GameState.swap, Bool.not_not]
+
+/-- **Resolving triggers** (milestone M8b): the triggers `l` of the opponent of the player to move,
+one after another, each with "this Pokémon" where the event leaves it (`TrigEvent.place`): its effect
+resolves on the exchanged state (`GameState.swap`) by `Run`, as a whole, and the state is exchanged
+back; an optional one (`AbilityUse.optional`, "you may") may be declined instead. -/
+inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → Prop where
+  | nil (g : GameState) : Fire ev [] g g
+  | run {ab : Ability} {l : List Ability} {g g₁ g₂ : GameState}
+      (hk : (ab.script ev.place).trigOk = true)
+      (hr : Run (ab.script ev.place) g.swap g₁) (ht : Fire ev l g₁.swap g₂) :
+      Fire ev (ab :: l) g g₂
+  | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
+      (ho : ab.use.optional = true) (ht : Fire ev l g g₂) : Fire ev (ab :: l) g g₂
 
 end Pokemon

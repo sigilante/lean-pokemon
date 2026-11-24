@@ -88,9 +88,10 @@ theorem not_damageBounded_of_dbB {g : GameState} (h : dbB g = false) : ¬ Damage
 
 /-- `Settled`, decided, for a closed state with both Active Pokémon. -/
 theorem settled_of_dbB {g : GameState} {a b : InPlay} (ha : g.cur.active = some a)
-    (hb : g.opp.active = some b) (h : dbB g = true) : Settled g :=
+    (hb : g.opp.active = some b) (h : dbB g = true)
+    (hpd : g.pend = false := by first | rfl | assumption) : Settled g :=
   ⟨damageBounded_of_dbB h, (by rw [ha]; exact fun e => nomatch e),
-    (by rw [hb]; exact fun e => nomatch e)⟩
+    (by rw [hb]; exact fun e => nomatch e), hpd⟩
 
 /-! ## Cards -/
 
@@ -144,7 +145,7 @@ def pl (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerStat
   ⟨[mt], hand, [], prizes, [], some a, bench, false, false, false, false, false, Store.empty, true, KOHist.empty⟩
 
 def gs (a b : PlayerState) (st : Option (Bool × Card)) : GameState :=
-  ⟨a, b, true, false, false, false, none, st, false, false⟩
+  ⟨a, b, true, false, false, false, none, st, false, false, false⟩
 
 theorem benched_at (c : PokemonCard) (d : Nat) (e t : List Card) : Benched (at_ c d e t) :=
   ⟨rfl, rfl, rfl, rfl⟩
@@ -221,7 +222,7 @@ def sg1 : GameState :=
       false, false, Store.empty, true, KOHist.empty⟩,
     ⟨[mt], [], [lively], [mt, mt], [], some (at_ big 0 [] []), [], false, false, false, false,
       false, Store.empty, true, KOHist.empty⟩,
-    true, false, false, false, none, some (true, plainStadium), true, false⟩
+    true, false, false, false, none, some (true, plainStadium), true, false, false⟩
 
 theorem sg0_wellFormed : WellFormed sg0 :=
   wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp)
@@ -302,7 +303,7 @@ def cg1 : GameState :=
       false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
     ⟨[mt], [], [lively], [mt, mt, mt], [], some (at_ big 0 [] []), [], false, false, false, false,
       false, Store.empty, true, KOHist.empty⟩,
-    true, false, false, false, none, some (true, plainStadium), true, false⟩
+    true, false, false, false, none, some (true, plainStadium), true, false, false⟩
 
 theorem cg0_wellFormed : WellFormed cg0 :=
   wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp)
@@ -421,6 +422,7 @@ theorem move_r0 {g₁ : GameState} (hm : Move r0 g₁) (hb : g₁.opp.bench = [a
     g₁ = rA := by
   cases hm with
   | playBasic hh => simp [r0, gs, pl] at hh
+  | trigger _ hp => simp [r0, gs] at hp
   | attach hh => simp [r0, gs, pl] at hh
   | evolve hh => simp [r0, gs, pl] at hh
   | attachBench hh => simp [r0, gs, pl] at hh
@@ -479,18 +481,19 @@ theorem move_r0 {g₁ : GameState} (hm : Move r0 g₁) (hb : g₁.opp.bench = [a
   | deckOut hbt => simp [r0, gs] at hbt
 
 /-- From a state whose check ends the game, every move is the check. -/
-theorem move_eq_koStep {g g' : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none)
-    (hm : Move g g') : g' = g.koStep :=
+theorem move_eq_koStep {g g' : GameState} (hu : ¬ Calm g) (hw : g.koStep.winner ≠ none)
+    (hm : Move g g') (hpd : g.pend = false := by first | rfl | assumption) : g' = g.koStep :=
   hm.eq_koStep_of_won hu hw
 
 /-- Reachability from a state whose check ends the game. -/
-theorem reach_of_won {g g' : GameState} (hu : ¬ Settled g) (hw : g.koStep.winner ≠ none)
-    (hn : g.winner = none) (h : Reach g g') : g' = g ∨ g' = g.koStep := by
+theorem reach_of_won {g g' : GameState} (hu : ¬ Calm g) (hw : g.koStep.winner ≠ none)
+    (hn : g.winner = none) (h : Reach g g') (hpd : g.pend = false := by first | rfl | assumption) :
+    g' = g ∨ g' = g.koStep := by
   induction h with
   | refl => exact .inl rfl
   | step _ hn' hm ih =>
       rcases ih with rfl | rfl
-      · exact .inr (move_eq_koStep hu hw hm)
+      · exact .inr (move_eq_koStep hu hw hm hpd)
       · exact absurd hn' hw
 
 /-- **The Benched Pokémon cannot be promoted and survive** (milestone batch-KO; it replaces the
@@ -512,7 +515,7 @@ theorem guard_knocked_out :
       rA.koStep.winner = some (.win true) ∧
       (∀ g, Reach rA g → g = rA ∨ g = rA.koStep) := by
   have hk : ¬ DamageBounded rA := not_damageBounded_of_dbB (by decide)
-  have hu : ¬ Settled rA := fun hs => hk hs.1
+  have hu : ¬ Calm rA := fun hs => hk hs.1
   have hw : rA.koStep.winner ≠ none := by decide
   exact ⟨move_r0_rA, rfl, by decide, hk, fun _ hm hb => move_r0 hm hb,
     fun _ hm => move_eq_koStep hu hw hm, rfl, rfl, rfl, by decide,
@@ -592,6 +595,7 @@ theorem move_m0 {g₁ : GameState} (hm : Move m0 g₁) (hb : g₁.opp.bench = [a
     g₁ = mA := by
   cases hm with
   | playBasic hh => simp [m0, gs, pl] at hh
+  | trigger _ hp => simp [m0, gs] at hp
   | attach hh => simp [m0, gs, pl] at hh
   | evolve hh => simp [m0, gs, pl] at hh
   | attachBench hh => simp [m0, gs, pl] at hh
@@ -669,7 +673,7 @@ theorem double_knockOut_taken :
       mA.koStep.winner = some (.win true) ∧
       (∀ g, Reach mA g → g = mA ∨ g = mA.koStep) := by
   have hk : ¬ DamageBounded mA := not_damageBounded_of_dbB (by decide)
-  have hu : ¬ Settled mA := fun hs => hk hs.1
+  have hu : ¬ Calm mA := fun hs => hk hs.1
   have hw : mA.koStep.winner ≠ none := by decide
   exact ⟨move_m0_mA, rfl, rfl, by decide, by decide, hk, fun _ hm hb => move_m0 hm hb,
     fun _ hm => move_eq_koStep hu hw hm, rfl, rfl, rfl, rfl, by decide,
@@ -742,9 +746,9 @@ theorem outcome_per_round :
       sd0.koStep.hpOf .opp .bench (at_ small 4 [] []) = 3 ∧ ¬ DamageBounded sd0.koStep ∧
       (∀ g, Reach sd0 g → g = sd0 ∨ g = sd0.koStep) := by
   have hk : ¬ DamageBounded sd0 := not_damageBounded_of_dbB (by decide)
-  have hu : ¬ Settled sd0 := fun hs => hk hs.1
+  have hu : ¬ Calm sd0 := fun hs => hk hs.1
   have hw : sd0.koStep.winner ≠ none := by decide
-  exact ⟨sd0_wellFormed, rfl, hu, by decide, fun _ hm => move_eq_koStep hu hw hm, by decide, rfl,
+  exact ⟨sd0_wellFormed, rfl, fun hs => hu hs.calm, by decide, fun _ hm => move_eq_koStep hu hw hm, by decide, rfl,
     rfl, by decide, not_damageBounded_of_dbB (by decide), fun _ h => reach_of_won hu hw rfl h⟩
 
 end Pokemon.StaticWitness

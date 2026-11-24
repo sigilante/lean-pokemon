@@ -408,7 +408,7 @@ def start : GameState :=
   ⟨side [spread2] [.energy .fire, .energy .fire, .energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic big)
       [InPlay.ofBasic low, InPlay.ofBasic big, InPlay.ofBasic low],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
   refine ⟨fun _ => ⟨by simp [start, Trainer.side], by simp [start, Trainer.side]⟩,

@@ -42,13 +42,13 @@ def side (hand : List Card) (discard : List Card) (a : InPlay) : PlayerState :=
 `item`. -/
 def start : GameState :=
   ⟨side [item] [] (InPlay.ofBasic mon), side [] [] (InPlay.ofBasic mon),
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 /-- `start` after playing `item` with `n` repetitions of `poisonUp 1`. -/
 def st (n : Nat) : GameState :=
   ⟨side [] [item] (InPlay.ofBasic mon),
     side [] [] { InPlay.ofBasic mon with poisoned := true, poisonUp := n },
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>

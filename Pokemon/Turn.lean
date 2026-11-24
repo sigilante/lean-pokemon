@@ -36,10 +36,12 @@ caused, the Prize cards, the outcome and the promotions) or the end of the turn,
 turns, and has not attacked. No other action (playing a card, attaching Energy, evolving,
 retreating, attacking again) is legal. (Milestone batch-KO replaced `KOMove`, the eight Knock Out
 moves, by `KOBatch` in the statement; milestone M8b added the `koByAttack` triggers the batch fires,
-`Fire`, after it.) -/
+`Fire`, after it; milestone MV7 added the resolution of a trigger the attack left pending,
+`TrigMove`, which comes before the batch step.) -/
 theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
-    (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ (g'.curIsFirst = !g.curIsFirst ∧ g'.between = true ∧ g'.attacked = false) := by
+    (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ TrigMove g g' ∨
+      (g'.curIsFirst = !g.curIsFirst ∧ g'.between = true ∧ g'.attacked = false) := by
   cases hm with
   | playBasic _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | attach _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
@@ -58,7 +60,8 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | attackConfused _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | knockOuts h hl ht => exact .inl ⟨_, _, h, hl, ht⟩
-  | endTurn => exact .inr ⟨rfl, rfl, rfl⟩
+  | trigger hc hp hl ht => exact .inr (.inl ⟨hc, hp, _, hl, ht⟩)
+  | endTurn => exact .inr (.inr ⟨rfl, rfl, rfl⟩)
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
 
@@ -109,10 +112,12 @@ Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is
 (`BenchChar.eq_of_noChar`: `bo = g.opp.bench` and `bc = g.cur.bench.map InPlay.unfresh`), which
 is the old statement. Milestone batch-KO replaced the first alternative, the eight Knock Out moves
 (`KOMove`), by the batch Knock Out step `KOBatch`, which takes them all at once; milestone M8b
-added the triggers the batch fires, `Fire`, after it.) -/
+added the triggers the batch fires, `Fire`, after it; milestone MV7 the resolution of a pending
+trigger, `TrigMove`, which comes before the batch step.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
-    (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),
+    (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ TrigMove g g' ∨
+      ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),
       g.opp.active = some a ∧ g.cur.active = some b ∧ DamageBounded g ∧
       BenchChar g.opp.bench bo ∧ BenchChar (g.cur.bench.map InPlay.unfresh) bc ∧
       g' = g.passTurn fa sa ca fb sb cb a b bo bc := by
@@ -134,8 +139,9 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | attackConfused _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | knockOuts h hl ht => exact .inl ⟨_, _, h, hl, ht⟩
+  | trigger hc hp hl ht => exact .inr (.inl ⟨hc, hp, _, hl, ht⟩)
   | endTurn fa sa ca fb sb cb ha' hb' hk _ hco hcc =>
-      exact .inr ⟨_, _, fa, sa, ca, fb, sb, cb, _, _, ha', hb', hk, hco, hcc, rfl⟩
+      exact .inr (.inr ⟨_, _, fa, sa, ca, fb, sb, cb, _, _, ha', hb', hk, hco, hcc, rfl⟩)
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
 
@@ -197,10 +203,20 @@ theorem GameState.ZoneOnly.sameTurn {g g' : GameState} (h : GameState.ZoneOnly g
 theorem KOBatch.sameTurn {g g' : GameState} (h : KOBatch g g') : g.SameTurn g' := by
   cases h <;> exact .refl _
 
+/-- Clearing the pending-trigger record changes no turn flag (milestone MV7). -/
+theorem GameState.SameTurn.unpend (g : GameState) : g.SameTurn { g with pend := false } :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- The resolution of pending triggers changes no turn flag (milestone MV7). -/
+theorem Fire.sameTurn_unpend {l : List Ability} {g g' : GameState}
+    (h : Fire .oppBenched l { g with pend := false } g') : g.SameTurn g' :=
+  (GameState.SameTurn.unpend g).trans h.zoneOnly.sameTurn
+
 theorem Resolve.sameTurn {g g' : GameState} (h : Resolve g g') : g.SameTurn g' := by
   induction h with
   | done => exact .refl _
   | step _ hm _ ih => exact hm.sameTurn.trans ih
+  | trigger _ _ _ _ ht _ ih => exact ht.sameTurn_unpend.trans ih
 
 theorem TRun.sameTurn {e : Effect} {g g' : GameState} (h : TRun e g g') : g.SameTurn g' := by
   induction h with
@@ -257,6 +273,8 @@ theorem Resolve.stFlags {g g' : GameState} (h : Resolve g g') :
   induction h with
   | done => exact ⟨rfl, rfl⟩
   | step _ hm _ ih => exact ⟨ih.1.trans hm.stFlags.1, ih.2.trans hm.stFlags.2⟩
+  | trigger _ _ _ _ ht _ ih =>
+      exact ⟨ih.1.trans ht.zoneOnly.stadiumPlayed, ih.2.trans ht.zoneOnly.stadiumUsed⟩
 
 theorem TRun.stFlags {e : Effect} {g g' : GameState} (h : TRun e g g') :
     g'.stadiumPlayed = g.stadiumPlayed ∧ g'.stadiumUsed = g.stadiumUsed := by
@@ -317,6 +335,7 @@ theorem Move.flagsOk {g g' : GameState} (hm : Move g g') (hc : g.FlagsOk) : g'.F
   | endTurn => exact ⟨fun hf => (by cases hf), fun _ => rfl⟩
   | startTurn => exact ⟨hc.1, fun hb => by cases hb⟩
   | knockOuts h _ ht => exact hc.of_sameTurn (h.sameTurn.trans ht.zoneOnly.sameTurn)
+  | trigger _ _ _ ht => exact hc.of_sameTurn ht.sameTurn_unpend
   | _ => exact hc
 
 theorem Reach.flagsOk {g₀ g : GameState} (h : Reach g₀ g) (hc : g₀.FlagsOk) : g.FlagsOk := by
@@ -339,6 +358,7 @@ theorem Move.firstTurn_no_attack {g g' : GameState} (hc : g.FlagsOk) (hf : g.fir
   | attack _ _ _ _ _ hf' => exact absurd (hf.symm.trans hf') (by decide)
   | attackConfused _ _ _ _ _ hf' => exact absurd (hf.symm.trans hf') (by decide)
   | knockOuts h _ ht => exact (h.sameTurn.trans ht.zoneOnly.sameTurn).2.2.1.trans ha
+  | trigger _ _ _ ht => exact ht.sameTurn_unpend.2.2.1.trans ha
   | _ => first | exact ha | rfl
 
 /-- **The starting player cannot play a Supporter on the first turn of the game**: no move made
@@ -357,6 +377,7 @@ theorem Move.firstTurn_no_supporter {g g' : GameState} (hf : g.firstTurn = true)
   | attackConfused _ _ _ _ _ hf₀ => exact absurd (hf.symm.trans hf₀) (by decide)
   | endTurn => cases hf'
   | knockOuts h _ ht => exact (h.sameTurn.trans ht.zoneOnly.sameTurn).2.2.2.2.2.2
+  | trigger _ _ _ ht => exact ht.sameTurn_unpend.2.2.2.2.2.2
   | _ => rfl
 
 /-- **On the first turn of the game the player to move is the starting player**, with

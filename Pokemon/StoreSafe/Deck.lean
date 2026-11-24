@@ -368,21 +368,6 @@ theorem GameState.discAmt_eq (g : GameState) : g.discAmt = g.discW Card.amt := b
 
 theorem Card.amt_tw : TrainerWeight Card.amt := ⟨fun _ => rfl, fun _ => rfl⟩
 
-/-- The filters of an effect's zone moves out of a discard pile: what it can recycle to the hand
-or the deck. (Attaching Energy or benching a Basic Pokémon from a discard pile moves an Energy or
-a Pokémon card, which carries no Trainer amount.) A window on a discard pile (`Effect.look`,
-milestone MV6) takes the whole pile off: with the other cards put back in the discard pile it
-recycles what its filter admits; with them put anywhere else it may recycle any card (`Filter.any`).
-A window on a deck or a hand recycles nothing. -/
-def Effect.recFilters : Effect → List Filter
-  | .move _ .discard _ f _ => [f]
-  | .look _ .discard f _ _ rest => if rest = .discard then [f] else [.any]
-  | .ite _ a b => a.recFilters ++ b.recFilters
-  | .seq a b => a.recFilters ++ b.recFilters
-  | .choice a b => a.recFilters ++ b.recFilters
-  | .iter a => a.recFilters
-  | _ => []
-
 /-- `e` recycles no card of `C` that has weight `w`. -/
 def Effect.RecOk (w : Card → Nat) (C : List Card) (e : Effect) : Prop :=
   ∀ f ∈ e.recFilters, ∀ y ∈ C, f.eval y = true → w y = 0
@@ -528,17 +513,42 @@ theorem KOBatch.disc_mono (w : Card → Nat) {g g' : GameState} (h : KOBatch g g
     PlayerState.koOut, GameState.side, PlayerState.noteKO, wsum_append]
   omega
 
-theorem Resolve.disc_mono (w : Card → Nat) {g g' : GameState} (h : Resolve g g') :
-    g.discW w ≤ g'.discW w := by
+theorem GameState.swap_discW (w : Card → Nat) (g : GameState) : g.swap.discW w = g.discW w :=
+  Nat.add_comm _ _
+
+/-- **A trigger resolution keeps the weight of the discard piles** when its triggers recycle no card
+of positive weight. -/
+theorem Fire.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} {ev : TrigEvent}
+    {l : List Ability} {g g' : GameState} (h : Fire ev l g g') :
+    (∀ ab ∈ l, (ab.script ev.place).RecOk w C) → (∀ y ∈ g.allCards, y ∈ C) →
+      g.discW w ≤ g'.discW w := by
+  induction h with
+  | nil => intro _ _; exact Nat.le_refl _
+  | @run ab l g g₁ g₂ _ hr _ ih =>
+      intro hl hC
+      have hC' : ∀ y ∈ g.swap.allCards, y ∈ C := fun y hy => hC y (g.swap_perm.mem_iff.1 hy)
+      have h1 := hr.disc_mono hw (hl _ (.head _)) hC'
+      have h2 := ih (fun ab hab => hl ab (.tail _ hab)) (fun y hy =>
+        hC' y (hr.perm.mem_iff.1 (g₁.swap_perm.mem_iff.1 hy)))
+      rw [GameState.swap_discW] at h1 h2
+      exact Nat.le_trans h1 h2
+  | decline _ _ ih => intro hl hC; exact ih (fun ab hab => hl ab (.tail _ hab)) hC
+
+theorem Resolve.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {g g' : GameState}
+    (h : Resolve g g') : g.discW w ≤ g'.discW w := by
   induction h with
   | done => exact Nat.le_refl _
   | step _ hm _ ih => exact Nat.le_trans (hm.disc_mono w) ih
+  | trigger _ _ _ hl ht _ ih =>
+      exact Nat.le_trans (ht.disc_mono hw
+        (fun ab hab => Effect.recOk_nil (GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab)))
+        (fun _ hy => hy)) ih
 
 theorem TRun.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} {e : Effect}
     {g g' : GameState} (h : TRun e g g') :
     e.RecOk w C → (∀ y ∈ g.allCards, y ∈ C) → g.discW w ≤ g'.discW w := by
   induction h with
-  | prim _ _ hr hk => intro hc hC; exact Nat.le_trans (hr.disc_mono hw hc hC) (hk.disc_mono w)
+  | prim _ _ hr hk => intro hc hC; exact Nat.le_trans (hr.disc_mono hw hc hC) (hk.disc_mono hw)
   | stop => intro _ _; exact Nat.le_refl _
   | iteT _ _ _ _ ih => intro hr hC; exact ih (Effect.RecOk.left hr) hC
   | iteF _ _ _ _ ih => intro hr hC; exact ih (Effect.RecOk.right hr) hC
@@ -591,10 +601,18 @@ theorem Run.flags_keep {e : Effect} {g g' : GameState} (h : Run e g g') : Flags 
 theorem KOBatch.flags_keep {g g' : GameState} (h : KOBatch g g') : Flags g g' := by
   cases h <;> exact ⟨rfl, rfl, rfl⟩
 
+theorem Fire.flags_keep {ev : TrigEvent} {l : List Ability} {g g' : GameState}
+    (h : Fire ev l g g') : Flags g g' :=
+  have z := h.zoneOnly
+  ⟨z.attacked, z.cur_gxUsed, z.opp_gxUsed⟩
+
 theorem Resolve.flags_keep {g g' : GameState} (h : Resolve g g') : Flags g g' := by
   induction h with
   | done => exact Flags.refl _
   | step _ hm _ ih => exact hm.flags_keep.trans ih
+  | trigger _ _ _ _ ht _ ih =>
+      have h₁ := ht.flags_keep
+      exact ⟨ih.attacked.trans h₁.attacked, ih.gxCur.trans h₁.gxCur, ih.gxOpp.trans h₁.gxOpp⟩
 
 theorem TRun.flags_keep {e : Effect} {g g' : GameState} (h : TRun e g g') : Flags g g' := by
   induction h with
@@ -640,6 +658,20 @@ theorem KOBatch.keeps {g g' : GameState} (h : KOBatch g g') :
     omega
   cases h <;> exact ⟨⟨hd, rfl, rfl, rfl⟩, fun _ => rfl⟩
 
+theorem Fire.slotAmt {ev : TrigEvent} {l : List Ability} {g g' : GameState}
+    (h : Fire ev l g g') (s : Slot) : g'.slotAmt s = g.slotAmt s := by
+  simp only [GameState.slotAmt, h.zoneOnly.cur_mods, h.zoneOnly.opp_mods]
+
+/-- A trigger resolution keeps what `Keeps` asks, when its triggers recycle nothing. -/
+theorem Fire.keeps {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g')
+    (hn : ∀ ab ∈ l, (ab.script ev.place).recFilters = []) : Keeps g g' :=
+  have hf := h.flags_keep
+  ⟨by
+    have := h.disc_mono (C := g.allCards) Card.amt_tw
+      (fun ab hab => Effect.recOk_nil (hn ab hab)) fun _ hy => hy
+    rw [GameState.discAmt_eq, GameState.discAmt_eq]; exact this,
+   hf.attacked, hf.gxCur, hf.gxOpp⟩
+
 theorem Resolve.keeps {g g' : GameState} (h : Resolve g g') :
     Keeps g g' ∧ ∀ s, g'.slotAmt s = g.slotAmt s := by
   induction h with
@@ -647,6 +679,11 @@ theorem Resolve.keeps {g g' : GameState} (h : Resolve g g') :
   | step _ hm _ ih =>
       obtain ⟨k₁, s₁⟩ := hm.keeps
       exact ⟨k₁.trans ih.1, fun s => (ih.2 s).trans (s₁ s)⟩
+  | trigger _ _ _ hl ht _ ih =>
+      have k₁ := ht.keeps (fun ab hab => GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab))
+      exact ⟨⟨Nat.le_trans k₁.disc ih.1.disc, ih.1.attacked.trans k₁.attacked,
+        ih.1.gxCur.trans k₁.gxCur, ih.1.gxOpp.trans k₁.gxOpp⟩,
+        fun s => (ih.2 s).trans (ht.slotAmt s)⟩
 
 theorem TRun.keeps {e : Effect} {g g' : GameState} (h : TRun e g g') (hn : e.recFilters = []) :
     Keeps g g' :=
@@ -1451,7 +1488,8 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
           have e1 : a.cure.unlock.abW = a.abW := rfl
           have e2 : (Whose.mover .own q).abW = q.abW := rfl
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, ha, hb, abWo, optN,
-            abWs_append, abWs, e1, e2, List.length_append, List.length_cons]; omega
+            abWs_append, abWs, e1, e2, List.length_append, List.length_cons, Whose.noteBenched,
+            GameState.noteBenched]; omega
       | opp => exact Nat.le_refl _
   | @benchDamage g q b₁ b₂ w n h =>
       cases w with
@@ -1589,12 +1627,68 @@ theorem KOBatch.abPot_le {g g' : GameState} (h : KOBatch g g') (hw : g'.winner =
   simp only [GameState.abPot, hcur]
   omega
 
+/-- An effect of the trigger fragment never raises the potential of the opponent of the player it
+resolves for. -/
+theorem Run.oppAbPot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
+    e.trigOk = true → g'.opp.abPot ≤ g.opp.abPot := by
+  induction h with
+  | seq _ _ ih₁ ih₂ =>
+      intro hk
+      simp only [Effect.trigOk, Bool.and_eq_true] at hk
+      exact Nat.le_trans (ih₂ hk.2) (ih₁ hk.1)
+  | choiceL _ ih =>
+      intro hk; simp only [Effect.trigOk, Bool.and_eq_true] at hk; exact ih hk.1
+  | choiceR _ ih =>
+      intro hk; simp only [Effect.trigOk, Bool.and_eq_true] at hk; exact ih hk.2
+  | @counters g p n h =>
+      intro _
+      have e : ({ p with damage := p.damage + n } : InPlay).abW = p.abW := rfl
+      simp only [PlayerState.abPot, h, abWo, optN, e]; omega
+  | @inflict g p c h =>
+      intro _
+      have e : (p.inflict c).abW = p.abW := by cases c <;> rfl
+      simp only [PlayerState.abPot, h, abWo, optN, e]; omega
+  | @zone e w g s' hw hz =>
+      intro _
+      cases w with
+      | own => exact Nat.le_refl _
+      | opp =>
+          have := hz.abPot_le
+          simp only [GameState.side] at this
+          exact this
+  | skip => intro _; exact Nat.le_refl _
+  | draw => intro _; exact Nat.le_refl _
+  | drawEmpty => intro _; exact Nat.le_refl _
+  | shuffle => intro _; exact Nat.le_refl _
+  | @touchActive e w f g p he h =>
+      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
+  | @touchBench e w f g q b₁ b₂ he h =>
+      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
+  | _ => intro hk; simp [Effect.trigOk] at hk
+
+/-- **A trigger resolution does not raise the potential of the player to move**: it changes no
+Prize card, and its effects on that player's Pokémon (the trigger owner's opponent's) never raise
+their potential. -/
+theorem Fire.abPot_le {ev : TrigEvent} {l : List Ability} {g g' : GameState}
+    (h : Fire ev l g g') : g'.abPot ≤ g.abPot := by
+  induction h with
+  | nil => exact Nat.le_refl _
+  | @run ab l g g₁ g₂ hk hr _ ih =>
+      have h1 : g₁.opp.abPot ≤ g.cur.abPot := hr.oppAbPot_le hk
+      have h2 : g₁.cur.prizes = g.opp.prizes := (hr.zoneOnly hk).cur_prizes
+      have h3 : g₁.swap.abPot ≤ g.abPot := by
+        show g₁.opp.abPot + 2 * g₁.cur.prizes.length ≤ g.cur.abPot + 2 * g.opp.prizes.length
+        rw [h2]; omega
+      exact Nat.le_trans ih h3
+  | decline _ _ ih => exact ih
+
 /-- A resolution that ends with no winner passed only through states with no winner. -/
 theorem Resolve.winner_back {g g' : GameState} (h : Resolve g g') (hw : g'.winner = none) :
     g.winner = none := by
   cases h with
   | done => exact hw
   | step hn => exact hn
+  | trigger hn => exact hn
 
 theorem TRun.winner_back {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : g'.winner = none) :
     g.winner = none := by
@@ -1614,6 +1708,7 @@ theorem Resolve.abPot_le {g g' : GameState} (h : Resolve g g') (hw : g'.winner =
   induction h with
   | done => exact Nat.le_refl _
   | step _ hm hr ih => exact Nat.le_trans (ih hw) (hm.abPot_le (hr.winner_back hw))
+  | trigger _ _ _ _ ht _ ih => exact Nat.le_trans (ih hw) ht.abPot_le
 
 /-- A Trainer effect's resolution does not raise the potential, unless it ends the game. -/
 theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : g'.winner = none) :
@@ -1685,7 +1780,7 @@ Condition, or move cards, which never raise a player's potential. -/
 theorem Ability.event_of_trigOn {ev : TrigEvent} {sp : Spot} {ab : Ability}
     (h : ab.trigOn ev sp = true) : ab.use.event = some ev := by
   simp only [Ability.trigOn, Bool.and_eq_true, beq_iff_eq] at h
-  exact h.1.1.1
+  exact h.1.1.1.1
 
 theorem InPlay.trigs_card {ev : TrigEvent} {sp : Spot} {p : InPlay} {ab : Ability}
     (h : ab ∈ p.trigs ev sp) : ∃ c ∈ p.cardList, ab ∈ c.abilities ∧ ab.use.event = some ev := by
@@ -1728,100 +1823,5 @@ theorem GameState.batchTrigs_card {g g₁ : GameState} {ab : Ability} (h : ab �
   split at h
   · exact GameState.koTrigs_card h
   · nomatch h
-
-theorem Fire.flags_keep {ev : TrigEvent} {l : List Ability} {g g' : GameState}
-    (h : Fire ev l g g') : Flags g g' :=
-  have z := h.zoneOnly
-  ⟨z.attacked, z.cur_gxUsed, z.opp_gxUsed⟩
-
-theorem Fire.slotAmt {ev : TrigEvent} {l : List Ability} {g g' : GameState}
-    (h : Fire ev l g g') (s : Slot) : g'.slotAmt s = g.slotAmt s := by
-  simp only [GameState.slotAmt, h.zoneOnly.cur_mods, h.zoneOnly.opp_mods]
-
-theorem GameState.swap_discW (w : Card → Nat) (g : GameState) : g.swap.discW w = g.discW w :=
-  Nat.add_comm _ _
-
-/-- **A trigger resolution keeps the weight of the discard piles** when its triggers recycle no card
-of positive weight. -/
-theorem Fire.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} {ev : TrigEvent}
-    {l : List Ability} {g g' : GameState} (h : Fire ev l g g') :
-    (∀ ab ∈ l, (ab.script ev.place).RecOk w C) → (∀ y ∈ g.allCards, y ∈ C) →
-      g.discW w ≤ g'.discW w := by
-  induction h with
-  | nil => intro _ _; exact Nat.le_refl _
-  | @run ab l g g₁ g₂ _ hr _ ih =>
-      intro hl hC
-      have hC' : ∀ y ∈ g.swap.allCards, y ∈ C := fun y hy => hC y (g.swap_perm.mem_iff.1 hy)
-      have h1 := hr.disc_mono hw (hl _ (.head _)) hC'
-      have h2 := ih (fun ab hab => hl ab (.tail _ hab)) (fun y hy =>
-        hC' y (hr.perm.mem_iff.1 (g₁.swap_perm.mem_iff.1 hy)))
-      rw [GameState.swap_discW] at h1 h2
-      exact Nat.le_trans h1 h2
-  | decline _ _ ih => intro hl hC; exact ih (fun ab hab => hl ab (.tail _ hab)) hC
-
-/-- A trigger resolution keeps what `Keeps` asks, when its triggers recycle nothing. -/
-theorem Fire.keeps {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g')
-    (hn : ∀ ab ∈ l, (ab.script ev.place).recFilters = []) : Keeps g g' :=
-  have hf := h.flags_keep
-  ⟨by
-    have := h.disc_mono (C := g.allCards) Card.amt_tw
-      (fun ab hab => Effect.recOk_nil (hn ab hab)) fun _ hy => hy
-    rw [GameState.discAmt_eq, GameState.discAmt_eq]; exact this,
-   hf.attacked, hf.gxCur, hf.gxOpp⟩
-
-/-- An effect of the trigger fragment never raises the potential of the opponent of the player it
-resolves for. -/
-theorem Run.oppAbPot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
-    e.trigOk = true → g'.opp.abPot ≤ g.opp.abPot := by
-  induction h with
-  | seq _ _ ih₁ ih₂ =>
-      intro hk
-      simp only [Effect.trigOk, Bool.and_eq_true] at hk
-      exact Nat.le_trans (ih₂ hk.2) (ih₁ hk.1)
-  | choiceL _ ih =>
-      intro hk; simp only [Effect.trigOk, Bool.and_eq_true] at hk; exact ih hk.1
-  | choiceR _ ih =>
-      intro hk; simp only [Effect.trigOk, Bool.and_eq_true] at hk; exact ih hk.2
-  | @counters g p n h =>
-      intro _
-      have e : ({ p with damage := p.damage + n } : InPlay).abW = p.abW := rfl
-      simp only [PlayerState.abPot, h, abWo, optN, e]; omega
-  | @inflict g p c h =>
-      intro _
-      have e : (p.inflict c).abW = p.abW := by cases c <;> rfl
-      simp only [PlayerState.abPot, h, abWo, optN, e]; omega
-  | @zone e w g s' hw hz =>
-      intro _
-      cases w with
-      | own => exact Nat.le_refl _
-      | opp =>
-          have := hz.abPot_le
-          simp only [GameState.side] at this
-          exact this
-  | skip => intro _; exact Nat.le_refl _
-  | draw => intro _; exact Nat.le_refl _
-  | drawEmpty => intro _; exact Nat.le_refl _
-  | shuffle => intro _; exact Nat.le_refl _
-  | @touchActive e w f g p he h =>
-      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
-  | @touchBench e w f g q b₁ b₂ he h =>
-      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
-  | _ => intro hk; simp [Effect.trigOk] at hk
-
-/-- **A trigger resolution does not raise the potential of the player to move**: it changes no
-Prize card, and its effects on that player's Pokémon (the trigger owner's opponent's) never raise
-their potential. -/
-theorem Fire.abPot_le {ev : TrigEvent} {l : List Ability} {g g' : GameState}
-    (h : Fire ev l g g') : g'.abPot ≤ g.abPot := by
-  induction h with
-  | nil => exact Nat.le_refl _
-  | @run ab l g g₁ g₂ hk hr _ ih =>
-      have h1 : g₁.opp.abPot ≤ g.cur.abPot := hr.oppAbPot_le hk
-      have h2 : g₁.cur.prizes = g.opp.prizes := (hr.zoneOnly hk).cur_prizes
-      have h3 : g₁.swap.abPot ≤ g.abPot := by
-        show g₁.opp.abPot + 2 * g₁.cur.prizes.length ≤ g.cur.abPot + 2 * g.opp.prizes.length
-        rw [h2]; omega
-      exact Nat.le_trans ih h3
-  | decline _ _ ih => exact ih
 
 end Pokemon

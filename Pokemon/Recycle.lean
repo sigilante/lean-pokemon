@@ -55,7 +55,7 @@ def pl (hand discard : List Card) (r : Nat) : PlayerState :=
     false, false, store r, true, KOHist.empty⟩
 
 def gs (hand discard : List Card) (r : Nat) : GameState :=
-  ⟨pl hand discard r, pl [] [] 0, true, false, false, false, none, none, false, false⟩
+  ⟨pl hand discard r, pl [] [] 0, true, false, false, false, none, none, false, false, false⟩
 
 /-- The start of a round. -/
 def st (r : Nat) : GameState := gs [ironDefender, recA] [recB] r
