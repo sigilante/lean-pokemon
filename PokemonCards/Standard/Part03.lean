@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part03
 open Pokemon
 
+/-- Raboot (sv7-27). Records: sv7-27, sv7-147, me2pt5-37. -/
+def sv7_27 : Card := .pokemon
+  { name := "Raboot", stage := .stage1, evolvesFrom := some "Scorbunny",
+    hp := 9, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Low Sweep", cost := [.fire], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Combustion", cost := [.fire, .colorless, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
 /-- Charcadet (sv7-29). Records: sv7-29. -/
 def sv7_29 : Card := .pokemon
   { name := "Charcadet", stage := .basic, evolvesFrom := none,
@@ -1863,22 +1877,9 @@ def sv8_117 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Zweilous (sv8-118). Records: sv8-118. -/
-def sv8_118 : Card := .pokemon
-  { name := "Zweilous", stage := .stage1, evolvesFrom := some "Deino",
-    hp := 10, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Stomp Off", cost := [.darkness], damage := 0,
-        effect := .move .opp (.top 2) .discard .any .all,
-        gx := false },
-      { name := "Darkness Fang", cost := [.darkness, .colorless, .colorless], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_27,
   sv7_29,
   sv7_31,
   sv7_33,
@@ -2027,8 +2028,7 @@ def cards : List Card := [
   sv8_111,
   sv8_112,
   sv8_114,
-  sv8_117,
-  sv8_118]
+  sv8_117]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

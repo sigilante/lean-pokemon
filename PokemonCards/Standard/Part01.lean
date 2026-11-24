@@ -309,7 +309,7 @@ def svp_151 : Card := .pokemon
         effect := .ite (.countGe (.prizes .opp) 5) (.damage (.const 10)) (.damage (.const 17)),
         gx := false }] }
 
-/-- Magneton (svp-153). Records: svp-153, svp-159, sv8-59. Caveats: koCounters, selfBench, upTo0. -/
+/-- Magneton (svp-153). Records: svp-153, svp-159, sv8-59. Caveats: koCounters, selfBench, selfKOBench, upTo0. -/
 def svp_153 : Card := .pokemon
   { name := "Magneton", stage := .stage1, evolvesFrom := some "Magnemite",
     hp := 10, type := .lightning, retreat := 1, weakness := some .fighting,

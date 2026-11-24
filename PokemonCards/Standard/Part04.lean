@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part04
 open Pokemon
 
+/-- Zweilous (sv8-118). Records: sv8-118. -/
+def sv8_118 : Card := .pokemon
+  { name := "Zweilous", stage := .stage1, evolvesFrom := some "Deino",
+    hp := 10, type := .darkness, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stomp Off", cost := [.darkness], damage := 0,
+        effect := .move .opp (.top 2) .discard .any .all,
+        gx := false },
+      { name := "Darkness Fang", cost := [.darkness, .colorless, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
 /-- Hydreigon ex (sv8-119). Records: sv8-119, sv8-223, sv8-240. Caveats: benchMods. -/
 def sv8_119 : Card := .pokemon
   { name := "Hydreigon ex", stage := .stage2, evolvesFrom := some "Zweilous",
@@ -1744,19 +1758,9 @@ def sv9_79 : Card := .pokemon
         effect := .damage (.add (.const 18) (.count (.bench .own (.stage .stage2)) 4)),
         gx := false }] }
 
-/-- Larvitar (sv9-80). Records: sv9-80. -/
-def sv9_80 : Card := .pokemon
-  { name := "Larvitar", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Crunch", cost := [.colorless, .colorless], damage := 2,
-        effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv8_118,
   sv8_119,
   sv8_120,
   sv8_122,
@@ -1905,8 +1909,7 @@ def cards : List Card := [
   sv9_76,
   sv9_77,
   sv9_78,
-  sv9_79,
-  sv9_80]
+  sv9_79]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

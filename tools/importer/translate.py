@@ -192,9 +192,16 @@ CAVEATS = {
                   "caveats trigKO, koAttackWide)",
     'selfKOTiming': "the Knock Outs of an Ability's resolution are checked after each step (`TRun`): when the step before "
                     "'this Pokémon is Knocked Out' Knocks Out an opponent's Pokémon and so gives the player their last Prize "
-                    "card, the player wins before the self-Knock-Out step, where a check after the whole Ability would give "
-                    "both players their last Prize card at once, a tiebreaker (Known gaps, self-Knock-Out Abilities: "
-                    "timing)",
+                    "card, or leaves the opponent no Pokémon in play, the player wins before the self-Knock-Out step, where a "
+                    "check after the whole Ability would also Knock Out this Pokémon in the same check (both players' "
+                    "last Prize cards at once, a tiebreaker; or possibly a way to win for the opponent) (Known gaps, "
+                    "self-Knock-Out Abilities: timing)",
+    'selfKOBench': "used from the Bench, 'this Pokémon is Knocked Out' is 9999 damage counters on one Benched Pokémon "
+                   "chosen at resolution (`SelfOp.counters` on the Bench, `benchCounters .own`): another Benched Pokémon "
+                   "may be Knocked Out instead, so this Pokémon survives (and can use the Ability again next turn) and "
+                   "the opponent takes the Prize cards of the other Pokémon (2 or 3 for a Pokémon ex or Mega Evolution "
+                   "Pokémon ex) (Known gaps, self-Knock-Out Abilities: 'on the Bench SelfOp.counters may choose another "
+                   "Benched Pokémon (a superset)')",
 }
 
 
@@ -247,6 +254,7 @@ CAVEAT_DIRECTION = {
                                     # takes the Knock Out first; a marked holder's trigger in unreached states
     'koCounters': 'both',          # with a derived HP of 9999 counters or more the Pokémon survives (the printed Knock
                                    # Out is absent, the survival is extra); vacuous in games of two 60-card decks
+    'selfKOBench': 'allows more',  # the printed Knock Out of this Pokémon is among the outcomes; others are extra
     'selfKOTiming': 'both',        # the win before the self-Knock-Out step, where print may give a tiebreaker
     'abilityByTool': 'both',       # a Tool-given Ability is not read: a smaller count than print may give (the
                                    # printed amount is absent), or damage that print may prevent (allows more)
@@ -756,6 +764,10 @@ def parse_test(c, ctx):
     if m and (m.group(1) == 'Special Energy' or KNOWN_NAMES.get(m.group(1)) == {'Special Energy'}):
         f = SPECIAL_F if m.group(1) == 'Special Energy' else ('named', m.group(1))
         return [('countGe', ('energy', OWN, f), 1)], False
+    # importer 0.14.0 (Haxorus sv6pt5-46): the same on the opponent's Active Pokémon (`Count.energy .opp`, which counts
+    # the Energy cards attached to that player's Active Pokémon passing the filter, Pokemon/Card.lean `Count`)
+    if c == opp_a + ' has any Special Energy attached':
+        return [('countGe', ('energy', OPP, SPECIAL_F), 1)], False
     m = re.match(r'^(you have|your opponent has) (\d+) or (more|fewer) cards in (your|their) hand$', c)
     if m:
         w = OWN if m.group(1) == 'you have' else OPP
@@ -2413,6 +2425,15 @@ class Parser:
         # ex): the pronoun is the opponent's Active Pokémon of the condition
         sents = [re.sub(r"^If (your opponent's Active Pokémon [^,]+), (?:it|that Pokémon) is Knocked Out\.$",
                         r"If \1, your opponent's Active Pokémon is Knocked Out.", x) for x in sents]
+        # importer 0.14.0 (Hydrapple sv10-18): "Discard N F from your hand, and Knock Out your opponent's Active Pokémon.
+        # If you can't discard N cards in this way, this attack does nothing." is the cost, its "If you can't", then the
+        # Knock Out: `ite (countGe (pile own hand F) N) (seq (discard exactly N) (counters 9999)) skip`, as printed (both
+        # halves happen together, or nothing does)
+        for k in range(len(sents) - 1):
+            m = re.match(r"^(Discard (\d+) .+? from your hand), and (Knock Out your opponent's Active Pokémon)\.$", sents[k])
+            if m and sents[k + 1] == "If you can't discard %s cards in this way, this attack does nothing." % m.group(2):
+                sents = sents[:k] + [m.group(1) + '.', sents[k + 1], m.group(3) + '.'] + sents[k + 2:]
+                break
         i = 0
         n = len(sents)
         while i < n:
@@ -4848,6 +4869,9 @@ def translate_ability(c, a, res):
         res['used'].append(('ab-self-ko', SELF_KO))
         eff = abseq(eff, ('self', ('counters', KO_COUNTERS)))
         cavs.add('koCounters')
+        if spot != ('active',):
+            # usable from the Bench: the self-Knock-Out step may fall on another Benched Pokémon (review, 0.14.0)
+            cavs.add('selfKOBench')
         if any(x[0] in PLACERS for e in T.ability_scripts({'effect': pre_eff}) for x in T.prims(e)):
             cavs.add('selfKOTiming')
     for _, tests, neg in wraps:

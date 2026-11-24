@@ -1326,7 +1326,7 @@ def sv6pt5_18 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Dusclops (sv6pt5-19). Records: sv6pt5-19, sv6pt5-69, sv8pt5-36. Caveats: koCounters, selfBench, selfKOTiming. -/
+/-- Dusclops (sv6pt5-19). Records: sv6pt5-19, sv6pt5-69, sv8pt5-36. Caveats: koCounters, selfBench, selfKOBench, selfKOTiming. -/
 def sv6pt5_19 : Card := .pokemon
   { name := "Dusclops", stage := .stage1, evolvesFrom := some "Duskull",
     hp := 9, type := .psychic, retreat := 2, weakness := some .darkness,
@@ -1340,7 +1340,7 @@ def sv6pt5_19 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Dusknoir (sv6pt5-20). Records: sv6pt5-20, sv6pt5-70, sv8pt5-37. Caveats: koCounters, perPokemon, selfBench, selfKOTiming. -/
+/-- Dusknoir (sv6pt5-20). Records: sv6pt5-20, sv6pt5-70, sv8pt5-37. Caveats: koCounters, perPokemon, selfBench, selfKOBench, selfKOTiming. -/
 def sv6pt5_20 : Card := .pokemon
   { name := "Dusknoir", stage := .stage2, evolvesFrom := some "Dusclops",
     hp := 16, type := .psychic, retreat := 3, weakness := some .darkness,
@@ -1517,6 +1517,20 @@ def sv6pt5_44 : Card := .pokemon
         gx := false },
       { name := "Sharp Fang", cost := [.fighting, .metal], damage := 3,
         effect := .skip,
+        gx := false }] }
+
+/-- Haxorus (sv6pt5-46). Records: sv6pt5-46. Caveats: koCounters. -/
+def sv6pt5_46 : Card := .pokemon
+  { name := "Haxorus", stage := .stage2, evolvesFrom := some "Fraxure",
+    hp := 17, type := .dragon, retreat := 2, weakness := none,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bring Down the Axe", cost := [.fighting], damage := 0,
+        effect := .ite (.countGe (.energy .opp .specialEnergy) 1) (.counters 9999) .skip,
+        gx := false },
+      { name := "Dragon Pulse", cost := [.fighting, .metal], damage := 23,
+        effect := .move .own (.top 3) .discard .any .all,
         gx := false }] }
 
 /-- Meowth (sv6pt5-48). Records: sv6pt5-48, me2-106. -/
@@ -1823,20 +1837,6 @@ def sv7_26 : Card := .pokemon
         effect := .choice (.damage (.const 2)) (.damage (.const 1)),
         gx := false }] }
 
-/-- Raboot (sv7-27). Records: sv7-27, sv7-147, me2pt5-37. -/
-def sv7_27 : Card := .pokemon
-  { name := "Raboot", stage := .stage1, evolvesFrom := some "Scorbunny",
-    hp := 9, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Low Sweep", cost := [.fire], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Combustion", cost := [.fire, .colorless, .colorless], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   sv6_13,
@@ -1960,6 +1960,7 @@ def cards : List Card := [
   sv6pt5_41,
   sv6pt5_43,
   sv6pt5_44,
+  sv6pt5_46,
   sv6pt5_48,
   sv6pt5_49,
   sv6pt5_51,
@@ -1987,8 +1988,7 @@ def cards : List Card := [
   sv7_23,
   sv7_24,
   sv7_25,
-  sv7_26,
-  sv7_27]
+  sv7_26]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

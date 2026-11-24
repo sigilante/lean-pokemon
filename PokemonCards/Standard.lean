@@ -21,7 +21,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1470 terms, for 1477 of the pool's 2161 cards: 7 cards share the term of another,
+/-- Every imported card (1472 terms, for 1479 of the pool's 2161 cards: 7 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -188,7 +188,6 @@ def notImported : List (String × String × String) := [
   ("sv6pt5-40", "Genesect", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): If this Pokémon has a Pokémon Tool attached, your opponent can't play any ACE SPEC cards from their hand."),
   ("sv6pt5-42", "Copperajah", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): As long as this Pokémon is in the Active Spot, your opponent can't play any Stadium cards from their hand."),
   ("sv6pt5-45", "Fraxure", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon."),
-  ("sv6pt5-46", "Haxorus", "condition not expressible: your opponent's Active Pokémon has any Special Energy attached: If your opponent's Active Pokémon has any Special Energy attached, your opponent's Active Pokémon is Knocked Out."),
   ("sv6pt5-47", "Kyurem", "Ability: static, cost (attack cost or Energy provision): If your opponent has any cards in their discard pile that have \"Colress\" in the name, this Pokémon can use the Trifrost attack for Colorless."),
   ("sv6pt5-50", "Eevee", "card kind with no filter: Basic Energy cards of different types: Search your deck for up to 3 Basic Energy cards of different types, reveal them, and put them into your hand."),
   ("sv6pt5-55", "Binding Mochi", "Pokémon Tool: static, cond (a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage)): Attacks used by the Poisoned Pokémon this card is attached to do 40 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."),
@@ -358,7 +357,6 @@ def notImported : List (String × String × String) := [
   ("sv10-11", "Dwebble", "unhandled sentence: Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it."),
   ("sv10-15", "Team Rocket's Blipbug", "unhandled sentence: Look at 1 of your opponent's face-down Prize cards."),
   ("sv10-17", "Dipplin", "unhandled sentence: Put an Energy attached to this Pokémon into your hand."),
-  ("sv10-18", "Hydrapple", "unhandled sentence: Discard 6 Basic Grass Energy cards from your hand, and Knock Out your opponent's Active Pokémon."),
   ("sv10-23", "Arboliva ex", "unhandled sentence: Choose 1 of your opponent's Pokémon 6 times."),
   ("sv10-31", "Team Rocket's Moltres ex", "unhandled sentence: Discard a Team Rocket's Energy from this Pokémon."),
   ("sv10-36", "Ethan's Magcargo", "Ability: static, noRetreat (\"has no Retreat Cost\" (a set form; the model has more and less only)): If this Pokémon has no Energy attached, it has no Retreat Cost."),
@@ -728,13 +726,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-133", "Growing Grass Energy", "Special Energy"),
   ("me6-134", "Nitro Fire Energy", "Special Energy")]
 
-/-- **The count.** `all` has 1470 entries. -/
-theorem all_length : all.length = 1470 := by decide +kernel
+/-- **The count.** `all` has 1472 entries. -/
+theorem all_length : all.length = 1472 := by decide +kernel
 
-/-- `notImported` has 684 entries. -/
-theorem notImported_length : notImported.length = 684 := by decide +kernel
+/-- `notImported` has 682 entries. -/
+theorem notImported_length : notImported.length = 682 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1470 + 7 + 684 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1472 + 7 + 682 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -891,7 +889,7 @@ theorem cross_8_10 : crossOk Part08.cards Part10.cards = true := by decide +kern
 /-- No card of part 9 is the same term as a card of part 10. -/
 theorem cross_9_10 : crossOk Part09.cards Part10.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1470 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1472 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=

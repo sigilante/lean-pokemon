@@ -30,7 +30,7 @@ svp-141	Noctowl	Pokémon	imported with caveats	upTo0	svp-141 sv7-115 sv8pt5-78	s
 svp-148	Miraidon	Pokémon	imported exactly		svp-148	svp_148		
 svp-150	Paradise Resort	Stadium	imported exactly		svp-150	svp_150	Retreat	
 svp-151	Gouging Fire	Pokémon	imported exactly		svp-151 sv8-38	svp_151		
-svp-153	Magneton	Pokémon	imported with caveats	koCounters,selfBench,upTo0	svp-153 svp-159 sv8-59	svp_153		
+svp-153	Magneton	Pokémon	imported with caveats	koCounters,selfBench,selfKOBench,upTo0	svp-153 svp-159 sv8-59	svp_153		
 svp-155	Wooper	Pokémon	imported exactly		svp-155	svp_155		
 svp-157	Zapdos	Pokémon	imported exactly		svp-157	svp_157		
 svp-162	Houndstone ex	Pokémon	imported exactly		svp-162	svp_162		
@@ -256,8 +256,8 @@ sv6pt5-13	Sneasel	Pokémon	imported with caveats	perPokemon	sv6pt5-13 me2pt5-44	
 sv6pt5-14	Weavile	Pokémon	imported exactly		sv6pt5-14 me2pt5-45 me2pt5-228	sv6pt5_14		
 sv6pt5-16	Drowzee	Pokémon	imported with caveats	hiddenInfo	sv6pt5-16	sv6pt5_16		
 sv6pt5-18	Duskull	Pokémon	imported exactly		sv6pt5-18 sv6pt5-68 sv8pt5-35	sv6pt5_18		
-sv6pt5-19	Dusclops	Pokémon	imported with caveats	koCounters,selfBench,selfKOTiming	sv6pt5-19 sv6pt5-69 sv8pt5-36	sv6pt5_19		
-sv6pt5-20	Dusknoir	Pokémon	imported with caveats	koCounters,perPokemon,selfBench,selfKOTiming	sv6pt5-20 sv6pt5-70 sv8pt5-37	sv6pt5_20		
+sv6pt5-19	Dusclops	Pokémon	imported with caveats	koCounters,selfBench,selfKOBench,selfKOTiming	sv6pt5-19 sv6pt5-69 sv8pt5-36	sv6pt5_19		
+sv6pt5-20	Dusknoir	Pokémon	imported with caveats	koCounters,perPokemon,selfBench,selfKOBench,selfKOTiming	sv6pt5-20 sv6pt5-70 sv8pt5-37	sv6pt5_20		
 sv6pt5-23	Croagunk	Pokémon	imported exactly		sv6pt5-23	sv6pt5_23		
 sv6pt5-24	Toxicroak	Pokémon	imported exactly		sv6pt5-24	sv6pt5_24		
 sv6pt5-25	Bloodmoon Ursaluna	Pokémon	imported with caveats	selfBench,upTo0	sv6pt5-25 sv8pt5-54	sv6pt5_25		
@@ -270,6 +270,7 @@ sv6pt5-38	Fezandipiti ex	Pokémon	imported with caveats	benchMods,koCheckup,oneP
 sv6pt5-41	Cufant	Pokémon	imported exactly		sv6pt5-41 sv6pt5-76	sv6pt5_41		
 sv6pt5-43	Varoom	Pokémon	imported with caveats	perPokemon	sv6pt5-43	sv6pt5_43		
 sv6pt5-44	Axew	Pokémon	imported exactly		sv6pt5-44	sv6pt5_44		
+sv6pt5-46	Haxorus	Pokémon	imported with caveats	koCounters	sv6pt5-46	sv6pt5_46		Bring Down the Axe
 sv6pt5-48	Meowth	Pokémon	imported exactly		sv6pt5-48 me2-106	sv6pt5_48		
 sv6pt5-49	Persian	Pokémon	imported exactly		sv6pt5-49 sv6pt5-78	sv6pt5_49		
 sv6pt5-51	Furfrou	Pokémon	imported with caveats	mayFail	sv6pt5-51	sv6pt5_51		
@@ -670,6 +671,7 @@ sv10-12	Crustle	Pokémon	imported with caveats	ignFxStadium,staticPreventBench	s
 sv10-13	Fomantis	Pokémon	imported exactly		sv10-13	sv10_13		
 sv10-14	Lurantis	Pokémon	imported exactly		sv10-14	sv10_14		
 sv10-16	Applin	Pokémon	imported exactly		sv10-16	sv10_16		
+sv10-18	Hydrapple	Pokémon	imported with caveats	koCounters	sv10-18 sv10-188	sv10_18		
 sv10-19	Team Rocket's Tarountula	Pokémon	imported with caveats	recoil	sv10-19 me2pt5-18	sv10_19		
 sv10-20	Team Rocket's Spidops	Pokémon	imported with caveats	mayFail,selfBench	sv10-20 sv10-187 me2pt5-19	sv10_20		
 sv10-21	Smoliv	Pokémon	imported exactly		sv10-21	sv10_21		

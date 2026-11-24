@@ -11,6 +11,28 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part06
 open Pokemon
 
+/-- Marnie's Morgrem (sv10-135). Records: sv10-135. -/
+def sv10_135 : Card := .pokemon
+  { name := "Marnie's Morgrem", stage := .stage1, evolvesFrom := some "Marnie's Impidimp",
+    hp := 10, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Corkscrew Punch", cost := [.darkness, .darkness], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
+/-- Marnie's Morpeko (sv10-137). Records: sv10-137. -/
+def sv10_137 : Card := .pokemon
+  { name := "Marnie's Morpeko", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 0, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Spiky Wheel", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .damage (.add (.const 2) (.count (.energy .own (.energyOf .darkness)) 4)),
+        gx := false }] }
+
 /-- Arven's Maschiff (sv10-138). Records: sv10-138. -/
 def sv10_138 : Card := .pokemon
   { name := "Arven's Maschiff", stage := .basic, evolvesFrom := none,
@@ -1768,30 +1790,10 @@ def zsv10pt5_60 : Card := .pokemon
         effect := .selfDamage 3,
         gx := false }] }
 
-/-- Klink (zsv10pt5-61). Records: zsv10pt5-61, zsv10pt5-139. Caveats: perPokemon. -/
-def zsv10pt5_61 : Card := .pokemon
-  { name := "Klink", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .metal, retreat := 1, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Hard Gears", cost := [.metal], damage := 1,
-        effect := .linger .own .next (.reduce 1),
-        gx := false }] }
-
-/-- Klang (zsv10pt5-62). Records: zsv10pt5-62, zsv10pt5-140. Caveats: perPokemon. -/
-def zsv10pt5_62 : Card := .pokemon
-  { name := "Klang", stage := .stage1, evolvesFrom := some "Klink",
-    hp := 9, type := .metal, retreat := 2, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Hard Gears", cost := [.metal, .colorless], damage := 5,
-        effect := .linger .own .next (.reduce 2),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_135,
+  sv10_137,
   sv10_138,
   sv10_139,
   sv10_141,
@@ -1939,9 +1941,7 @@ def cards : List Card := [
   zsv10pt5_57,
   zsv10pt5_58,
   zsv10pt5_59,
-  zsv10pt5_60,
-  zsv10pt5_61,
-  zsv10pt5_62]
+  zsv10pt5_60]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1997,6 +1997,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Virizion", "Sigilyph", "Klink", "Klang"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Virizion", "Sigilyph"] := by decide +kernel
 
 end PokemonCards.Standard.Part06

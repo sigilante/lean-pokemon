@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 10 of 10 (120 cards).
+Imported Standard cards, part 10 of 10 (122 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,28 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part10
 open Pokemon
+
+/-- Pikachu (me55-50). Records: me55-50. -/
+def me55_50 : Card := .pokemon
+  { name := "Pikachu", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .lightning, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Satisfied Spark", cost := [.lightning, .lightning, .colorless, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Pikachu (me55-51). Records: me55-51. Caveats: benchMods. -/
+def me55_51 : Card := .pokemon
+  { name := "Pikachu", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .lightning, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Lightning Crash", cost := [.lightning, .lightning, .lightning], damage := 0,
+        effect := .seq (.discardEnergy .own .active (.energyOf .lightning) .all) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 9)) (.benchDamage .opp 9)) (.damage (.const 9))),
+        gx := false }] }
 
 /-- Pikachu (me55-52). Records: me55-52. -/
 def me55_52 : Card := .pokemon
@@ -1539,6 +1561,8 @@ def me6_89 : Card := .trainer "Aarune" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me55_50,
+  me55_51,
   me55_52,
   me55_53,
   me55_56,

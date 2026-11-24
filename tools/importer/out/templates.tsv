@@ -1,7 +1,7 @@
 rule	lean_fragment	sentences_in_imported_cards	sentences_in_pool	example_card	example_sentence
 flip-a-coin	choice (heads) (tails), or a choice of damage, or choice (whole attack) skip	133	176	svp-114 Picnicker	Flip a coin.
 shuffle	shuffle	130	196	svp-123 Teal Mask Ogerpon	Then, shuffle your deck.
-if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	117	133	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
+if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	118	134	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
 inflict	inflict c [; inflict c' ...]	116	152	svp-129 Pecharunt	Your opponent's Active Pokémon is now Poisoned.
 discard-energy	ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip); in a Trainer no fallback when none (min_take)	93	121	svp-105 Armarouge ex	Discard a Fire Energy from this Pokémon.
 reminder	skip (the model never applies Weakness or Resistance to the Bench)	71	105	svp-163 Cinderace ex	(Don't apply Weakness and Resistance for Benched Pokémon.)
@@ -17,7 +17,7 @@ static-ability		32	36	svp-129 Pecharunt	As long as this Pokémon is in the Activ
 search-to-bench	putBench own deck F (n times)	30	34	sv5-18 Grubbin	Search your deck for up to 2 Grubbin and put them onto your Bench.
 self-lock-all		28	42	sv5-7 Breloom	During your next turn, this Pokémon can't attack.
 damage-ignores	damage a {weak/resist/fx := true} on every damage step to the opponent's Active Pokémon	27	37	sv5-98 Sandy Shocks	This attack's damage isn't affected by Weakness.
-mill	move w (top n) discard any all	23	31	sv5-22 Scovillain ex	Discard the top card of your opponent's deck.
+mill	move w (top n) discard any all	24	31	sv5-22 Scovillain ex	Discard the top card of your opponent's deck.
 ling-reduce-self	linger own next (reduce n)	23	30	sv5-3 Seedot	During your opponent's next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).
 also-1-bench	benchDamage w n	23	26	sv5-79 Iron Valiant	This attack also does 20 damage to 1 of your opponent's Benched Pokémon.
 self-lock-this		22	27	svp-89 Feraligatr	During your next turn, this Pokémon can't use Giant Wave.
@@ -60,6 +60,7 @@ ling-prevent-self	linger own next prevent	5	5	sv5-87 Golett	During your opponent
 move-energy-self-bench	moveEnergy own F	5	9	sv8pt5-87 Shaymin	Move an Energy from this Pokémon to 1 of your Benched Pokémon.
 switch-active	switch own	5	8	sv5-157 Prime Catcher	Switch your Active Pokémon with 1 of your Benched Pokémon.
 attach-2	attach own (hand|discard) F spot TF (n times; a target of a type: TF = ptype)	5	8	sv6-133 Chansey	Attach a Basic Energy card from your hand to 1 of your Pokémon.
+ko-opp-active	counters 9999	5	6	sv6pt5-46 Haxorus	Your opponent's Active Pokémon is Knocked Out.
 opp-discards	ite (countGe (pile opp hand any) n) (move opp hand discard any (exactly n)) (... all); in a Trainer no fallback when none (min_take)	5	5	sv7-24 Salazzle	Your opponent discards a card from their hand.
 look-take-hand	look w (top|bottom n) F (upTo k | most 1) (put hand) rest	4	4	svp-118 Tatsugiri	Look at the top 6 cards of your deck, reveal a Supporter card you find there, and put it into your hand. Shuffle the other cards back into your deck.
 damage-to-M-opp	Effect.hitSome m n, unfolded: ite (countGe (bench opp any) m) (choice (damage n; benchSome opp (m-1) any true n) (benchSome opp m any true n)) (damage n; benchSome opp (m-1) any true n)	4	7	sv6-106 Greninja ex	This attack does 120 damage to 2 of your opponent's Pokémon.
@@ -74,6 +75,8 @@ flip-n-coins-tree		4	4	sv6-90 Slurpuff	Flip 2 coins. This attack does 90 damage 
 ling-lock-self	linger own after (lock attack|retreat)	4	5	sv6-101 Nosepass	During your next turn, this Pokémon can't attack.
 look-top-take	move own (top n) hand F (upTo k); shuffle	4	4	sv6-143 Bug Catching Set	Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of Grass Pokémon and Basic Grass Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.
 search-several	move own deck hand F1 (upTo 1); move own deck hand F2 (upTo 1); …	4	4	sv6-163 Secret Box	Search your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand.
+discard-own-hand-kind	ite (countGe (pile own hand F) n) (move own hand discard F (exactly n)) (... all | skip)	4	4	sv6pt5-5 Decidueye	Discard a Basic Grass Energy card from your hand.
+if-you-cant-nothing		4	4	sv6pt5-5 Decidueye	If you can't, this attack does nothing.
 stadium-use		4	10	sv6pt5-54 Academy at Night	Once during each player's turn, that player may put a card from their hand on top of their deck.
 ling-item-lock	linger opp next (lock item)	4	4	sv7-51 Galvantula ex	During your opponent's next turn, they can't play any Item cards from their hand.
 ab-inflict	inflict c	4	4	sv8-9 Shiinotic	Make your opponent's Active Pokémon Asleep.
@@ -86,8 +89,6 @@ ling-bonus-self	linger own after (bonus n)	3	4	sv6-76 Kilowattrel	During your ne
 ab-move-energy	moveEnergy own F	3	3	sv6-134 Blissey ex	Move a Basic Energy from 1 of your Pokémon to another of your Pokémon.
 discard-energy-1-opp	ite (countGe (energyAll opp energy) 1) (choice (discardEnergy opp active energy (exactly 1)) (ite (countGe (bench opp pokemon) 1) (discardEnergy opp bench energy (exactly 1)) none)) (skip | none)	3	3	sv6-148 Enhanced Hammer	Discard a Special Energy from 1 of your opponent's Pokémon.
 play-condition-history		3	3	sv6-151 Hassel	You can use this card only if any of your Pokémon were Knocked Out during your opponent's last turn.
-discard-own-hand-kind	ite (countGe (pile own hand F) n) (move own hand discard F (exactly n)) (... all | skip)	3	3	sv6pt5-5 Decidueye	Discard a Basic Grass Energy card from your hand.
-if-you-cant-nothing		3	3	sv6pt5-5 Decidueye	If you can't, this attack does nothing.
 ab-one-per-name		3	5	sv6pt5-38 Fezandipiti ex	You can't use more than 1 Flip the Script Ability each turn.
 if-condition-draw-instead		3	3	sv7-139 Lacey	If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead.
 ling-expose-defending	linger opp after (expose n)	3	3	sv8-105 Vibrava	During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance).
@@ -95,7 +96,6 @@ damage-each-opp-kind	ite (top opp ex) (damage n) skip; benchSome opp 5 ex true n
 discard-own-hand-card	ite (countGe (pile own hand any) n) (move own hand discard any (exactly n)) (... all)	3	3	sv8-128 Klefki	Discard a card from your hand.
 trigger-koByAttack		3	3	sv8-162 Amulet of Hope	If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, search your deck for up to 3 cards and put them into your hand.
 flip-until-tails-each		3	3	sv8pt5-82 Lugia ex	Flip a coin until you get tails. For each heads, discard an Energy from your opponent's Active Pokémon.
-ko-opp-active	counters 9999	3	4	sv9-48 Iono's Electrode	Your opponent's Active Pokémon is Knocked Out.
 hand-deck-draw	move w hand shuffle any all; move w (top n) hand any all (each side)	3	3	me3-76 Judge	Each player shuffles their hand into their deck and draws 4 cards.
 bottom-count-then-sort	damage (count (pile own (bottom n) F) k); look own (bottom n) pokemon all (put shuffle) discard	3	4	me5-9 Sizzlipede	Reveal the bottom 7 cards of your deck, and this attack does 50 damage for each Pokémon you find there that has the Bug Out attack. Then, shuffle any revealed Pokémon back into your deck. Discard the other cards.
 spread-any	N copies of (benchCounters opp 1), or of (one_of opp (counters 1) (benchCounters opp 1))	2	4	sv6-130 Dragapult ex	Put 6 damage counters on your opponent's Benched Pokémon in any way you like.

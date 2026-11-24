@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part05
 open Pokemon
 
+/-- Larvitar (sv9-80). Records: sv9-80. -/
+def sv9_80 : Card := .pokemon
+  { name := "Larvitar", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Crunch", cost := [.colorless, .colorless], damage := 2,
+        effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
+        gx := false }] }
+
 /-- Pupitar (sv9-81). Records: sv9-81. Caveats: recoil. -/
 def sv9_81 : Card := .pokemon
   { name := "Pupitar", stage := .stage1, evolvesFrom := some "Larvitar",
@@ -846,6 +857,20 @@ def sv10_16 : Card := .pokemon
     attacks := [
       { name := "Mini Drain", cost := [.grass], damage := 1,
         effect := .heal 1,
+        gx := false }] }
+
+/-- Hydrapple (sv10-18). Records: sv10-18, sv10-188. Caveats: koCounters. -/
+def sv10_18 : Card := .pokemon
+  { name := "Hydrapple", stage := .stage2, evolvesFrom := some "Dipplin",
+    hp := 17, type := .grass, retreat := 3, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Hydra Breath", cost := [.grass], damage := 0,
+        effect := .ite (.countGe (.pile .own .hand (.energyOf .grass)) 6) (.seq (.move .own .hand .discard (.energyOf .grass) (.exactly 6)) (.counters 9999)) .skip,
+        gx := false },
+      { name := "Whip Smash", cost := [.grass, .colorless, .colorless], damage := 14,
+        effect := .skip,
         gx := false }] }
 
 /-- Team Rocket's Tarountula (sv10-19). Records: sv10-19, me2pt5-18. Caveats: recoil. -/
@@ -1878,30 +1903,9 @@ def sv10_134 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Marnie's Morgrem (sv10-135). Records: sv10-135. -/
-def sv10_135 : Card := .pokemon
-  { name := "Marnie's Morgrem", stage := .stage1, evolvesFrom := some "Marnie's Impidimp",
-    hp := 10, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Corkscrew Punch", cost := [.darkness, .darkness], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
-/-- Marnie's Morpeko (sv10-137). Records: sv10-137. -/
-def sv10_137 : Card := .pokemon
-  { name := "Marnie's Morpeko", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 0, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Spiky Wheel", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .damage (.add (.const 2) (.count (.energy .own (.energyOf .darkness)) 4)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv9_80,
   sv9_81,
   sv9_82,
   sv9_83,
@@ -1970,6 +1974,7 @@ def cards : List Card := [
   sv10_13,
   sv10_14,
   sv10_16,
+  sv10_18,
   sv10_19,
   sv10_20,
   sv10_21,
@@ -2049,9 +2054,7 @@ def cards : List Card := [
   sv10_131,
   sv10_132,
   sv10_133,
-  sv10_134,
-  sv10_135,
-  sv10_137]
+  sv10_134]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

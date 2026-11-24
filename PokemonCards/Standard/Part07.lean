@@ -11,6 +11,28 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part07
 open Pokemon
 
+/-- Klink (zsv10pt5-61). Records: zsv10pt5-61, zsv10pt5-139. Caveats: perPokemon. -/
+def zsv10pt5_61 : Card := .pokemon
+  { name := "Klink", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .metal, retreat := 1, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Hard Gears", cost := [.metal], damage := 1,
+        effect := .linger .own .next (.reduce 1),
+        gx := false }] }
+
+/-- Klang (zsv10pt5-62). Records: zsv10pt5-62, zsv10pt5-140. Caveats: perPokemon. -/
+def zsv10pt5_62 : Card := .pokemon
+  { name := "Klang", stage := .stage1, evolvesFrom := some "Klink",
+    hp := 9, type := .metal, retreat := 2, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Hard Gears", cost := [.metal, .colorless], damage := 5,
+        effect := .linger .own .next (.reduce 2),
+        gx := false }] }
+
 /-- Klinklang (zsv10pt5-63). Records: zsv10pt5-63, zsv10pt5-141. Caveats: staticBench. -/
 def zsv10pt5_63 : Card := .pokemon
   { name := "Klinklang", stage := .stage2, evolvesFrom := some "Klang",
@@ -1783,33 +1805,10 @@ def me2_57 : Card := .pokemon
         effect := .choice (.damage (.const 3)) (.damage (.const 1)),
         gx := false }] }
 
-/-- Honchkrow (me2-58). Records: me2-58. Caveats: benchMods. -/
-def me2_58 : Card := .pokemon
-  { name := "Honchkrow", stage := .stage1, evolvesFrom := some "Murkrow",
-    hp := 13, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Wind of Darkness", cost := [.darkness], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Sniping Feathers", cost := [.darkness, .darkness, .colorless], damage := 0,
-        effect := .seq (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))),
-        gx := false }] }
-
-/-- Sableye (me2-59). Records: me2-59. -/
-def me2_59 : Card := .pokemon
-  { name := "Sableye", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Cocky Claw", cost := [.darkness], damage := 0,
-        effect := .ite (.countGe (.bench .own (.and (.stage .stage2) (.ptype .darkness))) 1) (.damage (.const 9)) (.damage (.const 2)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  zsv10pt5_61,
+  zsv10pt5_62,
   zsv10pt5_63,
   zsv10pt5_64,
   zsv10pt5_65,
@@ -1957,9 +1956,7 @@ def cards : List Card := [
   me2_53,
   me2_54,
   me2_55,
-  me2_57,
-  me2_58,
-  me2_59]
+  me2_57]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2015,6 +2012,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Genesect ex", "Exeggutor", "Buneary", "Pawmi"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi"] := by decide +kernel
 
 end PokemonCards.Standard.Part07

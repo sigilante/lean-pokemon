@@ -11,6 +11,31 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part08
 open Pokemon
 
+/-- Honchkrow (me2-58). Records: me2-58. Caveats: benchMods. -/
+def me2_58 : Card := .pokemon
+  { name := "Honchkrow", stage := .stage1, evolvesFrom := some "Murkrow",
+    hp := 13, type := .darkness, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Wind of Darkness", cost := [.darkness], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Sniping Feathers", cost := [.darkness, .darkness, .colorless], damage := 0,
+        effect := .seq (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))),
+        gx := false }] }
+
+/-- Sableye (me2-59). Records: me2-59. -/
+def me2_59 : Card := .pokemon
+  { name := "Sableye", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Cocky Claw", cost := [.darkness], damage := 0,
+        effect := .ite (.countGe (.bench .own (.and (.stage .stage2) (.ptype .darkness))) 1) (.damage (.const 9)) (.damage (.const 2)),
+        gx := false }] }
+
 /-- Carvanha (me2-60). Records: me2-60. Caveats: recoil. -/
 def me2_60 : Card := .pokemon
   { name := "Carvanha", stage := .basic, evolvesFrom := none,
@@ -1823,33 +1848,10 @@ def me3_42 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Barbaracle (me3-43). Records: me3-43. Caveats: mayFail. -/
-def me3_43 : Card := .pokemon
-  { name := "Barbaracle", stage := .stage1, evolvesFrom := some "Binacle",
-    hp := 13, type := .fighting, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Stone Arms", use := .once,
-        spot := none, cond := none,
-        effect := .fx (.seq (.seq (.ite (.countGe (.pile .own .hand (.energyOf .fighting)) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.bench .own (.ptype .fighting)) 1) .skip (.ite (.top .own (.ptype .fighting)) .skip (.move .own (.top 0) .hand .any (.exactly 1))))) (.choice (.attach .own .hand (.energyOf .fighting) .active (.ptype .fighting)) (.attach .own .hand (.energyOf .fighting) .bench (.ptype .fighting)))) }],
-    attacks := [
-      { name := "Hammer In", cost := [.fighting, .fighting, .colorless], damage := 8,
-        effect := .skip,
-        gx := false }] }
-
-/-- Tyrunt (me3-44). Records: me3-44. -/
-def me3_44 : Card := .pokemon
-  { name := "Tyrunt", stage := .stage1, evolvesFrom := some "Antique Jaw Fossil",
-    hp := 10, type := .fighting, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Get Angry", cost := [.fighting, .colorless], damage := 0,
-        effect := .damage (.per .own 2),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me2_58,
+  me2_59,
   me2_60,
   me2_61,
   me2_63,
@@ -1997,9 +1999,7 @@ def cards : List Card := [
   me3_36,
   me3_37,
   me3_38,
-  me3_42,
-  me3_43,
-  me3_44]
+  me3_42]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
