@@ -329,7 +329,7 @@ theorem Resolve.clamp_sim {k : Nat} {g₁ g₁' : GameState} (h : Resolve g₁ g
       exact ⟨g₂', .step (by rw [GameState.winner_of_clamp hc]; exact hn) hm₂ hr₂, hc'⟩
   | @trigger g₀ g₃ g' l hn hcl hp hl ht _ ih =>
       intro g₂ hH hc
-      have hcl₂ := GameState.calm_of_clamp hc hcl (GameState.hpBelow_of_hpBound hH)
+      have hcl₂ := GameState.bothActive_of_clampAt hc hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_clampAt hc).trans hp
       have hT := GameState.benchedTrigs_of_clampAt hc
       have hc₀ : ({ g₀ with pend := false } : GameState).clamp k =

@@ -129,9 +129,9 @@ theorem draw_forced :
     ∀ g', Move (hit false two) g' → g'.opp.hand.length = 2 := by
   intro g' hm
   have hu : ¬ Calm (hit false two) := fun hs => (spikes_fire false two (.inl rfl)).2.1 hs.1
-  rcases hm.batch_of_not_settled (fun hs => hu hs.calm) with ⟨g₁, l, hb, hl, hf⟩ | ⟨hc, -⟩
+  rcases hm.batch_of_not_settled (fun hs => hu hs.calm) with ⟨g₁, l, hb, hl, hf⟩ | ⟨-, hp, -⟩
   rotate_left
-  · exact absurd hc hu
+  · exact absurd hp (by decide)
   have hw₁ : g₁.winner = none := by
     obtain ⟨-, -, -, -, pw⟩ := hb.piles
     rw [pw]; rfl

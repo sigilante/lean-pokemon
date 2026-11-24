@@ -223,14 +223,15 @@ theorem Resolve.exists (g : GameState) :
         | none =>
             by_cases hs : Calm g
             · exact ⟨g, .done (.inl (hs.settled hp))⟩
-            · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs
+            · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs (.inl hp)
               cases hw₁ : g₁.winner with
               | some o =>
                   exact ⟨g₁, .step hw hm (.done (.inr (by rw [hw₁]; exact fun e => nomatch e)))⟩
               | none =>
                   obtain ⟨g', hr⟩ := ih _ (hn ▸ hm.koMeasure_lt hw₁) g₁ rfl (hm.pend_eq.trans hp)
                   exact ⟨g', .step hw hm hr⟩
-  -- with one pending (milestone MV7): batch steps, then the triggers, then `key₀`
+  -- with one pending (milestone MV7): the triggers first, once both Active Spots are filled (before
+  -- that, batch steps), then `key₀`
   have key : ∀ n g, g.koMeasure = n → ∃ g', Resolve g g' := by
     intro n
     induction n using Nat.strongRecOn with
@@ -239,14 +240,21 @@ theorem Resolve.exists (g : GameState) :
         cases hw : g.winner with
         | some o => exact ⟨g, .done (.inr (by rw [hw]; exact fun e => nomatch e))⟩
         | none =>
+            by_cases hr : g.pend = true ∧ g.BothActive
+            · obtain ⟨g₁, ht⟩ := hr.2.trigs_exist
+              obtain ⟨g', hr'⟩ := key₀ _ g₁ rfl ht.zoneOnly.pend
+              exact ⟨g', .trigger hw hr.2 hr.1 (.refl _) ht hr'⟩
+            have hq : g.pend = false ∨ ¬ g.BothActive := by
+              cases hpd : g.pend with
+              | false => exact .inl rfl
+              | true => exact .inr fun hb => hr ⟨hpd, hb⟩
             by_cases hs : Calm g
-            · cases hp : g.pend with
-              | false => exact ⟨g, .done (.inl (hs.settled hp))⟩
-              | true =>
-                  obtain ⟨g₁, ht⟩ := hs.trigs_exist
-                  obtain ⟨g', hr⟩ := key₀ _ g₁ rfl ht.zoneOnly.pend
-                  exact ⟨g', .trigger hw hs hp (.refl _) ht hr⟩
-            · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs
+            · have hp : g.pend = false := by
+                rcases hq with h | h
+                · exact h
+                · exact absurd hs.bothActive h
+              exact ⟨g, .done (.inl (hs.settled hp))⟩
+            · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs hq
               cases hw₁ : g₁.winner with
               | some o =>
                   exact ⟨g₁, .step hw hm (.done (.inr (by rw [hw₁]; exact fun e => nomatch e)))⟩
@@ -291,11 +299,59 @@ theorem Resolve.chain {g g' : GameState} (h : Resolve g g') (hp : g.pend = false
   | trigger _ _ hp' => rw [hp] at hp'; cases hp'
 
 /-- **`Resolve` takes at most `koMeasure g + 1` batches**, from a state with no pending trigger
-(hypothesis added by milestone MV7, see `Resolve.chain`). -/
+(hypothesis added by milestone MV7, see `Resolve.chain`). With a trigger pending the bound is
+`Resolve.chain_le_pend` (in two parts: no bound in terms of `koMeasure g` alone is proved, since the
+triggers' effects can put Pokémon into play and raise `koMeasure`). -/
 theorem Resolve.chain_le {g g' : GameState} (h : Resolve g g') (hp : g.pend = false) :
     ∃ n, KOChain n g g' ∧ n ≤ g.koMeasure + 1 := by
   obtain ⟨n, hc⟩ := h.chain hp
   exact ⟨n, hc, hc.length_le⟩
+
+/-- **The shape of every resolution** (milestone MV7): a chain of at most `koMeasure g + 1` batch
+steps; or such a chain to a state `g₁` with both Active Spots filled and a trigger pending, the
+resolution of its triggers (once: nothing sets the record again), and a chain of at most
+`koMeasure g₂ + 1` batch steps from their result `g₂`. So a resolution takes at most
+`(koMeasure g + 1) + 1 + (koMeasure g₂ + 1)` steps. No bound in terms of `koMeasure g` alone is
+proved: the triggers' effects can put Pokémon into play, which raises `koMeasure`. From a state
+with both Active Spots filled the first chain is empty (`Resolve.trigger_first`). -/
+theorem Resolve.chain_le_pend {g g' : GameState} (h : Resolve g g') :
+    (∃ n, KOChain n g g' ∧ n ≤ g.koMeasure + 1) ∨
+      ∃ n₁ g₁ l g₂ n₂, KOChain n₁ g g₁ ∧ n₁ ≤ g.koMeasure + 1 ∧ g₁.winner = none ∧
+        g₁.BothActive ∧ g₁.pend = true ∧ l.Perm g₁.benchedTrigs ∧
+        Fire .oppBenched l { g₁ with pend := false } g₂ ∧ KOChain n₂ g₂ g' ∧
+        n₂ ≤ g₂.koMeasure + 1 := by
+  induction h with
+  | done => exact .inl ⟨0, .refl _, Nat.zero_le _⟩
+  | step hn hm _ ih =>
+      rcases ih with ⟨n, hc, -⟩ | ⟨n₁, g₁, l, g₂, n₂, hc, -, h1, h2, h3, h4, h5, h6, h7⟩
+      · exact .inl ⟨n + 1, .step hn hm hc, (KOChain.step hn hm hc).length_le⟩
+      · exact .inr ⟨n₁ + 1, g₁, l, g₂, n₂, .step hn hm hc, (KOChain.step hn hm hc).length_le,
+          h1, h2, h3, h4, h5, h6, h7⟩
+  | @trigger g g₁ g' l hn hb hp hl ht hr _ =>
+      obtain ⟨n, hc, hle⟩ := hr.chain_le ht.zoneOnly.pend
+      exact .inr ⟨0, g, l, g₁, n, .refl _, Nat.zero_le _, hn, hb, hp, hl, ht, hc, hle⟩
+
+/-- **A pending trigger resolves first** (milestone MV7): from a state with both Active Spots filled,
+a trigger pending and no outcome, every resolution begins with the triggers (no batch Knock Out step
+comes before them: `KOBatch` needs no trigger ready), then at most `koMeasure g₂ + 1` batch steps
+from their result `g₂`. So inside a Trainer, Stadium or Ability effect the triggers raised by a
+step see the Pokémon in play as that step left them. -/
+theorem Resolve.trigger_first {g g' : GameState} (h : Resolve g g') (hb : g.BothActive)
+    (hp : g.pend = true) (hn : g.winner = none) :
+    ∃ l g₂ n, l.Perm g.benchedTrigs ∧ Fire .oppBenched l { g with pend := false } g₂ ∧
+      KOChain n g₂ g' ∧ n ≤ g₂.koMeasure + 1 := by
+  cases h with
+  | done h =>
+      rcases h with hs | hw
+      · rw [hs.2.2.2] at hp; cases hp
+      · exact absurd hn hw
+  | step _ hm _ =>
+      rcases hm.not_ready with hq | hq
+      · rw [hq] at hp; cases hp
+      · exact absurd hb hq
+  | trigger _ _ _ hl ht hr =>
+      obtain ⟨n, hc, hle⟩ := hr.chain_le ht.zoneOnly.pend
+      exact ⟨_, _, n, hl, ht, hc, hle⟩
 
 /-! ## With triggers (milestone M8b)
 

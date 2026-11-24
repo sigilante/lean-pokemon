@@ -1190,7 +1190,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
   have hfl := Store.flags_of_cap hm₁
   cases h with
   | @trigger _ l hcl hp hl ht =>
-      have hcl₂ := GameState.calm_of_clamp hc hcl hH
+      have hcl₂ := GameState.bothActive_of_clampAt hc hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_clampAt hc).trans hp
       have hT := GameState.benchedTrigs_of_clampAt hc
       have hc₀ : ({ g₁ with pend := false } : GameState).clamp k =

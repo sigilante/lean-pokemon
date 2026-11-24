@@ -76,8 +76,10 @@ now says where the Pokémon goes and which move it is. Milestone M8b changed it 
 the batch step `g₁` followed by the `koByAttack` triggers it fires (`Fire`), and the discard pile
 named is the batch step's (a trigger may move cards out of it). Until this name was introduced the theorem was
 `Move.pending_untouched`, a name from before batch-KO that no longer fits; that name is kept as a
-deprecated alias. -/
-theorem Move.pending_knockedOut {g g' : GameState} {p : InPlay} (hm : Move g g') :
+deprecated alias. Milestone MV7 added the hypothesis `g.pend = false`: a pending trigger resolves
+before the Knock Out check (`Move.trigger`). -/
+theorem Move.pending_knockedOut {g g' : GameState} {p : InPlay} (hm : Move g g')
+    (hpd : g.pend = false := by first | rfl | assumption) :
     (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage →
         ∃ g₁, KOBatch g g₁ ∧ (∃ l, g₁.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
           (∃ ts, ts.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack ts g₁ g') ∧
@@ -111,7 +113,7 @@ theorem Move.pending_knockedOut {g g' : GameState} {p : InPlay} (hm : Move g g')
   | endTurn _ _ _ _ _ _ _ _ hk _ => exact bounded hk _ _
   | startTurn _ _ _ hk _ => exact bounded hk _ _
   | deckOut _ _ _ hk _ => exact bounded hk _ _
-  | trigger hc => exact bounded hc.1 _ _
+  | trigger _ hp => rw [hpd] at hp; cases hp
   | knockOuts h hl ht =>
       exact ⟨fun ha hk => ⟨_, h, h.active_out (w := .own) ha hk, ⟨_, hl, ht⟩,
           ht.zoneOnly.first.trans h.same.1⟩,
@@ -122,7 +124,8 @@ theorem Move.pending_knockedOut {g g' : GameState} {p : InPlay} (hm : Move g g')
 milestone batch-KO, when the pending Active Pokémon could stay untouched by the move; it is now
 Knocked Out, so the name no longer fits. -/
 @[deprecated Move.pending_knockedOut (since := "2026-11-22")]
-theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') :
+theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g')
+    (hpd : g.pend = false := by first | rfl | assumption) :
     (g.cur.active = some p → g.hpOf .own .active p ≤ p.damage →
         ∃ g₁, KOBatch g g₁ ∧ (∃ l, g₁.cur.discard = p.cardList ++ l ++ g.cur.discard) ∧
           (∃ ts, ts.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack ts g₁ g') ∧
@@ -131,7 +134,7 @@ theorem Move.pending_untouched {g g' : GameState} {p : InPlay} (hm : Move g g') 
         ∃ g₁, KOBatch g g₁ ∧ (∃ l, g₁.opp.discard = p.cardList ++ l ++ g.opp.discard) ∧
           (∃ ts, ts.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack ts g₁ g') ∧
           g'.curIsFirst = g.curIsFirst) :=
-  Move.pending_knockedOut hm
+  Move.pending_knockedOut hm hpd
 
 namespace Reads
 

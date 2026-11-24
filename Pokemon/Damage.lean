@@ -1045,6 +1045,24 @@ theorem GameState.pend_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : G
     (h : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k) : g₂.pend = g₁.pend :=
   (congrArg GameState.pend h).symm
 
+/-- Both clamps keep whether both Active Spots are filled (milestone MV7). -/
+theorem GameState.bothActive_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
+    (h : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k) (hb : g₁.BothActive) :
+    g₂.BothActive := by
+  have e1 := congrArg (fun g => g.cur.active.isSome) h
+  have e2 := congrArg (fun g => g.opp.active.isSome) h
+  simp only [GameState.clampAt, Option.isSome_map] at e1 e2
+  exact ⟨e1 ▸ hb.1, e2 ▸ hb.2⟩
+
+/-- Both clamps keep "no trigger ready to resolve", the premise of the batch Knock Out step
+(milestone MV7). -/
+theorem GameState.notReady_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
+    (h : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k)
+    (hq : g₁.pend = false ∨ ¬ g₁.BothActive) : g₂.pend = false ∨ ¬ g₂.BothActive := by
+  rcases hq with hp | hb
+  · exact .inl ((GameState.pend_of_clampAt h).trans hp)
+  · exact .inr fun hb₂ => hb (GameState.bothActive_of_clampAt h.symm hb₂)
+
 theorem GameState.settled_of_clamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.clamp k = g₂.clamp k)
     (hs : Settled g₁) (hH : g₁.HpBelow k) : Settled g₂ :=
   (GameState.calm_of_clamp h hs.calm hH).settled ((GameState.pend_of_clampAt h).trans hs.2.2.2)
@@ -1351,17 +1369,17 @@ theorem KOBatch.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (h : KOBatch g
     rw [← GameState.koStep_clamp hH, hc, GameState.koStep_clamp hH₂]
   have hwk := GameState.winner_of_clamp hks
   cases h with
-  | won hu hw =>
+  | won hu hw hq =>
       exact ⟨_, .won (fun hs => hu (GameState.calm_of_clamp hc.symm hs hH₂))
-        (by rw [hwk]; exact hw), hks⟩
-  | @go ac ao bc bo hu hw hpc hpo =>
+        (by rw [hwk]; exact hw) (GameState.notReady_of_clampAt hc hq), hks⟩
+  | @go ac ao bc bo hu hw hpc hpo hq =>
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, hg, hc₂, ha₂, -, -, he₁, he₂⟩ := GameState.clamp_inv hks
       obtain ⟨ac', bc', hpc', hac, hbc⟩ := hpc.sim (a₂ := g₂.koStep.cur.active)
         (b₂ := g₂.koStep.cur.bench) (by rw [hg]; exact hc₂) (by rw [hg]; exact he₁)
       obtain ⟨ao', bo', hpo', hao, hbo⟩ := hpo.sim (a₂ := g₂.koStep.opp.active)
         (b₂ := g₂.koStep.opp.bench) (by rw [hg]; exact ha₂) (by rw [hg]; exact he₂)
       refine ⟨_, .go (fun hs => hu (GameState.calm_of_clamp hc.symm hs hH₂))
-        (by rw [hwk]; exact hw) hpc' hpo', ?_⟩
+        (by rw [hwk]; exact hw) hpc' hpo' (GameState.notReady_of_clampAt hc hq), ?_⟩
       have e : ∀ X : GameState, ∀ a b c d, (X.withPlay a b c d).clamp k =
           (X.clamp k).withPlay (a.map (InPlay.clampWith k .hp)) (b.map (InPlay.clampWith k .hp))
             (c.map (InPlay.clampWith k .hp)) (d.map (InPlay.clampWith k .hp)) :=

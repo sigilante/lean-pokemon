@@ -1092,6 +1092,14 @@ both Active Spots are filled: the `Settled` of the milestones before MV7. The ba
 def Calm (g : GameState) : Prop :=
   DamageBounded g ∧ g.cur.active ≠ none ∧ g.opp.active ≠ none
 
+/-- Both Active Spots are filled. A pending trigger (`GameState.pend`, milestone MV7) resolves from
+such a state (`Move.trigger`, `Resolve.trigger`), before the Knock Out check. -/
+def GameState.BothActive (g : GameState) : Prop :=
+  g.cur.active.isSome = true ∧ g.opp.active.isSome = true
+
+instance (g : GameState) : Decidable g.BothActive :=
+  inferInstanceAs (Decidable (_ ∧ _))
+
 /-- `Calm` and no triggered Ability pending (`GameState.pend = false`, milestone MV7). Every move
 except the batch Knock Out step (`Move.knockOuts`) and the resolution of pending triggers
 (`Move.trigger`) requires it, so every pending Knock Out is taken, the Active Pokémon replaced, and
@@ -1277,11 +1285,14 @@ not end the game lowers twice the number of Pokémon in play plus the number of 
 (`KOBatch.koMeasure_lt`); every chain of batches is finite (`KOBatch.acc`) and every state has a
 `Resolve` result (`Resolve.exists`), in `Pokemon/Terminate.lean`. -/
 inductive KOBatch : GameState → GameState → Prop where
-  | won {g : GameState} (hu : ¬ Calm g) (hw : g.koStep.winner ≠ none) : KOBatch g g.koStep
+  | won {g : GameState} (hu : ¬ Calm g) (hw : g.koStep.winner ≠ none)
+      (hq : g.pend = false ∨ ¬ g.BothActive := by first | exact .inl rfl | assumption) :
+      KOBatch g g.koStep
   | go {g : GameState} {ac ao : Option InPlay} {bc bo : List InPlay} (hu : ¬ Calm g)
       (hw : g.koStep.winner = none)
       (hc : Promote g.koStep.cur.active g.koStep.cur.bench ac bc)
-      (ho : Promote g.koStep.opp.active g.koStep.opp.bench ao bo) :
+      (ho : Promote g.koStep.opp.active g.koStep.opp.bench ao bo)
+      (hq : g.pend = false ∨ ¬ g.BothActive := by first | exact .inl rfl | assumption) :
       KOBatch g (g.koStep.withPlay ac bc ao bo)
 
 /-- `Calm`, decided. -/
@@ -1335,7 +1346,7 @@ inductive Resolve : GameState → GameState → Prop where
   | done {g : GameState} (h : Settled g ∨ g.winner ≠ none) : Resolve g g
   | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOBatch g g₁)
       (hr : Resolve g₁ g') : Resolve g g'
-  | trigger {g g₁ g' : GameState} {l : List Ability} (hn : g.winner = none) (hc : Calm g)
+  | trigger {g g₁ g' : GameState} {l : List Ability} (hn : g.winner = none) (hb : g.BothActive)
       (hp : g.pend = true) (hl : l.Perm g.benchedTrigs)
       (ht : Fire .oppBenched l { g with pend := false } g₁) (hr : Resolve g₁ g') : Resolve g g'
 
@@ -1928,7 +1939,7 @@ inductive Move : GameState → GameState → Prop where
   (`Fire`; a "you may" one can be declined), and the record is cleared. Before any other move:
   every other move but the batch Knock Out step needs `Settled`, or (`endTurn`, `startTurn`,
   `deckOut`) `pend = false` -/
-  | trigger {g g' : GameState} {l : List Ability} (hc : Calm g) (hp : g.pend = true)
+  | trigger {g g' : GameState} {l : List Ability} (hb : g.BothActive) (hp : g.pend = true)
       (hl : l.Perm g.benchedTrigs) (ht : Fire .oppBenched l { g with pend := false } g') :
       Move g g'
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
@@ -1980,6 +1991,12 @@ theorem KOBatch.not_calm {g g' : GameState} (h : KOBatch g g') : ¬ Calm g := by
 /-- The batch Knock Out step is taken only from a state that is not `Settled`. -/
 theorem KOBatch.not_settled {g g' : GameState} (h : KOBatch g g') : ¬ Settled g :=
   fun hs => h.not_calm hs.calm
+
+/-- The batch Knock Out step is taken only when no trigger is ready to resolve (milestone MV7): none
+is pending, or an Active Spot is empty. -/
+theorem KOBatch.not_ready {g g' : GameState} (h : KOBatch g g') :
+    g.pend = false ∨ ¬ g.BothActive := by
+  cases h <;> assumption
 
 /-- The batch Knock Out step keeps the pending-trigger record (milestone MV7). -/
 theorem KOBatch.pend_eq {g g' : GameState} (h : KOBatch g g') : g'.pend = g.pend := by
@@ -2044,7 +2061,7 @@ theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
 state with a trigger pending, the opponent's `oppBenched` triggers fire, in any order, on the state
 with the record cleared. -/
 def TrigMove (g g' : GameState) : Prop :=
-  Calm g ∧ g.pend = true ∧
+  g.BothActive ∧ g.pend = true ∧
     ∃ l, l.Perm g.benchedTrigs ∧ Fire .oppBenched l { g with pend := false } g'
 
 /-- **From a state that is not `Settled` the only moves are the batch Knock Out step and the
@@ -2112,15 +2129,18 @@ theorem Move.eq_of_batchTrigs_nil {g g₁ g' : GameState} {l : List Ability}
   rw [List.Perm.eq_nil hl] at ht
   exact ht.nil_eq
 
-/-- A move from a state that is not `Calm`, whose check ends the game, is the check alone: no
-trigger fires once the game is over. (Milestone MV7: the hypothesis was `¬ Settled g`; a state that
-is `Calm` with a trigger pending is not `Settled`, and from it the move resolves the trigger.) -/
+/-- A move from a state that is not `Calm`, with no trigger pending, whose check ends the game, is
+the check alone: no trigger fires once the game is over. (Milestone MV7: the hypothesis was
+`¬ Settled g`; a state that is `Calm` with a trigger pending is not `Settled`, and from it the move
+resolves the trigger. The hypothesis `g.pend = false` was added when the pending triggers were made
+to resolve before the Knock Out check: from a state with one pending the move resolves it.) -/
 theorem Move.eq_koStep_of_won {g g' : GameState} (hm : Move g g') (hu : ¬ Calm g)
-    (hw : g.koStep.winner ≠ none) : g' = g.koStep := by
-  rcases hm.batch_of_not_settled (fun hs => hu hs.calm) with ⟨g₁, l, h, hl, ht⟩ | ⟨hc, -⟩
+    (hw : g.koStep.winner ≠ none) (hpd : g.pend = false := by first | rfl | assumption) :
+    g' = g.koStep := by
+  rcases hm.batch_of_not_settled (fun hs => hu hs.calm) with ⟨g₁, l, h, hl, ht⟩ | ⟨-, hp, -⟩
   · have e := h.eq_of_won hw
     subst e
     exact Move.eq_of_batchTrigs_nil hl ht (GameState.batchTrigs_of_won hw)
-  · exact absurd hc hu
+  · rw [hpd] at hp; cases hp
 
 end Pokemon

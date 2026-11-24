@@ -482,17 +482,18 @@ theorem move_r0 {g₁ : GameState} (hm : Move r0 g₁) (hb : g₁.opp.bench = [a
 
 /-- From a state whose check ends the game, every move is the check. -/
 theorem move_eq_koStep {g g' : GameState} (hu : ¬ Calm g) (hw : g.koStep.winner ≠ none)
-    (hm : Move g g') : g' = g.koStep :=
+    (hm : Move g g') (hpd : g.pend = false := by first | rfl | assumption) : g' = g.koStep :=
   hm.eq_koStep_of_won hu hw
 
 /-- Reachability from a state whose check ends the game. -/
 theorem reach_of_won {g g' : GameState} (hu : ¬ Calm g) (hw : g.koStep.winner ≠ none)
-    (hn : g.winner = none) (h : Reach g g') : g' = g ∨ g' = g.koStep := by
+    (hn : g.winner = none) (h : Reach g g') (hpd : g.pend = false := by first | rfl | assumption) :
+    g' = g ∨ g' = g.koStep := by
   induction h with
   | refl => exact .inl rfl
   | step _ hn' hm ih =>
       rcases ih with rfl | rfl
-      · exact .inr (move_eq_koStep hu hw hm)
+      · exact .inr (move_eq_koStep hu hw hm hpd)
       · exact absurd hn' hw
 
 /-- **The Benched Pokémon cannot be promoted and survive** (milestone batch-KO; it replaces the

@@ -235,10 +235,6 @@ theorem ZStep.exists_of_trigOk {e : Effect} {w : Whose} (hw : e.zSide = some w)
         | cons p b => exact ⟨_, .toolsBench (w := w') (b₁ := []) (by rw [hb]; rfl), ha⟩
   case look => simp [Effect.trigOk] at hk
 
-/-- Both Active Spots are filled. -/
-def GameState.BothActive (g : GameState) : Prop :=
-  g.cur.active.isSome = true ∧ g.opp.active.isSome = true
-
 theorem GameState.BothActive.swap {g : GameState} (h : g.BothActive) : g.swap.BothActive :=
   ⟨h.2, h.1⟩
 
@@ -368,11 +364,16 @@ theorem Fire.exists {ev : TrigEvent} : ∀ {l : List Ability},
 theorem Calm.bothActive {g : GameState} (h : Calm g) : g.BothActive :=
   ⟨Option.isSome_iff_ne_none.2 h.2.1, Option.isSome_iff_ne_none.2 h.2.2⟩
 
-/-- **Pending triggers can always be resolved** (milestone MV7): from a `Calm` state, the opponent's
-`oppBenched` triggers have a resolution (every one resolving) on the state with the record cleared. -/
+/-- **Pending triggers can always be resolved** (milestone MV7): from a state with both Active
+Spots filled, the opponent's `oppBenched` triggers have a resolution (every one resolving) on the
+state with the record cleared. -/
+theorem GameState.BothActive.trigs_exist {g : GameState} (h : g.BothActive) :
+    ∃ g', Fire .oppBenched g.benchedTrigs { g with pend := false } g' :=
+  Fire.exists (fun _ hab => GameState.benchedTrigs_trigOk hab) (g := { g with pend := false }) h
+
+/-- `GameState.BothActive.trigs_exist` from a `Calm` state. -/
 theorem Calm.trigs_exist {g : GameState} (h : Calm g) :
     ∃ g', Fire .oppBenched g.benchedTrigs { g with pend := false } g' :=
-  Fire.exists (fun _ hab => GameState.benchedTrigs_trigOk hab) (g := { g with pend := false })
-    h.bothActive
+  h.bothActive.trigs_exist
 
 end Pokemon

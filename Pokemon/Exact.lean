@@ -322,17 +322,17 @@ theorem KOBatch.xclamp_sim {g₁ g₁' g₂ : GameState} (h : KOBatch g₁ g₁'
     rw [← GameState.koStep_xclamp hH, hc, GameState.koStep_xclamp hH₂]
   have hwk := GameState.winner_of_xclamp hks
   cases h with
-  | won hu hw =>
+  | won hu hw hq =>
       exact ⟨_, .won (fun hs => hu (GameState.calm_of_xclamp hc.symm hs hH₂))
-        (by rw [hwk]; exact hw), hks⟩
-  | @go ac ao bc bo hu hw hpc hpo =>
+        (by rw [hwk]; exact hw) (GameState.notReady_of_clampAt (GameState.xclampAt_iff.1 hc).1 hq), hks⟩
+  | @go ac ao bc bo hu hw hpc hpo hq =>
       obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hks
       obtain ⟨ac', bc', hpc', hac, hbc⟩ := hpc.sim (a₂ := g₂.koStep.cur.active)
         (b₂ := g₂.koStep.cur.bench) (by rw [hg]; exact hc₂) (by rw [hg]; exact he₁)
       obtain ⟨ao', bo', hpo', hao, hbo⟩ := hpo.sim (a₂ := g₂.koStep.opp.active)
         (b₂ := g₂.koStep.opp.bench) (by rw [hg]; exact ha₂) (by rw [hg]; exact he₂)
       refine ⟨_, .go (fun hs => hu (GameState.calm_of_xclamp hc.symm hs hH₂))
-        (by rw [hwk]; exact hw) hpc' hpo', ?_⟩
+        (by rw [hwk]; exact hw) hpc' hpo' (GameState.notReady_of_clampAt (GameState.xclampAt_iff.1 hc).1 hq), ?_⟩
       have e : ∀ X : GameState, ∀ a b c d, (X.withPlay a b c d).xclamp K =
           (X.xclamp K).withPlay (a.map (InPlay.clampWith K .hp)) (b.map (InPlay.clampWith K .hp))
             (c.map (InPlay.clampWith K .hp)) (d.map (InPlay.clampWith K .hp)) :=
@@ -357,7 +357,7 @@ theorem Resolve.xclamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
       exact ⟨g₂', .step (by rw [GameState.winner_of_xclamp hc]; exact hn) hm₂ hr₂, hc'⟩
   | @trigger g₀ g₃ g' l hn hcl hp hl ht _ ih =>
       intro g₂ hH hc
-      have hcl₂ := GameState.calm_of_xclamp hc hcl (GameState.hpBelow_of_hpBound hH)
+      have hcl₂ := GameState.bothActive_of_clampAt (GameState.xclampAt_iff.1 hc).1 hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_xclampAt hc).trans hp
       have hT := GameState.benchedTrigs_of_xclampAt hc
       have hc₀ : ({ g₀ with pend := false } : GameState).xclamp K =
@@ -1097,7 +1097,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
   obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
   cases h with
   | @trigger _ l hcl hp hl ht =>
-      have hcl₂ := GameState.calm_of_xclamp hc hcl hH
+      have hcl₂ := GameState.bothActive_of_clampAt (GameState.xclampAt_iff.1 hc).1 hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_xclampAt hc).trans hp
       have hT := GameState.benchedTrigs_of_xclampAt hc
       have hc₀ : ({ g₁ with pend := false } : GameState).xclamp k =
