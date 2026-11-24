@@ -43,14 +43,15 @@ turns are rightly not moves in the owner's turn, and set nothing).
 namespace Pokemon
 
 /-- The end of a turn shifts the Knock Out history of both players: the player who now moves
-reads, as "last turn", what happened to their Pokémon in the turn just ended. -/
+reads, as "last turn", what happened to their Pokémon in the turn just ended. (Milestone MV7 added
+the premise `g.pend = false` of `Move.endTurn`.) -/
 theorem Move.endTurn_ko {g : GameState} {a b : InPlay} {bo bc : List InPlay}
     (fa sa ca fb sb cb : Bool) (ha : g.opp.active = some a) (hb : g.cur.active = some b)
     (hk : DamageBounded g) (hbt : g.between = false) (hco : BenchChar g.opp.bench bo)
-    (hcc : BenchChar (g.cur.bench.map InPlay.unfresh) bc) :
+    (hcc : BenchChar (g.cur.bench.map InPlay.unfresh) bc) (hpd : g.pend = false) :
     ∃ g', Move g g' ∧ g'.cur.ko.last = g.opp.ko.now ∧ g'.cur.ko.lastAtk = g.opp.ko.nowAtk ∧
       g'.cur.ko.now = false ∧ g'.opp.ko.last = g.cur.ko.now :=
-  ⟨_, .endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc, rfl, rfl, rfl, rfl⟩
+  ⟨_, .endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc hpd, rfl, rfl, rfl, rfl⟩
 
 /-- The batch Knock Out check outside Checkup records a Knock Out of the opponent's Pokémon. -/
 theorem GameState.koStep_noteOpp {g : GameState} (hbt : g.between = false)

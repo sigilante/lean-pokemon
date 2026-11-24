@@ -313,11 +313,26 @@ theorem KOBatch.perm {g g' : GameState} (h : KOBatch g g') : g'.allCards.Perm g.
         List.count_append] at *
       omega
 
+/-- Exchanging the players permutes the cards in the game. -/
+theorem GameState.swap_perm (g : GameState) : g.swap.allCards.Perm g.allCards := by
+  simp only [GameState.allCards, GameState.swap]
+  exact List.Perm.append_right _ List.perm_append_comm
+
+/-- **Resolving triggers permutes the cards** (milestone M8b). -/
+theorem Fire.perm {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g') :
+    g'.allCards.Perm g.allCards := by
+  induction h with
+  | nil => exact .refl _
+  | @run ab l g g₁ g₂ _ hr _ ih =>
+      exact ih.trans ((g₁.swap_perm).trans (hr.perm.trans g.swap_perm))
+  | decline _ _ ih => exact ih
+
 /-- Taking the Knock Outs permutes the cards in the game. -/
 theorem Resolve.perm {g g' : GameState} (h : Resolve g g') : g'.allCards.Perm g.allCards := by
   induction h with
   | done => exact .refl _
   | step _ hm _ ih => exact ih.trans hm.perm
+  | trigger _ _ _ _ ht _ ih => exact ih.trans ht.perm
 
 /-- Resolving a Trainer card's effect, Knock Outs included, permutes the cards in the game:
 a Knock Out in mid-effect moves the Knocked Out Pokémon's cards to its owner's discard pile and
@@ -350,20 +365,6 @@ theorem PlayFromHand.perm {g g₁ : GameState} {x : InPlay} {w : PlayWay}
   | evolve hh ha => perm_count [hh, ha]
   | evolveBench hh hb => perm_count [hh, hb]
 
-/-- Exchanging the players permutes the cards in the game. -/
-theorem GameState.swap_perm (g : GameState) : g.swap.allCards.Perm g.allCards := by
-  simp only [GameState.allCards, GameState.swap]
-  exact List.Perm.append_right _ List.perm_append_comm
-
-/-- **Resolving triggers permutes the cards** (milestone M8b). -/
-theorem Fire.perm {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g') :
-    g'.allCards.Perm g.allCards := by
-  induction h with
-  | nil => exact .refl _
-  | @run ab l g g₁ g₂ _ hr _ ih =>
-      exact ih.trans ((g₁.swap_perm).trans (hr.perm.trans g.swap_perm))
-  | decline _ _ ih => exact ih
-
 /-- A legal move permutes the cards in the game. -/
 theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCards := by
   cases h with
@@ -394,6 +395,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
       rw [GameState.allCards_afterAttack]; exact ht.perm.trans hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | knockOuts h _ ht => exact ht.perm.trans h.perm
+  | trigger _ _ _ ht => exact ht.perm
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh, hco.cardList,
         hcc.cardList, benchCardList_unfresh]

@@ -17,8 +17,10 @@ proves that the repetition ends.
   `Resolve`), is finite (accessibility of the converse relation).
 * `Resolve.exists`: every state has a `Resolve` result, and every result is `Settled` or has an
   outcome. So every primitive step of a Trainer effect can always be resolved.
-* `KOChain`, `Resolve.chain`, `KOChain.length_le`: a `Resolve` result is reached by a chain of at
-  most `koMeasure g + 1` batches.
+* `KOChain`, `Resolve.chain`, `KOChain.length_le`: a `Resolve` result from a state with no pending
+  trigger is reached by a chain of at most `koMeasure g + 1` batches. With a trigger pending
+  (milestone MV7) `Resolve` resolves it once the state is `Calm` (`Resolve.trigger`); no trigger
+  sets the record again, so `Resolve.exists` recurses on the record first.
 
 All proofs are constructive (the axiom gate of `Pokemon/Audit.lean`).
 -/
@@ -113,9 +115,9 @@ theorem Promote.count {a a' : Option InPlay} {b b' : List InPlay} (h : Promote a
       simp only [optCount, List.length_append, List.length_cons]
       omega
 
-/-- A state that is not `Settled` has a pending Knock Out (some Prize value to take) or an empty
-Active Spot. -/
-theorem koVal_pos_or_empty {g : GameState} (hu : ¬ Settled g) :
+/-- A state that is not `Calm` has a pending Knock Out (some Prize value to take) or an empty
+Active Spot. (Before milestone MV7 the hypothesis was `¬ Settled g`, which meant the same.) -/
+theorem koVal_pos_or_empty {g : GameState} (hu : ¬ Calm g) :
     0 < g.koVal .own + g.koVal .opp ∨ 0 < g.cur.emptyActive + g.opp.emptyActive := by
   rcases damageBounded_or_pending g with hk | hk
   · right
@@ -131,7 +133,7 @@ theorem koVal_pos_or_empty {g : GameState} (hu : ¬ Settled g) :
             simp only [PlayerState.emptyActive, ho, optCount]
             omega
         | some b =>
-            have hs : Settled g :=
+            have hs : Calm g :=
               ⟨hk, (by rw [hc]; exact fun e => nomatch e), (by rw [ho]; exact fun e => nomatch e)⟩
             exact absurd hs hu
   · left
@@ -148,7 +150,7 @@ theorem koVal_pos_or_empty {g : GameState} (hu : ¬ Settled g) :
 /-- **A batch Knock Out step lowers the measure** unless it ends the game. The step is `go`: the
 check removes `k` Pokémon and the promotions fill both Active Spots without changing the count, so
 the measure goes from `2n + e` to `2(n − k)`; and `k > 0` or `e > 0`, since the state was not
-`Settled` (`koVal_pos_or_empty`). -/
+`Calm` (`koVal_pos_or_empty`). -/
 theorem KOBatch.koMeasure_lt {g g' : GameState} (h : KOBatch g g') (hw : g'.winner = none) :
     g'.koMeasure < g.koMeasure := by
   cases h with
@@ -210,6 +212,25 @@ result is `Settled` or has an outcome. So `Resolve` never gets stuck and every p
 Trainer effect can be followed by its Knock Outs (`TRun.prim`). -/
 theorem Resolve.exists (g : GameState) :
     ∃ g', Resolve g g' ∧ (Settled g' ∨ g'.winner ≠ none) := by
+  -- with no trigger pending: batch steps only (the batch step keeps the record)
+  have key₀ : ∀ n g, g.koMeasure = n → g.pend = false → ∃ g', Resolve g g' := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+        intro g hn hp
+        cases hw : g.winner with
+        | some o => exact ⟨g, .done (.inr (by rw [hw]; exact fun e => nomatch e))⟩
+        | none =>
+            by_cases hs : Calm g
+            · exact ⟨g, .done (.inl (hs.settled hp))⟩
+            · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs
+              cases hw₁ : g₁.winner with
+              | some o =>
+                  exact ⟨g₁, .step hw hm (.done (.inr (by rw [hw₁]; exact fun e => nomatch e)))⟩
+              | none =>
+                  obtain ⟨g', hr⟩ := ih _ (hn ▸ hm.koMeasure_lt hw₁) g₁ rfl (hm.pend_eq.trans hp)
+                  exact ⟨g', .step hw hm hr⟩
+  -- with one pending (milestone MV7): batch steps, then the triggers, then `key₀`
   have key : ∀ n g, g.koMeasure = n → ∃ g', Resolve g g' := by
     intro n
     induction n using Nat.strongRecOn with
@@ -218,8 +239,13 @@ theorem Resolve.exists (g : GameState) :
         cases hw : g.winner with
         | some o => exact ⟨g, .done (.inr (by rw [hw]; exact fun e => nomatch e))⟩
         | none =>
-            by_cases hs : Settled g
-            · exact ⟨g, .done (.inl hs)⟩
+            by_cases hs : Calm g
+            · cases hp : g.pend with
+              | false => exact ⟨g, .done (.inl (hs.settled hp))⟩
+              | true =>
+                  obtain ⟨g₁, ht⟩ := hs.trigs_exist
+                  obtain ⟨g', hr⟩ := key₀ _ g₁ rfl ht.zoneOnly.pend
+                  exact ⟨g', .trigger hw hs hp (.refl _) ht hr⟩
             · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs
               cases hw₁ : g₁.winner with
               | some o =>
@@ -251,18 +277,24 @@ theorem KOChain.length_le {n : Nat} {g g' : GameState} (h : KOChain n g g') :
           have := hm.koMeasure_lt hn₁
           omega
 
-/-- A `Resolve` result is reached by a chain of batch steps. -/
-theorem Resolve.chain {g g' : GameState} (h : Resolve g g') : ∃ n, KOChain n g g' := by
+/-- A `Resolve` result from a state with no pending trigger is reached by a chain of batch steps.
+(Milestone MV7 added the hypothesis `g.pend = false`: from a state with a trigger pending the
+resolution is a chain to a `Calm` state, the triggers (`Resolve.trigger`), then a chain from their
+result, which has none pending.) -/
+theorem Resolve.chain {g g' : GameState} (h : Resolve g g') (hp : g.pend = false) :
+    ∃ n, KOChain n g g' := by
   induction h with
   | done => exact ⟨0, .refl _⟩
   | step hn hm _ ih =>
-      obtain ⟨n, hc⟩ := ih
+      obtain ⟨n, hc⟩ := ih (hm.pend_eq.trans hp)
       exact ⟨n + 1, .step hn hm hc⟩
+  | trigger _ _ hp' => rw [hp] at hp'; cases hp'
 
-/-- **`Resolve` takes at most `koMeasure g + 1` batches.** -/
-theorem Resolve.chain_le {g g' : GameState} (h : Resolve g g') :
+/-- **`Resolve` takes at most `koMeasure g + 1` batches**, from a state with no pending trigger
+(hypothesis added by milestone MV7, see `Resolve.chain`). -/
+theorem Resolve.chain_le {g g' : GameState} (h : Resolve g g') (hp : g.pend = false) :
     ∃ n, KOChain n g g' ∧ n ≤ g.koMeasure + 1 := by
-  obtain ⟨n, hc⟩ := h.chain
+  obtain ⟨n, hc⟩ := h.chain hp
   exact ⟨n, hc, hc.length_le⟩
 
 /-! ## With triggers (milestone M8b)
@@ -382,17 +414,36 @@ theorem KOMove.acc (g : GameState) : Acc (fun b a => KOMove a b) g := by
   | some o => exact Acc.intro g fun _ ⟨hn', _⟩ => by rw [hw] at hn'; cases hn'
 
 /-- **The repeated Knock Out check with its triggers ends, for play** (milestone M8b): there is no
-infinite sequence of moves through states that are not `Settled` (from such a state the only move is
-the batch move with its triggers, `Move.batch_of_not_settled`). So a chain of Knock Outs and
+infinite sequence of moves through states that are not `Settled` (from such a state the only moves
+are the batch move with its triggers and, since milestone MV7, the resolution of pending triggers,
+`Move.batch_of_not_settled`; the batch move keeps the pending record, its resolution clears it, and
+no trigger sets it, so the measure is the record, then the Prize cards left, then `koMeasure`). So a chain of Knock Outs and
 triggers started by one move (an attack's Knock Outs, and the Knock Outs the `koByAttack` triggers
 cause) ends in a `Settled` state or with an outcome. -/
 theorem Move.unsettled_acc (g : GameState) :
     Acc (fun b a => ¬ Settled a ∧ a.winner = none ∧ Move a b) g := by
+  -- the batch move keeps the pending-trigger record
+  have keep : ∀ {g g' : GameState}, KOMove g g' → g'.pend = g.pend := by
+    intro g g' ⟨_, g₁, l, hb, _, ht⟩
+    exact ht.zoneOnly.pend.trans hb.pend_eq
+  -- with no trigger pending, only batch moves follow (milestone M8b)
+  have h₀ : ∀ g, g.pend = false → Acc (fun b a => ¬ Settled a ∧ a.winner = none ∧ Move a b) g := by
+    intro g hp
+    have h := KOMove.acc g
+    induction h with
+    | intro g _ ih =>
+        refine Acc.intro g fun g' ⟨hu, hw, hm⟩ => ?_
+        rcases hm.batch_of_not_settled hu with ⟨g₁, l, hb, hl, ht⟩ | ⟨-, hp', -⟩
+        · have hk : KOMove g g' := ⟨hw, g₁, l, hb, hl, ht⟩
+          exact ih g' hk ((keep hk).trans hp)
+        · rw [hp] at hp'; cases hp'
+  -- with one pending (milestone MV7): batch moves keep it, and its resolution clears it
   have h := KOMove.acc g
   induction h with
   | intro g _ ih =>
-      refine Acc.intro g fun g' ⟨hu, hw, hm⟩ => ih g' ?_
-      obtain ⟨g₁, l, hb, hl, ht⟩ := hm.batch_of_not_settled hu
-      exact ⟨hw, g₁, l, hb, hl, ht⟩
+      refine Acc.intro g fun g' ⟨hu, hw, hm⟩ => ?_
+      rcases hm.batch_of_not_settled hu with ⟨g₁, l, hb, hl, ht⟩ | ⟨-, -, l, -, ht⟩
+      · exact ih g' ⟨hw, g₁, l, hb, hl, ht⟩
+      · exact h₀ g' ht.zoneOnly.pend
 
 end Pokemon

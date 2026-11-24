@@ -109,7 +109,7 @@ def masher : PokemonCard := ⟨"Masher", .basic, none, 10, .colorless, [growl, s
 /-- The player to move has `a` Active; the opponent `big`. -/
 def start (a : InPlay) : GameState :=
   ⟨side [] [.energy .fire] a [], side [] [.energy .fire] (InPlay.ofBasic big) [], true, false,
-    false, false, none, none, false, false⟩
+    false, false, none, none, false, false, false⟩
 
 theorem start_wellFormed (a : InPlay) : WellFormed (start a) := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>

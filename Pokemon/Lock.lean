@@ -53,7 +53,7 @@ Active; one Prize card each, one card in each deck. -/
 def g0 : GameState :=
   ⟨{ side [] [.energy .fire] (InPlay.ofBasic feral) [InPlay.ofBasic big] with deck := deck3 },
     { side [] [.energy .fire] (InPlay.ofBasic big) [] with deck := deck3 },
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem g0_wellFormed : WellFormed g0 := by
   refine ⟨fun _ => ⟨by simp [g0, side], by simp [g0, side]⟩, fun p hp => ?_, fun p hp => by cases hp⟩
@@ -79,10 +79,11 @@ def endT (g : GameState) : GameState :=
     stadiumUsed := false }
 
 theorem endT_move {g : GameState} {a b : InPlay} (ha : g.opp.active = some a)
-    (hb : g.cur.active = some b) (hk : DamageBounded g) (hbt : g.between = false) :
+    (hb : g.cur.active = some b) (hk : DamageBounded g) (hbt : g.between = false)
+    (hpd : g.pend = false := by first | rfl | assumption) :
     Move g (endT g) := by
   have := Move.endTurn false false false false false false ha hb hk hbt (BenchChar.refl _)
-    (BenchChar.refl _)
+    (BenchChar.refl _) hpd
   simp only [endT, ha, hb, Option.map_some]
   exact this
 
@@ -93,8 +94,9 @@ def startT (g : GameState) : GameState :=
 
 theorem startT_move {g : GameState} {a b : InPlay} {c : Card} {d : List Card}
     (hbt : g.between = true) (ha : g.opp.active = some a) (hb : g.cur.active = some b)
-    (hk : DamageBounded g) (hd : g.cur.deck = c :: d) : Move g (startT g) := by
-  have := Move.startTurn hbt ha hb hk hd
+    (hk : DamageBounded g) (hd : g.cur.deck = c :: d)
+    (hpd : g.pend = false := by first | rfl | assumption) : Move g (startT g) := by
+  have := Move.startTurn hbt ha hb hk hd hpd
   simp only [startT, hd, List.drop_succ_cons, List.drop_zero, List.take_succ_cons, List.take_zero,
     List.singleton_append]
   exact this
@@ -186,6 +188,7 @@ theorem g3_no_wave : ∀ g', Move g3 g' → g'.attacked = true → g'.opp.active
         | touchBench he => simp [Effect.touch] at he
         | zone hw => simp [Effect.zSide] at hw
   | knockOuts h => exact absurd hs h.not_settled
+  | trigger _ hp => rw [hs.2.2.2] at hp; cases hp
   | endTurn => exact absurd hat (by simp)
   | _ => rfl
 

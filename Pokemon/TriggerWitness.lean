@@ -58,14 +58,14 @@ Grass Energy in the deck, an empty hand and the Prize cards `pz`. -/
 def start (opt : Bool) (pz : List Card) : GameState :=
   ⟨side [] pz (InPlay.ofBasic striker) [InPlay.ofBasic big],
     side [] pz (InPlay.ofBasic (spiky opt)) [InPlay.ofBasic big],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 /-- The state after `strike` and the `spikes` trigger: 5 damage counters on `spiky`, 3 on
 `striker`. -/
 def hit (opt : Bool) (pz : List Card) : GameState :=
   ⟨{ side [] pz { InPlay.ofBasic striker with damage := 3 } [InPlay.ofBasic big] with gxUsed := false },
     side [] pz { InPlay.ofBasic (spiky opt) with damage := 5 } [InPlay.ofBasic big],
-    true, false, true, false, none, none, false, false⟩
+    true, false, true, false, none, none, false, false, false⟩
 
 /-- Two Prize cards. -/
 def two : List Card := [.energy .fire, .energy .water]
@@ -111,7 +111,7 @@ the opponent drew the Grass Energy. -/
 theorem double_ko_then_draw (opt : Bool) :
     ∃ g', Move (hit opt two) g' ∧ g'.opp.hand = [.energy .grass, .energy .fire] ∧
       g'.cur.prizes = [.energy .water] ∧ g'.opp.prizes = [.energy .water] ∧ g'.winner = none := by
-  have hu : ¬ Settled (hit opt two) := fun hs => (spikes_fire opt two (.inl rfl)).2.1 hs.1
+  have hu : ¬ Calm (hit opt two) := fun hs => (spikes_fire opt two (.inl rfl)).2.1 hs.1
   have hw : (hit opt two).koStep.winner = none := by cases opt <;> rfl
   have hb : KOBatch (hit opt two) _ :=
     .go hu hw (ac := some (InPlay.ofBasic big)) (bc := []) (ao := some (InPlay.ofBasic big))
@@ -128,8 +128,10 @@ gives the opponent a card. -/
 theorem draw_forced :
     ∀ g', Move (hit false two) g' → g'.opp.hand.length = 2 := by
   intro g' hm
-  have hu : ¬ Settled (hit false two) := fun hs => (spikes_fire false two (.inl rfl)).2.1 hs.1
-  obtain ⟨g₁, l, hb, hl, hf⟩ := hm.batch_of_not_settled hu
+  have hu : ¬ Calm (hit false two) := fun hs => (spikes_fire false two (.inl rfl)).2.1 hs.1
+  rcases hm.batch_of_not_settled (fun hs => hu hs.calm) with ⟨g₁, l, hb, hl, hf⟩ | ⟨hc, -⟩
+  rotate_left
+  · exact absurd hc hu
   have hw₁ : g₁.winner = none := by
     obtain ⟨-, -, -, -, pw⟩ := hb.piles
     rw [pw]; rfl
@@ -159,7 +161,7 @@ theorem draw_forced :
 optional, the batch move that declines it leaves the opponent's hand as the Prize card made it. -/
 theorem draw_declined :
     ∃ g', Move (hit true two) g' ∧ g'.opp.hand = [.energy .fire] ∧ g'.winner = none := by
-  have hu : ¬ Settled (hit true two) := fun hs => (spikes_fire true two (.inl rfl)).2.1 hs.1
+  have hu : ¬ Calm (hit true two) := fun hs => (spikes_fire true two (.inl rfl)).2.1 hs.1
   have hw : (hit true two).koStep.winner = none := rfl
   have hb : KOBatch (hit true two) _ :=
     .go hu hw (ac := some (InPlay.ofBasic big)) (bc := []) (ao := some (InPlay.ofBasic big))
@@ -176,7 +178,7 @@ theorem last_prizes_suddenDeath (opt : Bool) :
     Move (start opt one) (hit opt one) ∧
       ∀ g', Move (hit opt one) g' → g'.winner = some .suddenDeath ∧ g'.opp.hand = one := by
   refine ⟨(spikes_fire opt one (.inr rfl)).1, fun g' hm => ?_⟩
-  have hu : ¬ Settled (hit opt one) := fun hs => (spikes_fire opt one (.inr rfl)).2.1 hs.1
+  have hu : ¬ Calm (hit opt one) := fun hs => (spikes_fire opt one (.inr rfl)).2.1 hs.1
   have e := hm.eq_koStep_of_won hu (by cases opt <;> decide)
   subst e
   cases opt <;> exact ⟨rfl, rfl⟩
@@ -216,7 +218,7 @@ trigger) undamaged on the Bench. -/
 def pullStart : GameState :=
   ⟨side [] two (InPlay.ofBasic puller) [InPlay.ofBasic big],
     side [] two { InPlay.ofBasic big with damage := 9 } [InPlay.ofBasic (spiky false)],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem pullStart_settled : Settled pullStart := by decide
 

@@ -99,7 +99,7 @@ theorem Move.item_guarded {g g' : GameState} {l₁ l₂ : List Card} {n : String
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g') :
     TRunG e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g' :=
-  hr.guarded (.inl (hst.congr rfl rfl rfl rfl rfl rfl))
+  hr.guarded (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))
 
 theorem Move.supporter_guarded {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
     (hst : Settled g)
@@ -109,7 +109,7 @@ theorem Move.supporter_guarded {g g' : GameState} {l₁ l₂ : List Card} {n : S
     TRunG e { g with cur := { g.cur with
         hand := l₁ ++ l₂, supporterPlayed := true,
         discard := Card.trainer n .supporter e :: g.cur.discard } } g' :=
-  hr.guarded (.inl (hst.congr rfl rfl rfl rfl rfl rfl))
+  hr.guarded (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))
 
 /-- **A finished game stops the effect.** From a state with a winner, the only resolution of
 any effect leaves the state unchanged. -/
@@ -151,9 +151,10 @@ theorem settled_of {g : GameState} {a b : InPlay} (hc : g.cur.active = some a)
     (ho : g.opp.active = some b) (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp)
     (hbc : ∀ p ∈ g.cur.bench, p.damage < p.top.hp)
     (hbo : ∀ p ∈ g.opp.bench, p.damage < p.top.hp)
-    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl) : Settled g := by
+    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl)
+    (hpd : g.pend = false := by first | rfl | assumption) : Settled g := by
   refine ⟨DamageBounded.intro' (fun p hp => ?_) (fun p hp => ?_) (fun p hp => ?_)
-    (fun p hp => ?_), by rw [hc]; simp, by rw [ho]; simp⟩
+    (fun p hp => ?_), by rw [hc]; simp, by rw [ho]; simp, hpd⟩
   · rw [hpl.hpOf (w := .own) (sp := .active) hp]; rw [hc] at hp; cases hp; exact ha
   · rw [hpl.hpOf (w := .own) (sp := .bench) hp]; exact hbc p hp
   · rw [hpl.hpOf (w := .opp) (sp := .active) hp]; rw [ho] at hp; cases hp; exact hb
@@ -172,7 +173,7 @@ def selfItem : Card := .trainer "SelfHarm" .item (.seq (.selfDamage 5) (.heal 5)
 def start1 : GameState :=
   ⟨side [selfItem] [.energy .fire] (InPlay.ofBasic mon) [InPlay.ofBasic big],
     side [] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem start1_wellFormed : WellFormed start1 := by
   refine ⟨fun _ => ⟨by simp [start1, side], by simp [start1, side]⟩, fun p hp => ?_,
@@ -194,7 +195,7 @@ def after1 : GameState :=
       false, Store.empty, true, ⟨true, false, false, false⟩⟩,
     ⟨[.energy .grass], [.energy .fire], [], [.energy .fire], [], some (InPlay.ofBasic big), [],
       false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem move_after1 : Move start1 after1 := by
   refine .item (l₁ := []) (l₂ := []) (n := "SelfHarm") rfl rfl start1_settled
@@ -230,7 +231,7 @@ move has two Prize cards and `hitItem` in hand. -/
 def start2 : GameState :=
   ⟨side [hitItem] [.energy .fire, .energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic mon) [InPlay.ofBasic big],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem start2_wellFormed : WellFormed start2 := by
   refine ⟨fun _ => ⟨by simp [start2, side], by simp [start2, side]⟩,
@@ -252,7 +253,7 @@ def after2 : GameState :=
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [],
       some { InPlay.ofBasic big with damage := 0 + 5 }, [], false, false, false, false,
       false, Store.empty, true, ⟨true, false, false, false⟩⟩,
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem move_after2 : Move start2 after2 := by
   refine .item (l₁ := []) (l₂ := []) (n := "Hit") rfl rfl start2_settled
@@ -288,7 +289,7 @@ Pokémon has 50 HP. -/
 def start3 : GameState :=
   ⟨side [winItem] [.energy .fire] (InPlay.ofBasic big) [],
     side [] [.energy .fire] (InPlay.ofBasic mon) [InPlay.ofBasic big],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem start3_wellFormed : WellFormed start3 := by
   refine ⟨fun _ => ⟨by simp [start3, side], by simp [start3, side]⟩,
@@ -306,7 +307,7 @@ def after3 : GameState :=
       [], false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
     ⟨[.energy .grass], [], [.pokemon mon], [.energy .fire], [], none, [InPlay.ofBasic big],
       false, false, false, false, false, Store.empty, true, ⟨true, false, false, false⟩⟩,
-    true, false, false, false, some (.win true), none, false, false⟩
+    true, false, false, false, some (.win true), none, false, false, false⟩
 
 theorem move_after3 : Move start3 after3 :=
   .item (l₁ := []) (l₂ := []) (n := "Win") rfl rfl start3_settled

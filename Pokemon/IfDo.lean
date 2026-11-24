@@ -503,7 +503,7 @@ def start (hand : List Card) : GameState :=
   ⟨{ side hand [.energy .fire] (InPlay.ofBasic klefki) [] with
       deck := [.energy .grass, .energy .water] },
     side [] [.energy .fire] (InPlay.ofBasic big) [], true, false, false, false, none, none, false,
-    false⟩
+    false, false⟩
 
 theorem start_wellFormed (hand : List Card) : WellFormed (start hand) := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>

@@ -64,12 +64,13 @@ def spl (b : Nat) (hand deck : List Card) : PlayerState :=
 rest-of-game bonus of `b`, the Stadium `gym` in play (owned by the first player), not yet used. -/
 def S (b : Nat) : GameState :=
   ⟨spl b [.energy .metal] [], spl b [] [.energy .metal], true, false, false, false, none,
-    some (true, gym), false, false⟩
+    some (true, gym), false, false, false⟩
 
 theorem settled_mon {g : GameState} (hc : g.cur.active = some mon) (ho : g.opp.active = some mon)
     (h1 : g.cur.bench = []) (h2 : g.opp.bench = [])
-    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl) : Settled g :=
-  Abilities.settled_two hc ho (show 0 < 10 by decide) (show 0 < 10 by decide) h1 h2 hpl
+    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl)
+    (hpd : g.pend = false := by first | rfl | assumption) : Settled g :=
+  Abilities.settled_two hc ho (show 0 < 10 by decide) (show 0 < 10 by decide) h1 h2 hpl hpd
 
 /-- **One round**: the first player uses the Stadium and ends the turn, the second player draws,
 uses the Stadium and ends the turn, the first player draws: both rest-of-game bonuses are one
@@ -157,7 +158,7 @@ def depot : Card :=
 /-- A deck with `ironDefender` (an Item that writes a carried reduction) and `depot` in play. -/
 def D : GameState :=
   ⟨spl 0 [ironDefender] [.energy .metal], spl 0 [] [.energy .metal], true, false, false, false,
-    none, some (true, depot), false, false⟩
+    none, some (true, depot), false, false, false⟩
 
 /-- **A Stadium that returns a modifier-writing Item every turn, to both players, is store-safe**
 (milestone M5), so `StoreSafe.xfinite` applies to `D`. -/
@@ -199,7 +200,7 @@ def wpl (hand deck discard : List Card) : PlayerState :=
 /-- A state in the turn proper (`bt = false`) or between turns, with the player to move `a`, the
 opponent `b`, whether the player to move went first, the Stadium slot and the two Stadium flags. -/
 def W (a b : PlayerState) (cf bt : Bool) (st : Option (Bool × Card)) (sp su : Bool) : GameState :=
-  ⟨a, b, cf, false, false, bt, none, st, sp, su⟩
+  ⟨a, b, cf, false, false, bt, none, st, sp, su, false⟩
 
 theorem W_settled (a b : PlayerState) (cf bt : Bool) (st : Option (Bool × Card)) (sp su : Bool)
     (ha : a.active = some mon) (hb : b.active = some mon) (ha' : a.bench = [])
@@ -251,6 +252,7 @@ theorem levincia_refused : ∀ g', Move W2 g' → g'.curIsFirst = true →
   intro g' hm hc
   cases hm with
   | playBasic hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
+  | trigger _ hp => simp [W2, W] at hp
   | attach => exact ⟨rfl, rfl⟩
   | evolve hh => exact absurd (mem_of_eq hh) (by simp [W2, W, wpl, lt])
   | attachBench _ _ hb => simp [W2, W, wpl] at hb
@@ -280,8 +282,8 @@ theorem levincia_refused : ∀ g', Move W2 g' → g'.curIsFirst = true →
   | knockOuts h =>
       have hs : Settled W2 := W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl
       cases h with
-      | won hu => exact absurd hs hu
-      | go hu => exact absurd hs hu
+      | won hu => exact absurd hs.calm hu
+      | go hu => exact absurd hs.calm hu
   | endTurn => simp [W2, W] at hc
   | startTurn hbt => simp [W2, W] at hbt
   | deckOut hbt => simp [W2, W] at hbt
@@ -332,6 +334,7 @@ theorem same_name_refused : ∀ g', Move (X levincia) g' → g'.curIsFirst = tru
   intro g' hm hc
   cases hm with
   | playBasic hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
+  | trigger _ hp => simp [X, W] at hp
   | attach hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
   | evolve hh => exact absurd (mem_of_eq hh) (by simp [X, W, wpl, levincia])
   | attachBench _ _ hb => simp [X, W, wpl] at hb
@@ -365,8 +368,8 @@ theorem same_name_refused : ∀ g', Move (X levincia) g' → g'.curIsFirst = tru
   | knockOuts h =>
       have hs : Settled (X levincia) := W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl
       cases h with
-      | won hu => exact absurd hs hu
-      | go hu => exact absurd hs hu
+      | won hu => exact absurd hs.calm hu
+      | go hu => exact absurd hs.calm hu
   | endTurn => simp [X, W] at hc
   | startTurn hbt => simp [X, W] at hbt
   | deckOut hbt => simp [X, W] at hbt

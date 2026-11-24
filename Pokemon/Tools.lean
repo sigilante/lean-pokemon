@@ -36,7 +36,7 @@ def tpl (hand : List Card) (active : InPlay) (bench : List InPlay) (discard : Li
   ⟨[mt], hand, discard, [mt, mt], [], some active, bench, false, false, false, false, false,
     Store.empty, true, KOHist.empty⟩
 
-def T (a b : PlayerState) : GameState := ⟨a, b, true, false, false, false, none, none, false, false⟩
+def T (a b : PlayerState) : GameState := ⟨a, b, true, false, false, false, none, none, false, false, false⟩
 
 theorem T_settled {a b : PlayerState} (ha : a.active = some mon) (hb : b.active = some mon)
     (hab : ∀ p ∈ a.bench, p.damage < p.top.hp) (hbb : b.bench = [])
@@ -73,6 +73,7 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
   intro g' hm hc
   cases hm with
   | playBasic hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])
+  | trigger _ hp => simp [R, T] at hp
   | attach hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])
   | evolve hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])
   | attachBench hh => exact absurd (mem_of_eq hh) (by simp [R, T, tpl, helmet])
@@ -122,8 +123,8 @@ theorem second_tool_refused : ∀ g', Move R g' → g'.curIsFirst = true → g'.
   | knockOuts h =>
       have hs : Settled R := by decide
       cases h with
-      | won hu => exact absurd hs hu
-      | go hu => exact absurd hs hu
+      | won hu => exact absurd hs.calm hu
+      | go hu => exact absurd hs.calm hu
   | endTurn => simp [R, T] at hc
   | startTurn hbt => simp [R, T] at hbt
   | deckOut hbt => simp [R, T] at hbt

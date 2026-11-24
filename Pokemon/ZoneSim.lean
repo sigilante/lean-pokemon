@@ -310,4 +310,34 @@ theorem Fire.clamp_sim {co cp cbo cbp : Cap} {k : Nat} {ev : TrigEvent} {l : Lis
       obtain ⟨h₂, ht, hc₂⟩ := ih hc
       exact ⟨h₂, .decline ho ht, hc₂⟩
 
+/-- The kernel of `clamp k` is a simulation for taking the Knock Outs, when `hpBound` of the cards
+is at most `k` (milestone M6 added the hypothesis: derived HP must be at most the cap). -/
+theorem Resolve.clamp_sim {k : Nat} {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
+    ∀ {g₂ : GameState}, hpBound g₁.allCards ≤ k → g₁.clamp k = g₂.clamp k →
+      ∃ g₂', Resolve g₂ g₂' ∧ g₁'.clamp k = g₂'.clamp k := by
+  induction h with
+  | done h =>
+      intro g₂ hH hc
+      refine ⟨g₂, .done ?_, hc⟩
+      rcases h with h | h
+      · exact .inl (GameState.settled_of_clamp hc h (GameState.hpBelow_of_hpBound hH))
+      · exact .inr (by rw [GameState.winner_of_clamp hc]; exact h)
+  | step hn hm _ ih =>
+      intro g₂ hH hc
+      obtain ⟨m₂, hm₂, hcm⟩ := hm.clamp_sim hc (GameState.hpBelow_of_hpBound hH)
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm hm.perm]; exact hH) hcm
+      exact ⟨g₂', .step (by rw [GameState.winner_of_clamp hc]; exact hn) hm₂ hr₂, hc'⟩
+  | @trigger g₀ g₃ g' l hn hcl hp hl ht _ ih =>
+      intro g₂ hH hc
+      have hcl₂ := GameState.calm_of_clamp hc hcl (GameState.hpBelow_of_hpBound hH)
+      have hp₂ : g₂.pend = true := (GameState.pend_of_clampAt hc).trans hp
+      have hT := GameState.benchedTrigs_of_clampAt hc
+      have hc₀ : ({ g₀ with pend := false } : GameState).clamp k =
+          ({ g₂ with pend := false } : GameState).clamp k :=
+        congrArg (fun g : GameState => { g with pend := false }) hc
+      obtain ⟨m₂, ht₂, hcm⟩ := ht.clamp_sim hc₀
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ht.perm]; exact hH) hcm
+      exact ⟨g₂', .trigger (by rw [GameState.winner_of_clamp hc]; exact hn) hcl₂ hp₂
+        (hT ▸ hl) ht₂ hr₂, hc'⟩
+
 end Pokemon

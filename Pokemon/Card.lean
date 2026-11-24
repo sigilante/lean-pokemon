@@ -1147,19 +1147,39 @@ of today's Standard.
   check after the attack, when the Pokémon and its cards are already in the discard pile; with the
   Ability's `spot = some .active`, only if the Pokémon was Knocked Out in the Active Spot.
 
-Both belong to the player whose turn it is not, and their effects are written from that player's
-side: `.own` is the owner, `.opp` the attacker's player, so "the Attacking Pokémon" is the
+* `oppBenched` (milestone MV7; survey S20, S12 E8): "Whenever your opponent's Active Pokémon moves to
+  the Bench during their turn, …" (Magcargo sv5-29, Mismagius ex me2-36). Raised at its source: by a
+  retreat (`Move.retreat`) and by a switch of the player's own Active Pokémon with a Benched one inside
+  any effect of their turn (`Run.switch .own`), which record it in the state (`GameState.pend`); it
+  resolves before the next action (`Move.trigger`, and `Resolve.trigger` after a step of a Trainer,
+  Stadium or Ability effect). "Their new Active Pokémon" is the opponent's Active Pokémon when it
+  resolves (`counters`, `inflict`).
+
+All three belong to the player whose turn it is not, and their effects are written from that
+player's side: `.own` is the owner, `.opp` the player to move, so "the Attacking Pokémon" is the
 opponent's Active Pokémon (`counters`, `inflict`, `discardEnergy .opp .active`). -/
 inductive TrigEvent where
   | damaged
   | koByAttack
+  | oppBenched
   deriving DecidableEq
 
 /-- Where "this Pokémon" is when a trigger on the event resolves: in the Active Spot for `damaged`;
-nowhere in play for `koByAttack` (it has been Knocked Out), so an effect on it is not tracked. -/
+nowhere in play for `koByAttack` (it has been Knocked Out), so an effect on it is not tracked; for
+`oppBenched` not tracked either (the trigger's Pokémon may be Active or Benched). -/
 def TrigEvent.place : TrigEvent → Option Spot
   | .damaged => some .active
   | .koByAttack => none
+  | .oppBenched => none
+
+/-- Does the event fire only after the turn's attack (milestone MV7)? `damaged` and `koByAttack` do;
+`oppBenched` fires at any time of the turn, as often as the player switches, so its effects must
+recycle nothing (`Ability.trigOn`): the per-turn store invariant needs the discard piles kept before
+the attack (`StoreSafe`, clause 3 (a)). -/
+def TrigEvent.late : TrigEvent → Bool
+  | .damaged => true
+  | .koByAttack => true
+  | .oppBenched => false
 
 /-- The use limit of an Ability (survey S9 part 2, `ability_kind`): "Once during your turn, you
 may …" (`once`: once per turn for each Pokémon in play that has it); "As often as you like during
@@ -1167,8 +1187,8 @@ your turn, you may …" (`unlimited`); or a trigger on entering play from the ha
 may", so optional); or (milestone M6) static (`static ss`: never used; its static effects `ss` are
 in force while the Pokémon is in play, `Pokemon/Static.lean`); or (milestone M8b) triggered by the
 event `ev` (`triggered ev opt`; `opt`: "you may", so the owner may decline it; otherwise it must
-resolve). Other triggered Abilities (S12: Checkup, moving between spots, attaching Energy, the
-opponent's plays, replacement effects) have no constructor. -/
+resolve). Other triggered Abilities (S12, S20: Checkup, the player's own moves between spots,
+attaching Energy, the opponent's plays, replacement effects) have no constructor. -/
 inductive AbilityUse where
   | once
   | unlimited
@@ -1310,14 +1330,34 @@ def Ability.spotOk (ab : Ability) (sp : Spot) : Bool :=
   | none => true
   | some s => decide (s = sp)
 
+/-- The filters of an effect's zone moves out of a discard pile: what it can recycle to the hand
+or the deck. (Attaching Energy or benching a Basic Pokémon from a discard pile moves an Energy or
+a Pokémon card, which carries no Trainer amount.) A window on a discard pile (`Effect.look`,
+milestone MV6) takes the whole pile off: with the other cards put back in the discard pile it
+recycles what its filter admits; with them put anywhere else it may recycle any card (`Filter.any`).
+A window on a deck or a hand recycles nothing. -/
+def Effect.recFilters : Effect → List Filter
+  | .move _ .discard _ f _ => [f]
+  | .look _ .discard f _ _ rest => if rest = .discard then [f] else [.any]
+  | .ite _ a b => a.recFilters ++ b.recFilters
+  | .seq a b => a.recFilters ++ b.recFilters
+  | .choice a b => a.recFilters ++ b.recFilters
+  | .iter a => a.recFilters
+  | _ => []
+
 /-- **Does the Ability trigger on `ev`, for its Pokémon at `sp`?** (milestone M8b) A triggered
 Ability of that event, whose place allows `sp` ("if this Pokémon is in the Active Spot and is
 Knocked Out": `spot = some .active`), with no further printed condition (a trigger with a `cond`
 never fires: conditions on a trigger, such as Adversity Policy's Weakness, are not expressible), and
 whose effect is in the trigger fragment (`Effect.trigOk`; a trigger outside it never fires, which
-under-models the card). -/
+under-models the card). Since milestone MV7 an event that can fire before the turn's attack
+(`TrigEvent.late = false`: `oppBenched`) also needs an effect that recycles nothing
+(`Effect.recFilters = []`): such a trigger can fire many times in one turn, and the store bound
+(`StoreSafe`) keeps the discard piles' Item writers before the attack; a trigger of that event whose
+effect recycles never fires (an under-model; no card of the census recycles, survey S20). -/
 def Ability.trigOn (ev : TrigEvent) (sp : Spot) (ab : Ability) : Bool :=
-  ab.use.event == some ev && ab.spotOk sp && ab.cond.isNone && (ab.script ev.place).trigOk
+  ab.use.event == some ev && ab.spotOk sp && ab.cond.isNone && (ab.script ev.place).trigOk &&
+    (ev.late || (ab.script ev.place).recFilters.isEmpty)
 
 /-- The rule box of a Pokémon card, as far as it decides how many Prize cards its Knock Out gives
 (milestone M3; survey S8 C3, S9). The kinds are those of today's Standard (regulation marks H, I,

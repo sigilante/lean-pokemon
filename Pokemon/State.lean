@@ -532,6 +532,13 @@ structure GameState where
   during each player's turn, that player may …"); set by `Move.stadiumUse`, cleared by
   `Move.endTurn` and by `Move.stadium` (a Stadium newly put into play has not been used) -/
   stadiumUsed : Bool
+  /-- is a triggered Ability pending? (milestone MV7, survey S20) Set at the source of an event that
+  the opponent of the player to move has a trigger for (`TrigEvent.oppBenched`: a retreat, or a switch
+  of the player's own Active Pokémon inside an effect), cleared when the triggers resolve
+  (`Move.trigger`, `Resolve.trigger`). `Settled` requires it to be `false`, so a pending trigger
+  resolves before any other action. Defaults to `false`: a state written without it has nothing
+  pending. -/
+  pend : Bool := false
 
 /-- The Active Pokémon of the player to move (`own`) or of the opponent (`opp`). -/
 def GameState.activeOf : Whose → GameState → Option InPlay

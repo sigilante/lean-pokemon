@@ -452,10 +452,11 @@ theorem KOBatch.trigs_exist {g g₁ : GameState} (h : KOBatch g g₁) :
         (fun _ hab => GameState.batchTrigs_trigOk hab) (h.bothActive hw)
       exact ⟨g', _, .refl _, ht⟩
 
-/-- **A batch Knock Out step exists** from every state that is not `Settled`: the check, and, if
+/-- **A batch Knock Out step exists** from every state that is not `Calm` (before milestone MV7:
+`Settled`, which meant the same): the check, and, if
 nobody wins, a promotion for each player with an empty Active Spot (who has a Benched Pokémon,
 since otherwise the opponent would win). -/
-theorem KOBatch.exists_of {g : GameState} (hu : ¬ Settled g) : ∃ g', KOBatch g g' := by
+theorem KOBatch.exists_of {g : GameState} (hu : ¬ Calm g) : ∃ g', KOBatch g g' := by
   cases hw : g.koStep.winner with
   | some o => exact ⟨_, .won hu (by rw [hw]; exact fun h => nomatch h)⟩
   | none =>
@@ -471,6 +472,7 @@ theorem Resolve.wellFormed {g g' : GameState} (h : Resolve g g') (hw : WellForme
   induction h with
   | done => exact hw
   | step _ hm _ ih => exact ih (hm.wellFormed hw)
+  | trigger _ _ _ _ ht _ ih => exact ih (WellFormed.of_frame hw ht.frame)
 
 /-- Resolving a Trainer card's effect, Knock Outs included, preserves well-formedness. -/
 theorem TRun.wellFormed {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : WellFormed g) :
@@ -492,6 +494,7 @@ theorem Resolve.settled_or_won {g g' : GameState} (h : Resolve g g') :
   induction h with
   | done h => exact h
   | step _ _ _ ih => exact ih
+  | trigger _ _ _ _ _ _ ih => exact ih
 
 /-- **Trainer effects end settled.** A Trainer card's effect, resolved from a state that is
 `Settled` or finished, ends in a state that is `Settled` or finished: no Knock Out is left
@@ -607,6 +610,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
       exact WellFormed.of_frame (WellFormed.of_frame hw hr.frame) ht.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | knockOuts h _ ht => exact WellFormed.of_frame (h.wellFormed hw) ht.frame
+  | trigger _ _ _ ht => exact WellFormed.of_frame hw ht.frame
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2, hcc.benched ?_⟩
       intro p hp
@@ -877,27 +881,33 @@ theorem damageBounded_or_pending (g : GameState) : DamageBounded g ∨ ¬ Damage
   · exact hob p hp
 
 /-- **No deadlock, in every state.** Every state has a legal move: the batch Knock Out step if the
-state is not `Settled` (a Pokémon in play at or above its HP, or an empty Active Spot; the step
+state is not `Calm` (a Pokémon in play at or above its HP, or an empty Active Spot; the step
 exists in every such state, `KOBatch.exists_of`: if a player takes more Prize cards than remain
 they win, a player with no Pokémon to promote loses, both at once give the rulebook's simultaneous
-outcome, and otherwise every empty Active Spot is filled); otherwise the end of the turn, or
+outcome, and otherwise every empty Active Spot is filled); otherwise (milestone MV7) the resolution
+of a pending trigger (`Move.trigger`, `Calm.trigs_exist`); otherwise the end of the turn, or
 between turns the draw (or a loss by decking out). No hypothesis is needed (milestone batch-KO);
 `Reach` makes no move once the game is over, so for play the statement that matters is
 `Reach.progress`. -/
 theorem Move.exists_move (g : GameState) : ∃ g', Move g g' := by
-  by_cases hs : Settled g
-  · obtain ⟨hk, hc, ho⟩ := hs
+  by_cases hs : Calm g
+  · cases hpd : g.pend with
+    | true =>
+        obtain ⟨g', ht⟩ := hs.trigs_exist
+        exact ⟨g', .trigger hs hpd (.refl _) ht⟩
+    | false =>
+    obtain ⟨hk, hc, ho⟩ := hs
     match ha : g.opp.active, hb : g.cur.active with
     | none, _ => exact absurd ha ho
     | some _, none => exact absurd hb hc
     | some a, some b =>
         match hbt : g.between with
         | false => exact ⟨_, .endTurn false false false false false false ha hb hk hbt
-            (BenchChar.refl _) (BenchChar.refl _)⟩
+            (BenchChar.refl _) (BenchChar.refl _) hpd⟩
         | true =>
             match hd : g.cur.deck with
-            | [] => exact ⟨_, .deckOut hbt ha hb hk hd⟩
-            | c :: d => exact ⟨_, .startTurn hbt ha hb hk hd⟩
+            | [] => exact ⟨_, .deckOut hbt ha hb hk hd hpd⟩
+            | c :: d => exact ⟨_, .startTurn hbt ha hb hk hd hpd⟩
   · obtain ⟨g₁, hm⟩ := KOBatch.exists_of hs
     obtain ⟨g', l, hl, ht⟩ := hm.trigs_exist
     exact ⟨g', .knockOuts hm hl ht⟩

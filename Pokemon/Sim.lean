@@ -79,11 +79,19 @@ theorem KOBatch.noReduce {g g' : GameState} (h : KOBatch g g') (hn : g.NoReduce)
     g'.NoReduce := by
   cases h <;> exact hn
 
+/-- A change of the zones only keeps the stores (milestone M8b). -/
+theorem GameState.ZoneOnly.noReduce {g g' : GameState} (z : GameState.ZoneOnly g g')
+    (h : g.NoReduce) : g'.NoReduce := by
+  unfold GameState.NoReduce
+  rw [z.cur_mods, z.opp_mods]
+  exact h
+
 theorem Resolve.noReduce {g g' : GameState} (h : Resolve g g') (hn : g.NoReduce) :
     g'.NoReduce := by
   induction h with
   | done => exact hn
   | step _ hm _ ih => exact ih (hm.noReduce hn)
+  | trigger _ _ _ _ ht _ ih => exact ih (ht.zoneOnly.noReduce hn)
 
 theorem TRun.noReduce {e : Effect} {g g' : GameState} (h : TRun e g g') :
     e.tame = true → g.NoReduce → g'.NoReduce := by
@@ -969,13 +977,6 @@ theorem PlayFromHand.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} {x : InPl
       simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append,
         List.map_cons, h1, h3]
 
-/-- A change of the zones only keeps the stores (milestone M8b). -/
-theorem GameState.ZoneOnly.noReduce {g g' : GameState} (z : GameState.ZoneOnly g g')
-    (h : g.NoReduce) : g'.NoReduce := by
-  unfold GameState.NoReduce
-  rw [z.cur_mods, z.opp_mods]
-  exact h
-
 /-- Whether the opponent's Active Pokémon's damage rose is read exactly through `rclamp`, when its
 damage before is below the cap. -/
 theorem GameState.damagedB_of_rclamp {k : Nat} {g₁ g₁' g₂ g₂' : GameState} {d₁ d₂ : InPlay}
@@ -1132,6 +1133,7 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
       exact hr.noReduce (abilitiesTame_mem h1.2 hm _ (ab.script_mem _)) (by cases hp <;> exact hn)
   | endTurn => exact ⟨hn.2.shift, hn.1.shift⟩
   | knockOuts h _ ht' => exact ht'.zoneOnly.noReduce (h.noReduce hn)
+  | trigger _ _ _ ht' => exact ht'.zoneOnly.noReduce hn
   | _ => exact hn
 
 /-- Play preserves `Fit k`: the cards are permuted, and no stored damage reduction comes into
@@ -1186,6 +1188,15 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
   obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, hg, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
   have hfl := Store.flags_of_cap hm₁
   cases h with
+  | @trigger _ l hcl hp hl ht =>
+      have hcl₂ := GameState.calm_of_clamp hc hcl hH
+      have hp₂ : g₂.pend = true := (GameState.pend_of_clampAt hc).trans hp
+      have hT := GameState.benchedTrigs_of_clampAt hc
+      have hc₀ : ({ g₁ with pend := false } : GameState).clamp k =
+          ({ g₂ with pend := false } : GameState).clamp k :=
+        congrArg (fun g : GameState => { g with pend := false }) hc
+      obtain ⟨g₂', ht₂, hc'⟩ := ht.clamp_sim hc₀
+      exact ⟨g₂', .trigger hcl₂ hp₂ (by rw [hT]; exact hl) ht₂, hc'⟩
   | playBasic hh hs hhp hb hbt hst hat =>
       have hs' := hs₂ hst
       subst hg
@@ -1252,7 +1263,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (g₂ := { g₂ with cur := { g₂.cur with
           hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g₂.cur.discard } })
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂])
-        (.inl (hst.congr rfl rfl rfl rfl rfl rfl))
+        (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))
       exact ⟨g₂', .item (by subst hg; exact hh) (by subst hg; exact hbt) hs' hr'
         (by subst hg; rw [hfl.2.2.2]; exact hl) (by subst hg; exact hat) hnd hbh, hc'⟩
   | @supporter g' l₁ l₂ n e hh hs hbt hst hr hat hf hnd hbh =>
@@ -1267,7 +1278,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
           hand := l₁ ++ l₂, supporterPlayed := true,
           discard := Card.trainer n .supporter e :: g₂.cur.discard } })
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂])
-        (.inl (hst.congr rfl rfl rfl rfl rfl rfl))
+        (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))
       exact ⟨g₂', .supporter (by subst hg; exact hh) (by subst hg; exact hs)
         (by subst hg; exact hbt) hs' hr' (by subst hg; exact hat) (by subst hg; exact hf) hnd hbh, hc'⟩
   | @stadium l₁ l₂ n e ss hh hs hn hbt hst hat =>
@@ -1281,7 +1292,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 ht hb hF.2.2.2.1 hcap
         (g₂ := { g₂ with stadiumUsed := true })
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂])
-        (.inl (hst.congr rfl rfl rfl rfl rfl rfl))
+        (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))
       exact ⟨g₂', .stadiumUse (by subst hg; exact hs) (by subst hg; exact hu)
         (by subst hg; exact hbt) hs' (by subst hg; exact hat) hr' hnd hbh, hc'⟩
   | @tool l₁ l₂ n gr a hh ha ht hbt hst hat =>

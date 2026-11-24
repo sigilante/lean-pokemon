@@ -56,7 +56,7 @@ def wpl (r : Nat) (u : Bool) : PlayerState :=
     false, false, store r, true, KOHist.empty⟩
 
 def wgs (r : Nat) (u : Bool) : GameState :=
-  ⟨wpl r u, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false⟩
+  ⟨wpl r u, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false, false⟩
 
 theorem wgs_settled (r : Nat) (u : Bool) : Settled (wgs r u) :=
   Trainer.settled_of rfl rfl (show 0 < 10 by decide) (by decide) (fun p hp => by cases hp)
@@ -146,7 +146,7 @@ def kpl (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : Playe
     false, false, store r, true, KOHist.empty⟩
 
 def kgs (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : GameState :=
-  ⟨kpl u hand discard r b, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false⟩
+  ⟨kpl u hand discard r b, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false, false⟩
 
 theorem kgs_settled (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool)
     (hu : (retrieve u).statics = [] := by rfl) :
@@ -249,9 +249,10 @@ theorem unlimited_twice : Reach (wgs 0 false) (wgs 6 true) := reach_wgs 2
 theorem settled_two {g : GameState} {a b : InPlay} (hc : g.cur.active = some a)
     (ho : g.opp.active = some b) (ha : a.damage < a.top.hp) (hb : b.damage < b.top.hp)
     (h1 : g.cur.bench = []) (h2 : g.opp.bench = [])
-    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl) : Settled g :=
+    (hpl : g.Plain := by exact GameState.plain_of_plainB rfl)
+    (hpd : g.pend = false := by first | rfl | assumption) : Settled g :=
   Trainer.settled_of hc ho ha hb (by rw [h1]; intro p hp; cases hp) (by rw [h2]; intro p hp; cases hp)
-    hpl
+    hpl hpd
 
 /-- "Once during your turn, you may use this Ability. During this turn, your attacks do 10 more
 damage": a once-per-turn Ability whose use is visible in the store. -/
@@ -273,7 +274,7 @@ def bpl : PlayerState :=
     false, false, false, false, Store.empty, true, KOHist.empty⟩
 
 /-- The charger's player to move, in the turn proper, `u` whether it has used its Ability. -/
-def cgs (u : Bool) (b : Nat) : GameState := ⟨cpl u b, bpl, true, false, false, false, none, none, false, false⟩
+def cgs (u : Bool) (b : Nat) : GameState := ⟨cpl u b, bpl, true, false, false, false, none, none, false, false, false⟩
 
 theorem cgs_settled (u : Bool) (b : Nat) : Settled (cgs u b) :=
   settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl
@@ -333,7 +334,7 @@ def spl (hand deck : List Card) (bench : List InPlay) : PlayerState :=
     false, false, Store.empty, true, KOHist.empty⟩
 
 def sgs (hand deck : List Card) (bench : List InPlay) : GameState :=
-  ⟨spl hand deck bench, bpl, true, false, false, false, none, none, false, false⟩
+  ⟨spl hand deck bench, bpl, true, false, false, false, none, none, false, false, false⟩
 
 /-- **An on-play Ability**: playing `scoutMon` from the hand onto the Bench triggers its Ability,
 and the player draws a card. -/
@@ -380,7 +381,7 @@ def vpl (u onV : Bool) : PlayerState :=
     [{ InPlay.ofBasic sprout with energy := if onV then [] else [.energy .grass] }], false, false,
     false, false, false, Store.empty, true, KOHist.empty⟩
 
-def vgs (u onV : Bool) : GameState := ⟨vpl u onV, bpl, true, false, false, false, none, none, false, false⟩
+def vgs (u onV : Bool) : GameState := ⟨vpl u onV, bpl, true, false, false, false, none, none, false, false, false⟩
 
 theorem vgs_settled (u onV : Bool) : Settled (vgs u onV) :=
   Trainer.settled_of rfl rfl (show 0 < 36 by decide) (show 0 < 10 by decide)
@@ -434,7 +435,7 @@ def opl (u onO : Bool) : PlayerState :=
     [{ InPlay.ofBasic sprout with damage := if onO then 0 else 1 }], false, false,
     false, false, false, Store.empty, true, KOHist.empty⟩
 
-def ogs (u onO : Bool) : GameState := ⟨opl u onO, bpl, true, false, false, false, none, none, false, false⟩
+def ogs (u onO : Bool) : GameState := ⟨opl u onO, bpl, true, false, false, false, none, none, false, false, false⟩
 
 theorem ogs_settled (u onO : Bool) : Settled (ogs u onO) := by
   cases onO
@@ -493,7 +494,7 @@ write a damage bonus. -/
 theorem feraligatr_storeSafe :
     (⟨⟨[], [ironDefender], [], [.energy .water], [], some (InPlay.ofBasic feraligatr), [], false,
       false, false, false, false, Store.empty, true, KOHist.empty⟩, Recycle.pl [] [] 0, true, false, false,
-      false, none, none, false, false⟩ : GameState).StoreSafe := by
+      false, none, none, false, false, false⟩ : GameState).StoreSafe := by
   refine ⟨by unfold GameState.LoopFree; decide, GameState.GXOnly.of_noAttacks (by decide),
     by unfold GameState.RecycleSafe; decide, by unfold GameState.AbilitySafe; decide, by decide⟩
 

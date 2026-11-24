@@ -132,7 +132,7 @@ def guarded : Store := Store.empty.add .now (.reduce 2)
 def start : GameState :=
   ⟨side [] [.energy .fire] (InPlay.ofBasic driller) [],
     { side [] [.energy .fire] (InPlay.ofBasic rock) [] with mods := guarded },
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>

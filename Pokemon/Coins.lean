@@ -78,7 +78,7 @@ def start : GameState :=
   ⟨{ side [] [.energy .fire] buggerIn [] with
       deck := [.energy .grass, .pokemon bugger, .energy .fire] },
     side [] [.energy .fire] (InPlay.ofBasic big) [], true, false, false, false, none, none, false,
-    false⟩
+    false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>

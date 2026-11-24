@@ -97,7 +97,7 @@ def sick : InPlay := { InPlay.ofBasic big with rot := .asleep, poisoned := true,
 Active and one Prize card left (so has taken 5). -/
 def start : GameState :=
   ⟨side [] [.energy .fire] rotomIn [benchIn], side [] [.energy .fire] sick [],
-    true, false, false, false, none, none, false, false⟩
+    true, false, false, false, none, none, false, false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩

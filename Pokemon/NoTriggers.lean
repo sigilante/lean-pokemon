@@ -28,12 +28,15 @@ theorem Move.knockOuts_of_trigFree {g g₁ : GameState} (h : KOBatch g g₁) (hf
   Move.knockOuts_of_nil h (hf.batchTrigs g₁)
 
 /-- **With no triggered Ability, the batch move is the batch Knock Out step** (the statement of
-`Move.batch_of_not_settled` before milestone M8b). -/
-theorem Move.batch_of_not_settled_trigFree {g g' : GameState} (hm : Move g g') (hu : ¬ Settled g)
+`Move.batch_of_not_settled` before milestone M8b). Milestone MV7 changed the hypothesis from
+`¬ Settled g` to `¬ Calm g`, which is what it meant before: a state that is `Calm` with a trigger
+pending is not `Settled`, and its move resolves the trigger. -/
+theorem Move.batch_of_not_settled_trigFree {g g' : GameState} (hm : Move g g') (hu : ¬ Calm g)
     (hf : g.TrigFree) : KOBatch g g' := by
-  obtain ⟨g₁, l, hb, hl, ht⟩ := hm.batch_of_not_settled hu
-  rw [Move.eq_of_batchTrigs_nil hl ht (hf.batchTrigs g₁)]
-  exact hb
+  rcases hm.batch_of_not_settled (fun hs => hu hs.calm) with ⟨g₁, l, hb, hl, ht⟩ | ⟨hc, -⟩
+  · rw [Move.eq_of_batchTrigs_nil hl ht (hf.batchTrigs g₁)]
+    exact hb
+  · exact absurd hc hu
 
 /-- With no triggered Ability, an attack with the premises of milestone M8a (and, since milestone
 MV4, no attack lock against it) is a move to the state after its script with the attack recorded

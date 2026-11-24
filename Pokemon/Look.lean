@@ -291,7 +291,7 @@ def looker : PokemonCard := ⟨"Looker", .basic, none, 10, .colorless, [present,
 def start (d : List Card) : GameState :=
   ⟨{ side [] [.energy .fire] (InPlay.ofBasic looker) [InPlay.ofBasic big] with deck := d },
     side [] [.energy .fire] (InPlay.ofBasic big) [], true, false, false, false, none, none, false,
-    false⟩
+    false, false⟩
 
 theorem start_wellFormed (d : List Card) : WellFormed (start d) := by
   refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩

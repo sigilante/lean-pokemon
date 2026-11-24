@@ -107,7 +107,7 @@ def side (hand discard : List Card) (a : InPlay) (t : Store) : PlayerState :=
 
 /-- The player to move has `a` and the store `s`; the opponent has `b` and the store `t`. -/
 def st (hand discard : List Card) (a b : InPlay) (s t : Store) : GameState :=
-  ⟨side hand discard a s, side [] [] b t, true, false, false, false, none, none, false, false⟩
+  ⟨side hand discard a s, side [] [] b t, true, false, false, false, none, none, false, false, false⟩
 
 /-- No static effect has a source in play (milestone M6): the witnesses' cards have none. -/
 theorem plain_st (hand discard : List Card) (a b : InPlay) (s t : Store)
@@ -238,6 +238,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [red, st, side] at hh
+  | trigger _ hp => simp [red, st] at hp
   | attach hh => simp [red, st, side] at hh
   | evolve hh => simp [red, st, side] at hh
   | attachBench hh => simp [red, st, side] at hh
@@ -302,8 +303,8 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
   | knockOuts h =>
       have hs : Settled (red k (2 * k + 2)) := settled_st _ _ _ _ _ _ (by decide) (by decide)
       cases h with
-      | won hu => exact hu hs
-      | go hu => exact hu hs
+      | won hu => exact hu hs.calm
+      | go hu => exact hu hs.calm
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt, GameState.afterAttack] at e
@@ -398,6 +399,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
     fun g₂' hm heq => ?_⟩
   cases hm with
   | playBasic hh => simp [dr, st, side] at hh
+  | trigger _ hp => simp [dr, st] at hp
   | attach hh => simp [dr, st, side] at hh
   | evolve hh => simp [dr, st, side] at hh
   | attachBench hh => simp [dr, st, side] at hh
@@ -464,8 +466,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
   | knockOuts h =>
       have hs : Settled (dr k (2 * k + 2)) := settled_st _ _ _ _ _ _ (drainer_ok k) (by decide)
       cases h with
-      | won hu => exact hu hs
-      | go hu => exact hu hs
+      | won hu => exact hu hs.calm
+      | go hu => exact hu hs.calm
   | endTurn =>
       have e := congrArg GameState.attacked heq
       simp [GameState.clamp, GameState.clampAt, GameState.afterAttack] at e

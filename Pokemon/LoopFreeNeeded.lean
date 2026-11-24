@@ -38,11 +38,11 @@ def pl (hand discard : List Card) (t : Store) : PlayerState :=
 /-- The start: the player to move holds `pump`, both players have the guard Active and no
 modifiers. -/
 def S0 : GameState :=
-  ⟨pl [pump] [] (nowB 0), pl [] [] (nowB 0), true, false, false, false, none, none, false, false⟩
+  ⟨pl [pump] [] (nowB 0), pl [] [] (nowB 0), true, false, false, false, none, none, false, false, false⟩
 
 /-- After `pump` is played with its `iter` unrolled `b` times. -/
 def T (b : Nat) : GameState :=
-  ⟨pl [] [pump] (nowB b), pl [] [] (nowB 0), true, false, false, false, none, none, false, false⟩
+  ⟨pl [] [pump] (nowB b), pl [] [] (nowB 0), true, false, false, false, none, none, false, false, false⟩
 
 theorem step (b : Nat) : TRun (.linger .own .now (.bonus 1)) (T b) (T (b + 1)) :=
   .prim rfl rfl (.linger .own .now (.bonus 1) _) (.done (.inl (settled_mon rfl rfl rfl rfl)))
@@ -119,10 +119,10 @@ def sap : Card := .trainer "Sap" .item (.iter (.linger .own .now (.weaken 1)))
 def nowM (b : Nat) : Store := ⟨{ Mods.empty with minus := b }, Mods.empty, Mods.empty, Mods.empty⟩
 
 def W0 : GameState :=
-  ⟨pl [sap] [] (nowM 0), pl [] [] (nowM 0), true, false, false, false, none, none, false, false⟩
+  ⟨pl [sap] [] (nowM 0), pl [] [] (nowM 0), true, false, false, false, none, none, false, false, false⟩
 
 def V (b : Nat) : GameState :=
-  ⟨pl [] [sap] (nowM b), pl [] [] (nowM 0), true, false, false, false, none, none, false, false⟩
+  ⟨pl [] [sap] (nowM b), pl [] [] (nowM 0), true, false, false, false, none, none, false, false, false⟩
 
 theorem stepV (b : Nat) : TRun (.linger .own .now (.weaken 1)) (V b) (V (b + 1)) :=
   .prim rfl rfl (.linger .own .now (.weaken 1) _) (.done (.inl (settled_mon rfl rfl rfl rfl)))
