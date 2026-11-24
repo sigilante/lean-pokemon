@@ -131,12 +131,14 @@ def Card.trigsOn (ev : TrigEvent) (c : Card) : List Ability :=
 def Card.hasTrig (ev : TrigEvent) (c : Card) : Bool := !(c.trigsOn ev).isEmpty
 
 /-- Every triggered Ability the card has or gives has no printed condition (`cond = none`) and resolves an
-effect of the trigger fragment at its event's place (`Effect.trigOk` of `Ability.script ab ev.place`): the two
+effect of the trigger fragment at its event's place (`Effect.trigOk` of `Ability.script ab ev.place`), and
+(milestone MV7) on an event that can fire before the attack (`TrigEvent.late = false`) recycles nothing: the
 conditions under which `Ability.trigOn` holds wherever the Ability's place allows. -/
 def Card.trigsOk (c : Card) : Bool :=
   c.abilities.all fun ab =>
     match ab.use.event with
-    | some ev => ab.cond.isNone && (ab.script ev.place).trigOk
+    | some ev => ab.cond.isNone && (ab.script ev.place).trigOk &&
+        (ev.late || (ab.script ev.place).recFilters.isEmpty)
     | none => true
 
 /-- A triggered Ability the card has or gives writes a lingering modifier (bonus, reduction, prevention or
@@ -426,8 +428,9 @@ theorem trigOn_of_trigsOk {c : Card} (h : c.trigsOk = true) {ab : Ability} (hab 
   have h1 := List.all_eq_true.1 h ab hab
   rw [he] at h1
   simp only [Bool.and_eq_true] at h1
-  refine ⟨?_, h1.2⟩
-  simp only [Ability.trigOn, he, beq_self_eq_true, Bool.true_and, h1.1, h1.2, Bool.and_true]
+  refine ⟨?_, h1.1.2⟩
+  simp only [Ability.trigOn, he, beq_self_eq_true, Bool.true_and, h1.1.1, h1.1.2, h1.2,
+    Bool.and_true]
 
 /-- **Store-safe decks from a checked pool.** If every card of `C` passes `Card.importOk` and
 `recSafeB C` holds, every game whose cards all come from `C` is `StoreSafe`: `LoopFree`, `GXOnly`,
