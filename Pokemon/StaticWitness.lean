@@ -154,8 +154,9 @@ theorem benched_at (c : PokemonCard) (d : Nat) (e t : List Card) : Benched (at_ 
 Benches is well formed. -/
 theorem wellFormed_gs {h₁ h₂ p₁ p₂ : List Card} {a₁ a₂ : InPlay} {b₁ b₂ : List InPlay}
     {st : Option (Bool × Card)} (hp₁ : p₁ ≠ []) (hp₂ : p₂ ≠ []) (hb₁ : ∀ p ∈ b₁, Benched p)
-    (hb₂ : ∀ p ∈ b₂, Benched p) : WellFormed (gs (pl h₁ p₁ a₁ b₁) (pl h₂ p₂ a₂ b₂) st) :=
-  ⟨fun _ => ⟨hp₁, hp₂⟩, hb₁, hb₂⟩
+    (hb₂ : ∀ p ∈ b₂, Benched p) (hm : (gs (pl h₁ p₁ a₁ b₁) (pl h₂ p₂ a₂ b₂) st).MarksOk) :
+    WellFormed (gs (pl h₁ p₁ a₁ b₁) (pl h₂ p₂ a₂ b₂) st) :=
+  ⟨fun _ => ⟨hp₁, hp₂⟩, hb₁, hb₂, hm⟩
 
 /-! ## A Tool holds a Pokémon above its printed HP, and its discard Knocks it Out -/
 
@@ -174,7 +175,7 @@ def tg1 : GameState :=
     (pl [] [mt, mt] (at_ big 0 [] []) []) none
 
 theorem tg0_wellFormed : WellFormed tg0 :=
-  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp)
+  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp) (.of_b rfl)
 
 theorem tg0_settled : Settled tg0 := settled_of_dbB rfl rfl (by decide)
 
@@ -225,7 +226,7 @@ def sg1 : GameState :=
     true, false, false, false, none, some (true, plainStadium), true, false, false⟩
 
 theorem sg0_wellFormed : WellFormed sg0 :=
-  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp)
+  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp) (.of_b rfl)
 
 theorem sg0_settled : Settled sg0 := settled_of_dbB rfl rfl (by decide)
 
@@ -252,7 +253,7 @@ def eg0 : GameState :=
   gs (pl [charge, mt] [mt, mt] (at_ bulky 3 [mt] []) []) (pl [] [mt, mt] (at_ big 0 [] []) []) none
 
 theorem eg0_wellFormed : WellFormed eg0 :=
-  wellFormed_gs (by decide) (by decide) (by simp) (by simp)
+  wellFormed_gs (by decide) (by decide) (by simp) (by simp) (.of_b rfl)
 
 theorem eg0_settled : Settled eg0 := settled_of_dbB rfl rfl (by decide)
 
@@ -306,7 +307,7 @@ def cg1 : GameState :=
     true, false, false, false, none, some (true, plainStadium), true, false, false⟩
 
 theorem cg0_wellFormed : WellFormed cg0 :=
-  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp)
+  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp) (.of_b rfl)
 
 theorem cg0_settled : Settled cg0 := settled_of_dbB rfl rfl (by decide)
 
@@ -341,7 +342,7 @@ def leaf : PokemonCard := ⟨"Leaf", .basic, none, 10, .grass, [], 1, some .fire
 def wg : GameState :=
   gs (pl [] [mt] (at_ flame 0 [] []) []) (pl [] [mt] (at_ leaf 0 [] [scale]) []) none
 
-theorem wg_wellFormed : WellFormed wg := wellFormed_gs (by decide) (by decide) (by simp) (by simp)
+theorem wg_wellFormed : WellFormed wg := wellFormed_gs (by decide) (by decide) (by simp) (by simp) (.of_b rfl)
 
 theorem wg_settled : Settled wg := settled_of_dbB rfl rfl (by decide)
 
@@ -387,7 +388,7 @@ def r0 : GameState :=
     none
 
 theorem r0_wellFormed : WellFormed r0 :=
-  wellFormed_gs (by decide) (by decide) (by simp) (by simp [benched_at])
+  wellFormed_gs (by decide) (by decide) (by simp) (by simp [benched_at]) (.of_b rfl)
 
 theorem r0_settled : Settled r0 := settled_of_dbB rfl rfl (by decide)
 
@@ -572,7 +573,7 @@ def m0 : GameState :=
     (pl [] [mt, mt, mt] (at_ gm 0 [] []) [at_ gm 0 [] []]) none
 
 theorem m0_wellFormed : WellFormed m0 :=
-  wellFormed_gs (by decide) (by decide) (by simp) (by simp [benched_at])
+  wellFormed_gs (by decide) (by decide) (by simp) (by simp [benched_at]) (.of_b rfl)
 
 theorem m0_settled : Settled m0 := settled_of_dbB rfl rfl (by decide)
 
@@ -723,7 +724,7 @@ def sd0 : GameState :=
      (pl [] [mt] (at_ boss 5 [] []) [at_ small 4 [] []]) none
 
 theorem sd0_wellFormed : WellFormed sd0 :=
-  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp [benched_at])
+  wellFormed_gs (by decide) (by decide) (by simp [benched_at]) (by simp [benched_at]) (.of_b rfl)
 
 /-- **A recorded modelling decision: the outcome is decided at the end of each round of the
 check.** In `sd0` both Active Pokémon are at their HP; B's Benched `small` has 4 damage counters

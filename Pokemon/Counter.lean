@@ -1205,11 +1205,10 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
       rw [hC.bench, List.map_nil] at hcc
       cases hco
       cases hcc
-      have z₁ := GameState.checkupMore_noStatics hts.noStatics (w := .opp) (sp := .active)
-        (w' := .opp) (q := if oa then a else a.checkup false fa sa ca) ha (by split <;> rfl)
-      have z₂ := GameState.checkupMore_noStatics hts.noStatics (w := .own) (sp := .active)
-        (w' := .own) (q := if ob then b.unfresh else b.unfresh.checkup true fb sb cb) hb
-        (by split <;> rfl)
+      have z₁ := GameState.checkupMoreBy_noStatics hts.noStatics (w := .opp) (sp := .active)
+        (w' := .opp) (q := a) (q' := a.checkup false fa sa ca) ha rfl oa
+      have z₂ := GameState.checkupMoreBy_noStatics hts.noStatics (w := .own) (sp := .active)
+        (w' := .own) (q := b.unfresh) (q' := b.unfresh.checkup true fb sb cb) hb rfl ob
       exact .inr (.inl ⟨(hO.toCur ha hoc false fa sa ca z₁).weak,
         (hC.toOpp hb hcc true fb sb cb z₂).weak, rfl⟩)
   | @startTurn a b c d _ _ _ _ hd =>
@@ -1263,9 +1262,10 @@ theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.
   exact ⟨_, .endTurn false false false false false false hp' hp (hs.damageBounded hns hc ho) hbt
       (by rw [hs.opp.bench]; exact .nil) (by rw [hs.cur.bench, List.map_nil]; exact .nil) hs.pend,
     ⟨hs.opp.toCur hp' hoc false false false false
-        (GameState.checkupMore_noStatics hns (w := .opp) (sp := .active) hp' rfl),
+        (GameState.checkupMoreBy_noStatics hns (w := .opp) (sp := .active) hp' rfl []),
       hs.cur.toOpp hp hcc true false false false
-        (GameState.checkupMore_noStatics hns (w := .own) (sp := .active) hp rfl), rfl⟩,
+        (GameState.checkupMoreBy_noStatics hns (w := .own) (sp := .active) (q := p.unfresh) hp rfl []),
+      rfl⟩,
     rfl, rfl, rfl, rfl⟩
 
 /-- Drawing for the turn from a state of known shape whose deck is known to be nonempty. -/
@@ -1338,7 +1338,7 @@ def HaltMarked (g : GameState) : Prop :=
 
 theorem start_wellFormed (M : Machine) (a b : Nat) : WellFormed (start M a b) :=
   ⟨fun _ => ⟨List.cons_ne_nil _ _, List.cons_ne_nil _ _⟩, (fun _ hp => by cases hp),
-    (fun _ hp => by cases hp)⟩
+    (fun _ hp => by cases hp), .of_b rfl⟩
 
 theorem start_noTS (M : Machine) (a b : Nat) : NoTS (start M a b) := by
   intro c hc

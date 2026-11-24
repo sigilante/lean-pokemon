@@ -294,7 +294,7 @@ def start (d : List Card) : GameState :=
     false, false⟩
 
 theorem start_wellFormed (d : List Card) : WellFormed (start d) := by
-  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩
+  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_, .of_b rfl⟩
   · intro p hp
     simp only [start, side, List.mem_singleton] at hp
     subst hp

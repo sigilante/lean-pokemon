@@ -1103,7 +1103,7 @@ inductive SAmt where
   put 3 more damage counters on your opponent's Burned Pokémon", Magmortar sv9-21: `sel = opp`,
   `c = burned`, `n = 3`; Pecharunt svp-129, "As long as this Pokémon is in the Active Spot, put 5
   more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup": `src = some
-  .active`, `c = poisoned`, `n = 5`). Read by `Move.endTurn` (`GameState.checkupMore`), never
+  .active`, `c = poisoned`, `n = 5`). Read by `Move.endTurn` (`GameState.checkupMoreBy`), never
   stored. -/
 inductive SEff where
   | hpPlus (a : SAmt)

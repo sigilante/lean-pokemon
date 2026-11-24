@@ -129,10 +129,10 @@ theorem settled_st (hand discard : List Card) (a b : InPlay) (s t : Store)
     simp only [st, side, Option.some.injEq] at hp; subst hp; exact hb
   · simp [st, side] at hp
 
-theorem wellFormed_st (hand discard : List Card) (a b : InPlay) (s t : Store) :
-    WellFormed (st hand discard a b s t) :=
+theorem wellFormed_st (hand discard : List Card) (a b : InPlay) (s t : Store)
+    (hm : (st hand discard a b s t).MarksOk) : WellFormed (st hand discard a b s t) :=
   ⟨fun _ => ⟨by simp [st, side], by simp [st, side]⟩, fun p hp => by simp [st, side] at hp,
-    fun p hp => by simp [st, side] at hp⟩
+    fun p hp => by simp [st, side] at hp, hm⟩
 
 theorem clamp_st {k : Nat} (hand discard : List Card) (a b : InPlay) {s₁ s₂ : Store}
     (t : Store) (h : s₁.cap (2 * k) = s₂.cap (2 * k)) :
@@ -227,7 +227,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
       (∀ x ∈ g₀.allCards, x.tmax < k) ∧
       ∃ g₁ g₂ g₁', Reach g₀ g₁ ∧ Reach g₀ g₂ ∧ g₁.clamp k = g₂.clamp k ∧ Move g₁ g₁' ∧
         ∀ g₂', Move g₂ g₂' → g₁'.clamp k ≠ g₂'.clamp k := by
-  refine ⟨red₀ k, wellFormed_st _ _ _ _ _ _, settled_st _ _ _ _ _ _ (by decide) (by decide),
+  refine ⟨red₀ k, wellFormed_st _ _ _ _ _ _ (.of_b rfl), settled_st _ _ _ _ _ _ (by decide) (by decide),
     ⟨Store.NoReduce.empty, Store.NoReduce.empty⟩, hpLe_red₀ hk, tmax_red₀ hk,
     red k (2 * k + 1), red k (2 * k + 2), _, reach_red k true, reach_red k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),
@@ -387,7 +387,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
       (∀ x ∈ g₀.allCards, x.tmax < k) ∧
       ∃ g₁ g₂ g₁', Reach g₀ g₁ ∧ Reach g₀ g₂ ∧ g₁.clamp k = g₂.clamp k ∧ Move g₁ g₁' ∧
         ∀ g₂', Move g₂ g₂' → g₁'.clamp k ≠ g₂'.clamp k := by
-  refine ⟨dr₀ k, wellFormed_st _ _ _ _ _ _, settled_st _ _ _ _ _ _ (drainer_ok k) (by decide),
+  refine ⟨dr₀ k, wellFormed_st _ _ _ _ _ _ (.of_b rfl), settled_st _ _ _ _ _ _ (drainer_ok k) (by decide),
     ⟨Store.NoReduce.empty, Store.NoReduce.empty⟩, hpLe_dr₀ hk, tmax_dr₀ hk,
     dr k (2 * k + 1), dr k (2 * k + 2), _, reach_dr k true, reach_dr k false,
     clamp_st _ _ _ _ _ (bonusNow_cap k),

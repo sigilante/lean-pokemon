@@ -56,7 +56,7 @@ def g0 : GameState :=
     true, false, false, false, none, none, false, false, false⟩
 
 theorem g0_wellFormed : WellFormed g0 := by
-  refine ⟨fun _ => ⟨by simp [g0, side], by simp [g0, side]⟩, fun p hp => ?_, fun p hp => by cases hp⟩
+  refine ⟨fun _ => ⟨by simp [g0, side], by simp [g0, side]⟩, fun p hp => ?_, (fun p hp => by cases hp), .of_b rfl⟩
   simp only [g0, side, List.mem_singleton] at hp
   subst hp
   exact ⟨rfl, rfl, rfl, rfl⟩

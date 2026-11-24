@@ -506,7 +506,7 @@ def start (hand : List Card) : GameState :=
     false, false⟩
 
 theorem start_wellFormed (hand : List Card) : WellFormed (start hand) := by
-  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>
+  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
     intro p hp <;> cases hp
 
 theorem start_settled_draws : Settled (start [.energy .fire]) :=

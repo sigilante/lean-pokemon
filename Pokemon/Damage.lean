@@ -391,6 +391,20 @@ theorem GameState.checkupMore_congr {g₁ g₂ : GameState} (hs : GameState.Same
     split <;> simp only [hh]
   simp only [GameState.checkupMore, hv, hs.inForce, e]
 
+/-- The extra Checkup counters in the next player's order (milestone MV7b) read the field, the
+Pokémon's view and the Special Conditions of the Pokémon before and after the step only. -/
+theorem GameState.checkupMoreBy_congr {g₁ g₂ : GameState} (hs : GameState.SameField g₁ g₂)
+    {w : Whose} {o : List Bool} {q q' p p' : InPlay} (hv : q.sv = p.sv)
+    (hh : ∀ x, q.has x = p.has x) (hh' : ∀ x, q'.has x = p'.has x) :
+    g₂.checkupMoreBy w o q q' = g₁.checkupMoreBy w o p p' := by
+  have e : ∀ {q p : InPlay}, (∀ x, q.has x = p.has x) →
+      Static.condMoreFor q = Static.condMoreFor p := by
+    intro q p hh
+    funext s
+    unfold Static.condMoreFor
+    split <;> simp only [hh]
+  simp only [GameState.checkupMoreBy, hv, hs.inForce, Static.splitMore_congr (e hh) (e hh')]
+
 /-- Checkup preserves agreement when the damage is equal, and then the results agree with
 damage capped at the bound `K` (`Cap.hp`). -/
 theorem InPlay.Agree.checkup {c : Cap} {q p : InPlay} (h : Agree K c q p)

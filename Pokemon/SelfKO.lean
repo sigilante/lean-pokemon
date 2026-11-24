@@ -23,9 +23,16 @@ one: a superset (another Benched Pokémon could be Knocked Out instead), so the 
 import the Bench form only with a caveat. "1 of your opponent's Pokémon" is
 `choice (counters 5) (benchCounters .opp 5)`, exact.
 
-* `self_ko`: from the well-formed, `Settled` start `d0`, the Ability puts 5 counters on the
+* `self_ko` (an existential witness: one play exists, nothing is claimed about every resolution):
+  from the well-formed, `Settled` start `d0`, a move uses the Ability, puts 5 counters on the
   opponent's Active Pokémon and Knocks its user Out inside the same move: the user is in its
   owner's discard pile, the Benched `sitter` is promoted, and the opponent has taken a Prize card.
+
+Timing: the Knock Outs inside an Ability's resolution are checked after each step (`TRun`). With both
+players on their last Prize card and a first step that Knocks Out the opponent's Pokémon, the mover
+takes their last Prize card and wins before the self-Knock-Out step resolves; a check after the
+whole Ability would give both players their last Prize card at once (a tiebreaker). The model keeps
+its convention for effects (Known gaps).
 -/
 
 namespace Pokemon.SelfKO
@@ -47,15 +54,16 @@ def d0 : GameState :=
 
 theorem d0_wellFormed : WellFormed d0 := by
   refine ⟨fun _ => ⟨by simp [d0, side], by simp [d0, side]⟩, fun p hp => ?_, fun _ hp => by
-    simp [d0, side] at hp⟩
+    simp [d0, side] at hp, .of_b rfl⟩
   simp only [d0, side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem d0_settled : Settled d0 := (GameState.settled_iff _).2 (by decide)
 
-/-- **A self-Knock-Out Ability, with the existing language**: one move uses it; the opponent's
-Active Pokémon has 5 damage counters, the user is Knocked Out (in the discard pile), `sitter` is
-promoted, and the opponent has taken one of their two Prize cards. -/
+/-- **A self-Knock-Out Ability, with the existing language** (an existential witness): some move
+uses it, after which the opponent's Active Pokémon has 5 damage counters, the user is Knocked Out
+(in the discard pile), `sitter` is promoted, and the opponent has taken one of their two Prize
+cards. -/
 theorem self_ko :
     ∃ g', Move d0 g' ∧ g'.opp.active.map InPlay.damage = some 5 ∧
       Card.pokemon duskC ∈ g'.cur.discard ∧ g'.cur.active.map InPlay.top = some sitterC ∧

@@ -81,17 +81,17 @@ theorem GameState.dealt_zero (g : GameState) : g.dealt 0 = 0 := by
 opponent's Active Pokémon `a` and `fb sb cb` for the player's own `b`, the Benches after
 their Char counters, `bo` (the opponent's) and `bc` (the player's), and (milestone MV7b) the order
 of the static Checkup effects and the Special Conditions' step on each Active Pokémon (`oa`, `ob`:
-the static effects first). -/
+one entry per effect in force, `true` before the step; `GameState.checkupMoreBy`). -/
 def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List InPlay)
-    (g : GameState) (oa ob : Bool) : GameState :=
+    (g : GameState) (oa ob : List Bool) : GameState :=
   { cur := { g.opp with
       active := some ((a.checkup false fa sa ca).addDamage
-        (g.checkupMore .opp (if oa then a else a.checkup false fa sa ca))), bench := bo,
+        (g.checkupMoreBy .opp oa a (a.checkup false fa sa ca))), bench := bo,
       energyAttached := false, supporterPlayed := false, retreated := false,
       mods := g.opp.mods.shift, ko := g.opp.ko.shift },
     opp := { g.cur.unfresh with
       active := some ((b.unfresh.checkup true fb sb cb).addDamage
-        (g.checkupMore .own (if ob then b.unfresh else b.unfresh.checkup true fb sb cb))),
+        (g.checkupMoreBy .own ob b.unfresh (b.unfresh.checkup true fb sb cb))),
       bench := bc,
       mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
     curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
@@ -119,11 +119,12 @@ is the old statement. Milestone batch-KO replaced the first alternative, the eig
 (`KOMove`), by the batch Knock Out step `KOBatch`, which takes them all at once; milestone M8b
 added the triggers the batch fires, `Fire`, after it; milestone MV7 the resolution of a pending
 trigger, `TrigMove`, which comes before the batch step; milestone MV7b the order `oa`, `ob` of the
-static Checkup effects, `GameState.checkupMore`.) -/
+static Checkup effects, `GameState.checkupMoreBy`, one Boolean per Active Pokémon until the review
+of stage 2 and since then one entry per effect in force.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
     (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ TrigMove g g' ∨
-      ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay) (oa ob : Bool),
+      ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay) (oa ob : List Bool),
       g.opp.active = some a ∧ g.cur.active = some b ∧ DamageBounded g ∧
       BenchChar g.opp.bench bo ∧ BenchChar (g.cur.bench.map InPlay.unfresh) bc ∧
       g' = g.passTurn fa sa ca fb sb cb a b bo bc oa ob := by

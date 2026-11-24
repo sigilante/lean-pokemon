@@ -194,10 +194,31 @@ def Static.condMoreFor (p : InPlay) (s : Static) : Nat :=
 /-- **The extra damage counters of Pokémon Checkup** (milestone MV7b) on the `w` player's Active
 Pokémon `p`: the sum of the `condMore` effects in force on it whose Special Condition it has
 (Magmortar's "3 more damage counters on your opponent's Burned Pokémon"). Computed, never stored.
-`Move.endTurn` reads it on the Pokémon before or after the Special Conditions' step, as the next
-player orders the two (rulebook 2026 p. 15). -/
+`Move.endTurn` reads each of these effects either on the Pokémon before the Special Conditions'
+step or on the Pokémon after it, as the next player orders them (`GameState.checkupMoreBy`;
+rulebook 2026 p. 15). -/
 def GameState.checkupMore (g : GameState) (w : Whose) (p : InPlay) : Nat :=
   sumOf (Static.condMoreFor p) (g.inForce w .active p.sv)
+
+/-- The extra Checkup counters of the effects `l`, each read on the Pokémon before the Special
+Conditions' step (`p`) or after it (`p'`), as the choice `o` says, effect by effect in the order of
+`l`: `true` before, `false` after; an effect with no entry (`o` shorter than `l`) is read before.
+Entries beyond `l` are ignored (`Static.splitMore_take`). -/
+def Static.splitMore (p p' : InPlay) : List Static → List Bool → Nat
+  | [], _ => 0
+  | s :: l, [] => Static.condMoreFor p s + Static.splitMore p p' l []
+  | s :: l, b :: o => Static.condMoreFor (if b then p else p') s + Static.splitMore p p' l o
+
+/-- **The extra damage counters of Pokémon Checkup, in the next player's order** (milestone MV7b,
+corrected after review): the `w` player's Active Pokémon is `p` before the Special Conditions' step
+and `p'` after it; each `condMore` effect in force on it (in the order of `GameState.inForce`) is
+applied before the step (read on `p`) or after it (read on `p'`), as `o` says
+(`Static.splitMore`). "The player whose turn is next decides the order of the effects, but all
+Special Conditions must happen at the same time … you can apply one Ability, then Special
+Conditions, and then another Ability" (rulebook 2026 p. 15). With `o = []` every effect comes
+first, `GameState.checkupMore p` (`GameState.checkupMoreBy_nil`). -/
+def GameState.checkupMoreBy (g : GameState) (w : Whose) (o : List Bool) (p p' : InPlay) : Nat :=
+  Static.splitMore p p' (g.inForce w .active p.sv) o
 
 /-- **Derived HP** (milestone M6): the HP of the Pokémon `p` of the `w` player at `sp` in the state
 `g`, in counters: its printed HP, plus every `hpPlus` in force, less every `hpMinus` in force
@@ -636,6 +657,64 @@ theorem GameState.checkupMore_noStatics {g : GameState} (hn : g.NoStatics) {w w'
     {sp : Spot} {p q : InPlay} (hp : g.In w sp p) (hv : q.sv = p.sv) : g.checkupMore w' q = 0 := by
   simp only [GameState.checkupMore, hv, g.inForce_noStatics hn hp, sumOf_nil]
 
+/-- Every effect first (milestone MV7b): the choice `[]` is `GameState.checkupMore` on the
+Pokémon before the Special Conditions' step. -/
+theorem Static.splitMore_nil (p p' : InPlay) :
+    ∀ l : List Static, Static.splitMore p p' l [] = sumOf (Static.condMoreFor p) l
+  | [] => rfl
+  | s :: l => by
+      simp only [Static.splitMore, Static.splitMore_nil p p' l, sumOf, List.map_cons, List.sum_cons]
+
+theorem GameState.checkupMoreBy_nil (g : GameState) (w : Whose) (p p' : InPlay) :
+    g.checkupMoreBy w [] p p' = g.checkupMore w p :=
+  Static.splitMore_nil p p' _
+
+/-- **The choice is finite** (milestone MV7b): only the first `l.length` entries of `o` matter, so
+every choice gives the same counters as one of length at most the number of effects in force. -/
+theorem Static.splitMore_take (p p' : InPlay) :
+    ∀ (l : List Static) (o : List Bool), Static.splitMore p p' l (o.take l.length) =
+      Static.splitMore p p' l o
+  | [], _ => rfl
+  | s :: l, [] => rfl
+  | s :: l, b :: o => by
+      simp only [List.length_cons, List.take_succ_cons, Static.splitMore, Static.splitMore_take p p' l o]
+
+/-- No extra counter when every effect gives none on either reading of the Pokémon. -/
+theorem Static.splitMore_eq_zero {p p' : InPlay} :
+    ∀ (o : List Bool) {l : List Static},
+      (∀ s ∈ l, Static.condMoreFor p s = 0 ∧ Static.condMoreFor p' s = 0) →
+        Static.splitMore p p' l o = 0
+  | _, [], _ => rfl
+  | [], s :: l, h => by
+      rw [Static.splitMore, (h s (.head _)).1, Static.splitMore_eq_zero [] fun x hx => h x (.tail _ hx)]
+  | b :: o, s :: l, h => by
+      have e : Static.condMoreFor (if b then p else p') s = 0 := by
+        cases b
+        · exact (h s (.head _)).2
+        · exact (h s (.head _)).1
+      rw [Static.splitMore, e, Static.splitMore_eq_zero o fun x hx => h x (.tail _ hx)]
+
+/-- The ordered counters read each Pokémon only through `Static.condMoreFor`. -/
+theorem Static.splitMore_congr {p p' q q' : InPlay} (e : Static.condMoreFor q = Static.condMoreFor p)
+    (e' : Static.condMoreFor q' = Static.condMoreFor p') :
+    ∀ (o : List Bool) (l : List Static), Static.splitMore q q' l o = Static.splitMore p p' l o
+  | _, [] => rfl
+  | [], s :: l => by
+      rw [Static.splitMore, Static.splitMore, e, Static.splitMore_congr e e' [] l]
+  | b :: o, s :: l => by
+      have h : Static.condMoreFor (if b then q else q') s = Static.condMoreFor (if b then p else p') s := by
+        cases b
+        · simp only [Bool.false_eq_true, ↓reduceIte, e']
+        · simp only [↓reduceIte, e]
+      rw [Static.splitMore, Static.splitMore, h, Static.splitMore_congr e e' o l]
+
+/-- With no static effects, no extra counter in any order (milestone MV7b). -/
+theorem GameState.checkupMoreBy_noStatics {g : GameState} (hn : g.NoStatics) {w w' : Whose}
+    {sp : Spot} {p q q' : InPlay} (hp : g.In w sp p) (hv : q.sv = p.sv) (o : List Bool) :
+    g.checkupMoreBy w' o q q' = 0 := by
+  simp only [GameState.checkupMoreBy, hv, g.inForce_noStatics hn hp]
+  rfl
+
 /-- A static effect that is not a Checkup change (milestone MV7b). -/
 def Static.checkupFree (s : Static) : Bool :=
   match s.eff with
@@ -661,6 +740,24 @@ theorem GameState.checkupMore_of_free {g : GameState} (hf : g.CheckupFree) {w w'
   unfold Static.condMoreFor
   unfold Static.checkupFree at h
   split
+  · next heq => rw [heq] at h; cases h
+  · rfl
+
+/-- **…in every order** (milestone MV7b): with no static Checkup change, the extra counters are 0
+whichever effects the next player puts before the Special Conditions' step. -/
+theorem GameState.checkupMoreBy_of_free {g : GameState} (hf : g.CheckupFree) {w w' : Whose}
+    {sp : Spot} {p q q' : InPlay} (hp : g.In w sp p) (hv : q.sv = p.sv) (o : List Bool) :
+    g.checkupMoreBy w' o q q' = 0 := by
+  unfold GameState.checkupMoreBy
+  rw [hv]
+  refine Static.splitMore_eq_zero o fun s hs => ?_
+  obtain ⟨c, hc, hsc⟩ := g.mem_inForce hp hs
+  have h := hf c hc s hsc
+  unfold Static.condMoreFor
+  unfold Static.checkupFree at h
+  constructor <;> split
+  · next heq => rw [heq] at h; cases h
+  · rfl
   · next heq => rw [heq] at h; cases h
   · rfl
 

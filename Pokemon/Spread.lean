@@ -412,7 +412,7 @@ def start : GameState :=
 
 theorem start_wellFormed : WellFormed start := by
   refine ⟨fun _ => ⟨by simp [start, Trainer.side], by simp [start, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [start, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 

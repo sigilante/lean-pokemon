@@ -112,7 +112,7 @@ theorem reach_st (k : Nat) : Reach (st 0) (st (6 * k)) := by
 
 theorem st_wellFormed : WellFormed (st 0) :=
   ⟨fun _ => ⟨by simp [st, gs, pl], by simp [st, gs, pl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem st_loopFree : (st 0).LoopFree := by
   unfold GameState.LoopFree; decide

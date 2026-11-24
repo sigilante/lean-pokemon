@@ -79,7 +79,7 @@ theorem reach_wgs (k : Nat) : Reach (wgs 0 false) (wgs (3 * k) (decide (0 < k)))
 
 theorem wgs_wellFormed : WellFormed (wgs 0 false) :=
   ⟨fun _ => ⟨by simp [wgs, wpl], by simp [wgs, Recycle.pl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem wgs_allCards : (wgs 0 false).allCards =
     [.energy .metal, .pokemon warden, .energy .metal, .pokemon Recycle.guard] := rfl
@@ -190,7 +190,7 @@ theorem reach_kgs (k : Nat) :
 
 theorem kgs_wellFormed (u : AbilityUse) : WellFormed (kgs u [ironDefender] [] 0 false) :=
   ⟨fun _ => ⟨by simp [kgs, kpl], by simp [kgs, Recycle.pl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem kgs_allCards (u : AbilityUse) : (kgs u [ironDefender] [] 0 false).allCards =
     [ironDefender, .energy .metal, .pokemon (keeper u), .energy .metal,

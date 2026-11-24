@@ -50,7 +50,7 @@ def duel (opp : PokemonCard) : GameState :=
     true, false, false, false, none, none, false, false, false⟩
 
 theorem duel_wellFormed (opp : PokemonCard) : WellFormed (duel opp) := by
-  refine ⟨fun _ => ⟨by simp [duel, side], by simp [duel, side]⟩, ?_, ?_⟩ <;>
+  refine ⟨fun _ => ⟨by simp [duel, side], by simp [duel, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
     intro p hp <;> cases hp
 
 theorem duel_settled_ex : Settled (duel exMon) := (GameState.settled_iff _).2 (by decide)

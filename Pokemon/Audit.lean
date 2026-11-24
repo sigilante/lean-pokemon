@@ -7,6 +7,7 @@ import Pokemon.Effect
 import Pokemon.Rules
 import Pokemon.Zone
 import Pokemon.Conservation
+import Pokemon.Marks
 import Pokemon.WellFormed
 import Pokemon.Damage
 import Pokemon.ZoneSim

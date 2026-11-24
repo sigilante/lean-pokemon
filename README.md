@@ -165,18 +165,25 @@ the attacker, then the opponent's Active Pokémon); milestone MV7b records the h
 the event marks each of the opponent's Pokémon that has such a trigger where it is
 (`InPlay.owe : Option Spot`, the spot; enumerated by `Finite.inPlays`, kept by both clamps), the
 mark travels with the Pokémon, and the resolution fires the marked ones (`GameState.owedTrigs`) and
-clears the marks (`GameState.unpend`); the review's two cases are now theorems that the wrong
+clears the marks (`GameState.unpend`); marks exist only on the opponent's Pokémon while a trigger
+is pending (`GameState.MarksOk`, part of `WellFormed` since the review of stage 2; preserved by
+every move, `Move.marksOk`; the review's stale-mark start is not well formed,
+`Gust.stale_mark_excluded`); the review's two cases are now theorems that the wrong
 outcome cannot happen (`Gust.gust_drops_holder`, `Gust.gust_adds_holder`, `Gust.gust_probe_fails`).
 Milestone MV7b also added static changes of Pokémon Checkup, which are not triggers: "During
 Pokémon Checkup, put 3 more damage counters on your opponent's Burned Pokémon" (Magmortar sv9-21;
 Pecharunt svp-129 for Poisoned, while Active; the Stadium Perilous Jungle sv5-156) is a static effect
 (`SEff.condMore`, `SEff` now 8 constructors) that `Move.endTurn` reads when it applies Checkup
-(`GameState.checkupMore`), before or after the Special Conditions as the next player orders them
-(rulebook 2026 p. 15: `Move.endTurn`'s `oa`, `ob`); computed, never stored, so both clamps and the
-store bound are unaffected; witnesses in `Pokemon/Checkup.lean`. Self-Knock-Out Abilities
+(`GameState.checkupMoreBy`); the next player puts each such effect in force before or after the
+Special Conditions' step (rulebook 2026 p. 15, "you can apply one Ability, then Special Conditions,
+and then another Ability": `Move.endTurn`'s `oa`, `ob`, one entry per effect; until the review of
+stage 2 it was one Boolean per Active Pokémon, which missed that order with two sources,
+`CheckupW.two_sources`); computed, never stored, so both clamps and the store bound are
+unaffected; witnesses in `Pokemon/Checkup.lean`. Self-Knock-Out Abilities
 (Dusclops, Dusknoir: "If you use this Ability, this Pokémon is Knocked Out") need no new construct:
 damage counters on "this Pokémon" above every derived HP, taken by the batch step inside the
-Ability's resolution (`Pokemon/SelfKO.lean`). Recording the event at its source needs no
+Ability's resolution (`Pokemon/SelfKO.lean`; `SelfKO.self_ko` is a witness, one play, not a
+statement about every resolution). Recording the event at its source needs no
 Pokémon identity: Benching an identical copy of the old Active Pokémon raises nothing
 (`Benched.copy_quiet`, `Benched.copy_quiet_all`). Such a trigger may fire before the attack, as often
 as the player switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store
@@ -460,7 +467,9 @@ came with milestone MV3), cost changes and every triggered effect
   behaviour, since the printed card places all its counters at once); an Item takes the last Prize card in mid-effect and the
   rest of it is not resolved (`Trainer.winMidEffect_reachable`);
 * from a well-formed start (`WellFormed`: both players have Prizes while there is no winner;
-  Benched Pokémon have no Special Condition; since M3 a Benched Pokémon may be at or above its HP,
+  Benched Pokémon have no Special Condition; since milestone MV7b's review no Pokémon of the player
+  to move carries an owed-trigger mark and the opponent's carry none unless a trigger is pending,
+  `GameState.MarksOk`, which play keeps, `Move.marksOk`; since M3 a Benched Pokémon may be at or above its HP,
   which is a pending Knock Out, and `Settled` excludes it before every move but the batch Knock
   Out step), no reachable state without a winner is stuck (`Reach.progress`; since milestone
   batch-KO no state at all is, `Move.exists_move`), and if a Knock Out is pending the batch Knock

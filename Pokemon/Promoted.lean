@@ -62,7 +62,7 @@ def g0 : GameState :=
   st (side (InPlay.ofBasic victimC) [InPlay.ofBasic (watcherC false), InPlay.ofBasic (mistyC 10)])
 
 theorem g0_wellFormed : WellFormed g0 := by
-  refine ⟨fun _ => ⟨by simp [g0, st, side], by simp [g0, st, side]⟩, ?_, ?_⟩ <;> intro p hp <;>
+  refine ⟨fun _ => ⟨by simp [g0, st, side], by simp [g0, st, side]⟩, ?_, ?_, .of_b rfl⟩ <;> intro p hp <;>
     simp [g0, st, side] at hp <;> rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem g0_settled : Settled g0 := (GameState.settled_iff _).2 (by decide)

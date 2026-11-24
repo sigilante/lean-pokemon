@@ -60,7 +60,7 @@ def s0 (hand : List Card) (opt : Bool) : GameState :=
     false, false, false⟩
 
 theorem s0_wellFormed (hand : List Card) (opt : Bool) : WellFormed (s0 hand opt) := by
-  refine ⟨fun _ => ⟨by simp [s0, pl], by simp [s0, pl]⟩, ?_, ?_⟩ <;> intro p hp <;>
+  refine ⟨fun _ => ⟨by simp [s0, pl], by simp [s0, pl]⟩, ?_, ?_, .of_b rfl⟩ <;> intro p hp <;>
     simp [s0, pl] at hp <;> subst hp <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem s0_settled (hand : List Card) (opt : Bool) : Settled (s0 hand opt) := by
@@ -261,7 +261,7 @@ def t0 : GameState :=
     false, false, false⟩
 
 theorem t0_wellFormed : WellFormed t0 := by
-  refine ⟨fun _ => ⟨by simp [t0, pl], by simp [t0, pl]⟩, ?_, ?_⟩ <;> intro p hp <;>
+  refine ⟨fun _ => ⟨by simp [t0, pl], by simp [t0, pl]⟩, ?_, ?_, .of_b rfl⟩ <;> intro p hp <;>
     simp [t0, pl] at hp <;> subst hp <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem t0_settled : Settled t0 :=

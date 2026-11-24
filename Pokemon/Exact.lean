@@ -1306,8 +1306,9 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       exact ⟨g₂', .knockOuts h₂ (hbt ▸ hl) ht₂, e'⟩
   | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc _ oa ob =>
       have hk' := hk₂ hk
-      have hcm := fun (w : Whose) (q p : InPlay) (hv : q.sv = p.sv) (hh : ∀ x, q.has x = p.has x) =>
-        GameState.checkupMore_congr (w := w) (GameState.sameField_of_xclampAt hc) hv hh
+      have hcm := fun (w : Whose) (o : List Bool) (q q' p p' : InPlay) (hv : q.sv = p.sv)
+          (hh : ∀ x, q.has x = p.has x) (hh' : ∀ x, q'.has x = p'.has x) =>
+        GameState.checkupMoreBy_congr (w := w) (o := o) (GameState.sameField_of_xclampAt hc) hv hh hh'
       subst hg
       rw [ha] at ha₂
       rw [hb] at hc₂
@@ -1323,12 +1324,10 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       obtain ⟨bo', hbo, ebo⟩ := hco.sim ee₂
       obtain ⟨bc', hbc, ebc⟩ := hcc.sim ee₁
       refine ⟨_, .endTurn fa sa ca fb sb cb rfl rfl hk' hbt hbo hbc (oa := oa) (ob := ob), ?_⟩
-      rw [hcm .opp (if oa then qa else qa.checkup false fa sa ca) (if oa then a else a.checkup false fa sa ca)
-          (by split; exact hqa.sv; exact h1.sv) (fun x => by split; exact hqa.has x; exact h1.has x),
-        hcm .own (if ob then qb.unfresh else qb.unfresh.checkup true fb sb cb)
-          (if ob then b.unfresh else b.unfresh.checkup true fb sb cb)
-          (by split; exact hqb.upd.2.2.2.2.2.sv; exact h2.sv)
-          (fun x => by split; exact hqb.upd.2.2.2.2.2.has x; exact h2.has x)]
+      rw [hcm .opp oa qa (qa.checkup false fa sa ca) a (a.checkup false fa sa ca) hqa.sv hqa.has
+          h1.has,
+        hcm .own ob qb.unfresh (qb.unfresh.checkup true fb sb cb) b.unfresh
+          (b.unfresh.checkup true fb sb cb) hqb.upd.2.2.2.2.2.sv hqb.upd.2.2.2.2.2.has h2.has]
       simp only [InPlay.clamp_of_agree (h1.addDamage _), InPlay.clamp_of_agree (h2.addDamage _),
         GameState.xclamp, GameState.xclampAt, PlayerState.unfresh, Option.map_some, hb,
         bench_recap (c := .hp) ebo,

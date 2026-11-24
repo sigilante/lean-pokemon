@@ -120,13 +120,6 @@ theorem InPlay.benchedTrigs_nil_of {p : InPlay} (h : ∀ c ∈ p.cardList, c.ben
   · rfl
   · cases hev
 
-/-- A Pokémon with no `oppBenched` trigger where it is is not marked (milestone MV7b). -/
-theorem InPlay.noteOwe_of_nil {sp : Spot} {p : InPlay} (h : p.trigs .oppBenched sp = []) :
-    p.noteOwe sp = p := by
-  unfold InPlay.noteOwe
-  rw [h]
-  rfl
-
 /-- **With no `oppBenched` trigger in the game, the opponent has none in play.** -/
 theorem GameState.BenchedFree.benchedTrigs {g : GameState} (h : g.BenchedFree) :
     g.benchedTrigs = [] := by
@@ -141,27 +134,6 @@ theorem GameState.BenchedFree.benchedTrigs {g : GameState} (h : g.BenchedFree) :
       (fun c hc => h c (GameState.mem_allCards_of_opp_bench hp hc)) _
   unfold GameState.benchedTrigs
   rw [h1, h2]; rfl
-
-/-- **With no trigger to record, raising the event changes nothing** (milestone MV7): the retreat
-and the switch of the player's own Active Pokémon give the states they gave before MV7. -/
-theorem GameState.noteBenched_of_nil {g : GameState} (h : g.benchedTrigs = []) :
-    g.noteBenched = g := by
-  have h1 : optTrigs .oppBenched g.opp.active = [] := (List.append_eq_nil_iff.1 h).1
-  have h2 : g.opp.bench.flatMap (InPlay.trigs .oppBenched .bench) = [] :=
-    (List.append_eq_nil_iff.1 h).2
-  have ea : g.opp.active.map (InPlay.noteOwe .active) = g.opp.active := by
-    cases ha : g.opp.active with
-    | none => rfl
-    | some p =>
-        rw [ha] at h1
-        simp only [Option.map_some, InPlay.noteOwe_of_nil (show p.trigs .oppBenched .active = [] from h1)]
-  have eb : g.opp.bench.map (InPlay.noteOwe .bench) = g.opp.bench :=
-    (List.map_congr_left fun p hp => InPlay.noteOwe_of_nil (List.flatMap_eq_nil_iff.1 h2 p hp)).trans
-      (List.map_id _)
-  unfold GameState.noteBenched
-  rw [h, ea, eb]
-  cases g; rename_i pend
-  cases pend <;> rfl
 
 /-- The record after raising the event, when the opponent has no `oppBenched` trigger in play. -/
 theorem GameState.noteBenched_pend_of_nil {g : GameState} (h : g.noteBenched.benchedTrigs = []) :

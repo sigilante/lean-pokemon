@@ -24,10 +24,16 @@ Pokémon, then switch the opponent's Active Pokémon with one of their Benched P
 * `gust_adds_holder`: from `b0` (`victim` Active; the Magcargo-like `watcher` and `misty` Benched),
   no play that attacks and then makes a move Confuses the mover's Active Pokémon, whichever Benched
   Pokémon the attack gusts in: `misty` was on the Bench at the event, where its trigger does not
-  work; `watcher`, which works from the Bench, fires (Burned). `gust_adds_runs`: the play that gusts
-  `misty` in, with the mover's Active Pokémon Burned and not Confused.
+  work. `gust_adds_runs` (one play, an existential witness): the attack gusts `misty` in, `watcher`,
+  which works from the Bench, fires, and the mover's Active Pokémon is Burned and not Confused.
 * `gust_probe_fails`: the reviewer's two statements, restricted to plays that begin with the attack,
   are false.
+
+A stale mark (the review of stage 2): `c0` is `b0`'s board with `misty` already marked and nothing
+pending. It has Prize cards, Benches without Special Conditions and is `Settled`, and its stale
+mark would fire at the next event as an owed trigger; `stale_mark_excluded` proves that it is not
+`WellFormed` (`GameState.MarksOk` fails) and is not reachable from any start with `MarksOk`
+(`Reach.marksOk`).
 -/
 
 namespace Pokemon.Gust
@@ -53,13 +59,15 @@ def b0 : GameState :=
   stJ (side (InPlay.ofBasic victimC) [InPlay.ofBasic (watcherC false), InPlay.ofBasic (mistyC 30)])
 
 theorem a0_wellFormed : WellFormed a0 := by
-  refine ⟨fun _ => ⟨by simp [a0, stJ, side], by simp [a0, stJ, side]⟩, ?_, ?_⟩ <;> intro p hp <;>
+  refine ⟨fun _ => ⟨by simp [a0, stJ, side], by simp [a0, stJ, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
+    intro p hp <;>
     simp [a0, stJ, side] at hp <;> subst hp <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem a0_settled : Settled a0 := (GameState.settled_iff _).2 (by decide)
 
 theorem b0_wellFormed : WellFormed b0 := by
-  refine ⟨fun _ => ⟨by simp [b0, stJ, side], by simp [b0, stJ, side]⟩, ?_, ?_⟩ <;> intro p hp <;>
+  refine ⟨fun _ => ⟨by simp [b0, stJ, side], by simp [b0, stJ, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
+    intro p hp <;>
     simp [b0, stJ, side] at hp <;> rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem b0_settled : Settled b0 := (GameState.settled_iff _).2 (by decide)
@@ -312,5 +320,29 @@ theorem gust_probe_fails :
     cases hc
   · obtain ⟨_, _, h1, ha, h2, hc⟩ := h
     exact gust_adds_holder _ _ h1 ha h2 hc
+
+/-- The review's stale-mark state: `b0`'s board with the Benched `misty` (whose trigger works only in
+the Active Spot) already marked as owing it at the Active Spot, and no trigger pending. -/
+def c0 : GameState :=
+  stJ (side (InPlay.ofBasic victimC)
+    [InPlay.ofBasic (watcherC false), { InPlay.ofBasic (mistyC 30) with owe := some .active }])
+
+/-- **A stale mark is excluded** (the review's probe, now a theorem): `c0` meets the other clauses
+of `WellFormed` and is `Settled`, and at the next event its stale mark would be owed beside
+`watcher`'s fresh one; but it is not `WellFormed`, and no play from a start with `MarksOk` (every
+`WellFormed` start) reaches it. -/
+theorem stale_mark_excluded :
+    ((c0.winner = none → c0.cur.prizes ≠ [] ∧ c0.opp.prizes ≠ []) ∧
+        (∀ p ∈ c0.cur.bench, Benched p) ∧ ∀ p ∈ c0.opp.bench, Benched p) ∧
+      Settled c0 ∧ c0.pend = false ∧ c0.noteBenched.owedTrigs.length = 2 ∧
+      ¬ WellFormed c0 ∧ ∀ g₀, g₀.MarksOk → ¬ Reach g₀ c0 := by
+  have hn : ¬ c0.MarksOk := fun h => by
+    have e := (h.2 rfl).2 { InPlay.ofBasic (mistyC 30) with owe := some .active }
+      (by simp [c0, stJ, side])
+    cases e
+  refine ⟨⟨fun _ => ⟨by simp [c0, stJ, side], by simp [c0, stJ, side]⟩, ?_, ?_⟩,
+    (GameState.settled_iff _).2 (by decide), rfl, by decide, fun h => hn h.2.2.2,
+    fun g₀ h₀ hr => hn (Reach.marksOk h₀ hr)⟩ <;> intro p hp <;>
+    simp [c0, stJ, side] at hp <;> rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 end Pokemon.Gust

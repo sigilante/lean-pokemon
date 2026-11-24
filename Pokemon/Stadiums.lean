@@ -107,7 +107,7 @@ theorem reach_S (k : Nat) : Reach (S 0) (S k) := by
 
 theorem S_wellFormed : WellFormed (S 0) :=
   ⟨fun _ => ⟨by simp [S, spl], by simp [S, spl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem S_allCards : (S 0).allCards =
     [.energy .metal, .energy .metal, .pokemon guard, .energy .metal, .energy .metal,

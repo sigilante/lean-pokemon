@@ -61,7 +61,7 @@ def exStart (prizes : List Card) : GameState :=
 
 theorem exStart_wellFormed (c : Card) (cs : List Card) : WellFormed (exStart (c :: cs)) := by
   refine ⟨fun _ => ⟨by simp [exStart, Trainer.side], by simp [exStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [exStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact benched_ofBasic (by decide)
 
@@ -120,7 +120,7 @@ def benchStart : GameState :=
 
 theorem benchStart_wellFormed : WellFormed benchStart := by
   refine ⟨fun _ => ⟨by simp [benchStart, Trainer.side], by simp [benchStart, Trainer.side]⟩,
-    fun p hp => ?_, fun p hp => by cases hp⟩
+    fun p hp => ?_, (fun p hp => by cases hp), .of_b rfl⟩
   simp only [benchStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -179,7 +179,7 @@ def spreadStart : GameState :=
 
 theorem spreadStart_wellFormed : WellFormed spreadStart := by
   refine ⟨fun _ => ⟨by simp [spreadStart, Trainer.side], by simp [spreadStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [spreadStart, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -223,14 +223,14 @@ def charStart : GameState :=
 
 theorem charStart_wellFormed : WellFormed charStart := by
   refine ⟨fun _ => ⟨by simp [charStart, Trainer.side], by simp [charStart, Trainer.side]⟩,
-    fun p hp => ?_, fun p hp => by cases hp⟩
+    fun p hp => ?_, (fun p hp => by cases hp), .of_b rfl⟩
   simp only [charStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- The board after the turn ends with tails for the Char counter. -/
 def charMid : GameState :=
   charStart.passTurn false false false false false false (InPlay.ofBasic big) (InPlay.ofBasic big)
-    [] [charred.unfresh.addDamage 2] true true
+    [] [charred.unfresh.addDamage 2] [] []
 
 /-- **Witness: Char on the Bench.** Ending the turn with tails for the Char counter on the
 Benched `tiny` (20 HP) puts 2 damage counters on it; between turns its Knock Out is pending, and
@@ -265,7 +265,7 @@ def gustStart : GameState :=
 
 theorem gustStart_wellFormed : WellFormed gustStart := by
   refine ⟨fun _ => ⟨by simp [gustStart, Trainer.side], by simp [gustStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [gustStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -308,7 +308,7 @@ def switchStart : GameState :=
 
 theorem switchStart_wellFormed : WellFormed switchStart := by
   refine ⟨fun _ => ⟨by simp [switchStart, Trainer.side], by simp [switchStart, Trainer.side]⟩,
-    fun p hp => ?_, fun p hp => by cases hp⟩
+    fun p hp => ?_, (fun p hp => by cases hp), .of_b rfl⟩
   simp only [switchStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -350,7 +350,7 @@ def whirlStart : GameState :=
 
 theorem whirlStart_wellFormed : WellFormed whirlStart := by
   refine ⟨fun _ => ⟨by simp [whirlStart, Trainer.side], by simp [whirlStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [whirlStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -390,7 +390,7 @@ def megaStart (prizes : List Card) : GameState :=
 
 theorem megaStart_wellFormed (c : Card) (cs : List Card) : WellFormed (megaStart (c :: cs)) := by
   refine ⟨fun _ => ⟨by simp [megaStart, Trainer.side], by simp [megaStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [megaStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact benched_ofBasic (by decide)
 
@@ -425,7 +425,7 @@ def exBenchStart : GameState :=
 
 theorem exBenchStart_wellFormed : WellFormed exBenchStart := by
   refine ⟨fun _ => ⟨by simp [exBenchStart, Trainer.side], by simp [exBenchStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [exBenchStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -461,7 +461,7 @@ def healStart : GameState :=
 
 theorem healStart_wellFormed : WellFormed healStart := by
   refine ⟨fun _ => ⟨by simp [healStart, Trainer.side], by simp [healStart, Trainer.side]⟩,
-    fun p hp => ?_, fun p hp => by cases hp⟩
+    fun p hp => ?_, (fun p hp => by cases hp), .of_b rfl⟩
   simp only [healStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -703,7 +703,7 @@ def snipeStart : GameState :=
 
 theorem snipeStart_wellFormed : WellFormed snipeStart := by
   refine ⟨fun _ => ⟨by simp [snipeStart, Trainer.side], by simp [snipeStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [snipeStart, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -742,7 +742,7 @@ def pokeStart : GameState :=
 
 theorem pokeStart_wellFormed : WellFormed pokeStart := by
   refine ⟨fun _ => ⟨by simp [pokeStart, Trainer.side], by simp [pokeStart, Trainer.side]⟩,
-    (fun p hp => by cases hp), fun p hp => ?_⟩
+    (fun p hp => by cases hp), fun p hp => ?_, .of_b rfl⟩
   simp only [pokeStart, Trainer.side, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -794,10 +794,10 @@ def lastStart (oppBench : List InPlay) : GameState :=
     side [] [.energy .fire] (InPlay.ofBasic Infinite.mon) oppBench,
     true, false, false, false, none, none, false, false, false⟩
 
-theorem lastStart_wellFormed (b : List InPlay) (hb : ∀ p ∈ b, Benched p) :
-    WellFormed (lastStart b) := by
+theorem lastStart_wellFormed (b : List InPlay) (hb : ∀ p ∈ b, Benched p)
+    (hm : (lastStart b).MarksOk) : WellFormed (lastStart b) := by
   refine ⟨fun _ => ⟨by simp [lastStart, Trainer.side], by simp [lastStart, Trainer.side]⟩,
-    fun p hp => ?_, hb⟩
+    fun p hp => ?_, hb, hm⟩
   simp only [lastStart, Trainer.side, List.mem_singleton] at hp
   subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
 
@@ -833,7 +833,7 @@ theorem suddenDeath_forced :
   have hs : Settled (lastStart [InPlay.ofBasic big]) := by decide
   have hu : ¬ Calm (lastHit [InPlay.ofBasic big]) := by decide
   refine ⟨lastStart_wellFormed _ (fun p hp => by
-      simp only [List.mem_singleton] at hp; subst hp; exact ⟨rfl, rfl, rfl, rfl⟩),
+      simp only [List.mem_singleton] at hp; subst hp; exact ⟨rfl, rfl, rfl, rfl⟩) (.of_b rfl),
     hs, move_lastHit _ hs, fun hk => hu ⟨hk, by decide, by decide⟩, rfl, rfl, fun g₂ hm => ?_⟩
   have e := hm.eq_koStep_of_won hu (by decide)
   subst e
@@ -851,7 +851,7 @@ theorem bothWays_wins :
           g₂.opp.prizes = [] ∧ g₂.opp.active = none ∧ g₂.opp.bench = [] := by
   have hs : Settled (lastStart []) := by decide
   have hu : ¬ Calm (lastHit []) := by decide
-  refine ⟨lastStart_wellFormed _ (fun p hp => nomatch hp), hs, move_lastHit _ hs,
+  refine ⟨lastStart_wellFormed _ (fun p hp => nomatch hp) (.of_b rfl), hs, move_lastHit _ hs,
     fun hk => hu ⟨hk, by decide, by decide⟩, fun g₂ hm => ?_⟩
   have e := hm.eq_koStep_of_won hu (by decide)
   subst e

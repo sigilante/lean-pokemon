@@ -111,8 +111,8 @@ def start (a : InPlay) : GameState :=
   ⟨side [] [.energy .fire] a [], side [] [.energy .fire] (InPlay.ofBasic big) [], true, false,
     false, false, none, none, false, false, false⟩
 
-theorem start_wellFormed (a : InPlay) : WellFormed (start a) := by
-  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>
+theorem start_wellFormed (a : InPlay) (hm : (start a).MarksOk) : WellFormed (start a) := by
+  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_, hm⟩ <;>
     intro p hp <;> cases hp
 
 /-- The attacker with no record. -/
@@ -130,7 +130,7 @@ theorem growl_witness :
     WellFormed (start plainIn) ∧ Settled (start plainIn) ∧ ∃ g, Move (start plainIn) g ∧
       g.opp.mods.next.minus = 3 := by
   have hr : Run growl.script (start plainIn) _ := .linger .opp .next (.weaken 3) _
-  exact ⟨start_wellFormed _, settled_plain, _,
+  exact ⟨start_wellFormed _ (.of_b rfl), settled_plain, _,
     .attack (hlk := rfl) (atk := growl) rfl (.head _) (.nil _) rfl rfl rfl rfl settled_plain hr rfl
       (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _), rfl⟩
 
@@ -139,7 +139,7 @@ theorem screech_witness :
     WellFormed (start plainIn) ∧ Settled (start plainIn) ∧ ∃ g, Move (start plainIn) g ∧
       g.opp.mods.after.more = 5 := by
   have hr : Run screech.script (start plainIn) _ := .linger .opp .after (.expose 5) _
-  exact ⟨start_wellFormed _, settled_plain, _,
+  exact ⟨start_wellFormed _ (.of_b rfl), settled_plain, _,
     .attack (hlk := rfl) (atk := screech) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
       settled_plain hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
@@ -151,7 +151,7 @@ theorem mash_plain :
       (g.cur.active.map fun p => p.lk.new) = some .note := by
   have hr : Run mash.script (start plainIn) _ :=
     .iteF (p := plainIn) rfl (by decide) (.damage (.const 6 _) rfl)
-  exact ⟨start_wellFormed _, settled_plain, _,
+  exact ⟨start_wellFormed _ (.of_b rfl), settled_plain, _,
     .attack (hlk := rfl) (atk := mash) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       settled_plain hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl, rfl⟩
@@ -162,7 +162,7 @@ theorem mash_boosted :
       g.opp.active = some { InPlay.ofBasic big with damage := 12 } := by
   have hr : Run mash.script (start notedIn) _ :=
     .iteT (p := notedIn) rfl (by decide) (.damage (.const 12 _) rfl)
-  exact ⟨start_wellFormed _, settled_noted, _,
+  exact ⟨start_wellFormed _ (.of_b rfl), settled_noted, _,
     .attack (hlk := rfl) (atk := mash) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       settled_noted hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
@@ -185,7 +185,7 @@ def penalised : GameState :=
   { g with cur := { g.cur with mods := minusStore 3 }, opp := { g.opp with mods := moreStore 5 } }
 
 theorem penalised_wellFormed : WellFormed penalised := by
-  refine ⟨fun _ => ⟨by simp [penalised, start, side], by simp [penalised, start, side]⟩, ?_, ?_⟩ <;>
+  refine ⟨fun _ => ⟨by simp [penalised, start, side], by simp [penalised, start, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
     intro p hp <;> cases hp
 
 theorem settled_penalised : Settled penalised := (GameState.settled_iff _).2 (by decide)
