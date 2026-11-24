@@ -917,6 +917,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   read on every Benched Pokémon at Checkup, beside `BenchChar`), Checkup healing that reads damage
   (Snorlax me55-119), and "don't recover" effects (Dizzying Valley me2-88, on evolution, not
   Checkup); witnesses in `Pokemon/Checkup.lean`;
+* self-Knock-Out Abilities ("If you use this Ability, this Pokémon is Knocked Out", Dusclops
+  sv6pt5-19, Dusknoir sv6pt5-20; survey S20 §a) need no new construct: damage counters on "this
+  Pokémon" above every derived HP (`SelfOp.counters` with a constant above `hpBound`) make it a
+  pending Knock Out that the batch step inside the Ability's resolution takes at once, with its Prize
+  cards and promotion (`SelfKO.self_ko`). Departures: the Knock Out is by damage counters, so an
+  effect preventing damage counters on it would stop it (none is modelled); on the Bench
+  `SelfOp.counters` may choose another Benched Pokémon (a superset; the importer should caveat it);
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
   is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that

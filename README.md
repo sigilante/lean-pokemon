@@ -173,7 +173,10 @@ Pecharunt svp-129 for Poisoned, while Active; the Stadium Perilous Jungle sv5-15
 (`SEff.condMore`, `SEff` now 8 constructors) that `Move.endTurn` reads when it applies Checkup
 (`GameState.checkupMore`), before or after the Special Conditions as the next player orders them
 (rulebook 2026 p. 15: `Move.endTurn`'s `oa`, `ob`); computed, never stored, so both clamps and the
-store bound are unaffected; witnesses in `Pokemon/Checkup.lean`. Recording the event at its source needs no
+store bound are unaffected; witnesses in `Pokemon/Checkup.lean`. Self-Knock-Out Abilities
+(Dusclops, Dusknoir: "If you use this Ability, this Pokémon is Knocked Out") need no new construct:
+damage counters on "this Pokémon" above every derived HP, taken by the batch step inside the
+Ability's resolution (`Pokemon/SelfKO.lean`). Recording the event at its source needs no
 Pokémon identity: Benching an identical copy of the old Active Pokémon raises nothing
 (`Benched.copy_quiet`, `Benched.copy_quiet_all`). Such a trigger may fire before the attack, as often
 as the player switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store
