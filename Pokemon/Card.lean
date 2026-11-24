@@ -1151,9 +1151,12 @@ of today's Standard.
   the Bench during their turn, …" (Magcargo sv5-29, Mismagius ex me2-36). Raised at its source: by a
   retreat (`Move.retreat`) and by a switch of the player's own Active Pokémon with a Benched one inside
   any effect of their turn (`Run.switch .own`), which record it in the state (`GameState.pend`); it
-  resolves before the next action (`Move.trigger`, and `Resolve.trigger` after a step of a Trainer,
-  Stadium or Ability effect). "Their new Active Pokémon" is the opponent's Active Pokémon when it
-  resolves (`counters`, `inflict`).
+  resolves before anything else, the Knock Out check included (`Move.trigger` after a retreat or an
+  attack, `Resolve.trigger` after a step of a Trainer, Stadium or Ability effect), so the triggers
+  that fire are those of the opponent's Pokémon in play as the retreat, the step or the attack left
+  them. "Their new Active Pokémon" is the opponent's Active Pokémon then (`counters`, `inflict`):
+  the Pokémon switched in, unless the rest of an attack's effect moved it (departures in the Known
+  gaps of `Pokemon/Rules.lean`).
 
 All three belong to the player whose turn it is not, and their effects are written from that
 player's side: `.own` is the owner, `.opp` the player to move, so "the Attacking Pokémon" is the

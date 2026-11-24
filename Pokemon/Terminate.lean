@@ -19,8 +19,10 @@ proves that the repetition ends.
   outcome. So every primitive step of a Trainer effect can always be resolved.
 * `KOChain`, `Resolve.chain`, `KOChain.length_le`: a `Resolve` result from a state with no pending
   trigger is reached by a chain of at most `koMeasure g + 1` batches. With a trigger pending
-  (milestone MV7) `Resolve` resolves it once the state is `Calm` (`Resolve.trigger`); no trigger
-  sets the record again, so `Resolve.exists` recurses on the record first.
+  (milestone MV7) `Resolve` resolves it first when both Active Spots are filled (`Resolve.trigger`,
+  `Resolve.trigger_first`), then at most `koMeasure + 1` batches measured after the triggers
+  (`Resolve.chain_le_pend`; no bound in the measure before them is proved); no trigger sets the
+  record again, so `Resolve.exists` recurses on the record first.
 
 All proofs are constructive (the axiom gate of `Pokemon/Audit.lean`).
 -/

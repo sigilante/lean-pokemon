@@ -37,7 +37,7 @@ turns, and has not attacked. No other action (playing a card, attaching Energy, 
 retreating, attacking again) is legal. (Milestone batch-KO replaced `KOMove`, the eight Knock Out
 moves, by `KOBatch` in the statement; milestone M8b added the `koByAttack` triggers the batch fires,
 `Fire`, after it; milestone MV7 added the resolution of a trigger the attack left pending,
-`TrigMove`.) -/
+`TrigMove`, which comes before the batch step.) -/
 theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
     (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ TrigMove g g' ∨
@@ -113,7 +113,7 @@ Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is
 is the old statement. Milestone batch-KO replaced the first alternative, the eight Knock Out moves
 (`KOMove`), by the batch Knock Out step `KOBatch`, which takes them all at once; milestone M8b
 added the triggers the batch fires, `Fire`, after it; milestone MV7 the resolution of a pending
-trigger, `TrigMove`.) -/
+trigger, `TrigMove`, which comes before the batch step.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
     (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ TrigMove g g' ∨

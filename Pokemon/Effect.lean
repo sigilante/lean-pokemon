@@ -363,7 +363,7 @@ def GameState.benchedTrigs (g : GameState) : List Ability :=
 /-- **Raise the `oppBenched` event** (milestone MV7): the player to move's Active Pokémon has just
 moved to the Bench (a retreat, or a switch of their own Active Pokémon). The record
 `GameState.pend` is set when the opponent has such a trigger in play, and left as it was otherwise,
-so a game without one is unchanged. -/
+so a game without one is unchanged (`GameState.noteBenched_of_nil`; for play, `Reach.pend_false`). -/
 def GameState.noteBenched (g : GameState) : GameState :=
   { g with pend := g.pend || !g.benchedTrigs.isEmpty }
 

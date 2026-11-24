@@ -152,16 +152,29 @@ Active Pokémon moves to the Bench during their turn" (`TrigEvent.oppBenched`; M
 Mismagius ex me2-36), to the real move relation: a retreat and a switch of the player's own Active
 Pokémon inside any effect record the event in the state (`GameState.pend`, a `Bool`, set only when
 the opponent has such a trigger in play; enumerated by `Finite.states`, copied by both clamps);
-`Settled` now also asks that nothing be pending (the old meaning is `Calm`), so the triggers resolve
-before any other action, by the new move `Move.trigger` or, inside a Trainer, Stadium or Ability
-effect, by the new step `Resolve.trigger` after the step that raised the event. Recording the event
-at its source needs no Pokémon identity: Benching an identical copy of the old Active Pokémon raises
-nothing (`Benched.copy_quiet`). Such a trigger may fire before the attack, as often as the player
-switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store bound needs no
-new clause. Every theorem was re-proved; statements that spell out the moves from an unsettled state
-gained the alternative `TrigMove` (`Move.batch_of_not_settled`, `Move.after_attack`,
-`Move.after_attack_passTurn`), and a few hypotheses `¬ Settled` became `¬ Calm` (Known gaps of
-`Pokemon/Rules.lean`; witnesses in `Pokemon/Benched.lean`). Milestone M5 added Stadiums
+`Settled` now also asks that nothing be pending (the old meaning is `Calm`), and the batch Knock Out
+step asks that no trigger be ready (`KOBatch`), so the triggers resolve before anything else, the
+Knock Out check included: by the new move `Move.trigger` after a retreat or an attack or, inside a
+Trainer, Stadium or Ability effect, by the new step `Resolve.trigger` right after the step that
+raised the event (`Resolve.trigger_first`). The triggers that fire are therefore those of the
+opponent's Pokémon in play as the raising move or step left them: a review of the first version,
+which resolved them after the Knock Out check, showed a Benched Mismagius-like Pokémon promoted by
+the check firing, and one Knocked Out by the same attack not firing; both are now theorems the other
+way (`Promoted.promoted_quiet`, `Promoted.held_fires`). Recording the event at its source needs no
+Pokémon identity: Benching an identical copy of the old Active Pokémon raises nothing
+(`Benched.copy_quiet`, `Benched.copy_quiet_all`). Such a trigger may fire before the attack, as often
+as the player switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store
+bound needs no new clause. For a game with no such trigger among its cards (`GameState.BenchedFree`)
+and nothing pending at the start, nothing is ever pending (`Reach.pend_false`), no move resolves a
+trigger (`Reach.not_trigMove`), `Settled` is the old `Settled` (`Reach.settled_iff_calm`), and the
+retreat and the switch give the states they gave before (`GameState.noteBenched_of_nil`;
+`Benched.retreat_quiet` is a witness). Every theorem was re-proved; statements that spell out the
+moves from an unsettled state gained the alternative `TrigMove` (`Move.batch_of_not_settled`,
+`Move.after_attack`, `Move.after_attack_passTurn`), and statements that name the batch step as the
+move from a state with a pending Knock Out gained the hypothesis `pend = false`
+(`Move.pending_knockedOut`, `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`,
+`Move.eq_koStep_of_won`; `KOBatch.exists_of` the hypothesis that no trigger is ready; Known gaps of `Pokemon/Rules.lean`; witnesses in
+`Pokemon/Benched.lean` and `Pokemon/Promoted.lean`). Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
 Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and
@@ -453,7 +466,10 @@ came with milestone MV3), cost changes and every triggered effect
   twice the number of Pokémon in play plus the number of empty Active Spots
   (`KOBatch.koMeasure_lt`), so every chain of batches is finite (`KOBatch.acc`), every state has a
   `Resolve` result, `Settled` or with an outcome (`Resolve.exists`), and `Resolve` from a state with
-  no pending trigger takes at most that measure plus one batches (`Resolve.chain_le`);
+  no pending trigger takes at most that measure plus one batches (`Resolve.chain_le`); with one
+  pending and both Active Spots filled, the resolution of the triggers and then at most the measure
+  after them plus one batches (`Resolve.trigger_first`, `Resolve.chain_le_pend`; no bound in the
+  measure before the triggers is proved);
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at `bound` the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and
