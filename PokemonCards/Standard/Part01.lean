@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.12.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.13.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -74,7 +74,7 @@ def svp_90 : Card := .pokemon
     abilities := [
       { name := "Metal Maker", use := .once,
         spot := none, cond := none,
-        effect := .fx (.look .own (.top 4) (.energyOf .metal) (.upTo 4) (.attach .any) .bottom) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.look .own (.top 4) (.energyOf .metal) (.upTo 4) (.attach .any) .bottom)) }],
     attacks := [
       { name := "Beam", cost := [.metal, .colorless, .colorless], damage := 6,
         effect := .skip,
@@ -193,9 +193,9 @@ def svp_113 : Card := .pokemon
 
 /-- Picnicker (svp-114). Records: svp-114. -/
 def svp_114 : Card := .trainer "Picnicker" .supporter
-    (.choice (.move .own (.top 4) .hand .any .all) (.move .own (.top 2) .hand .any .all))
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.choice (.move .own (.top 4) .hand .any .all) (.move .own (.top 2) .hand .any .all)))
 
-/-- Tatsugiri (svp-118). Records: svp-118, sv6-131, sv6-186. -/
+/-- Tatsugiri (svp-118). Records: svp-118, sv6-131, sv6-186. Caveats: failToFind. -/
 def svp_118 : Card := .pokemon
   { name := "Tatsugiri", stage := .basic, evolvesFrom := none,
     hp := 7, type := .dragon, retreat := 1, weakness := none,
@@ -203,7 +203,7 @@ def svp_118 : Card := .pokemon
     abilities := [
       { name := "Attract Customers", use := .once,
         spot := some .active, cond := none,
-        effect := .fx (.seq (.move .own (.top 6) .hand (.kind .supporter) (.upTo 1)) .shuffle) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.look .own (.top 6) (.kind .supporter) (.most 1) (.put .hand) .shuffle)) }],
     attacks := [
       { name := "Surf", cost := [.fire, .water], damage := 5,
         effect := .skip,
@@ -560,7 +560,7 @@ def sv5_17 : Card := .pokemon
     abilities := [
       { name := "Changing Seasons", use := .once,
         spot := none, cond := none,
-        effect := .fx (.seq (.move .own .deck .hand (.kind .stadium) (.upTo 1)) .shuffle) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand (.kind .stadium) (.upTo 1)) .shuffle)) }],
     attacks := [
       { name := "Superpowered Horns", cost := [.grass, .colorless, .colorless], damage := 11,
         effect := .skip,
@@ -1607,7 +1607,7 @@ def sv5_139 : Card := .pokemon
 
 /-- Buddy-Buddy Poffin (sv5-144). Records: sv5-144, sv6-223, sv8pt5-101, me1-167, me2pt5-184. Caveats: upTo0. -/
 def sv5_144 : Card := .trainer "Buddy-Buddy Poffin" .item
-    (.seq (.seq (.putBench .own .deck (.and .basic (.hpLe 7))) (.putBench .own .deck (.and .basic (.hpLe 7)))) .shuffle)
+    (.seq (.ite (.countGe (.bench .own .pokemon) 5) (.move .own (.top 0) .hand .any (.exactly 1)) .skip) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.putBench .own .deck (.and .basic (.hpLe 7))) (.putBench .own .deck (.and .basic (.hpLe 7)))) .shuffle)))
 
 /-- Ciphermaniac's Codebreaking (sv5-145). Records: sv5-145, sv5-198, sv8pt5-104. -/
 def sv5_145 : Card := .trainer "Ciphermaniac's Codebreaking" .supporter
@@ -1615,7 +1615,7 @@ def sv5_145 : Card := .trainer "Ciphermaniac's Codebreaking" .supporter
 
 /-- Eri (sv5-146). Records: sv5-146, sv5-199, sv5-210, sv8pt5-136. -/
 def sv5_146 : Card := .trainer "Eri" .supporter
-    (.choice (.move .opp .hand .discard (.kind .item) (.most 1)) (.move .opp .hand .discard (.kind .item) (.most 2)))
+    (.seq (.ite (.countGe (.pile .opp .hand .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.choice (.move .opp .hand .discard (.kind .item) (.most 1)) (.move .opp .hand .discard (.kind .item) (.most 2))))
 
 /-- Explorer's Guidance (sv5-147). Records: sv5-147, sv5-200, sv8pt5-107. -/
 def sv5_147 : Card := .trainer "Explorer's Guidance" .supporter
@@ -1636,7 +1636,7 @@ def sv5_152 : Card := .tool "Hero's Cape"
 
 /-- Master Ball (sv5-153). Records: sv5-153. Caveats: aceSpec. -/
 def sv5_153 : Card := .trainer "Master Ball" .item
-    (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle)
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle))
 
 /-- Maximum Belt (sv5-154). Records: sv5-154, sv8pt5-117. Caveats: aceSpec. -/
 def sv5_154 : Card := .tool "Maximum Belt"
@@ -1646,9 +1646,9 @@ def sv5_154 : Card := .tool "Maximum Belt"
     statics := [
       { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
 
-/-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec, noopPlay. -/
+/-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec. -/
 def sv5_157 : Card := .trainer "Prime Catcher" .item
-    (.ifDone (.countGe (.bench .opp .pokemon) 1) (.switch .opp) (.switch .own))
+    (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
 
 /-- Tangela (sv6-1). Records: sv6-1. -/
 def sv6_1 : Card := .pokemon

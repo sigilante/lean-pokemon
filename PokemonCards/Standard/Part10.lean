@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 10 of 10 (91 cards).
+Imported Standard cards, part 10 of 10 (108 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.12.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.13.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,217 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part10
 open Pokemon
+
+/-- Espeon ex (me55-70). Records: me55-70. -/
+def me55_70 : Card := .pokemon
+  { name := "Espeon ex", stage := .stage1, evolvesFrom := some "Eevee",
+    hp := 26, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Solar Beatdown", cost := [.psychic, .colorless], damage := 0,
+        effect := .damage (.add (.const 3) (.count (.bench .own .pokemon) 3)),
+        gx := false }] }
+
+/-- Sylveon ex (me55-71). Records: me55-71, me55-153. -/
+def me55_71 : Card := .pokemon
+  { name := "Sylveon ex", stage := .stage1, evolvesFrom := some "Eevee",
+    hp := 27, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .ex, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Colorful Harmony", cost := [.psychic, .colorless, .colorless], damage := 0,
+        effect := .damage (.count (.energyTypes .own) 5),
+        gx := false }] }
+
+/-- Cresselia (me55-74). Records: me55-74. -/
+def me55_74 : Card := .pokemon
+  { name := "Cresselia", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Aurora Gain", cost := [.psychic, .colorless], damage := 3,
+        effect := .heal 3,
+        gx := false },
+      { name := "Lunar Blast", cost := [.psychic, .colorless, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Chandelure (me55-75). Records: me55-75, me55-137. -/
+def me55_75 : Card := .pokemon
+  { name := "Chandelure", stage := .stage2, evolvesFrom := some "Lampent",
+    hp := 14, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Eerie Glow", cost := [.psychic, .psychic], damage := 13,
+        effect := .seq (.inflict .burned) (.inflict .confused),
+        gx := false }] }
+
+/-- Xerneas (me55-76). Records: me55-76. -/
+def me55_76 : Card := .pokemon
+  { name := "Xerneas", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Geonavigation", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand (.kind .stadium) (.upTo 2)) .shuffle,
+        gx := false },
+      { name := "Aurora Horns", cost := [.psychic, .psychic, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Comfey (me55-77). Records: me55-77. -/
+def me55_77 : Card := .pokemon
+  { name := "Comfey", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Comforting Aroma", cost := [.colorless], damage := 0,
+        effect := .benchHeal 8,
+        gx := false },
+      { name := "Magical Shot", cost := [.psychic], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Cosmog (me55-78). Records: me55-78. -/
+def me55_78 : Card := .pokemon
+  { name := "Cosmog", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Splash", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Cosmoem (me55-79). Records: me55-79. Caveats: perPokemon. -/
+def me55_79 : Card := .pokemon
+  { name := "Cosmoem", stage := .stage1, evolvesFrom := some "Cosmog",
+    hp := 10, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stiffen", cost := [.colorless, .colorless], damage := 0,
+        effect := .linger .own .next (.reduce 6),
+        gx := false }] }
+
+/-- Lunala (me55-80). Records: me55-80. -/
+def me55_80 : Card := .pokemon
+  { name := "Lunala", stage := .stage2, evolvesFrom := some "Cosmoem",
+    hp := 16, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Midnight Ray", cost := [.psychic], damage := 0,
+        effect := .damage (.add (.const 2) (.count (.pile .own .discard .energy) 2)),
+        gx := false },
+      { name := "Lunar Blast", cost := [.psychic, .colorless, .colorless], damage := 12,
+        effect := .skip,
+        gx := false }] }
+
+/-- Gimmighoul (me55-81). Records: me55-81. Caveats: searchAny. -/
+def me55_81 : Card := .pokemon
+  { name := "Gimmighoul", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Strolls So Much", cost := [.colorless], damage := 0,
+        effect := .choice (.seq (.move .own .deck .hand .any (.upTo 1)) .shuffle) .skip,
+        gx := false }] }
+
+/-- Groudon (me55-82). Records: me55-82. Caveats: benchMods. -/
+def me55_82 : Card := .pokemon
+  { name := "Groudon", stage := .basic, evolvesFrom := none,
+    hp := 14, type := .fighting, retreat := 4, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Break Ground", cost := [.fighting, .fighting, .fighting, .fighting, .fighting], damage := 25,
+        effect := .spreadDamage .own 2,
+        gx := false }] }
+
+/-- Lucario (me55-83). Records: me55-83. Caveats: benchMods. -/
+def me55_83 : Card := .pokemon
+  { name := "Lucario", stage := .stage1, evolvesFrom := some "Riolu",
+    hp := 12, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Aura Sphere", cost := [.fighting, .fighting, .colorless], damage := 10,
+        effect := .benchDamage .opp 6,
+        gx := false }] }
+
+/-- Koraidon (me55-86). Records: me55-86. -/
+def me55_86 : Card := .pokemon
+  { name := "Koraidon", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Low Kick", cost := [.fighting, .fighting], damage := 5,
+        effect := .skip,
+        gx := false },
+      { name := "Collision Course", cost := [.fighting, .fighting, .colorless], damage := 14,
+        effect := .ite (.countGe (.energy .own (.energyOf .fighting)) 2) (.discardEnergy .own .active (.energyOf .fighting) (.exactly 2)) (.discardEnergy .own .active (.energyOf .fighting) .all),
+        gx := false }] }
+
+/-- Nidoran ♀ (me55-87). Records: me55-87. Caveats: benchMods, perPokemon. -/
+def me55_87 : Card := .pokemon
+  { name := "Nidoran ♀", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .darkness, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Growl", cost := [.colorless], damage := 0,
+        effect := .linger .opp .next (.weaken 3),
+        gx := false },
+      { name := "Headbutt", cost := [.darkness], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Nidorina (me55-88). Records: me55-88. Caveats: noopUse. -/
+def me55_88 : Card := .pokemon
+  { name := "Nidorina", stage := .stage1, evolvesFrom := some "Nidoran ♀",
+    hp := 9, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Share Happiness", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3))) }],
+    attacks := [
+      { name := "Bite", cost := [.colorless, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Alolan Meowth (me55-89). Records: me55-89, me55-139. -/
+def me55_89 : Card := .pokemon
+  { name := "Alolan Meowth", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pay Day", cost := [], damage := 1,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false }] }
+
+/-- Umbreon (me55-91). Records: me55-91. Caveats: koAttackWide. -/
+def me55_91 : Card := .pokemon
+  { name := "Umbreon", stage := .stage1, evolvesFrom := some "Eevee",
+    hp := 11, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Retaliate", cost := [.darkness], damage := 0,
+        effect := .ite (.countGe (.koLast .own true) 1) (.damage (.const 13)) (.damage (.const 3)),
+        gx := false },
+      { name := "Darkness Fang", cost := [.darkness, .colorless, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
 
 /-- Umbreon ex (me55-92). Records: me55-92. -/
 def me55_92 : Card := .pokemon
@@ -153,7 +364,7 @@ def me55_105 : Card := .pokemon
     abilities := [
       { name := "Sunrise", use := .once,
         spot := some .bench, cond := none,
-        effect := .seq (.seq (.self (.attach .deck (.energyOf .metal))) (.self (.attach .deck (.energyOf .metal)))) (.fx .shuffle) }],
+        effect := .seq (.fx (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.seq (.self (.attach .deck (.energyOf .metal))) (.self (.attach .deck (.energyOf .metal)))) (.fx .shuffle)) }],
     attacks := [
       { name := "Sunsteel Strike", cost := [.metal, .metal, .colorless, .colorless], damage := 22,
         effect := .discardEnergy .own .active .energy .all,
@@ -309,7 +520,7 @@ def me55_124 : Card := .pokemon
     abilities := [],
     attacks := [
       { name := "Shoot Meteors", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .seq (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))) (.discardEnergy .own .active .energy .all),
+        effect := .seq (.discardEnergy .own .active .energy .all) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))),
         gx := false }] }
 
 /-- Heracross (me6-1). Records: me6-1. Caveats: recoil. -/
@@ -476,7 +687,7 @@ def me6_16 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Arboliva (me6-17). Records: me6-17. Caveats: noopUse. -/
+/-- Arboliva (me6-17). Records: me6-17. -/
 def me6_17 : Card := .pokemon
   { name := "Arboliva", stage := .stage2, evolvesFrom := some "Dolliv",
     hp := 15, type := .grass, retreat := 2, weakness := some .fire,
@@ -484,7 +695,7 @@ def me6_17 : Card := .pokemon
     abilities := [
       { name := "Slippery Oil", use := .once,
         spot := none, cond := none,
-        effect := .fx (.switch .opp) }],
+        effect := .fx (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.switch .opp)) }],
     attacks := [
       { name := "Mega Drain", cost := [.grass, .colorless], damage := 10,
         effect := .heal 3,
@@ -590,13 +801,13 @@ def me6_28 : Card := .pokemon
     abilities := [
       { name := "Deep Sea Draw", use := .once,
         spot := none, cond := none,
-        effect := .fx (.ite (.countGe (.pile .own .deck .any) 1) (.seq (.move .own (.top 1) .hand .any .all) (.choice (.move .own .hand .bottom .any (.exactly 1)) .skip)) .skip) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 1) .hand .any .all) (.choice (.move .own .hand .bottom .any (.exactly 1)) .skip))) }],
     attacks := [
       { name := "Gentle Slap", cost := [.water, .colorless, .colorless], damage := 10,
         effect := .skip,
         gx := false }] }
 
-/-- Wishiwashi ex (me6-29). Records: me6-29, me6-120. Caveats: noopUse. -/
+/-- Wishiwashi ex (me6-29). Records: me6-29, me6-120. -/
 def me6_29 : Card := .pokemon
   { name := "Wishiwashi ex", stage := .basic, evolvesFrom := none,
     hp := 26, type := .water, retreat := 3, weakness := some .lightning,
@@ -604,7 +815,7 @@ def me6_29 : Card := .pokemon
     abilities := [
       { name := "Oceanic Gain", use := .once,
         spot := some .active, cond := none,
-        effect := .self (.heal 5) }],
+        effect := .seq (.fx (.ite (.atLeast .own 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.self (.heal 5)) }],
     attacks := [
       { name := "Hydro Splash", cost := [.water, .water, .water, .colorless], damage := 22,
         effect := .skip,
@@ -704,7 +915,7 @@ def me6_39 : Card := .pokemon
     abilities := [
       { name := "Generator's Touch", use := .once,
         spot := none, cond := none,
-        effect := .fx (.choice (.attach .own .discard (.energyOf .lightning) .active .any) (.attach .own .discard (.energyOf .lightning) .bench .any)) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .discard (.energyOf .lightning)) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.choice (.attach .own .discard (.energyOf .lightning) .active .any) (.attach .own .discard (.energyOf .lightning) .bench .any))) }],
     attacks := [
       { name := "Electric Punch", cost := [.lightning, .colorless], damage := 10,
         effect := .skip,
@@ -824,7 +1035,7 @@ def me6_56 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Nidoqueen (me6-57). Records: me6-57. Caveats: noopUse. -/
+/-- Nidoqueen (me6-57). Records: me6-57. -/
 def me6_57 : Card := .pokemon
   { name := "Nidoqueen", stage := .stage2, evolvesFrom := some "Nidorina",
     hp := 17, type := .darkness, retreat := 3, weakness := some .fighting,
@@ -832,7 +1043,7 @@ def me6_57 : Card := .pokemon
     abilities := [
       { name := "Maternal Call", use := .once,
         spot := none, cond := none,
-        effect := .fx (.choice (.switch .opp) .skip) }],
+        effect := .fx (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.choice (.switch .opp) .skip)) }],
     attacks := [
       { name := "Giga Impact", cost := [.darkness, .colorless, .colorless], damage := 15,
         effect := .skip,
@@ -1052,7 +1263,7 @@ def me6_75 : Card := .pokemon
     abilities := [
       { name := "Beat Scales", use := .once,
         spot := none, cond := none,
-        effect := .fx (.look .own (.top 6) .basicEnergy (.upTo 6) (.attach (.ptype .dragon)) .shuffle) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.look .own (.top 6) .basicEnergy (.upTo 6) (.attach (.ptype .dragon)) .shuffle)) }],
     attacks := [
       { name := "Hammer In", cost := [.lightning, .fighting, .colorless], damage := 17,
         effect := .skip,
@@ -1105,7 +1316,7 @@ def me6_79 : Card := .pokemon
     abilities := [
       { name := "Energizing Present", use := .once,
         spot := some .active, cond := none,
-        effect := .fx (.look .own (.top 6) .energy (.most 1) (.put .hand) .bottom) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.look .own (.top 6) .energy (.most 1) (.put .hand) .bottom)) }],
     attacks := [
       { name := "Beat", cost := [.colorless], damage := 1,
         effect := .skip,
@@ -1174,10 +1385,27 @@ def me6_87 : Card := .pokemon
 
 /-- Aarune (me6-89). Records: me6-89, me6-125, me6-139. Caveats: upTo0. -/
 def me6_89 : Card := .trainer "Aarune" .supporter
-    (.seq (.move .own .deck .hand (.or (.kind .supporter) (.kind .stadium)) (.upTo 3)) .shuffle)
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand (.or (.kind .supporter) (.kind .stadium)) (.upTo 3)) .shuffle))
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me55_70,
+  me55_71,
+  me55_74,
+  me55_75,
+  me55_76,
+  me55_77,
+  me55_78,
+  me55_79,
+  me55_80,
+  me55_81,
+  me55_82,
+  me55_83,
+  me55_86,
+  me55_87,
+  me55_88,
+  me55_89,
+  me55_91,
   me55_92,
   me55_94,
   me55_95,
@@ -1321,6 +1549,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
 
 end PokemonCards.Standard.Part10

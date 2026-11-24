@@ -747,9 +747,11 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,448 are imported (1,063 exactly, 385 with
-caveats) as 1,441 distinct terms, and 713 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.12.0, which writes the MV6 vocabulary: fixed windows
+damage reduction). Of the pool's 2,161 cards, 1,465 are imported (1,097 exactly, 368 with
+caveats) as 1,458 distinct terms, and 696 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.13.0, which since 0.13.0 writes the precondition that a
+Trainer or an activated Ability can do something where public information decides it,
+`tools/importer/noop.py`, and since 0.12.0 the MV6 vocabulary: fixed windows
 `Effect.look`, `Qty.most`, the defender modifiers `Mod.weaken` and `Mod.expose`, named-attack bonuses
 with `AtkLock.note` and `Test.usedLast`, `Amt.heads` and `Count.retreat`; since 0.11.0 the MV5 Energy
 filters as printed: `basicEnergy` for "Basic Energy", `energy` for "Energy", `specialEnergy` for
