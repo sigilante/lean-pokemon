@@ -166,7 +166,14 @@ the event marks each of the opponent's Pokémon that has such a trigger where it
 (`InPlay.owe : Option Spot`, the spot; enumerated by `Finite.inPlays`, kept by both clamps), the
 mark travels with the Pokémon, and the resolution fires the marked ones (`GameState.owedTrigs`) and
 clears the marks (`GameState.unpend`); the review's two cases are now theorems that the wrong
-outcome cannot happen (`Gust.gust_drops_holder`, `Gust.gust_adds_holder`, `Gust.gust_probe_fails`). Recording the event at its source needs no
+outcome cannot happen (`Gust.gust_drops_holder`, `Gust.gust_adds_holder`, `Gust.gust_probe_fails`).
+Milestone MV7b also added static changes of Pokémon Checkup, which are not triggers: "During
+Pokémon Checkup, put 3 more damage counters on your opponent's Burned Pokémon" (Magmortar sv9-21;
+Pecharunt svp-129 for Poisoned, while Active; the Stadium Perilous Jungle sv5-156) is a static effect
+(`SEff.condMore`, `SEff` now 8 constructors) that `Move.endTurn` reads when it applies Checkup
+(`GameState.checkupMore`), before or after the Special Conditions as the next player orders them
+(rulebook 2026 p. 15: `Move.endTurn`'s `oa`, `ob`); computed, never stored, so both clamps and the
+store bound are unaffected; witnesses in `Pokemon/Checkup.lean`. Recording the event at its source needs no
 Pokémon identity: Benching an identical copy of the old Active Pokémon raises nothing
 (`Benched.copy_quiet`, `Benched.copy_quiet_all`). Such a trigger may fire before the attack, as often
 as the player switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store

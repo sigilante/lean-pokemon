@@ -1104,10 +1104,11 @@ theorem checkup_calm {p : InPlay} (hr : p.rot = .none) (hp : p.poisoned = false)
   simp [InPlay.checkup, hr, hp, hb, hc]
 
 theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
-    (ha : s.active = some a) (hc : k.marks.char = false) (o f sp c : Bool) :
+    (ha : s.active = some a) (hc : k.marks.char = false) (o f sp c : Bool) {n : Nat} (hn : n = 0) :
     Fits k { s with
-      active := some (a.checkup o f sp c), bench := [], energyAttached := false,
+      active := some ((a.checkup o f sp c).addDamage n), bench := [], energyAttached := false,
       supporterPlayed := false, retreated := false, mods := s.mods.shift, ko := s.ko.shift } := by
+  subst hn
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := h.active
   rw [ha] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm h2 h3 h4 (by rw [h6]; exact hc) o f sp c
@@ -1115,10 +1116,11 @@ theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
     by rw [h.mods]; rfl, h.stocked, h.held⟩
 
 theorem Fits.toOpp {k : Pk} {s : PlayerState} {b : InPlay} (h : Fits k s)
-    (hb : s.active = some b) (hc : k.marks.char = false) (o f sp c : Bool) :
+    (hb : s.active = some b) (hc : k.marks.char = false) (o f sp c : Bool) {n : Nat} (hn : n = 0) :
     Fits k { s.unfresh with
-      active := some (b.unfresh.checkup o f sp c), bench := [], mods := s.mods.shift,
+      active := some ((b.unfresh.checkup o f sp c).addDamage n), bench := [], mods := s.mods.shift,
       hadTurn := true, ko := s.ko.shift } := by
+  subst hn
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := h.active
   rw [hb] at hp; cases hp
   obtain ⟨e1, e2, e3⟩ := checkup_calm (p := b.unfresh) h2 h3 h4 (by rw [← hc, ← h6]; rfl)
@@ -1198,13 +1200,18 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
       | won hu => exact absurd hs'.calm hu
       | go hu => exact absurd hs'.calm hu
   | trigger _ hp₀ => rw [hs.pend] at hp₀; cases hp₀
-  | endTurn fa sa ca fb sb cb ha hb _ _ hco hcc =>
+  | @endTurn a b bo bc fa sa ca fb sb cb ha hb _ _ hco hcc _ oa ob =>
       rw [hO.bench] at hco
       rw [hC.bench, List.map_nil] at hcc
       cases hco
       cases hcc
-      exact .inr (.inl ⟨(hO.toCur ha hoc false fa sa ca).weak,
-        (hC.toOpp hb hcc true fb sb cb).weak, rfl⟩)
+      have z₁ := GameState.checkupMore_noStatics hts.noStatics (w := .opp) (sp := .active)
+        (w' := .opp) (q := if oa then a else a.checkup false fa sa ca) ha (by split <;> rfl)
+      have z₂ := GameState.checkupMore_noStatics hts.noStatics (w := .own) (sp := .active)
+        (w' := .own) (q := if ob then b.unfresh else b.unfresh.checkup true fb sb cb) hb
+        (by split <;> rfl)
+      exact .inr (.inl ⟨(hO.toCur ha hoc false fa sa ca z₁).weak,
+        (hC.toOpp hb hcc true fb sb cb z₂).weak, rfl⟩)
   | @startTurn a b c d _ _ _ _ hd =>
       refine .inl ⟨⟨hC.active, hC.bench, fun x hx => hC.deck x (by rw [hd]; exact .tail _ hx),
         fun x hx => ?_, hC.mods, (fun e => by cases e), (fun e => by cases e)⟩, hO.weak, hs.pend⟩
@@ -1255,7 +1262,10 @@ theorem endTurn_move {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.
   obtain ⟨p', hp', -⟩ := hs.opp.active
   exact ⟨_, .endTurn false false false false false false hp' hp (hs.damageBounded hns hc ho) hbt
       (by rw [hs.opp.bench]; exact .nil) (by rw [hs.cur.bench, List.map_nil]; exact .nil) hs.pend,
-    ⟨hs.opp.toCur hp' hoc false false false false, hs.cur.toOpp hp hcc true false false false, rfl⟩,
+    ⟨hs.opp.toCur hp' hoc false false false false
+        (GameState.checkupMore_noStatics hns (w := .opp) (sp := .active) hp' rfl),
+      hs.cur.toOpp hp hcc true false false false
+        (GameState.checkupMore_noStatics hns (w := .own) (sp := .active) hp rfl), rfl⟩,
     rfl, rfl, rfl, rfl⟩
 
 /-- Drawing for the turn from a state of known shape whose deck is known to be nonempty. -/

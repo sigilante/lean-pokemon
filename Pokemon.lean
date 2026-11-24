@@ -41,6 +41,7 @@ import Pokemon.TriggerWitness
 import Pokemon.Benched
 import Pokemon.Promoted
 import Pokemon.Gust
+import Pokemon.Checkup
 import Pokemon.NoTriggers
 import Pokemon.InPlayTests
 import Pokemon.Spread

@@ -370,6 +370,27 @@ theorem map_clamp_setMarks {c : Cap} (f : Marks → Marks) {o₁ o₂ : Option I
   rw [Option.map_map, Option.map_map, InPlay.clampWith_setMarks, ← Option.map_map,
     ← Option.map_map, h]
 
+/-- Agreement survives adding damage counters. -/
+theorem InPlay.Agree.addDamage {c : Cap} {q p : InPlay} (h : Agree K c q p) (n : Nat) :
+    Agree K c (q.addDamage n) (p.addDamage n) :=
+  h.upd.2.1 n
+
+/-- Agreeing Pokémon have the same Special Conditions. -/
+theorem InPlay.Agree.has {c : Cap} {q p : InPlay} (h : Agree K c q p) (x : Condition) :
+    q.has x = p.has x := by
+  cases x <;> simp only [InPlay.has, h.rot, h.poisoned, h.burned]
+
+/-- The extra Checkup counters (milestone MV7b) read the field and the Pokémon's view and Special
+Conditions only. -/
+theorem GameState.checkupMore_congr {g₁ g₂ : GameState} (hs : GameState.SameField g₁ g₂)
+    {w : Whose} {q p : InPlay} (hv : q.sv = p.sv) (hh : ∀ x, q.has x = p.has x) :
+    g₂.checkupMore w q = g₁.checkupMore w p := by
+  have e : Static.condMoreFor q = Static.condMoreFor p := by
+    funext s
+    unfold Static.condMoreFor
+    split <;> simp only [hh]
+  simp only [GameState.checkupMore, hv, hs.inForce, e]
+
 /-- Checkup preserves agreement when the damage is equal, and then the results agree with
 damage capped at the bound `K` (`Cap.hp`). -/
 theorem InPlay.Agree.checkup {c : Cap} {q p : InPlay} (h : Agree K c q p)
@@ -1493,7 +1514,7 @@ theorem Move.endTurn_pending_ko :
         List.not_mem_nil] at hp
     · subst hp; decide
     · subst hp; decide
-  refine ⟨cxState, _, .endTurn false false false false false false rfl rfl hk rfl .nil .nil, hk,
+  refine ⟨cxState, _, .endTurn_of_zero false false false false false false rfl rfl hk rfl .nil .nil (by decide) (by decide), hk,
     by decide, ?_⟩
   intro hk'
   have := hk' .own .active _ rfl

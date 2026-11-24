@@ -230,7 +230,7 @@ theorem charStart_wellFormed : WellFormed charStart := by
 /-- The board after the turn ends with tails for the Char counter. -/
 def charMid : GameState :=
   charStart.passTurn false false false false false false (InPlay.ofBasic big) (InPlay.ofBasic big)
-    [] [charred.unfresh.addDamage 2]
+    [] [charred.unfresh.addDamage 2] true true
 
 /-- **Witness: Char on the Bench.** Ending the turn with tails for the Char counter on the
 Benched `tiny` (20 HP) puts 2 damage counters on it; between turns its Knock Out is pending, and

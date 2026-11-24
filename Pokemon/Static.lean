@@ -184,6 +184,21 @@ def Static.retreatMinus (s : Static) : Nat :=
   | .retreatMinus n => n
   | _ => 0
 
+/-- The extra Checkup damage counters of a static effect on the Pokémon `p` (milestone MV7b): `n`
+if the effect is `condMore c n` and `p` has the Special Condition `c`. -/
+def Static.condMoreFor (p : InPlay) (s : Static) : Nat :=
+  match s.eff with
+  | .condMore c n => if p.has c then n else 0
+  | _ => 0
+
+/-- **The extra damage counters of Pokémon Checkup** (milestone MV7b) on the `w` player's Active
+Pokémon `p`: the sum of the `condMore` effects in force on it whose Special Condition it has
+(Magmortar's "3 more damage counters on your opponent's Burned Pokémon"). Computed, never stored.
+`Move.endTurn` reads it on the Pokémon before or after the Special Conditions' step, as the next
+player orders the two (rulebook 2026 p. 15). -/
+def GameState.checkupMore (g : GameState) (w : Whose) (p : InPlay) : Nat :=
+  sumOf (Static.condMoreFor p) (g.inForce w .active p.sv)
+
 /-- **Derived HP** (milestone M6): the HP of the Pokémon `p` of the `w` player at `sp` in the state
 `g`, in counters: its printed HP, plus every `hpPlus` in force, less every `hpMinus` in force
 (stopping at 0). It is computed, never stored: it changes when a source enters or leaves play, when
@@ -432,10 +447,10 @@ theorem mem_fieldOf {e : Spot × SView} {a : Option InPlay} {b : List InPlay}
         exact ⟨p, .inl rfl, by rw [h]⟩
   · exact ⟨p, .inr hp, rfl⟩
 
-/-- With no static effects in the game, none is in force anywhere. -/
-theorem GameState.inForce_noStatics {g : GameState} (hn : g.NoStatics) {w : Whose} {sp : Spot}
-    {p : InPlay} (hp : g.In w sp p) (w' : Whose) (sp' : Spot) : g.inForce w' sp' p.sv = [] := by
-  have hv : p.sv.statics = [] := InPlay.sv_statics_nil fun c hc => hn c (hp.cardList_sub hc)
+/-- With no static effects in the game, none is in force on a view with none of its own
+(milestone MV7b). -/
+theorem GameState.inForce_noStatics_view {g : GameState} (hn : g.NoStatics) {v : SView}
+    (hv : v.statics = []) (w' : Whose) (sp' : Spot) : g.inForce w' sp' v = [] := by
   have hf : ∀ (u : Whose) (e : Spot × SView), e ∈ (g.side u).field → e.2.statics = [] := by
     intro u e he
     obtain ⟨q, hq, he2⟩ := mem_fieldOf he
@@ -456,6 +471,12 @@ theorem GameState.inForce_noStatics {g : GameState} (hn : g.NoStatics) {w : Whos
     rw [hf u e he]
     rfl
   simp only [GameState.inForce, staticsInForce, hv, hst, List.filter_nil, hm, List.append_nil]
+
+/-- With no static effects in the game, none is in force anywhere. -/
+theorem GameState.inForce_noStatics {g : GameState} (hn : g.NoStatics) {w : Whose} {sp : Spot}
+    {p : InPlay} (hp : g.In w sp p) (w' : Whose) (sp' : Spot) : g.inForce w' sp' p.sv = [] :=
+  GameState.inForce_noStatics_view hn
+    (InPlay.sv_statics_nil fun c hc => hn c (hp.cardList_sub hc)) w' sp'
 
 theorem sumOf_nil (f : Static → Nat) : sumOf f [] = 0 := rfl
 /-- **No static effect has a source in play** (milestone M6): every Pokémon in play is the source of
@@ -490,6 +511,12 @@ theorem GameState.Plain.inForce {g : GameState} (h : g.Plain) {v : SView} (hv : 
     rw [h.1 u e he]
     rfl
   simp only [GameState.inForce, staticsInForce, hv, h.2, List.filter_nil, hm, List.append_nil]
+
+/-- In a `Plain` state Pokémon Checkup adds no extra counters to a Pokémon with no static effect
+of its own (milestone MV7b). -/
+theorem GameState.Plain.checkupMore {g : GameState} (h : g.Plain) {w : Whose} {q : InPlay}
+    (hq : q.sv.statics = []) : g.checkupMore w q = 0 := by
+  simp only [GameState.checkupMore, h.inForce hq, sumOf_nil]
 
 theorem GameState.Plain.sv {g : GameState} (h : g.Plain) {w : Whose} {sp : Spot} {p : InPlay}
     (hp : g.In w sp p) : p.sv.statics = [] := by
@@ -599,6 +626,43 @@ theorem GameState.mem_inForce {g : GameState} {w : Whose} {sp : Spot} {p : InPla
 theorem GameState.hpOf_noStatics {g : GameState} (hn : g.NoStatics) {w : Whose} {sp : Spot}
     {p : InPlay} (hp : g.In w sp p) : g.hpOf w sp p = p.top.hp := by
   simp only [GameState.hpOf, g.inForce_noStatics hn hp, sumOf_nil, Nat.add_zero, Nat.sub_zero]
+
+/-- With no static effects, Pokémon Checkup adds no extra damage counters (milestone MV7b). -/
+theorem GameState.checkupMore_zero {g : GameState} (hn : g.NoStatics) {w : Whose} {q : InPlay}
+    (hq : q.sv.statics = []) : g.checkupMore w q = 0 := by
+  simp only [GameState.checkupMore, g.inForce_noStatics_view hn hq, sumOf_nil]
+
+theorem GameState.checkupMore_noStatics {g : GameState} (hn : g.NoStatics) {w w' : Whose}
+    {sp : Spot} {p q : InPlay} (hp : g.In w sp p) (hv : q.sv = p.sv) : g.checkupMore w' q = 0 := by
+  simp only [GameState.checkupMore, hv, g.inForce_noStatics hn hp, sumOf_nil]
+
+/-- A static effect that is not a Checkup change (milestone MV7b). -/
+def Static.checkupFree (s : Static) : Bool :=
+  match s.eff with
+  | .condMore _ _ => false
+  | _ => true
+
+/-- No card of the game has a static Checkup change (milestone MV7b). Play keeps it (cards are
+only permuted). -/
+def GameState.CheckupFree (g : GameState) : Prop :=
+  ∀ c ∈ g.allCards, ∀ s ∈ c.statics, s.checkupFree = true
+
+/-- **A game with no static Checkup change ends its turns as before** (milestone MV7b): Pokémon
+Checkup adds no extra counter to a Pokémon in play (nor to its Checkup result, which has the same
+view). With `Move.endTurn_of_zero`, `Move.endTurn` is then the end of turn of the milestones before
+MV7b. -/
+theorem GameState.checkupMore_of_free {g : GameState} (hf : g.CheckupFree) {w w' : Whose}
+    {sp : Spot} {p q : InPlay} (hp : g.In w sp p) (hv : q.sv = p.sv) : g.checkupMore w' q = 0 := by
+  unfold GameState.checkupMore
+  rw [hv]
+  refine sumOf_eq_zero fun s hs => ?_
+  obtain ⟨c, hc, hsc⟩ := g.mem_inForce hp hs
+  have h := hf c hc s hsc
+  unfold Static.condMoreFor
+  unfold Static.checkupFree at h
+  split
+  · next heq => rw [heq] at h; cases h
+  · rfl
 
 /-- With no static effects, the Retreat Cost of the player's Active Pokémon is the printed one. -/
 theorem GameState.retreatOf_noStatics {g : GameState} (hn : g.NoStatics) {a : InPlay}

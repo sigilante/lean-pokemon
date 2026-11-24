@@ -308,12 +308,12 @@ effect rises by one). -/
 theorem once_again : ∃ g g', Reach (cgs true 1) g ∧ g.curIsFirst = true ∧ g.between = false ∧
     Move g g' ∧ g'.cur.mods.now.bonus = g.cur.mods.now.bonus + 1 := by
   refine ⟨_, _, .step (.step (.step (.step (.refl _) rfl
-      (.endTurn false false false false false false rfl rfl (cgs_settled true 1).1 rfl .nil .nil))
+      (.endTurn_of_zero false false false false false false rfl rfl (cgs_settled true 1).1 rfl .nil .nil (by decide) (by decide)))
       rfl (.startTurn rfl rfl rfl
         (settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl).1 rfl))
-      rfl (.endTurn false false false false false false rfl rfl
+      rfl (.endTurn_of_zero false false false false false false rfl rfl
         (settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl).1 rfl
-        .nil .nil))
+        .nil .nil (by decide) (by decide)))
       rfl (.startTurn rfl rfl rfl
         (settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl).1 rfl),
     rfl, rfl, .ability (ab := charge) (.active rfl) (.head _) rfl rfl (fun _ => rfl) trivial rfl

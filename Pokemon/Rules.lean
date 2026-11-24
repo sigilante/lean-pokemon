@@ -887,9 +887,36 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`GameState.noteBenched_of_nil`); `Benched.retreat_quiet` is a witness. Not modelled (survey S20
   §a): the player's own Pokémon moving between the Bench and the Active Spot (Yanmega ex,
   Clawitzer; 5 refused), Energy attached from the hand (Gengar ex, Magearna; 2), the opponent's
-  evolution (Team Rocket's Ampharos; 1) and Item or Supporter plays (prevention; 3), Checkup changes
-  (Magmortar, Pecharunt and 3 more), Knock Outs of other Pokémon and Prize changes, replacement
-  effects (Pikachu ex and 4 more);
+  evolution (Team Rocket's Ampharos; 1) and Item or Supporter plays (prevention; 3), Knock Outs of
+  other Pokémon and Prize changes, replacement effects (Pikachu ex and 4 more); Checkup changes are
+  the next item;
+* static changes of Pokémon Checkup (milestone MV7b, survey S20 §a T1): "During Pokémon Checkup,
+  put N more damage counters on your opponent's Burned / Poisoned Pokémon" (Magmortar sv9-21,
+  Pecharunt svp-129 "as long as this Pokémon is in the Active Spot"; the Stadium Perilous Jungle
+  sv5-156, "each Poisoned non-Darkness Pokémon (both yours and your opponent's)", has the same
+  shape with `sel = all`) are static effects, not triggers (`SEff.condMore c n`), computed when
+  `Move.endTurn` applies Checkup (`GameState.checkupMore`) and never stored; only an Active Pokémon
+  has Special Conditions, so only the Active Pokémon are read. Order: the rulebook lets the player
+  whose turn is next order the Checkup effects, "but all Special Conditions must happen at the same
+  time" (2026 p. 15); the model applies the Special Conditions' step (Poison, Burn and its flip,
+  Sleep, Paralysis, Char) and adds each Active Pokémon's extra counters either before it (reading
+  the Pokémon before the Burn flip: `Move.endTurn`'s `oa`/`ob` true, the default) or after it
+  (reading it after the flip, so a Pokémon cured on heads gets none: false). These are the only two
+  places an Ability's counters can take relative to the Special Conditions, and the Knock Out check
+  follows them all, so for added counters the two choices cover every order the next player can
+  choose (exact; `CheckupW.burn_heads_order`); the model lets both choices be made by the
+  nondeterminism of the move, not by that player (as for every other choice in the model). Poison
+  strength (`poisonUp`, which both clamps cap) is not involved: the extra counters are a function
+  of the cards in play and the Pokémon's Special Conditions (`GameState.checkupMore_congr`), which
+  both clamps keep. A game with no such effect among its cards (`GameState.CheckupFree`) ends its
+    turns as before (`GameState.checkupMore_of_free`, `Move.endTurn_of_zero`). Not modelled (still
+  refused): Checkup counters on every Pokémon passing a filter, Benched ones included (Froslass
+  svp-117, "1 damage counter on each Pokémon that has an Ability … except any Froslass"; Team
+  Rocket's Tyranitar sv10-96, "2 damage counters on each of your opponent's Basic Pokémon": the
+  filters exist, `Filter.hasAbility`, `Filter.not`, but the step would need a second static form
+  read on every Benched Pokémon at Checkup, beside `BenchChar`), Checkup healing that reads damage
+  (Snorlax me55-119), and "don't recover" effects (Dizzying Valley me2-88, on evolution, not
+  Checkup); witnesses in `Pokemon/Checkup.lean`;
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
   is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that
@@ -2016,19 +2043,27 @@ inductive Move : GameState → GameState → Prop where
   `bo`, the player's `bc`); the lingering modifiers of this turn expire and the others move one
   turn closer (`Store.shift`); then the opponent becomes the player to move, between turns.
   Requires both Active Pokémon, no pending Knock Out anywhere and (milestone MV7) no pending
-  trigger. -/
+  trigger. Since milestone MV7b each Active Pokémon also gets the extra counters of the static
+  `condMore` effects in force on it (`GameState.checkupMore`: Magmortar, Pecharunt), read on the
+  Pokémon before the Special Conditions' step (`oa`, `ob` true: the effect first) or after it
+  (false: after the Burn flip, which may have cured it); "The player whose turn is next decides the
+  order of the effects, but all Special Conditions must happen at the same time" (rulebook 2026
+  p. 15), and the two free choices cover every order that player can take. -/
   | endTurn {g : GameState} {a b : InPlay} {bo bc : List InPlay} (fa sa ca fb sb cb : Bool)
       (ha : g.opp.active = some a) (hb : g.cur.active = some b) (hk : DamageBounded g)
       (hbt : g.between = false) (hco : BenchChar g.opp.bench bo)
       (hcc : BenchChar (g.cur.bench.map InPlay.unfresh) bc)
-      (hpd : g.pend = false := by first | rfl | assumption) :
+      (hpd : g.pend = false := by first | rfl | assumption) (oa ob : Bool := true) :
       Move g
         { cur := { g.opp with
-            active := some (a.checkup false fa sa ca), bench := bo,
+            active := some ((a.checkup false fa sa ca).addDamage
+              (g.checkupMore .opp (if oa then a else a.checkup false fa sa ca))), bench := bo,
             energyAttached := false, supporterPlayed := false, retreated := false,
             mods := g.opp.mods.shift, ko := g.opp.ko.shift },
           opp := { g.cur.unfresh with
-            active := some (b.unfresh.checkup true fb sb cb), bench := bc,
+            active := some ((b.unfresh.checkup true fb sb cb).addDamage
+              (g.checkupMore .own (if ob then b.unfresh else b.unfresh.checkup true fb sb cb))),
+            bench := bc,
             mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
           curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
           between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
@@ -2046,6 +2081,30 @@ inductive Move : GameState → GameState → Prop where
       (hk : DamageBounded g) (hd : g.cur.deck = [])
       (hpd : g.pend = false := by first | rfl | assumption) :
       Move g { g with winner := some (.win !g.curIsFirst) }
+
+/-- `Move.endTurn` when no static Checkup effect applies to either Active Pokémon (milestone
+MV7b): the state of the milestones before, with the effects first (`oa = ob = true`). -/
+theorem Move.endTurn_of_zero {g : GameState} {a b : InPlay} {bo bc : List InPlay}
+    (fa sa ca fb sb cb : Bool)
+    (ha : g.opp.active = some a) (hb : g.cur.active = some b) (hk : DamageBounded g)
+    (hbt : g.between = false) (hco : BenchChar g.opp.bench bo)
+    (hcc : BenchChar (g.cur.bench.map InPlay.unfresh) bc)
+    (hz₁ : g.checkupMore .opp a = 0) (hz₂ : g.checkupMore .own b.unfresh = 0)
+    (hpd : g.pend = false := by first | rfl | assumption) :
+    Move g
+      { cur := { g.opp with
+          active := some (a.checkup false fa sa ca), bench := bo,
+          energyAttached := false, supporterPlayed := false, retreated := false,
+          mods := g.opp.mods.shift, ko := g.opp.ko.shift },
+        opp := { g.cur.unfresh with
+          active := some (b.unfresh.checkup true fb sb cb), bench := bc,
+          mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
+        curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
+        between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
+        stadiumUsed := false } := by
+  have h := Move.endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc hpd true true
+  simp only [↓reduceIte, hz₁, hz₂] at h
+  exact h
 
 /-- Reachability by legal play. No move is made once the game has a winner. -/
 inductive Reach : GameState → GameState → Prop where

@@ -1367,8 +1367,10 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
           GameState.koTrigs_of_clamp hc hH (GameState.hpBelow_of_clamp hc hH)]
       obtain ⟨g₂', ht₂, e'⟩ := ht.clamp_sim (co := .hp) (cp := .hp) (cbo := .hp) (cbp := .hp) e
       exact ⟨g₂', .knockOuts h₂ (hbt ▸ hl) ht₂, e'⟩
-  | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
+  | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc _ oa ob =>
       have hk' := hk₂ hk
+      have hcm := fun (w : Whose) (q p : InPlay) (hv : q.sv = p.sv) (hh : ∀ x, q.has x = p.has x) =>
+        GameState.checkupMore_congr (w := w) (GameState.sameField_of_clampAt hc) hv hh
       subst hg
       rw [ha] at ha₂
       rw [hb] at hc₂
@@ -1383,9 +1385,16 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
         (bench_exact_of_hp he₁ fun p hp => hk.lt_bound hH (w := .own) (sp := .bench) hp)
       obtain ⟨bo', hbo, ebo⟩ := hco.sim ee₂
       obtain ⟨bc', hbc, ebc⟩ := hcc.sim ee₁
-      refine ⟨_, .endTurn fa sa ca fb sb cb rfl rfl hk' hbt hbo hbc, ?_⟩
-      simp only [GameState.clamp, GameState.clampAt, PlayerState.unfresh, Option.map_some, hb,
-        InPlay.clamp_of_agree h1, InPlay.clamp_of_agree h2, Store.cap_shift hm₁,
+      refine ⟨_, .endTurn fa sa ca fb sb cb rfl rfl hk' hbt hbo hbc (oa := oa) (ob := ob), ?_⟩
+      rw [hcm .opp (if oa then qa else qa.checkup false fa sa ca) (if oa then a else a.checkup false fa sa ca)
+          (by split; exact hqa.sv; exact h1.sv) (fun x => by split; exact hqa.has x; exact h1.has x),
+        hcm .own (if ob then qb.unfresh else qb.unfresh.checkup true fb sb cb)
+          (if ob then b.unfresh else b.unfresh.checkup true fb sb cb)
+          (by split; exact hqb.upd.2.2.2.2.2.sv; exact h2.sv)
+          (fun x => by split; exact hqb.upd.2.2.2.2.2.has x; exact h2.has x)]
+      simp only [InPlay.clamp_of_agree (h1.addDamage _), InPlay.clamp_of_agree (h2.addDamage _),
+        GameState.clamp, GameState.clampAt, PlayerState.unfresh, Option.map_some, hb,
+        Store.cap_shift hm₁,
         Store.cap_shift hm₂, bench_recap (c := .hp) ebo,
         bench_recap (c := .hp) ebc]
   | startTurn hbt ha hb hk hd =>

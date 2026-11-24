@@ -927,10 +927,10 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
         ht.disc_mono Card.alAmt_tw (fun ab hab => Effect.recOk_nil (hrec ab hab)) (fun _ hy => hy)
       exact ⟨_, _, _, _, _, hi.same hwn hW hAl hf.attacked z.cur_supporterPlayed hf.gxCur hf.gxOpp
         (fun s => ht.slotAmt s) (hpot z.first) (hstp z.first)⟩
-  | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc =>
+  | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc hpd oa ob =>
       refine ⟨_, _, _, _, _, hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) (Nat.add_comm _ _) rfl (Nat.add_comm _ _) ?_⟩
-      have hperm := (Move.endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc).perm
+      have hperm := (Move.endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc hpd oa ob).perm
       exact Nat.le_trans (GameState.abPot_le_bound _) (by rw [hperm.length_eq]; exact hK)
   | startTurn => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩

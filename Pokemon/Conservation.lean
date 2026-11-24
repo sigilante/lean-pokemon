@@ -443,7 +443,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh, hco.cardList,
         hcc.cardList, benchCardList_unfresh]
-      perm_count [ha, hb, InPlay.checkup, InPlay.unfresh]
+      perm_count [ha, hb, InPlay.checkup, InPlay.unfresh, InPlay.addDamage]
   | startTurn hbt ha hb hk hd => perm_count [hd]
   | deckOut hbt ha hb hk hd => exact .refl _
 
