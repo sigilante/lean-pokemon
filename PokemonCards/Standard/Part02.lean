@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.12.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.13.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -161,7 +161,7 @@ def sv6_38 : Card := .pokemon
     abilities := [
       { name := "Alluring Light", use := .once,
         spot := none, cond := none,
-        effect := .fx (.seq (.move .own (.top 1) .hand .any .all) (.move .opp (.top 1) .hand .any .all)) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.ite (.countGe (.pile .opp .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.move .own (.top 1) .hand .any .all) (.move .opp (.top 1) .hand .any .all))) }],
     attacks := [
       { name := "Mind Ruler", cost := [.fire], damage := 0,
         effect := .damage (.count (.pile .opp .hand .any) 3),
@@ -334,7 +334,7 @@ def sv6_58 : Card := .pokemon
         effect := .skip,
         gx := false },
       { name := "Spit Shot", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .seq (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))) (.discardEnergy .own .active .energy .all),
+        effect := .seq (.discardEnergy .own .active .energy .all) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 12)) (.benchDamage .opp 12)) (.damage (.const 12))),
         gx := false }] }
 
 /-- Finizen (sv6-59). Records: sv6-59. -/
@@ -456,7 +456,7 @@ def sv6_72 : Card := .pokemon
     abilities := [
       { name := "Snack Seek", use := .once,
         spot := none, cond := none,
-        effect := .fx (.choice (.move .own (.top 1) .discard .any .all) .skip) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.look .own (.top 1) .any (.upTo 1) (.put .discard) .top)) }],
     attacks := [
       { name := "Pick and Stick", cost := [.lightning], damage := 0,
         effect := .seq (.choice (.attach .own .discard .basicEnergy .active .any) (.attach .own .discard .basicEnergy .bench .any)) (.choice (.attach .own .discard .basicEnergy .active .any) (.attach .own .discard .basicEnergy .bench .any)),
@@ -590,7 +590,7 @@ def sv6_87 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Florges (sv6-88). Records: sv6-88. Caveats: noopUse. -/
+/-- Florges (sv6-88). Records: sv6-88. -/
 def sv6_88 : Card := .pokemon
   { name := "Florges", stage := .stage2, evolvesFrom := some "Floette",
     hp := 14, type := .psychic, retreat := 2, weakness := some .metal,
@@ -598,10 +598,21 @@ def sv6_88 : Card := .pokemon
     abilities := [
       { name := "Captivating Invitation", use := .once,
         spot := none, cond := none,
-        effect := .fx (.choice (.ite (.countGe (.bench .opp .pokemon) 1) (.seq (.switch .opp) (.inflict .confused)) .skip) .skip) }],
+        effect := .fx (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.choice (.seq (.switch .opp) (.inflict .confused)) .skip)) }],
     attacks := [
       { name := "Magical Shot", cost := [.psychic, .colorless], damage := 12,
         effect := .skip,
+        gx := false }] }
+
+/-- Slurpuff (sv6-90). Records: sv6-90. -/
+def sv6_90 : Card := .pokemon
+  { name := "Slurpuff", stage := .stage1, evolvesFrom := some "Swirlix",
+    hp := 12, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Slurp Slurp", cost := [.psychic, .colorless], damage := 0,
+        effect := .choice (.seq (.damage (.const 0)) (.inflict .confused)) (.choice (.damage (.const 9)) (.damage (.const 18))),
         gx := false }] }
 
 /-- Sandshrew (sv6-97). Records: sv6-97. -/
@@ -947,7 +958,7 @@ def sv6_129 : Card := .pokemon
     abilities := [
       { name := "Recon Directive", use := .once,
         spot := none, cond := none,
-        effect := .fx (.ite (.countGe (.pile .own .deck .any) 2) (.seq (.move .own (.top 2) .hand .any (.exactly 1)) (.move .own (.top 1) .bottom .any .all)) (.move .own (.top 1) .hand .any .all)) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.pile .own .deck .any) 2) (.seq (.move .own (.top 2) .hand .any (.exactly 1)) (.move .own (.top 1) .bottom .any .all)) (.move .own (.top 1) .hand .any .all))) }],
     attacks := [
       { name := "Dragon Headbutt", cost := [.fire, .psychic], damage := 7,
         effect := .skip,
@@ -981,7 +992,7 @@ def sv6_133 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .all }] }
 
-/-- Blissey ex (sv6-134). Records: sv6-134, sv6-201. Caveats: noopUse. -/
+/-- Blissey ex (sv6-134). Records: sv6-134, sv6-201. Caveats: moveMayFail. -/
 def sv6_134 : Card := .pokemon
   { name := "Blissey ex", stage := .stage1, evolvesFrom := some "Chansey",
     hp := 30, type := .colorless, retreat := 4, weakness := some .fighting,
@@ -989,7 +1000,7 @@ def sv6_134 : Card := .pokemon
     abilities := [
       { name := "Happy Switch", use := .once,
         spot := none, cond := none,
-        effect := .fx (.moveEnergy .own .basicEnergy) }],
+        effect := .fx (.seq (.seq (.ite (.countGe (.energyAll .own .basicEnergy) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.moveEnergy .own .basicEnergy)) }],
     attacks := [
       { name := "Return", cost := [.colorless, .colorless, .colorless], damage := 18,
         effect := .choice (.drawTo .own 6) .skip,
@@ -1053,15 +1064,15 @@ def sv6_140 : Card := .pokemon
 
 /-- Accompanying Flute (sv6-142). Records: sv6-142. Caveats: oppBenchFresh. -/
 def sv6_142 : Card := .trainer "Accompanying Flute" .item
-    (.look .opp (.top 5) .basic (.upTo 5) .bench .shuffle)
+    (.seq (.ite (.countGe (.pile .opp .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.look .opp (.top 5) .basic (.upTo 5) .bench .shuffle))
 
 /-- Bug Catching Set (sv6-143). Records: sv6-143, sv8pt5-102. -/
 def sv6_143 : Card := .trainer "Bug Catching Set" .item
-    (.seq (.move .own (.top 7) .hand (.or (.ptype .grass) (.energyOf .grass)) (.upTo 2)) .shuffle)
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 7) .hand (.or (.ptype .grass) (.energyOf .grass)) (.upTo 2)) .shuffle))
 
-/-- Cook (sv6-147). Records: sv6-147. Caveats: noopPlay. -/
+/-- Cook (sv6-147). Records: sv6-147. -/
 def sv6_147 : Card := .trainer "Cook" .supporter
-    (.heal 7)
+    (.seq (.ite (.atLeast .own 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.heal 7))
 
 /-- Enhanced Hammer (sv6-148). Records: sv6-148, sv6-224. -/
 def sv6_148 : Card := .trainer "Enhanced Hammer" .item
@@ -1069,15 +1080,15 @@ def sv6_148 : Card := .trainer "Enhanced Hammer" .item
 
 /-- Hassel (sv6-151). Records: sv6-151, sv6-205. Caveats: koCheckup, upTo0. -/
 def sv6_151 : Card := .trainer "Hassel" .supporter
-    (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 8) .hand .any (.upTo 3)) .shuffle))
+    (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 8) .hand .any (.upTo 3)) .shuffle)))
 
 /-- Hyper Aroma (sv6-152). Records: sv6-152. Caveats: aceSpec, upTo0. -/
 def sv6_152 : Card := .trainer "Hyper Aroma" .item
-    (.seq (.move .own .deck .hand (.stage .stage1) (.upTo 3)) .shuffle)
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand (.stage .stage1) (.upTo 3)) .shuffle))
 
 /-- Lana's Aid (sv6-155). Records: sv6-155, sv6-207, sv6-219. Caveats: upTo0. -/
 def sv6_155 : Card := .trainer "Lana's Aid" .supporter
-    (.move .own .discard .hand (.or (.and .pokemon .noRuleBox) .basicEnergy) (.upTo 3))
+    (.seq (.ite (.countGe (.pile .own .discard (.or (.and .pokemon .noRuleBox) .basicEnergy)) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own .discard .hand (.or (.and .pokemon .noRuleBox) .basicEnergy) (.upTo 3)))
 
 /-- Lucky Helmet (sv6-158). Records: sv6-158. Caveats: trigDamaged. -/
 def sv6_158 : Card := .tool "Lucky Helmet"
@@ -1090,15 +1101,15 @@ def sv6_158 : Card := .tool "Lucky Helmet"
 
 /-- Raifort (sv6-161). Records: sv6-161. -/
 def sv6_161 : Card := .trainer "Raifort" .supporter
-    (.look .own (.top 5) .any (.upTo 5) (.put .discard) .top)
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.look .own (.top 5) .any (.upTo 5) (.put .discard) .top))
 
 /-- Secret Box (sv6-163). Records: sv6-163. Caveats: aceSpec. -/
 def sv6_163 : Card := .trainer "Secret Box" .item
-    (.seq (.move .own .hand .discard .any (.exactly 3)) (.seq (.seq (.move .own .deck .hand (.kind .item) (.upTo 1)) (.seq (.move .own .deck .hand .tool (.upTo 1)) (.seq (.move .own .deck .hand (.kind .supporter) (.upTo 1)) (.move .own .deck .hand (.kind .stadium) (.upTo 1))))) .shuffle))
+    (.seq (.move .own .hand .discard .any (.exactly 3)) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.move .own .deck .hand (.kind .item) (.upTo 1)) (.seq (.move .own .deck .hand .tool (.upTo 1)) (.seq (.move .own .deck .hand (.kind .supporter) (.upTo 1)) (.move .own .deck .hand (.kind .stadium) (.upTo 1))))) .shuffle)))
 
 /-- Unfair Stamp (sv6-165). Records: sv6-165. Caveats: aceSpec, koCheckup. -/
 def sv6_165 : Card := .trainer "Unfair Stamp" .item
-    (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.move .own .hand .shuffle .any .all) (.move .opp .hand .shuffle .any .all)) (.seq (.move .own (.top 5) .hand .any .all) (.move .opp (.top 2) .hand .any .all))))
+    (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.ite (.countGe (.pile .own .hand .any) 1) .skip (.ite (.countGe (.pile .opp .deck .any) 1) .skip (.ite (.countGe (.pile .opp .hand .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))))) (.seq (.seq (.move .own .hand .shuffle .any .all) (.move .opp .hand .shuffle .any .all)) (.seq (.move .own (.top 5) .hand .any .all) (.move .opp (.top 2) .hand .any .all)))))
 
 /-- Rowlet (sv6pt5-3). Records: sv6pt5-3. -/
 def sv6pt5_3 : Card := .pokemon
@@ -1379,7 +1390,7 @@ def sv6pt5_38 : Card := .pokemon
     abilities := [
       { name := "Flip the Script", use := .once,
         spot := none, cond := some (.countGe (.koLast .own false) 1),
-        effect := .fx (.move .own (.top 3) .hand .any .all) }],
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own (.top 3) .hand .any .all)) }],
     attacks := [
       { name := "Cruel Arrow", cost := [.colorless, .colorless, .colorless], damage := 0,
         effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 10)) (.benchDamage .opp 10)) (.damage (.const 10)),
@@ -1494,11 +1505,11 @@ def sv6pt5_54 : Card := .trainer "Academy at Night" .stadium
 
 /-- Colress's Tenacity (sv6pt5-57). Records: sv6pt5-57, sv6pt5-87. -/
 def sv6pt5_57 : Card := .trainer "Colress's Tenacity" .supporter
-    (.seq (.seq (.move .own .deck .hand (.kind .stadium) (.upTo 1)) (.move .own .deck .hand .energy (.upTo 1))) .shuffle)
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.move .own .deck .hand (.kind .stadium) (.upTo 1)) (.move .own .deck .hand .energy (.upTo 1))) .shuffle))
 
 /-- Dangerous Laser (sv6pt5-58). Records: sv6pt5-58. Caveats: aceSpec. -/
 def sv6pt5_58 : Card := .trainer "Dangerous Laser" .item
-    (.seq (.inflict .burned) (.inflict .confused))
+    (.seq (.ite (.cond .opp .burned) (.ite (.cond .opp .confused) (.move .own (.top 0) .hand .any (.exactly 1)) .skip) .skip) (.seq (.inflict .burned) (.inflict .confused)))
 
 /-- Night Stretcher (sv6pt5-61). Records: sv6pt5-61, sv8-251, me1-173, me2pt5-196. -/
 def sv6pt5_61 : Card := .trainer "Night Stretcher" .item
@@ -1817,17 +1828,6 @@ def sv7_36 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Tirtouga (sv7-37). Records: sv7-37. -/
-def sv7_37 : Card := .pokemon
-  { name := "Tirtouga", stage := .stage1, evolvesFrom := some "Antique Cover Fossil",
-    hp := 10, type := .water, retreat := 3, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Splashing Turn", cost := [.water, .water], damage := 7,
-        effect := .switch .own,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   sv6_21,
@@ -1876,6 +1876,7 @@ def cards : List Card := [
   sv6_86,
   sv6_87,
   sv6_88,
+  sv6_90,
   sv6_97,
   sv6_98,
   sv6_99,
@@ -1978,8 +1979,7 @@ def cards : List Card := [
   sv7_33,
   sv7_34,
   sv7_35,
-  sv7_36,
-  sv7_37]
+  sv7_36]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

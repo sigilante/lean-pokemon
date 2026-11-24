@@ -40,6 +40,7 @@ written: `Effect.mayDo`, consequences of `attach` / `putBench` / `moveEnergy` (w
 """
 import re
 
+import noop as N
 import terms as T
 from terms import OWN, OPP, SKIP, seq, choice, ite
 
@@ -82,17 +83,23 @@ CAVEATS = {
                       "poisonUp (N-1); the Known gaps list numbered Poison variants as absent",
     'selfInDiscard': "the model resolves a Trainer with the card already in the discard pile, so its "
                      "recycling filter or discard count can see the card itself (Known gaps)",
-    'searchAny': "a deck search for 'a card' (any card) may find nothing in the model",
-    'noopPlay': "a Trainer whose effect may do nothing in the model (switch with an empty Bench, heal an "
-                "undamaged Pokémon, cure a Pokémon with no Special Condition) can be played to no effect; "
-                "a Trainer cannot be played when its effect cannot happen (taken from rulings, not in the "
-                "2023 rulebook on hand)",
+    'searchAny': "a deck search for 'a card' (any card) may find nothing in the model, where print must take at least 1 "
+                 "(2026 rulebook p. 21: 'for any effect that allows you to search your deck or discard pile for any card you "
+                 "want and doesn't specify what kind, you must choose at least 1'; Known gaps, zone moves item: 'a superset "
+                 "elsewhere and for an attack that searches for any card')",
+    'noopPlay': "a Trainer (an Item, a Supporter, a Stadium's use) whose effect may do nothing in the model in a state where "
+                "it could do something (heal 30 damage from 1 of your Pokémon: the model may heal an undamaged one, as it "
+                "has no test of a Benched Pokémon's damage) can be played to no effect there. The importer reads the usual "
+                "ruling, not in the rulebook (2026 p. 12 says only 'When you play any Trainer card, do what it says'): a "
+                "card may not be played when its effect cannot do anything, except that a search of a hidden zone may find "
+                "nothing; where public information decides it the term states the precondition instead (noop.py; Known "
+                "gaps, item on plays to no effect)",
     'koBetweenSteps': "a Trainer or Ability sentence written as several primitives gets a Knock Out check between "
                       "them, and after a Knock Out later steps act on the replacement (Known gaps, TRun, M8a)",
-    'noopUse': "an Ability whose effect may do nothing in the model (a switch with an empty Bench, a heal of an "
-               "undamaged Pokémon, a move of Energy that moves none, a take when there is nothing to take, a "
-               "condition tested when the effect resolves) can be used to no effect, marking its Pokémon as used; "
-               "whether the printed game allows such a use was not checked",
+    'noopUse': "an activated Ability whose effect may do nothing in the model in a state where it could do something (as "
+               "noopPlay) can be used to no effect there, marking its Pokémon as used; the importer reads the ruling of "
+               "noopPlay for Abilities too, and states the precondition where public information decides it (noop.py; "
+               "Known gaps, item on plays to no effect)",
     'selfBench': "'this Pokémon' on the Bench is one Benched Pokémon chosen when the effect resolves, and for an "
                  "on-play Ability the Active Pokémon or a Benched one (Known gaps, M8a: SelfOp.at)",
     'moveAnyPair': "a move of Energy printed between particular Pokémon ('to this Pokémon', 'from 1 of your Benched "
@@ -235,12 +242,55 @@ CONDS = {'Asleep': 'asleep', 'Burned': 'burned', 'Confused': 'confused', 'Paraly
 def noop(ctx):
     """The `noopPlay` caveat, for a mandatory Trainer primitive that the model lets do nothing
     (`switchNone`, `heal` of an undamaged Pokémon, `benchHealNone`, `cure` with no condition). In an
-    attack doing nothing is what the card does when it cannot, so no caveat."""
+    attack doing nothing is what the card does when it cannot, so no caveat. Since importer 0.13.0 these
+    marks are provisional: `no_effect_trainer` and `no_effect_ability` drop them and decide the caveat
+    from the whole effect (`noop.py`)."""
     if ctx['kind'] == 'trainer':
         return {'noopPlay'}
     if ctx['kind'] == 'ability':
         return {'noopUse'}
     return set()
+
+
+COIN_RE = re.compile(r'[Ff]lip (?:a coin|\d+ coins)')
+
+
+def no_effect_trainer(body, text, cavs):
+    """Importer 0.13.0, one treatment of plays to no effect (`noop.py`): the effect `body` of an Item, Supporter or
+    Stadium use (its cost excluded) gets the precondition that it can do something, where public information decides
+    it, and the caveat `noopPlay` where a play to no effect is left that print forbids. Returns the new body; updates
+    `cavs` (the provisional `noopPlay` marks of the rules are dropped first)."""
+    cavs.discard('noopPlay')
+    known, clauses, _, residue = N.plan([body], bool(COIN_RE.search(text)))
+    cavs |= N.residue_caveats(residue, cavs, 'trainer')
+    return N.apply(body, known, clauses)
+
+
+def ab_decide(a, units):
+    if a[0] == 'fx':
+        return ('fx', N.decide(a[1], units))
+    if a[0] in ('seq', 'choice'):
+        return (a[0], ab_decide(a[1], units), ab_decide(a[2], units))
+    return a
+
+
+def no_effect_ability(eff, use, spot, text, cavs):
+    """As `no_effect_trainer`, for an Ability's effect before its cost: an activated Ability ("Once during your turn",
+    "As often as you like") gets the precondition and the caveat `noopUse`, the effect read at every place the Ability
+    can be used from; an on-play Ability needs neither, as a use to no effect leaves the state of the play without the
+    Ability (`Move.onPlay` against `PlayFromHand`)."""
+    cavs.discard('noopUse')
+    if use[0] not in ('once', 'unlimited'):
+        return eff
+    places = [spot] if spot is not None else [T.ACTIVE, T.BENCH]
+    bodies = [T.abeff_compile(p, eff) for p in places]
+    facts = [(N.bench(OWN), True)] if spot == T.BENCH else []
+    known, clauses, _, residue = N.plan(bodies, bool(COIN_RE.search(text)), facts)
+    cavs |= N.residue_caveats(residue, cavs, 'ability')
+    if not clauses:
+        return eff
+    units = list(known) + [cl[0] for cl in clauses if len(cl) == 1]
+    return abseq(('fx', seq(*[N.require(cl) for cl in clauses])), ab_decide(eff, units))
 
 
 def num(s):
@@ -513,14 +563,14 @@ def min_take(count, n, make, ctx):
 
     In an attack the effect does as much as it can, so with nothing to take it does nothing (`skip`,
     or the move of `all` of none). A Trainer cannot be played when its effect cannot happen (taken
-    from rulings; not in the 2023 rulebook on hand), so in a Trainer the case with nothing to take
+    from rulings; not in the rulebook, 2026 p. 12; `noop.py`), so in a Trainer the case with nothing to take
     has no resolution: `exactly 1` of none, the model's convention for an unpayable cost
     (Pokemon/Rules.lean, `Move.item`), and a Trainer that can take some but fewer than `n` takes all
     of them.
 
     An Ability follows the attack convention (it does what it can, nothing when nothing can be
-    taken) and is marked `noopUse`: whether the printed game lets an Ability be used when its effect
-    cannot happen was not checked, so the model allows such a use (allows more)."""
+    taken); since importer 0.13.0 `no_effect_ability` then adds the precondition that something can be
+    taken (`noop.py`), and the provisional `noopUse` mark set here is dropped."""
     if ctx['kind'] == 'ability':
         ctx['_cavs'].add('noopUse')
     if ctx['kind'] == 'trainer':
@@ -650,6 +700,10 @@ def parse_test(c, ctx):
     if m:
         w = OWN if m.group(1) == 'this Pokémon' else OPP
         return [('atLeast', w, 1)], m.group(2) == 'no'
+    # importer 0.13.0: "has exactly N damage counters on it" (`Test.exactly`, Mega Absol ex me1-86's test)
+    m = re.match(r'^(this Pokémon|' + opp_a + r') has exactly (\d+) damage counters on it$', c)
+    if m:
+        return [('exactly', OWN if m.group(1) == 'this Pokémon' else OPP, num(m.group(2)))], False
     m = re.match(r'^' + opp_a + r" (is|isn't) (Asleep|Burned|Confused|Paralyzed|Poisoned)$", c)
     if m:
         return [('cond', OPP, (CONDS[m.group(2)],))], m.group(1) == "isn't"
@@ -732,7 +786,48 @@ def parse_test(c, ctx):
     r = parse_test_mv2(c, ctx)
     if r is not None:
         return r
+    r = parse_test_and(c, ctx)
+    if r is not None:
+        return r
     raise Refuse('condition not expressible: ' + c)
+
+
+def parse_test_and(c, ctx):
+    """Importer 0.13.0 (survey S16 §5): conditions that are conjunctions of the model's tests, written as nested `ite`s
+    (`branch`, `and_ite`): an exact number of Prize cards ("you have exactly 6 Prize cards remaining"; "doesn't have
+    exactly 3 or 4": 3 or more and not 5 or more; `Count.prizes`, the Prize cards left), two Pokémon names on the Bench
+    ("Beldum and Metang are on your Bench", "you don't have Uxie and Azelf on your Bench"), and "all of your Pokémon in
+    play are F" (no Pokémon in play outside F, `Count.inPlay`)."""
+    m = re.match(r"^(you have|your opponent has|your opponent doesn't have) exactly (\d+)(?: or (\d+))? Prize cards? remaining$", c)
+    if m:
+        w = OWN if m.group(1) == 'you have' else OPP
+        lo = num(m.group(2))
+        hi = num(m.group(3)) if m.group(3) else lo
+        if hi < lo:
+            raise Refuse('condition not expressible: ' + c)
+        cnt = ('prizes', w)
+        t = ('AND', ((('countGe', cnt, lo), True), (('countGe', cnt, hi + 1), False)))
+        return [t], m.group(1) == "your opponent doesn't have"
+    m = re.match(r"^(?:(.+?) and (.+?) are on your Bench|you don't have (.+?) and (.+?) on your Bench)$", c)
+    if m:
+        a, b = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        fs = []
+        for x in (a, b):
+            if re.search(r',| and |\d|any ', x):
+                return None
+            f = parse_filter(x, ctx)
+            if not (f[0] == 'named' and is_pokemon_filter(f)):
+                return None
+            fs.append(f)
+        t = ('AND', tuple((('countGe', ('bench', OWN, f), 1), True) for f in fs))
+        return [t], bool(m.group(3))
+    m = re.match(r'^all of your Pokémon in play are (.+)$', c)
+    if m:
+        f = parse_filter(m.group(1), ctx)
+        if not is_pokemon_filter(f):
+            return None
+        return [('countGe', ('inPlay', OWN, ('and', ('pokemon',), ('not', f))), 1)], True
+    return None
 
 
 # milestone MV2, (C): the printed kinds of the opponent's Active Pokémon a test reads (`Test.top w f`, which reads
@@ -821,13 +916,30 @@ def parse_test_mv2(c, ctx):
 
 
 def branch(tests, neg, a, b):
-    """`if any test then a else b` (or the reverse when negated), as nested `ite`."""
+    """`if any test then a else b` (or the reverse when negated), as nested `ite`. A test may be a conjunction
+    ('AND', ((t, polarity), ...)) (importer 0.13.0: "exactly N Prize cards", "X and Y are on your Bench", "all of your
+    Pokémon in play are F"), written as nested `ite`s whose failing branches are the rest."""
     if neg:
         a, b = b, a
     out = b
     for t in reversed(tests):
-        out = ite(t, a, out)
+        out = and_ite(t, a, out, ite)
     return out
+
+
+def and_ite(t, a, b, mk):
+    """`ite t a b` for a test or a conjunction of literals (see `branch`); `mk` builds one `ite` node."""
+    if t[0] != 'AND':
+        return mk(t, a, b)
+    out = a
+    for (u, p) in reversed(t[1]):
+        out = mk(u, out, b) if p else mk(u, b, out)
+    return out
+
+
+def exactly_count(cnt, n):
+    """'the count is exactly n': n or more and not n + 1 or more."""
+    return ('AND', ((('countGe', cnt, n), True), (('countGe', cnt, n + 1), False)))
 
 
 # ------------------------------------------------------------------ items produced by sentences
@@ -1196,6 +1308,13 @@ def draw(w, n):
 @rule('draw', r'(?:Then, )?[Dd]raw (a card|(\d+) cards)\.', 'B', 'move own (top n) hand any all')
 def _(m, ctx):
     return Eff(draw(OWN, num(m.group(2)) if m.group(2) else 1))
+
+
+@rule('draw-more', r'[Dd]raw (a card|(\d+) cards) more\.|[Dd]raw (\d+) more cards?\.', 'B', 'move own (top n) hand any all')
+def _(m, ctx):
+    # importer 0.13.0 (Emcee's Hype sv10-163): "draw 2 more cards" after a draw is a second draw of 2
+    n = num(m.group(3) or m.group(2) or '1')
+    return Eff(draw(OWN, n))
 
 
 @rule('draw-to', r'Draw cards until you have (\d+) cards in your hand\.', 'B', 'drawTo own n')
@@ -1661,6 +1780,15 @@ def _(m, ctx):
     return Eff(('discardTools', OPP, ('active',)), pre=True)
 
 
+@rule('pre-discard-tools-self', r"Before doing damage, discard all Pokémon Tools from this Pokémon\.", 'A',
+      'discardTools own active, before the damage step')
+def _(m, ctx):
+    # importer 0.13.0 (Melmetal sv7-104): every Tool of the attacking Pokémon (the Active Pokémon in an attack, before
+    # the damage step: no switch precedes it), to the player's discard pile; "If you can't discard any, this attack
+    # does nothing" is the next sentence's `wrapIf` on `hasTool own`
+    return Eff(('discardTools', OWN, ('active',)), pre=True)
+
+
 @rule('pre-discard-tools-special-opp-active', r"Before doing damage, discard all Pokémon Tools and Special Energy from your "
       r"opponent's Active Pokémon\.", 'A', 'discardTools opp active; discardEnergy opp active specialEnergy all, before the damage step')
 def _(m, ctx):
@@ -2017,6 +2145,8 @@ _before(('search-several', 'search-either'), 'may-search-to-hand')
 
 def split_sentences(t):
     t = (t or '').replace('’', "'").replace('‘', "'")
+    # importer 0.13.0: a misprint in the data ("your oppoennt's Active Pokémon", Palkia me55-20)
+    t = t.replace("your oppoennt's", "your opponent's")
     out = []
     for line in re.split(r'\n+', t):
         for s in re.split(r"(?<=[.!?])[\"')]*\s+(?=[A-Z(\[•])", line):
@@ -2337,6 +2467,24 @@ class Parser:
             self.used.append(('play-condition-history', s))
             self.items.append((i, Cost(ite(tests[0], SKIP, NO_PLAY), ctx.pop('_tc', set()))))
             return i + 1
+        # importer 0.13.0 (Lacey sv7-139, Lillie's Determination me1-119, Team Rocket's Ariana sv10-171): "If C, draw N
+        # cards instead." / "If C, draw cards until you have N cards in your hand instead.", after a draw of the same
+        # kind in the sentence before: `ite C (new draw) (the earlier draw)`
+        m = re.match(r'^If (.+?), (draw (\d+) cards|draw cards until you have (\d+) cards in your hand) instead\.$', s)
+        if m:
+            prev = self.prev_item(i, "'instead'")
+            if m.group(3) and not (prev.e[0] == 'move' and prev.e[1:2] == (OWN,) and prev.e[2][0] == 'top'
+                                   and prev.e[3:] == (('hand',), ('any',), ('all',))):
+                raise Refuse("'draw N cards instead' after a sentence that is not a draw", s)
+            if m.group(4) and not (prev.e[0] == 'drawTo' and prev.e[1] == OWN):
+                raise Refuse("'draw cards until … instead' after a sentence that is not such a draw", s)
+            ctx.pop('_tc', None)
+            tests, neg = parse_test(m.group(1), ctx)
+            tc = ctx.pop('_tc', set())
+            new_draw = draw(OWN, num(m.group(3))) if m.group(3) else ('drawTo', OWN, num(m.group(4)))
+            self.used.append(('if-condition-draw-instead', s))
+            self.items[-1] = (self.items[-1][0], Eff(branch(tests, neg, new_draw, prev.e), prev.cavs | tc))
+            return i + 1
         # a condition: "If C, X."
         m = re.match(r'^If (.+?), (this attack does .+|.+)$', s)
         if m and not s.startswith('If you do,') and not s.startswith("If you can't"):
@@ -2392,21 +2540,20 @@ class Parser:
             self.items.append((i, Eff(seq(('move', OWN, ('top', k), ('hand',), ('any',), ('upTo', c)), ('shuffle',)),
                                       {'upTo0'} if ctx['kind'] != 'attack' else set())))
             return i + 2
-        # "Discard all Energy from this Pokémon, and this attack [also] does ...": two sentences. The
-        # discard and the damage commute in the model (the damage step reads no Energy of the attacker),
-        # so the order of the two items does not matter.
-        # Since importer 0.7 (milestone MV2 census, S13 §B) the discard may be of N, or of all of a type: the damage
-        # step and a damage-to-chosen-Pokémon step read no Energy of the attacker either.
+        # "Discard all Energy from this Pokémon, and this attack [also] does ...": two items, the discard first.
+        # Since importer 0.7 (milestone MV2 census, S13 §B) the discard may be of N, or of all of a type. Since importer
+        # 0.13.0 every such discard is resolved before the damage step, as printed (`build_attack`, `first_dmg`): the
+        # damage step reads the attacker's Energy through a static bonus with an Energy condition (`Static.need`).
         m = re.match(r"^(Discard (?:all|an|a|\d+) (?:(?:Basic )?" + TYPE_RE + r" )?Energy from this Pokémon), and "
                      r"(?P<dmg>this attack (?:also )?does (?!.*for each).+)$", s)
         if m and ctx['kind'] == 'attack':
             first = self.one(m.group(1) + '.')
             second = self.one(m.group('dmg')[0].upper() + m.group('dmg')[1:])
             self.used.append(('discard-all-and', s))
-            if m.group(1) != 'Discard all Energy from this Pokémon' and isinstance(second, Dmg):
+            if isinstance(second, Dmg):
                 # importer 0.7.0: the discard is resolved before the damage step, as printed (a static bonus
-                # with an Energy condition on the attacker could otherwise see the Energy; validation, MV2). The
-                # v0.6.0 form "Discard all Energy from this Pokémon, and …" keeps its earlier term.
+                # with an Energy condition on the attacker could otherwise see the Energy; validation, MV2); since
+                # importer 0.13.0 also for "Discard all Energy from this Pokémon, and …"
                 first = Eff(first.e, first.cavs, pre=True)
             self.items.append((i, first))
             self.items.append((i, second))
@@ -2459,6 +2606,16 @@ class Parser:
             self.items[-1] = (self.items[-1][0], Eff(a, prev.cavs, pre=True))
             self.items.append((i, ('wrapIf', [t], True)))
             return i + 1
+        if s == "If you can't discard any, this attack does nothing." and ctx['kind'] == 'attack':
+            # importer 0.13.0 (Melmetal sv7-104): after "Before doing damage, discard all Pokémon Tools from this Pokémon":
+            # the attack happens only if this Pokémon has a Tool (`hasTool own`, the exact test that the discard can
+            # discard any), tested when the attack starts, before the discard
+            if not self.items or self.items[-1][0] != i - 1 or not isinstance(self.items[-1][1], Eff) or \
+                    self.items[-1][1].e != ('discardTools', OWN, ('active',)):
+                raise Refuse("'If you can't discard any' after an action other than discarding this Pokémon's Tools", s)
+            self.used.append(('if-you-cant-discard-tools', s))
+            self.items.append((i, ('wrapIf', [('hasTool', OWN)], True)))
+            return i + 1
         m = re.match(r"^If you don't have exactly (\d+) cards in your hand, this attack does nothing\.$", s)
         if m and ctx['kind'] == 'attack':
             # "exactly n" is `countGe … n` and not `countGe … (n + 1)` (S15 §2, "already expressible")
@@ -2497,11 +2654,63 @@ class Parser:
             return i + 2
         return None
 
+    def coin_tree_step(self, S, i):
+        """Importer 0.13.0 (survey S16 §5, class I): "Flip k coins. [This attack does P (more) damage for each heads.]
+        If <a count of heads>, X. [If …, Y. …]" in an attack, where the same coins decide the damage and the
+        conditions (`Dmg('coinsx')`, built by `build_attack`). Only the forms the older rules do not cover: a per-heads
+        damage sentence followed by a condition, two or more conditions, or an exact count of heads."""
+        s = S[i]
+        m = re.match(r'^Flip (\d+|two|three|four) coins\.$', s)
+        if not m or self.ctx['kind'] != 'attack':
+            return None
+        k = num(m.group(1))
+        j = i + 1
+        per = None
+        more = False
+        m2 = re.match(r'^This attack does (\d+) (more )?damage for each heads\.$', S[j] if j < len(S) else '')
+        if m2:
+            per, more = counters(m2.group(1)), bool(m2.group(2))
+            j += 1
+        conds = []
+        exact = False
+        while j < len(S):
+            mc = re.match(r'^If (both of them are (?:heads|tails)|all of them are (?:heads|tails)|either of them is heads|'
+                          r'any of them are heads|at least (\d) of them are heads|(\d) of them (?:is|are) heads), (.+)$', S[j])
+            if not mc:
+                break
+            w = mc.group(1)
+            if w.endswith('tails'):
+                hs = {0}
+            elif w.startswith(('both', 'all')):
+                hs = {k}
+            elif w.startswith(('either', 'any')):
+                hs = set(range(1, k + 1))
+            elif mc.group(2):
+                hs = set(range(int(mc.group(2)), k + 1))
+            else:
+                hs = {int(mc.group(3))}
+                exact = True
+            if not hs or max(hs) > k or (w.startswith('both') and k != 2):
+                raise Refuse('coin condition not expressible', S[j])
+            X = self.clause(mc.group(4))
+            if isinstance(X, Nothing) or (isinstance(X, Dmg) and (X.op != 'add' or X.args[0][0] != 'const')):
+                raise Refuse('coin condition with a consequence not expressible', S[j])
+            conds.append((frozenset(hs), X))
+            j += 1
+        if not conds or not (per is not None or len(conds) >= 2 or exact):
+            return None
+        self.used.append(('flip-n-coins-tree', ' '.join(S[i:j])))
+        self.items.append((i, Dmg('coinsx', k, per, more, conds)))
+        return j
+
     def s16_step(self, S, i, nxt):
         """Multi-sentence forms of importer 0.9.0 (survey S16, class I); None if none applies."""
         s = S[i]
         ctx = self.ctx
         nx2 = S[i + 2] if i + 2 < len(S) else ''
+        j = self.coin_tree_step(S, i)
+        if j is not None:
+            return j
         # "Flip N coins. If both of them are heads / all … / either … / any … / at least k …, X." (one condition, no
         # further "If" sentence): for N ≥ 2 the event is neither certain nor impossible, and coin flips are
         # nondeterministic choices (Known gaps), so the outcomes are those of one flip: X, or not
@@ -2622,8 +2831,11 @@ class Parser:
             self.items.append((i, ('ifYouDo', X)))
             return i + 1
         if s == 'Look at the top card of your deck.' and nxt == 'You may discard that card.':
+            # importer 0.13.0: a window of the top card (`Effect.look`, milestone MV6), of which up to 1 is discarded and
+            # the rest put back on top: the same outcomes as `choice (move own (top 1) discard any all) skip`, written as
+            # the look it is, so that a use that discards nothing reads as a look at a hidden card (`noop.py`)
             self.used.append(('ab-look-top-may-discard', s + ' ' + nxt))
-            self.items.append((i, Eff(choice(('move', OWN, ('top', 1), ('discard',), ('any',), ('all',)), SKIP))))
+            self.items.append((i, Eff(('look', OWN, ('top', 1), ('any',), ('upTo', 1), ('put', ('discard',)), ('top',)))))
             return i + 2
         if (s == 'Look at the top 2 cards of your deck and put 1 of them into your hand.'
                 and nxt == 'Put the other card on the bottom of your deck.'):
@@ -2633,13 +2845,10 @@ class Parser:
             self.items.append((i, Eff(ite(('countGe', ('pile', OWN, ('deck',), ('any',)), 2), two,
                                           ('move', OWN, ('top', 1), ('hand',), ('any',), ('all',))))))
             return i + 2
-        m = re.match(r'^Look at the top (\d+) cards of your deck, reveal (an?) (.+?) you find there, and put it into your hand\.$', s)
-        if m and nxt == 'Shuffle the other cards back into your deck.':
-            k = num(m.group(1))
-            f = parse_filter(m.group(3), self.ctx)
-            self.used.append(('ab-look-top-reveal-take', s + ' ' + nxt))
-            self.items.append((i, Eff(seq(('move', OWN, ('top', k), ('hand',), f, ('upTo', 1)), ('shuffle',)))))
-            return i + 2
+        # importer 0.13.0: "Look at the top N cards of your deck, reveal a X you find there, and put it into your hand.
+        # Shuffle the other cards back into your deck." is left to the window rule of milestone MV6 (`mv6_step`: `look …
+        # (most 1)` with the caveat `failToFind`), as Delibird me6-79's same shape is; until 0.12.0 this rule wrote
+        # `upTo 1`, a take that may fail, without a caveat (Tatsugiri svp-118)
         return None
 
     def clause(self, c):
@@ -2652,6 +2861,11 @@ class Parser:
         m = re.match(r'^this attack does (\d+) more damage\.$', c)
         if m:
             return Dmg('add', ('const', counters(m.group(1))))
+        m = re.match(r'^this attack does (\d+) more damage, and (heal \d+ damage from this Pokémon\.)$', c)
+        if m and self.ctx['kind'] == 'attack':
+            # importer 0.13.0 (Floragato sv9-17): both halves under one coin; `flip` writes them as one leaf
+            X = self.clause(m.group(2))
+            return Dmg('addx', counters(m.group(1)), X)
         m = re.match(r'^(your opponent\'s Active Pokémon is now .+)$', c)
         if m:
             c = 'Y' + c[1:]
@@ -2666,6 +2880,10 @@ class Parser:
     def flip(self, H, Tl, i):
         if isinstance(Tl, Nothing) and H is None:
             self.items.append((i, ('wrapFlip',)))
+            return
+        if isinstance(H, Dmg) and H.op == 'addx' and Tl is None:
+            n, X = H.args
+            self.items.append((i, Dmg('coinsx', 1, None, False, [({1}, Dmg('add', ('const', n))), ({1}, X)])))
             return
         if isinstance(H, Dmg) and Tl is None:
             if H.op != 'add' or H.args[0][0] != 'const':
@@ -2772,6 +2990,11 @@ def window_qty(qw, n, private, ctx, bench=False):
     raise Refuse('window quantity not expressible: ' + qw)
 
 
+# "Your opponent reveals their hand" where nothing is then taken: a window on the opponent's hand that takes no card and
+# puts the hand back (the identity on states, as `skip`).
+REVEAL_OPP_HAND = ('look', OPP, ('hand',), ('any',), ('exactly', 0), ('put', ('hand',)), ('hand',))
+
+
 def opp_hand_clause(c, ctx):
     """A clause on the cards 'you find there' after "Your opponent reveals their hand" (a public window): an `Eff` or a
     `Dmg`."""
@@ -2807,7 +3030,10 @@ def opp_hand_clause(c, ctx):
         if qw == 'any number of':
             return Eff(mk(('upTo', 5)))
         if qw in ('a', 'an'):
-            return Eff(ite(('countGe', ('bench', OPP, ('pokemon',)), 5), SKIP, mk(('most', 1))))
+            # with a full Bench nothing is put there, but the hand is still revealed: importer 0.13.0 writes that branch as
+            # the reveal it is, a window on the opponent's hand that takes nothing (`look … (exactly 0)`, the identity),
+            # so that a use with a full Bench reads as a look at a hidden zone, not a use to no effect (`noop.py`)
+            return Eff(ite(('countGe', ('bench', OPP, ('pokemon',)), 5), REVEAL_OPP_HAND, mk(('most', 1))))
         k = num(qw.split()[-1])
         if ctx['kind'] == 'attack':
             return Eff(mk(('upTo', k)))
@@ -3052,6 +3278,8 @@ def amt_add(a, b):
 def tmap(tree, f):
     if tree[0] == 'L':
         return f(tree[1])
+    if tree[0] == 'LS':
+        return tattach(f(tree[1]), tree[2])
     if tree[0] == 'ite':
         return ('ite', tree[1], tmap(tree[2], f), tmap(tree[3], f))
     if tree[0] == 'choice':
@@ -3070,8 +3298,21 @@ def tbranch(tests, neg, a, b):
         a, b = b, a
     out = b
     for t in reversed(tests):
-        out = ('ite', t, a, out)
+        out = and_ite(t, a, out, lambda u, x, y: ('ite', u, x, y))
     return out
+
+
+def tattach(tree, e):
+    """The damage tree with the effect `e` after the damage step of every leaf (importer 0.13.0, `LS` leaves: the same
+    coins decide the damage and an effect)."""
+    if tree[0] == 'L':
+        return ('LS', tree[1], e)
+    if tree[0] == 'LS':
+        return ('LS', tree[1], seq(tree[2], e))
+    if tree[0] in ('ite', 'choice'):
+        return (tree[0],) + tuple(tattach(x, e) if isinstance(x, tuple) and x and x[0] in ('L', 'LS', 'ite', 'choice')
+                                  else x for x in tree[1:])
+    raise Refuse('an effect decided with the damage on a damage tree of another kind')
 
 
 def dmg(a, ig=None):
@@ -3085,6 +3326,8 @@ def to_effect(tree, drain=False, ig=None):
         raise Refuse('drain with a damage step that ignores Weakness, Resistance or effects')
     if tree[0] == 'L':
         return ('drain', tree[1]) if drain else dmg(tree[1], ig)
+    if tree[0] == 'LS':
+        return seq(to_effect(('L', tree[1]), drain, ig), tree[2])
     if tree[0] == 'S':
         # no damage step on this line of resolution (importer 0.9.0, 'eachF')
         if drain:
@@ -3126,7 +3369,7 @@ def amt_reads(a):
 
 
 def tree_reads(tree):
-    if tree[0] == 'L':
+    if tree[0] in ('L', 'LS'):
         return amt_reads(tree[1])
     if tree[0] == 'ite':
         return True
@@ -3161,8 +3404,15 @@ def build_attack(base, suffix, items, cost):
     pre = []           # effects printed "Before doing damage", resolved before the damage step
     wraps = []         # (index, wrap)
     ig = {}            # milestone MV3: the steps of the damage calculation the damage step switches off
-    for idx, it in items:
-        if isinstance(it, Eff) and it.pre:
+    # importer 0.13.0: an effect printed before the attack's damage text (a sentence, or the first half of one, before the
+    # first sentence that sets or changes the damage) is resolved before the damage step, in printed order, as the
+    # rulebook's "effects that happen before damage" (2026 p. 20, step F). Before 0.13.0 only some shapes were (`pre`):
+    # "Discard N Energy from this Pokémon, and …", damage to M chosen Pokémon; "Discard all Energy from this Pokémon[,.]
+    # [and] this attack does N damage to 1 of …" was resolved after the damage step (four cards).
+    first_dmg = next((k for k, (_, it) in enumerate(items) if isinstance(it, Dmg) and it.op not in ('ign', 'lastUse')),
+                     None)
+    for k, (idx, it) in enumerate(items):
+        if isinstance(it, Eff) and (it.pre or (first_dmg is not None and k < first_dmg)):
             cavs |= it.cavs
             pre.append(it.e)
         elif isinstance(it, Eff):
@@ -3224,6 +3474,36 @@ def build_attack(base, suffix, items, cost):
                     for h in range(k - 1, -1, -1):
                         out = ('choice', ('L', ('const', h * per)), out)
                     tree = out
+            elif op == 'coinsx':
+                # importer 0.13.0: "Flip k coins. [This attack does P (more) damage for each heads.] If <heads count>,
+                # X. …": one choice over the number of heads h = 0..k, whose leaf has the damage of h heads and the
+                # effects X of the conditions h satisfies (coin flips are nondeterministic choices, Known gaps)
+                k, per, more, conds = a
+                if per is not None and not more:
+                    if suffix != '×' or tree != 'X' or per != base:
+                        raise Refuse('coin damage does not match the printed damage')
+                    start = ('L', ('const', 0))
+                else:
+                    if tree in (None, 'X'):
+                        raise Refuse('coin conditions on an attack with no printed damage')
+                    if (per is not None or any(isinstance(x, Dmg) for _, x in conds)) and suffix != '+':
+                        raise Refuse('coin damage without a printed "+"')
+                    start = tree
+                for _, x in conds:
+                    cavs |= x.cavs
+
+                def alts(x, k=k, per=per, conds=conds):
+                    leaves = []
+                    for h in range(k + 1):
+                        add = (h * per if per else 0) + sum(X.args[0][1] for hs, X in conds if h in hs and isinstance(X, Dmg))
+                        effs = [X.e for hs, X in conds if h in hs and isinstance(X, Eff)]
+                        amt = amt_add(x, ('const', add)) if add else x
+                        leaves.append(('LS', amt, seq(*effs)) if effs else ('L', amt))
+                    out = leaves[-1]
+                    for lf in reversed(leaves[:-1]):
+                        out = ('choice', lf, out)
+                    return out
+                tree = tmap(start, alts)
             elif op == 'many':
                 per, more = a
                 if more:
@@ -3464,6 +3744,8 @@ def translate_trainer(c, res):
             return res
         res['caveats'] |= it.cavs
         effs.append(it.e)
+    if sents:
+        effs = [no_effect_trainer(seq(*effs), ' '.join(sents), res['caveats'])]
     e = seq(*costs, *effs)
     if not sents:
         B.append(('Trainer with no text', ''))
@@ -3735,6 +4017,7 @@ def translate_stadium(c, res, text, joined):
                 return res
             res['caveats'] |= it.cavs
             effs.append(it.e)
+        effs = [no_effect_trainer(seq(*effs), t, res['caveats'])]
         e = seq(*([cost] if cost else []), *effs)
         if e == SKIP or not (T.hit_free(e) and T.bench_hit_free(e)):
             B.append(('Stadium: activated effect not expressible: empty or with attack damage', t))
@@ -4267,7 +4550,7 @@ def ab_condition(c, spot, ctx):
     except Refuse as r:
         raise Refuse('Ability: ' + r.reason)
     ctx['_cavs'] |= ctx.pop('_tc', set())
-    if len(tests) == 1 and not neg:
+    if len(tests) == 1 and not neg and tests[0][0] != 'AND':
         return ('cond', tests[0])
     return ('wrap', tests, neg)
 
@@ -4449,6 +4732,11 @@ def translate_ability(c, a, res):
             return None
         eff = ('fx', branch(tests, neg, eff[1], SKIP))
         cavs.add('noopUse')
+    try:
+        eff = no_effect_ability(eff, use, spot, t, cavs)
+    except NotImplementedError as x:
+        B.append(('Ability: use to no effect not analysed (importer error): ' + repr(x), t))
+        return None
     if cost is not None:
         eff = abseq(('fx', cost), eff)
     ab = {'name': name, 'use': use, 'spot': ('some', spot) if spot else None,

@@ -1,7 +1,7 @@
 /-
 The imported Standard cards: the list, the cards not imported, and the set-level checks.
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.12.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.13.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -21,7 +21,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1441 terms, for 1448 of the pool's 2161 cards: 7 cards share the term of another,
+/-- Every imported card (1458 terms, for 1465 of the pool's 2161 cards: 7 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -140,7 +140,6 @@ def notImported : List (String × String × String) := [
   ("sv6-82", "Alakazam", "unhandled sentence: You may move any number of damage counters from your opponent's Pokémon to their other Pokémon in any way you like."),
   ("sv6-85", "Chimecho", "unhandled sentence: Shuffle 1 of your Benched Pokémon and all attached cards into your deck."),
   ("sv6-89", "Swirlix", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent's Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."),
-  ("sv6-90", "Slurpuff", "condition not expressible: both of them are tails: If both of them are tails,  your opponent's Active Pokémon is now Confused."),
   ("sv6-91", "Sandygast", "unhandled sentence: During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips a coin."),
   ("sv6-92", "Palossand", "unhandled sentence: During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips a coin."),
   ("sv6-93", "Enamorus", "condition not expressible: any of your Pokémon in play are the same type as any of your opponent's Pokémon in play: If any of your Pokémon in play are the same type as any of your opponent's Pokémon in play, this attack does 120 more damage."),
@@ -215,7 +214,6 @@ def notImported : List (String × String × String) := [
   ("sv7-50", "Joltik", "card kind with no filter: Basic Grass Energy cards and up to 2 Basic Lightning Energy: Search your deck for up to 2 Basic Grass Energy cards and up to 2 Basic Lightning Energy cards and attach them to your Pokémon in any way you like."),
   ("sv7-52", "Charjabug", "Bench placement of a named card that is not a Basic Pokémon (putBench is Basic-only): Search your deck for up to 3 Charjabug and put them onto your Bench."),
   ("sv7-53", "Vikavolt", "unhandled sentence: Switch this Pokémon with 1 of your Benched Lightning Pokémon."),
-  ("sv7-54", "Togedemaru", "condition not expressible: you have exactly 1 Prize card remaining: If you have exactly 1 Prize card remaining, your opponent's Active Pokémon is now Paralyzed."),
   ("sv7-58", "Slowking", "unhandled sentence: Discard the top card of your deck, and if that card is a Pokémon that doesn't have a Rule Box, choose 1 of its attacks and use it as this attack."),
   ("sv7-65", "Alcremie", "card kind with no filter: Pokémon that are the same type as any Basic Energy attached to this Pokémon: Search your deck for up to 5 Pokémon that are the same type as any Basic Energy attached to this Pokémon, reveal them, and put them into your hand."),
   ("sv7-67", "Dachsbun ex", "unhandled sentence: Heal all damage from each of your Evolution Pokémon."),
@@ -228,7 +226,6 @@ def notImported : List (String × String × String) := [
   ("sv7-93", "Pangoro", "unhandled sentence: This Pokémon is now Confused."),
   ("sv7-96", "Grimmsnarl", "unhandled sentence: Switch out your opponent's Active Pokémon to the Bench."),
   ("sv7-101", "Klinklang", "Ability: used from the hand: Once during your turn, if this Pokémon is in your hand and your opponent has any Stage 2 Pokémon in play, you may put this Pokémon onto your Bench."),
-  ("sv7-104", "Melmetal", "unhandled sentence: Before doing damage, discard all Pokémon Tools from this Pokémon."),
   ("sv7-107", "Archaludon", "Ability: static, noRetreat (\"has no Retreat Cost\" (a set form; the model has more and less only)): All of your Pokémon that have Metal Energy attached have no Retreat Cost."),
   ("sv7-110", "Orthworm ex", "Ability: triggered (M8b shape), not restricted to the Active Spot (the model fires damaged triggers in the Active Spot only): If this Pokémon is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), put 2 damage counters on the Attacking Pokémon for each Metal Energy attached to this Pokémon."),
   ("sv7-111", "Raging Bolt", "not modelled (Known gaps, MV2): spread: amount computed by the text: This attack does 30 damage to 1 of your opponent's Pokémon for each Energy attached to this Pokémon."),
@@ -243,7 +240,6 @@ def notImported : List (String × String × String) := [
   ("sv7-135", "Glass Trumpet", "unhandled sentence: You can use this card only if you have any Tera Pokémon in play."),
   ("sv7-136", "Grand Tree", "Stadium: activated effect not expressible: unhandled sentence: Once during each player's turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolved in this way, that player may search their deck for a Stage 2 Pokémon that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, that player shuffles their deck. (Players can't evolve a Basic Pokémon during their first turn or a Basic Pokémon that was put into play this turn.)"),
   ("sv7-138", "Kofu", "unhandled sentence: Put 2 cards from your hand on the bottom of your deck in any order."),
-  ("sv7-139", "Lacey", "unhandled sentence: Draw 8 cards instead."),
   ("sv7-140", "Occa Berry", "Pokémon Tool: triggered: If the Pokémon this card is attached to is damaged by an attack from your opponent's Fire Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."),
   ("sv7-141", "Payapa Berry", "Pokémon Tool: triggered: If the Pokémon this card is attached to is damaged by an attack from your opponent's Psychic Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."),
   ("sv7-142", "Sparkling Crystal", "Pokémon Tool: static, cost (attack cost or Energy provision): When the Tera Pokémon this card is attached to uses an attack, that attack costs 1 Energy less. (The Energy can be of any type.)"),
@@ -267,7 +263,6 @@ def notImported : List (String × String × String) := [
   ("sv8-74", "Azumarill", "Ability: static, cost (attack cost or Energy provision): If you have any Tera Pokémon in play, this Pokémon can use the Double-Edge attack for Psychic."),
   ("sv8-75", "Smoochum", "several cards to one chosen Pokémon: Search your deck for up to 2 Basic Psychic Energy cards and attach them to 1 of your Benched Pokémon."),
   ("sv8-76", "Latias ex", "Ability: static, noRetreat (\"has no Retreat Cost\" (a set form; the model has more and less only)): Your Basic Pokémon in play have no Retreat Cost."),
-  ("sv8-79", "Mesprit", "condition not expressible: you don't have Uxie and Azelf on your Bench: If you don't have Uxie and Azelf on your Bench, this attack does nothing."),
   ("sv8-80", "Azelf", "count not expressible: damage counter on all of your opponent's Pokémon: This attack does 10 more damage for each damage counter on all of your opponent's Pokémon."),
   ("sv8-83", "Cofagrigus", "unhandled sentence: Put 6 damage counters on each Pokémon that has an Ability (both yours and your opponent's)."),
   ("sv8-86", "Sylveon ex", "unhandled sentence: Choose 2 of your opponent's Benched Pokémon."),
@@ -290,7 +285,6 @@ def notImported : List (String × String × String) := [
   ("sv8-141", "Eternatus", "'If you can't' after an action with no exact feasibility test: If you can't, this attack does nothing."),
   ("sv8-143", "Eevee", "Ability: static (first-turn rule): As long as this Pokémon is in the Active Spot, it can evolve during your first turn or the turn you play it."),
   ("sv8-147", "Slaking ex", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): If your opponent has no Pokémon ex or Pokémon V in play, this Pokémon can't attack."),
-  ("sv8-149", "Zangoose", "coin flips not expressible: Flip 3 coins. If 1 of them is heads, this attack does 20 more damage."),
   ("sv8-150", "Kecleon", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): If any damage is done to this Pokémon by attacks, flip a coin. If heads, prevent that damage."),
   ("sv8-151", "Bouffalant", "not modelled (Known gaps, MV2): history: next-turn trigger on this Pokémon: During your opponent's next turn, if this Pokémon is damaged by an attack (even if this Pokémon is Knocked Out), put 6 damage counters on the Attacking Pokémon."),
   ("sv8-156", "Oranguru", "unhandled sentence: Until the end of your next turn, the Defending Pokémon's Weakness is now Colorless."),
@@ -334,8 +328,6 @@ def notImported : List (String × String × String) := [
   ("sv8pt5-108", "Festival Grounds", "Stadium: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions."),
   ("sv8pt5-111", "Haban Berry", "Pokémon Tool: triggered: If the Pokémon this card is attached to is damaged by an attack from your opponent's Dragon Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."),
   ("sv9-2", "Metapod", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks if that damage is 60 or less."),
-  ("sv9-3", "Butterfree", "condition not expressible: at least 2 of them are heads: If at least 2 of them are heads, your opponent's Active Pokémon is now Paralyzed."),
-  ("sv9-17", "Floragato", "unhandled sentence: This attack does 30 more damage, and heal 30 damage from this Pokémon."),
   ("sv9-21", "Magmortar", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): During Pokémon Checkup, put 3 more damage counters on your opponent's Burned Pokémon."),
   ("sv9-34", "Octillery", "unhandled sentence: You may put an Energy attached to your opponent's Active Pokémon into their hand."),
   ("sv9-37", "Ludicolo", "Ability: static, stack (stacking rule (\"doesn't stack\"): the model adds every effect in force): All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn't stack."),
@@ -348,7 +340,6 @@ def notImported : List (String × String × String) := [
   ("sv9-56", "Lillie's Clefairy ex", "Ability: static, typeWeak (a change of type or Weakness): The Weakness of each of your opponent's Dragon Pokémon in play is now Psychic. (Apply Weakness as ×2.)"),
   ("sv9-58", "Mr. Mime", "unhandled sentence: Then, draw a card for each card in your opponent's hand."),
   ("sv9-60", "Banette", "unhandled sentence: Your opponent chooses 3 cards from their hand and shuffles those cards into their deck."),
-  ("sv9-63", "Metagross", "condition not expressible: Beldum and Metang are on your Bench: If Beldum and Metang are on your Bench, this attack does 150 more damage."),
   ("sv9-64", "N's Sigilyph", "condition not expressible: you use this attack when you have exactly 1 Prize card remaining: If you use this attack when you have exactly 1 Prize card remaining, you win this game."),
   ("sv9-68", "Lillie's Comfey", "unhandled sentence: You may search your deck for any number of Basic Lillie's Pokémon and put them onto your Bench."),
   ("sv9-92", "Weezing", "not modelled (Known gaps, MV2): history: an attack used last turn: If this Pokémon used Pervasive Gas during your last turn, this attack does 120 more damage."),
@@ -360,7 +351,6 @@ def notImported : List (String × String × String) := [
   ("sv9-122", "Kecleon", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("sv9-128", "Noivern", "Ability: static, cost (attack cost or Energy provision): If you have the same number of cards in your hand as your opponent, ignore all Energy in the cost of Frightening Howl used by this Pokémon."),
   ("sv9-129", "Komala", "unhandled sentence: Both Active Pokémon are now Asleep."),
-  ("sv9-138", "Hop's Cramorant", "condition not expressible: your opponent doesn't have exactly 3 or 4 Prize cards remaining: If your opponent doesn't have exactly 3 or 4 Prize cards remaining, this attack does nothing."),
   ("sv9-142", "Billy & O'Nare", "unhandled sentence: Then, if you have 10 or more cards in your hand, draw 2 more cards."),
   ("sv9-148", "Hop's Choice Band", "Pokémon Tool: static, cost (attack cost or Energy provision): Attacks used by the Hop's Pokémon this card is attached to cost Colorless less and do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."),
   ("sv9-151", "Lillie's Pearl", "Pokémon Tool: triggered (M8b shape), changes the Prize cards taken: If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card."),
@@ -418,9 +408,7 @@ def notImported : List (String × String × String) := [
   ("sv10-146", "Zamazenta", "not modelled (Known gaps, MV2): history: next-turn trigger on this Pokémon: During your opponent's next turn, if this Pokémon is damaged by an attack (even if this Pokémon is Knocked Out), put damage counters on the Attacking Pokémon equal to the damage done to this Pokémon."),
   ("sv10-150", "Team Rocket's Persian ex", "unhandled sentence: Reveal the top 10 cards of your opponent's deck."),
   ("sv10-161", "Arven's Sandwich", "condition not expressible: that Pokémon is an Arven's Pokémon: If that Pokémon is an Arven's Pokémon, heal 100 damage from it instead."),
-  ("sv10-163", "Emcee's Hype", "unhandled sentence: Draw 2 more cards."),
   ("sv10-170", "Team Rocket's Archer", "unhandled sentence: You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn."),
-  ("sv10-171", "Team Rocket's Ariana", "condition not expressible: all of your Pokémon in play are Team Rocket's Pokémon: If all of your Pokémon in play are Team Rocket's Pokémon, draw cards until you have 8 cards in your hand instead."),
   ("sv10-172", "Team Rocket's Bother-Bot", "unhandled sentence: Turn 1 of your opponent's face-down Prize cards face up and choose a random card from your opponent's hand."),
   ("sv10-173", "Team Rocket's Factory", "Stadium: activated effect not expressible: a condition on the history of the turn: Once during each player's turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."),
   ("sv10-174", "Team Rocket's Giovanni", "unhandled sentence: Switch your Active Team Rocket's Pokémon with 1 of your Benched Team Rocket's Pokémon."),
@@ -431,7 +419,6 @@ def notImported : List (String × String × String) := [
   ("rsv10pt5-3", "Leavanny", "unhandled sentence: Heal 100 damage from each of your Basic Pokémon."),
   ("rsv10pt5-8", "Shelmet", "Ability: static (first-turn rule): If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it."),
   ("rsv10pt5-24", "Basculin", "condition not expressible: your opponent's Active Pokémon has no damage counters on it before this attack does damage: If your opponent's Active Pokémon has no damage counters on it before this attack does damage, this attack does nothing."),
-  ("rsv10pt5-29", "Vanilluxe", "condition not expressible: either of them is heads: If either of them is heads, your opponent's Active Pokémon is now Paralyzed."),
   ("rsv10pt5-37", "Swoobat", "unhandled sentence: Put 1 of your Benched Pokémon and all attached cards into your hand."),
   ("rsv10pt5-40", "Cofagrigus", "unhandled sentence: Move all damage counters from 1 of your Benched Pokémon to 1 of your opponent's Pokémon."),
   ("rsv10pt5-43", "Gothitelle", "condition not expressible: you have the same number of cards in your hand as your opponent: If you have the same number of cards in your hand as your opponent, this attack does 90 more damage."),
@@ -488,10 +475,9 @@ def notImported : List (String × String × String) := [
   ("me1-69", "Sandslash", "unhandled sentence: During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips a coin."),
   ("me1-80", "Marshadow", "condition not expressible: your opponent's Pokémon is Knocked Out by damage from this attack: If your opponent's Pokémon is Knocked Out by damage from this attack, during your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("me1-85", "Crawdaunt", "unhandled sentence: This attack can be used for Darkness."),
-  ("me1-86", "Mega Absol ex", "condition not expressible: your opponent's Active Pokémon has exactly 6 damage counters on it: If your opponent's Active Pokémon has exactly 6 damage counters on it, that Pokémon is Knocked Out."),
+  ("me1-86", "Mega Absol ex", "unhandled sentence: That Pokémon is Knocked Out."),
   ("me1-87", "Spiritomb", "Ability: triggered (M8b shape), fires on another Pokémon's event (your Active Pokémon of a type or name): If your Active Darkness Pokémon is damaged by an attack from your opponent's Pokémon (even if your Active Darkness Pokémon is Knocked Out), place 1 damage counter on the Attacking Pokémon."),
   ("me1-92", "Grafaiai", "unhandled sentence: Choose a Special Condition."),
-  ("me1-93", "Steelix", "condition not expressible: you have exactly 6 Prize cards remaining: If you have exactly 6 Prize cards remaining, this attack does 200 more damage."),
   ("me1-94", "Mega Mawile ex", "unhandled sentence: This attack's base damage is 30."),
   ("me1-95", "Dialga", "unhandled sentence: You may shuffle all Energy attached to this Pokémon into your deck and have this attack do 80 more damage."),
   ("me1-99", "Gholdengo", "flip until tails not expressible: Flip a coin until you get tails. Search your deck for a number of cards up to the number of heads and put them into your hand."),
@@ -502,7 +488,6 @@ def notImported : List (String × String × String) := [
   ("me1-113", "Acerola's Mischief", "unhandled sentence: Choose 1 of your Pokémon in play."),
   ("me1-117", "Forest of Vitality", "Stadium: static, evolve (evolution rules): Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn."),
   ("me1-118", "Iron Defender", "unhandled sentence: During your opponent's next turn, all of your Metal Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance)."),
-  ("me1-119", "Lillie's Determination", "condition not expressible: you have exactly 6 Prize cards remaining: If you have exactly 6 Prize cards remaining, draw 8 cards instead."),
   ("me1-120", "Lt. Surge's Bargain", "unhandled sentence: Ask your opponent if each player may take a Prize card."),
   ("me1-121", "Mega Signal", "card kind with no filter: Mega Evolution Pokémon ex: Search your deck for a Mega Evolution Pokémon ex, reveal it, and put it into your hand."),
   ("me1-122", "Mystery Garden", "Stadium: activated effect not expressible: unhandled sentence: Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play."),
@@ -651,7 +636,6 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me5-16", "Wailord ex", "unhandled sentence: This Pokémon is now Asleep."),
   ("me5-17", "Relicanth", "name substring that no card of that kind contains: Antique: This attack does 30 more damage for each of your Benched Pokémon that has \"Antique\" in its name."),
   ("me5-20", "Primarina", "unhandled sentence: Heal all damage from 1 of your Pokémon."),
-  ("me5-22", "Palafin", "condition not expressible: your opponent has exactly 1 Prize card remaining: If your opponent has exactly 1 Prize card remaining, this attack does 200 more damage."),
   ("me5-24", "Manectric", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Evolution Pokémon."),
   ("me5-26", "Vikavolt", "condition not expressible: this Pokémon has no Voltaic Lightning Energy attached: If this Pokémon has no Voltaic Lightning Energy attached, this attack does nothing."),
   ("me5-28", "Miraidon", "Ability: triggered (M8b shape), effect sentence not translated (unhandled sentence): Move up to 2 Basic Lightning Energy cards from this Pokémon to 1 of your Benched Pokémon."),
@@ -692,7 +676,6 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me55-12", "Ho-Oh", "unhandled sentence: Heal all damage from 1 of your Benched Pokémon."),
   ("me55-16", "Slowpoke", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("me55-18", "Articuno", "Ability: condition not expressible: you have Moltres and Zapdos in play: Once during your turn, if you have Moltres and Zapdos in play, you may use this Ability. Attach a Basic Water Energy card from your hand to this Pokémon."),
-  ("me55-20", "Palkia", "unhandled sentence: Switch out your oppoennt's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"),
   ("me55-21", "Greninja ex", "not modelled (Known gaps, MV2): spread: amount computed by the text: This attack does 30 damage to 1 of your opponent's Pokémon for each damage counter on that Pokémon."),
   ("me55-22", "Wishiwashi", "Ability: triggered (M8b shape), fires on another Pokémon's event (your Active Pokémon of a type or name): If your Wishiwashi or Wishiwashi ex is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if your Pokémon is Knocked Out), place 3 damage counters on the Attacking Pokémon."),
   ("me55-28", "Pikachu", "Ability: static, oppLess (the opponent's attacks do less damage before Weakness and Resistance (the model's static reduction is at step 5)): As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do 20 less damage (before applying Weakness and Resistance)."),
@@ -757,13 +740,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-133", "Growing Grass Energy", "Special Energy"),
   ("me6-134", "Nitro Fire Energy", "Special Energy")]
 
-/-- **The count.** `all` has 1441 entries. -/
-theorem all_length : all.length = 1441 := by decide +kernel
+/-- **The count.** `all` has 1458 entries. -/
+theorem all_length : all.length = 1458 := by decide +kernel
 
-/-- `notImported` has 713 entries. -/
-theorem notImported_length : notImported.length = 713 := by decide +kernel
+/-- `notImported` has 696 entries. -/
+theorem notImported_length : notImported.length = 696 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1441 + 7 + 713 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1458 + 7 + 696 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -920,7 +903,7 @@ theorem cross_8_10 : crossOk Part08.cards Part10.cards = true := by decide +kern
 /-- No card of part 9 is the same term as a card of part 10. -/
 theorem cross_9_10 : crossOk Part09.cards Part10.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1441 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1458 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=
