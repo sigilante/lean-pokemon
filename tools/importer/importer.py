@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.13.0'
+VERSION = '0.14.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -62,6 +62,9 @@ MECHS = [
      for k, d in TR.STATIC_DESC.items()] + [
     ('static Ability: first-turn rule', r'^Ability: static \(first-turn rule\)'),
     ('data defect: a Stage 1 or Stage 2 record with no evolves-from field', r'^evolution card with no evolves-from'),
+    # importer 0.14.0: the event of milestone MV7 ("your opponent's Active Pokémon moves to the Bench"), refused
+    ('triggered text of the MV7 event (the opponent\'s Active Pokémon moves to the Bench): "that Pokémon" or an effect '
+     'the model cannot resolve', r'^Ability: triggered \(MV7 oppBenched\)'),
     ("triggered Ability of other shapes (another Pokémon's Knock Out, replacement, Checkup, opponent's action, move "
      "between spots)", r'^Ability: triggered'),
     ('Ability with a first-turn rule ("once during your first turn", "can\'t use … during your first turn")',
@@ -214,6 +217,7 @@ def run(data, out, survey=None):
     gain_max = max(hp_gain(r['term']) for _, r in imported)
     # the largest static damage reduction units of one card (`Card.reduceGain`; the constant of `sReduce_le`)
     red_max = max(reduce_gain(r['term']) for _, r in imported)
+    ko_bound_check(imported)
     for k, chunk in enumerate(parts, 1):
         pn = 'Part%02d' % k
         part_names.append(pn)
@@ -539,18 +543,19 @@ def trigger_section(results):
         texts = [TR.norm(a.get('text')) for a in c.get('abilities') or []]
         if 'Pokémon Tool' in c['_sub']:
             texts += [TR.norm(x) for x in c.get('rules') or []]
-        if any(TR.trig_shape(t) or TR.FLYGON_KO in t for t in texts):
+        if any(TR.trig_shape(t) or TR.FLYGON_KO in t or TR.BENCHED_RX.match(t) for t in texts):
             rows.append((recs, r))
     used = lambda r: any(u[0].startswith('trigger-') for u in r['used'])  # noqa: E731
     imp = [(recs, r) for recs, r in rows if r['ok']]
     L.append('Triggered text of the two shapes of milestone M8b ("is in the Active Spot and is damaged by an attack '
              'from your opponent\'s Pokémon (even if this Pokémon is Knocked Out)", "is Knocked Out by damage from an '
-             'attack from your opponent\'s Pokémon"), on Pokémon and Tools: %d cards; imported %d (exactly %d, with '
+             'attack from your opponent\'s Pokémon") and of the event of milestone MV7 ("whenever your opponent\'s '
+             'Active Pokémon moves to the Bench during their turn"), on Pokémon and Tools: %d cards; imported %d (exactly %d, with '
              'caveats %d); trigger translated but the card blocked elsewhere %d; trigger refused %d.' % (
                  len(rows), len(imp), sum(1 for _, r in imp if not r['caveats']), sum(1 for _, r in imp if r['caveats']),
                  sum(1 for _, r in rows if not r['ok'] and used(r)), sum(1 for _, r in rows if not r['ok'] and not used(r))))
     L.append('')
-    for ev in ('damaged', 'koByAttack'):
+    for ev in ('damaged', 'koByAttack', 'oppBenched'):
         xs = [(recs, r) for recs, r in imp if term_trigs(r['term'], ev)]
         L.append('Imported with a `%s` trigger (%d):' % (ev, len(xs)))
         L.append('')
@@ -567,7 +572,7 @@ def trigger_section(results):
     c = collections.Counter()
     for recs, r in rows:
         if not r['ok'] and not used(r):
-            ts = [a for a, _ in r['blockers'] if 'triggered (M8b shape)' in a]
+            ts = [a for a, _ in r['blockers'] if 'triggered (M8b shape)' in a or 'triggered (MV7 ' in a]
             c[mech_of(ts[0], '') if ts else 'other: ' + r['blockers'][0][0]] += 1
     L.append('| trigger refused by reason | cards |')
     L.append('|---|---|')
@@ -575,6 +580,39 @@ def trigger_section(results):
         L.append('| %s | %d |' % (k, v))
     L.append('')
     return L
+
+
+def ko_bound_check(imported):
+    """The bound the caveat koCounters states (importer 0.14.0): "Knocked Out" is written as `TR.KO_COUNTERS` damage
+    counters, which Knocks Out a Pokémon whose derived HP is below it. Over the imported pool every static HP effect is a
+    Pokémon's or a Tool's on itself (`sel = self`) or a Stadium's; a Pokémon has at most one Tool and the game one Stadium,
+    so a Pokémon's derived HP (`GameState.hpOf`) is at most the largest printed HP, plus the largest HP units of one
+    Pokémon card's own static effects (a constant plus `k` for each of its E Energy cards), plus the largest of a Tool's
+    and of a Stadium's: 76 + 4E counters for today's pool, as the caveat says. Fails if the pool changes that."""
+    pk, tool, stad, kmax = 0, 0, 0, 0
+    for _, r in imported:
+        t = r['term']
+        for x in card_statics(t):
+            e = x['eff']
+            if e[0] != 'hpPlus':
+                continue
+            st = t[0] == 'trainer' and t[2] == ('stadium',)
+            assert st or x['sel'] == ('self',), ('an HP static on other Pokémon', t[1] if t[0] != 'pokemon' else t[1]['name'])
+            c = e[1][1] if e[1][0] == 'const' else 0
+            k = e[1][2] if e[1][0] == 'perEnergy' else 0
+            if st:
+                assert k == 0
+                stad = max(stad, c)
+            elif t[0] == 'tool':
+                assert k == 0
+                tool = max(tool, c)
+            else:
+                pk = max(pk, c)
+                kmax = max(kmax, k)
+    a = max(printed_hp(r['term']) for _, r in imported)
+    assert (a + pk + tool + stad, kmax) == (76, 4), (a, pk, tool, stad, kmax)
+    # two 60-card decks: at most 60 Energy cards on one Pokémon (its owner's)
+    assert 76 + 4 * 60 < TR.KO_COUNTERS
 
 
 def static_source(c):
@@ -716,6 +754,8 @@ TRIG_LISTS = [
      lambda t: bool(term_trigs(t, 'damaged'))),
     ('trigKO', 'with or giving a triggered Ability on `TrigEvent.koByAttack`', '(Card.hasTrig .koByAttack)',
      lambda t: bool(term_trigs(t, 'koByAttack'))),
+    ('trigBenched', 'with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7)',
+     '(Card.hasTrig .oppBenched)', lambda t: bool(term_trigs(t, 'oppBenched'))),
     ('trigLingers', 'whose triggered Abilities write a lingering modifier', 'Card.trigLingers',
      lambda t: any(T.lingers(e) for ab in term_trigs(t) for e in T.ability_scripts(ab))),
     ('trigRecycles', 'whose triggered Abilities can return a card from a discard pile', 'Card.trigRecycles',
