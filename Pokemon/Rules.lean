@@ -516,8 +516,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
 * Special Conditions: effects apply them only to the opponent's Active Pokémon (`inflict`) and
   remove them from the player's own Active Pokémon (`cure`) and, since milestone M3, from the
   Pokémon that a switch sends to the Bench, either player's (`switch .own` and `switch .opp`,
-  as the rulebook says for any Active Pokémon that goes to the Bench); the variants with a number
-  ("put 2 damage counters instead of 1 on the Poisoned Pokémon") are absent; a new Poison
+  as the rulebook says for any Active Pokémon that goes to the Bench); a variant with a number
+  ("put 8 damage counters on that Pokémon instead of 1", Team Rocket's Nidoking ex sv10-119) has
+  no constructor of its own; the importer writes it as Poison followed by `poisonUp (N - 1)`,
+  which a later Poison resets and Croagunk's increase adds to (caveat `poisonStrength`, both); a new Poison
   replaces the old one, as the rulebook says (2023 p. 16, 2024 the same), so poisoning a
   Pokémon that is already Poisoned resets its Poison strength (`poisonUp`) to 0
   (`InPlay.inflict`); Croagunk's cumulative increase is modelled as a number on the Pokémon
@@ -720,7 +722,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Pokémon (`InPlay.used`), cleared at the end of its owner's turn and by evolution (the evolved
   Pokémon has the new card's Abilities, unused; an evolution line whose two cards print the same
   once-per-turn Ability could use it twice in a turn in the model, a reading no ruling was checked
-  for); one flag serves all of a Pokémon's Abilities, exact for cards with one. Departures: "this
+  for); one flag serves all of a Pokémon's Abilities, exact for cards with one; "You can't
+  use more than 1 X Ability each turn" is not modelled: several Pokémon with that Ability can each
+  use it in a turn (more uses than print; the importer's caveat `onePerName`). Departures: "this
   Pokémon" (`SelfOp`) is exact in the Active Spot, but on the Bench it acts on one Benched Pokémon
   chosen when the effect resolves (a superset), and the model does not follow it if it is Knocked
   Out in mid-effect (later steps act on the Pokémon in its place, not a superset) or after a
@@ -845,7 +849,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   top `n` cards), hand and discard pile, to the hand, the discard pile, the top or bottom of the
   deck or shuffled into it, "up to `n`", exactly `n` or all of them; Energy is attached from a
   zone to the Active Pokémon or a Benched one, Basic Pokémon are put onto the Bench from a zone,
-  Energy is discarded from a Pokémon or moved between a player's Pokémon. Simplifications and
+  Energy is discarded from a Pokémon or moved between a player's Pokémon
+  (`moveEnergy w f`: one Energy from any of the player's Pokémon to any other, a superset of a
+  printed move between particular Pokémon, "from this Pokémon to 1 of your Benched Pokémon"; the
+  importer's caveat `moveAnyPair`). Simplifications and
   departures (since milestone MV6 also the bottom `n` cards of the deck, `Src.bottom`, and "`n`, or
   all that pass if fewer", `Qty.most`): "up to `n`" (`Qty.upTo n`, `Qty.ok`: any number of cards
   from 0 to `n`) allows 0 in
@@ -974,13 +981,30 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   lock: print would refuse announcing a locked attack, p. 20 step A). Not modelled: Paralysis timing
   per Pokémon (a Paralysis inflicted during its owner's own turn still ends at that turn's Checkup;
   `Effect.trigOk` keeps excluding Paralysis);
-* a Pokémon that an effect puts onto the opponent's Bench (`putBench .opp`) enters play `fresh`,
+* a Pokémon that an effect puts onto the opponent's Bench (`putBench .opp`, or a window placed on the opponent's Bench, `look .opp … .bench`) enters play `fresh`,
   and `Move.endTurn` clears `fresh` only on the side whose turn ends, so it stays `fresh` through
   its owner's next turn and cannot evolve then. The rulebook allows evolving "a Pokémon you had in
   play at the beginning of your turn" but "Neither player can evolve a Pokémon on its first turn in
   play" (2026 p. 11); whether the owner's next turn is that Pokémon's "first turn in play" is not
   settled there. If it is not, the model forbids an evolution print allows. Since importer 0.12 five imported
-  cards use `putBench .opp` and carry the caveat `oppBenchFresh`;
+  cards (Lickitung sv5-124, Accompanying Flute sv6-142, Lillie's Ribombee sv9-67, Mandibuzz
+  rsv10pt5-64, Sableye me6-60) put Pokémon onto the opponent's Bench with `look .opp … .bench`
+  (none uses `putBench .opp`) and carry the caveat `oppBenchFresh`;
+* plays and uses to no effect: `Move.item`, `Move.supporter`, `Move.stadiumUse` and `Move.ability`
+  need only that the effect have a resolution (`TRun`), not that it change anything. The rulebook
+  does not settle whether a card whose effect cannot do anything may be played (2026 p. 12: "When
+  you play any Trainer card, do what it says and obey the rule at the bottom of the card"); the
+  usual ruling, which is not in the rulebook and was not checked against a rulings compendium,
+  forbids it, except that a search of or look at a hidden zone may find nothing. The importer
+  (0.13.0, `tools/importer/noop.py`) writes that ruling as a precondition where public information
+  decides it (an `ite` whose failing branch has no resolution), counting a cost paid in order to
+  play as no effect and a coin flip as no effect, and marks what remains with `noopPlay` (a
+  Trainer) or `noopUse` (an Ability), allows more: a choice the model leaves open that does
+  nothing ("heal 30 damage from 1 of your Pokémon": an undamaged one, since no test reads a
+  Benched Pokémon's damage). If the ruling does not hold, those preconditions forbid plays print
+  allows; this is a reading, and cards written with such a precondition are counted as exact
+  under it. On-play Abilities need neither. `Move.stadiumUse` is also available for a Stadium
+  whose effect is `skip` (every static Stadium), a move that only sets `stadiumUsed`;
 * deck construction is not modelled: "your deck must be exactly 60 cards", "except for Basic
   Energy, you can only have 4 cards with the same name in your deck" (2026 p. 22), "your deck can
   include only one total ACE SPEC card" (p. 26), one Radiant Pokémon (p. 29). The theorems
