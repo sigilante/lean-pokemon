@@ -291,15 +291,44 @@ theorem GameState.benchedTrigs_of_xclampAt {K : Nat} {co cp cb : Cap} {g₁ g₂
     g₂.benchedTrigs = g₁.benchedTrigs :=
   GameState.benchedTrigs_of_clampAt (GameState.xclampAt_iff.1 h).1
 
+theorem GameState.owedTrigs_of_xclampAt {K : Nat} {co cp cb : Cap} {g₁ g₂ : GameState}
+    (h : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) :
+    g₂.owedTrigs = g₁.owedTrigs :=
+  GameState.owedTrigs_of_clampAt (GameState.xclampAt_iff.1 h).1
+
+theorem GameState.xclampAt_noteBenched (K : Nat) (co cp cb : Cap) (X : GameState) :
+    X.noteBenched.xclampAt K co cp cb = (X.xclampAt K co cp cb).noteBenched := by
+  have hT : (X.xclampAt K co cp cb).benchedTrigs = X.benchedTrigs :=
+    GameState.benchedTrigs_of_map (f := InPlay.clampWith K cp) (f' := InPlay.clampWith K cb)
+      (fun _ => rfl) (fun _ => rfl) rfl rfl
+  have e1 : InPlay.clampWith K cp ∘ InPlay.noteOwe .active =
+      InPlay.noteOwe .active ∘ InPlay.clampWith K cp :=
+    funext fun p => InPlay.clampWith_noteOwe K cp .active p
+  have e2 : InPlay.clampWith K cb ∘ InPlay.noteOwe .bench =
+      InPlay.noteOwe .bench ∘ InPlay.clampWith K cb :=
+    funext fun p => InPlay.clampWith_noteOwe K cb .bench p
+  conv => rhs; unfold GameState.noteBenched; rw [hT]
+  simp only [GameState.noteBenched, GameState.xclampAt, Option.map_map, List.map_map, e1, e2]
+
+theorem GameState.xclampAt_unpend (K : Nat) (co cp cb : Cap) (X : GameState) :
+    X.unpend.xclampAt K co cp cb = (X.xclampAt K co cp cb).unpend := by
+  have e1 : InPlay.clampWith K cp ∘ InPlay.clearOwe = InPlay.clearOwe ∘ InPlay.clampWith K cp :=
+    funext fun p => InPlay.clampWith_clearOwe K cp p
+  have e2 : InPlay.clampWith K cb ∘ InPlay.clearOwe = InPlay.clearOwe ∘ InPlay.clampWith K cb :=
+    funext fun p => InPlay.clampWith_clearOwe K cb p
+  simp only [GameState.unpend, GameState.xclampAt, Option.map_map, List.map_map, e1, e2]
+
 /-- Raising the `oppBenched` event commutes with the exact-store clamp (milestone MV7). -/
 theorem GameState.noteBenched_xclampAt {K : Nat} {co cp cb : Cap} {X₁ X₂ : GameState}
     (h : X₁.xclampAt K co cp cb = X₂.xclampAt K co cp cb) :
     X₁.noteBenched.xclampAt K co cp cb = X₂.noteBenched.xclampAt K co cp cb := by
-  have hp := GameState.pend_of_xclampAt h
-  have hT := GameState.benchedTrigs_of_xclampAt h
-  have e : ∀ X : GameState, X.noteBenched.xclampAt K co cp cb =
-      { X.xclampAt K co cp cb with pend := X.pend || !X.benchedTrigs.isEmpty } := fun _ => rfl
-  rw [e, e, h, hp, hT]
+  rw [GameState.xclampAt_noteBenched, GameState.xclampAt_noteBenched, h]
+
+/-- Clearing the record keeps equal exact-store clamps equal (milestone MV7b). -/
+theorem GameState.unpend_xclampAt {K : Nat} {co cp cb : Cap} {X₁ X₂ : GameState}
+    (h : X₁.xclampAt K co cp cb = X₂.xclampAt K co cp cb) :
+    X₁.unpend.xclampAt K co cp cb = X₂.unpend.xclampAt K co cp cb := by
+  rw [GameState.xclampAt_unpend, GameState.xclampAt_unpend, h]
 
 theorem Whose.noteBenched_xclampAt (w : Whose) {K : Nat} {co cp cb : Cap} {X₁ X₂ : GameState}
     (h : X₁.xclampAt K co cp cb = X₂.xclampAt K co cp cb) :
@@ -359,12 +388,11 @@ theorem Resolve.xclamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
       intro g₂ hH hc
       have hcl₂ := GameState.bothActive_of_clampAt (GameState.xclampAt_iff.1 hc).1 hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_xclampAt hc).trans hp
-      have hT := GameState.benchedTrigs_of_xclampAt hc
-      have hc₀ : ({ g₀ with pend := false } : GameState).xclamp K =
-          ({ g₂ with pend := false } : GameState).xclamp K :=
-        congrArg (fun g : GameState => { g with pend := false }) hc
+      have hT := GameState.owedTrigs_of_xclampAt hc
+      have hc₀ : g₀.unpend.xclamp K = g₂.unpend.xclamp K :=
+        GameState.unpend_xclampAt hc
       obtain ⟨m₂, ht₂, hcm⟩ := ht.xclamp_sim hc₀
-      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ht.perm]; exact hH) hcm
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ht.perm, GameState.allCards_unpend]; exact hH) hcm
       exact ⟨g₂', .trigger (by rw [GameState.winner_of_xclamp hc]; exact hn) hcl₂ hp₂
         (by rw [hT]; exact hl) ht₂ hr₂, hc'⟩
 
@@ -1099,10 +1127,9 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
   | @trigger _ l hcl hp hl ht =>
       have hcl₂ := GameState.bothActive_of_clampAt (GameState.xclampAt_iff.1 hc).1 hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_xclampAt hc).trans hp
-      have hT := GameState.benchedTrigs_of_xclampAt hc
-      have hc₀ : ({ g₁ with pend := false } : GameState).xclamp k =
-          ({ g₂ with pend := false } : GameState).xclamp k :=
-        congrArg (fun g : GameState => { g with pend := false }) hc
+      have hT := GameState.owedTrigs_of_xclampAt hc
+      have hc₀ : g₁.unpend.xclamp k = g₂.unpend.xclamp k :=
+        GameState.unpend_xclampAt hc
       obtain ⟨g₂', ht₂, hc'⟩ := ht.xclamp_sim hc₀
       exact ⟨g₂', .trigger hcl₂ hp₂ (by rw [hT]; exact hl) ht₂, hc'⟩
   | playBasic hh hs hhp hb hbt hst hat =>

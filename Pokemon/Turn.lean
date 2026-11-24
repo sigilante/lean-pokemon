@@ -204,12 +204,12 @@ theorem KOBatch.sameTurn {g g' : GameState} (h : KOBatch g g') : g.SameTurn g' :
   cases h <;> exact .refl _
 
 /-- Clearing the pending-trigger record changes no turn flag (milestone MV7). -/
-theorem GameState.SameTurn.unpend (g : GameState) : g.SameTurn { g with pend := false } :=
+theorem GameState.SameTurn.unpend (g : GameState) : g.SameTurn g.unpend :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- The resolution of pending triggers changes no turn flag (milestone MV7). -/
 theorem Fire.sameTurn_unpend {l : List Ability} {g g' : GameState}
-    (h : Fire .oppBenched l { g with pend := false } g') : g.SameTurn g' :=
+    (h : Fire .oppBenched l g.unpend g') : g.SameTurn g' :=
   (GameState.SameTurn.unpend g).trans h.zoneOnly.sameTurn
 
 theorem Resolve.sameTurn {g g' : GameState} (h : Resolve g g') : g.SameTurn g' := by

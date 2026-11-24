@@ -1156,8 +1156,9 @@ of today's Standard.
   that fire are those of the opponent's Pokémon in play as the retreat, the step or the attack left
   them. "Their new Active Pokémon" is the opponent's Active Pokémon then (`counters`, `inflict`):
   the Pokémon switched in (a well-formed attack does nothing more to the player's Active Pokémon
-  after the switch). What can differ from print is WHICH holders fire, when the rest of the
-  attack's effect moves the opponent's Pokémon (departures in the Known gaps of
+  after the switch). The holders that fire are those at the event (milestone MV7b): the event marks
+  them (`InPlay.owe`) and the resolution fires the marked ones (`GameState.owedTrigs`), wherever
+  the rest of the attack has moved them (`Pokemon/Gust.lean`; departures in the Known gaps of
   `Pokemon/Rules.lean`).
 
 All three belong to the player whose turn it is not, and their effects are written from that

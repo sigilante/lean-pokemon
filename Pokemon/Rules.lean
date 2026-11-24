@@ -803,14 +803,15 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (milestone MV7, survey S20; `TrigEvent.oppBenched`; Magcargo sv5-29, Mismagius ex me2-36). The
   event is raised at its source, by `Move.retreat` and by a switch of the player's own Active
   Pokémon with a Benched one (`Run.switch .own`) inside any effect of their turn, which set the
-  record `GameState.pend` when the opponent has such a trigger in play
-  (`GameState.noteBenched`). The triggers resolve before anything else, the Knock Out check
+  record `GameState.pend` when the opponent has such a trigger in play, and mark the holders
+  (`GameState.noteBenched`, `InPlay.owe`). The triggers resolve before anything else, the Knock Out check
   included: `Settled` requires the record clear and the batch Knock Out step requires no trigger
   ready (`KOBatch`: `pend = false` or an Active Spot empty), so after a retreat or an attack the next
   move is `Move.trigger`, and inside a Trainer, Stadium, Ability or on-play effect `Resolve.trigger`
   comes first after the step that raised the event, before that step's Knock Outs and the next step
-  (`Resolve.trigger_first`). So which triggers fire, and "their new Active Pokémon", are read on the
-  Pokémon in play as the retreat, the step or the attack left them. The rulebook gives no time for a
+  (`Resolve.trigger_first`). So "their new Active Pokémon" is read on the Pokémon in play as the
+  retreat, the step or the attack left them, and (milestone MV7b) the triggers that fire are those of
+  the holders marked at the event (below). The rulebook gives no time for a
   triggered Ability to resolve (it orders effects only at Checkup, 2026 p. 15); the model's reading
   is "when the event happens, before the Knock Outs it causes". Until the review of stage 2 the
   triggers resolved after the Knock Out check, and a Knock Out between the event and the resolution
@@ -825,27 +826,39 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (fewer outcomes) a trigger whose effect recycles a card from a discard pile never fires
   (`Ability.trigOn`: such a trigger could fire on every Switch played in a turn, and the store
   bound keeps the discard piles before the attack; no card of the census recycles); an
-  `oppBenched` trigger with a printed condition never fires, as for every trigger; (order, inside
-  an attack; more and fewer outcomes) the triggers are read after the whole attack's effect and the
-  opponent's `damaged` triggers, not at the switch, so what the effect does after the switch (a
-  well-formed attack does nothing more to the player's Active Pokémon, `Effect.switchSafe`, but may
-  switch the opponent's Active Pokémon or put Pokémon into play) and what the `damaged` triggers do
-  (their fragment has `putBench`) can change which of the opponent's Pokémon are in play, and
-  where, when the triggers are read. The card pool has the shape: three printed attacks switch
-  their user and then switch the opponent's Active Pokémon (Iron Bundle sv6-62 *Interjet*,
-  imported; Quaquaval ex sv2-52; Baltoy sv3-94), and against a holder whose trigger works only in
-  the Active Spot (Mismagius ex me2-36, not imported) the model fires nothing where print fires
-  (the holder was Active at the switch and is gusted to the Bench before the read) and fires where
-  print does not (a Benched holder gusted in, the record raised by another holder). A holder whose
-  effect falls on the player's Active Pokémon and that fires from either spot (Magcargo) is not
-  affected. Recording the holders at the event would remove this; (order, a switched-in
+  `oppBenched` trigger with a printed condition never fires, as for every trigger. WHICH triggers
+  fire is decided at the event (milestone MV7b, survey S20): `GameState.noteBenched` marks each of
+  the opponent's Pokémon that has such a trigger where it is then (`InPlay.owe`, the spot recorded),
+  the mark travels with the Pokémon, and the resolution fires the marked ones, at the spot recorded
+  (`GameState.owedTrigs`), wherever they are by then. Until milestone MV7b the triggers were read
+  after the whole attack's effect, so an attack that switches its user and then switches the
+  opponent's Active Pokémon (Iron Bundle sv6-62 *Interjet*, imported; Quaquaval ex sv2-52; Baltoy
+  sv3-94) against a holder whose trigger works only in the Active Spot (Mismagius ex me2-36) fired
+  nothing where print fires and fired where print does not; both are now theorems that the wrong
+  outcome cannot happen (`Gust.gust_drops_holder`: the holder Active at the switch fires though
+  gusted to the Bench; `Gust.gust_adds_holder`: a Benched holder gusted in does not fire; the
+  review's probe statements are false, `Gust.gust_probe_fails`). Putting Pokémon into play after
+  the event (the rest of the attack, its `damaged` triggers) marks nothing. What is still read at
+  the resolution, after the rest of the attack and its `damaged` triggers: (exact) "their new Active
+  Pokémon", the player's Active Pokémon then (a well-formed attack does nothing more to the player's
+  Active Pokémon after the switch, `Effect.switchSafe`); (fewer outcomes, no instance known) the
+  holder's Abilities, so a trigger given by a Tool that the rest of the attack discards from the
+  holder (`discardTools .opp`) is lost, where print resolves it (it triggered); (fewer outcomes,
+  unreached states) a marked holder that leaves play before the resolution loses its trigger, where
+  print resolves it: only the batch step removes Pokémon, and it runs with a trigger pending only
+  when an Active Spot is empty (`KOBatch`), a state no play is known to reach (next item); (start
+  states) a start state whose Pokémon carry marks resolves them at the first resolution, as owed
+  triggers; marks are written only by `noteBenched` and cleared by every resolution
+  (`GameState.unpend`); (order, a switched-in
   Pokémon Knocked Out) a switched-in Pokémon at or above its HP (a static HP change that reads its
   spot or its Energy) gets the trigger's effect, and is then Knocked Out, and its replacement gets
   nothing: under a reading that takes the Knock Out first, "their new Active Pokémon" would be the
   replacement, and the model has fewer outcomes than that reading; (unreached states) a state with
   a trigger pending and an Active Spot empty takes the batch step first (no theorem says that no
-  play reaches one; the retreat and the switch leave both Active Spots filled) — if such a state were reached, the promotion would come before the read
-  and the triggers of the promoted Pokémon would be read, the flaw the ordering otherwise removes;
+  play reaches one; the retreat and the switch leave both Active Spots filled) — if such a state
+  were reached, the promotion would come before the resolution, which since milestone MV7b still
+  fires the holders marked at the event (a promoted Pokémon that was not a holder then fires
+  nothing), but a marked holder Knocked Out by that batch would fire nothing;
   by inspection no primitive empties an Active Spot outside a Knock Out, and the batch step that
   promotes runs only when no trigger is ready. Multiplicity: an
   attack switches the player's own Active Pokémon at most once on any path of its effect
@@ -1390,16 +1403,17 @@ after another until the state is `Settled` or the game is over. Stopping earlier
 `done` requires one of the two, and no `KOBatch` exists from a `Calm` state. Before milestone
 batch-KO the steps were single Knock Outs and promotions (`KOMove`), in any order. Since milestone
 MV7 a pending trigger (`GameState.pend`, raised by the step just taken) is resolved too, first,
-before any batch step, when both Active Spots are filled (`trigger`: the opponent's `oppBenched`
-triggers, in any order, by `Fire`; `Resolve.trigger_first`); the Knock Outs of the step and of the
+before any batch step, when both Active Spots are filled (`trigger`: the owed `oppBenched`
+triggers, those of the opponent's Pokémon marked at the event (milestone MV7b,
+`GameState.owedTrigs`), in any order, by `Fire`; `Resolve.trigger_first`); the Knock Outs of the step and of the
 triggers are then taken by batch steps. -/
 inductive Resolve : GameState → GameState → Prop where
   | done {g : GameState} (h : Settled g ∨ g.winner ≠ none) : Resolve g g
   | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOBatch g g₁)
       (hr : Resolve g₁ g') : Resolve g g'
   | trigger {g g₁ g' : GameState} {l : List Ability} (hn : g.winner = none) (hb : g.BothActive)
-      (hp : g.pend = true) (hl : l.Perm g.benchedTrigs)
-      (ht : Fire .oppBenched l { g with pend := false } g₁) (hr : Resolve g₁ g') : Resolve g g'
+      (hp : g.pend = true) (hl : l.Perm g.owedTrigs)
+      (ht : Fire .oppBenched l g.unpend g₁) (hr : Resolve g₁ g') : Resolve g g'
 
 /-- **Resolution of a Trainer card's effect**, with the rulebook's Knock Out timing: a Pokémon
 whose damage reaches its HP at any time other than during an attack or Checkup is Knocked Out
@@ -1987,12 +2001,14 @@ inductive Move : GameState → GameState → Prop where
   | knockOuts {g g₁ g' : GameState} {l : List Ability} (h : KOBatch g g₁)
       (hl : l.Perm (g.batchTrigs g₁)) (ht : Fire .koByAttack l g₁ g') : Move g g'
   /-- resolve the pending triggers (milestone MV7): from a state with both Active Spots filled and a
-  trigger pending (`GameState.pend`, set by the move before), the opponent's `oppBenched` triggers
-  fire, in any order (`Fire`; a "you may" one can be declined), and the record is cleared. Before any
+  trigger pending (`GameState.pend`, set by the move before), the owed triggers fire (since milestone
+  MV7b those of the opponent's Pokémon marked at the event, `GameState.owedTrigs`), in any order
+  (`Fire`; a "you may" one can be declined), and the record and the marks are cleared
+  (`GameState.unpend`). Before any
   other move, the batch Knock Out step included: every other move needs `Settled`, or (`endTurn`,
   `startTurn`, `deckOut`) `pend = false`, and the batch step needs no trigger ready (`KOBatch`) -/
   | trigger {g g' : GameState} {l : List Ability} (hb : g.BothActive) (hp : g.pend = true)
-      (hl : l.Perm g.benchedTrigs) (ht : Fire .oppBenched l { g with pend := false } g') :
+      (hl : l.Perm g.owedTrigs) (ht : Fire .oppBenched l g.unpend g') :
       Move g g'
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
   (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
@@ -2110,11 +2126,11 @@ theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
   | evolveBench hh => exact ⟨_, _, hh⟩
 
 /-- The resolution of pending triggers (milestone MV7), `Move.trigger` spelled out: from a state
-with both Active Spots filled and a trigger pending, the opponent's `oppBenched` triggers fire, in
+with both Active Spots filled and a trigger pending, the owed `oppBenched` triggers fire, in
 any order, on the state with the record cleared. -/
 def TrigMove (g g' : GameState) : Prop :=
   g.BothActive ∧ g.pend = true ∧
-    ∃ l, l.Perm g.benchedTrigs ∧ Fire .oppBenched l { g with pend := false } g'
+    ∃ l, l.Perm g.owedTrigs ∧ Fire .oppBenched l g.unpend g'
 
 /-- **From a state that is not `Settled` the only moves are the batch Knock Out step and the
 resolution of pending triggers**: every other move needs `Settled` (`endTurn`, `startTurn` and

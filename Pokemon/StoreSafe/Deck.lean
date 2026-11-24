@@ -541,7 +541,7 @@ theorem Resolve.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {g g' : Game
   | step _ hm _ ih => exact Nat.le_trans (hm.disc_mono w) ih
   | trigger _ _ _ hl ht _ ih =>
       exact Nat.le_trans (ht.disc_mono hw
-        (fun ab hab => Effect.recOk_nil (GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab)))
+        (fun ab hab => Effect.recOk_nil (GameState.owedTrigs_recFilters (hl.mem_iff.1 hab)))
         (fun _ hy => hy)) ih
 
 theorem TRun.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} {e : Effect}
@@ -680,7 +680,7 @@ theorem Resolve.keeps {g g' : GameState} (h : Resolve g g') :
       obtain ⟨k₁, s₁⟩ := hm.keeps
       exact ⟨k₁.trans ih.1, fun s => (ih.2 s).trans (s₁ s)⟩
   | trigger _ _ _ hl ht _ ih =>
-      have k₁ := ht.keeps (fun ab hab => GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab))
+      have k₁ := ht.keeps (fun ab hab => GameState.owedTrigs_recFilters (hl.mem_iff.1 hab))
       exact ⟨⟨Nat.le_trans k₁.disc ih.1.disc, ih.1.attacked.trans k₁.attacked,
         ih.1.gxCur.trans k₁.gxCur, ih.1.gxOpp.trans k₁.gxOpp⟩,
         fun s => (ih.2 s).trans (ht.slotAmt s)⟩

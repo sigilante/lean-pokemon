@@ -106,7 +106,7 @@ theorem retreat_forced :
   intro g₂ hm
   rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, l, hl, ht⟩
   · exact absurd (retreat_raises false).2.2.1 hb.not_calm
-  · have e : (s1 false).benchedTrigs = [surge false] := rfl
+  · have e : (s1 false).owedTrigs = [surge false] := rfl
     rw [e] at hl
     rw [List.perm_singleton.1 hl] at ht
     cases ht with
@@ -194,7 +194,7 @@ theorem copy_quiet_all : ∀ g₂ g₃, Move (s1 false) g₂ → Move g₂ g₃ 
   intro g₂ g₃ hm h3
   rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, l, hl, ht⟩
   · exact absurd (retreat_raises false).2.2.1 hb.not_calm
-  have e : (s1 false).benchedTrigs = [surge false] := rfl
+  have e : (s1 false).owedTrigs = [surge false] := rfl
   rw [e] at hl
   rw [List.perm_singleton.1 hl] at ht
   cases ht with

@@ -112,6 +112,13 @@ theorem mem_markss (k : Marks) : k ∈ markss := by
   exact ⟨a, mem_bools _, b, mem_bools _, c, mem_bools _, d, mem_bools _, e,
     mem_opts fun t _ => mem_etypes t, rfl⟩
 
+/-- Both spots (milestone MV7b: the owed-trigger mark `InPlay.owe` is an optional spot). -/
+def spots : List Spot := [.active, .bench]
+
+theorem mem_spots : ∀ sp : Spot, sp ∈ spots
+  | .active => .head _
+  | .bench => .tail _ (.head _)
+
 /-- Every attack lock (milestone MV4). -/
 def atkLocks : List AtkLock := [.none, .this, .all, .note]
 
@@ -233,14 +240,14 @@ def inPlays (C : List Card) : List InPlay :=
   bools.flatMap fun poisoned => bools.flatMap fun burned =>
   (List.range (bound C + 1)).flatMap fun poisonUp => bools.flatMap fun fresh =>
   markss.flatMap fun marks => bools.flatMap fun used => bools.flatMap fun movedUp =>
-  lockStates.map fun lk =>
+  lockStates.flatMap fun lk => (opts spots).map fun owe =>
   ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used, movedUp,
-    lk⟩
+    lk, owe⟩
 
 theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     (hd : p.damage ≤ bound C) (hu : p.poisonUp ≤ bound C) : p ∈ inPlays C := by
   obtain ⟨top, under, energy, tools, damage, rot, poisoned, burned, poisonUp, fresh, marks, used,
-    movedUp, lk⟩ := p
+    movedUp, lk, owe⟩ := p
   have hw' : Within C (under ++ energy ++ tools) :=
     hw.of_sub (by simp [InPlay.cardList]) (fun _ hx => .tail _ hx)
   simp only [inPlays, List.mem_flatMap, List.mem_map]
@@ -248,7 +255,8 @@ theorem mem_inPlays {C : List Card} {p : InPlay} (hw : Within C p.cardList)
     energy, mem_cardLists hw'.left.right, tools, mem_cardLists hw'.right,
     damage, List.mem_range.2 (Nat.lt_succ_of_le hd), rot, mem_rots _, poisoned, mem_bools _,
     burned, mem_bools _, poisonUp, List.mem_range.2 (Nat.lt_succ_of_le hu), fresh, mem_bools _,
-    marks, mem_markss _, used, mem_bools _, movedUp, mem_bools _, lk, mem_lockStates _, rfl⟩
+    marks, mem_markss _, used, mem_bools _, movedUp, mem_bools _, lk, mem_lockStates _,
+    owe, mem_opts fun sp _ => mem_spots sp, rfl⟩
 
 theorem length_le_benchCardList : ∀ b : List InPlay, b.length ≤ (benchCardList b).length
   | [] => Nat.le_refl _
@@ -314,7 +322,9 @@ theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
 /-- A finite list containing every state whose cards are those of `C` (up to order) and
 whose Pokémon in play all have damage and Poison strength at most `bound C`. The Stadium slot (a
 card of `C` with its owner) and, since milestone M5, the two Stadium flags are enumerated, and since
-milestone MV7 the pending-trigger record; Tools are among each Pokémon's cards (`inPlays`). -/
+milestone MV7 the pending-trigger record (since milestone MV7b also the owed-trigger mark of each
+Pokémon, `InPlay.owe`, enumerated by `inPlays`); Tools are among each Pokémon's cards
+(`inPlays`). -/
 def states (C : List Card) : List GameState :=
   (players C).flatMap fun cur => (players C).flatMap fun opp =>
   bools.flatMap fun curIsFirst => bools.flatMap fun firstTurn =>

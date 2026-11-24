@@ -156,11 +156,17 @@ the opponent has such a trigger in play; enumerated by `Finite.states`, copied b
 step asks that no trigger be ready (`KOBatch`), so the triggers resolve before anything else, the
 Knock Out check included: by the new move `Move.trigger` after a retreat or an attack or, inside a
 Trainer, Stadium or Ability effect, by the new step `Resolve.trigger` right after the step that
-raised the event (`Resolve.trigger_first`). The triggers that fire are therefore those of the
-opponent's Pokémon in play as the raising move or step left them: a review of the first version,
-which resolved them after the Knock Out check, showed a Benched Mismagius-like Pokémon promoted by
-the check firing, and one Knocked Out by the same attack not firing; both are now theorems the other
-way (`Promoted.promoted_quiet`, `Promoted.held_fires`). Recording the event at its source needs no
+raised the event (`Resolve.trigger_first`). A review of the first version, which resolved them
+after the Knock Out check, showed a Benched Mismagius-like Pokémon promoted by the check firing, and
+one Knocked Out by the same attack not firing; both are now theorems the other way
+(`Promoted.promoted_quiet`, `Promoted.held_fires`). A second review showed that reading the holders
+at the resolution still erred when the rest of an attack gusts (Iron Bundle's *Interjet*: switch
+the attacker, then the opponent's Active Pokémon); milestone MV7b records the holders AT THE EVENT:
+the event marks each of the opponent's Pokémon that has such a trigger where it is
+(`InPlay.owe : Option Spot`, the spot; enumerated by `Finite.inPlays`, kept by both clamps), the
+mark travels with the Pokémon, and the resolution fires the marked ones (`GameState.owedTrigs`) and
+clears the marks (`GameState.unpend`); the review's two cases are now theorems that the wrong
+outcome cannot happen (`Gust.gust_drops_holder`, `Gust.gust_adds_holder`, `Gust.gust_probe_fails`). Recording the event at its source needs no
 Pokémon identity: Benching an identical copy of the old Active Pokémon raises nothing
 (`Benched.copy_quiet`, `Benched.copy_quiet_all`). Such a trigger may fire before the attack, as often
 as the player switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store
@@ -174,7 +180,7 @@ moves from an unsettled state gained the alternative `TrigMove` (`Move.batch_of_
 move from a state with a pending Knock Out gained the hypothesis `pend = false`
 (`Move.pending_knockedOut`, `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`,
 `Move.eq_koStep_of_won`; `KOBatch.exists_of` the hypothesis that no trigger is ready; Known gaps of `Pokemon/Rules.lean`; witnesses in
-`Pokemon/Benched.lean` and `Pokemon/Promoted.lean`). Milestone M5 added Stadiums
+`Pokemon/Benched.lean`, `Pokemon/Promoted.lean` and `Pokemon/Gust.lean`). Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
 Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and

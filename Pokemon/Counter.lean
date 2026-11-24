@@ -1289,7 +1289,7 @@ theorem reach_trans {g₁ g₂ g₃ : GameState} (h₁ : Reach g₁ g₂) (h₂ 
 
 /-- A Basic Pokémon just set up as Active: no damage, no Energy, no markers. -/
 def onPlay (top : PokemonCard) : InPlay :=
-  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty, false, false, {}⟩
+  ⟨top, [], [], [], 0, .none, false, false, 0, false, Marks.empty, false, false, {}, none⟩
 
 /-- **The start state for machine `M` with inputs `a`, `b`.** The first player (to move, in
 the main phase of a turn after the draw) has the Clock Active, one Energy in hand, an empty

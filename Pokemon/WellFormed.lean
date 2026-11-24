@@ -213,6 +213,7 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
           fun hb => by
             first
             | exact benched_update h hb ⟨rfl, rfl, rfl, rfl⟩
+            | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | @benchDamage g q b₁ b₂ w n h =>
       have hq : ∀ x, Benched x → Benched (x.hitBench n) := fun x hx => by
@@ -287,6 +288,10 @@ theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Fra
   obtain ⟨f1, f2, f3, f4, f5, _, _⟩ := hf
   refine ⟨fun hn => ?_, f1 hw.2.1, f2 hw.2.2⟩
   rw [f3, f4]; exact hw.1 (f5 ▸ hn)
+
+/-- Clearing the record keeps the frame (milestone MV7b). -/
+theorem Run.Frame.unpend (g : GameState) : Run.Frame g g.unpend :=
+  ⟨id, fun hb => hb.map fun _ hq => hq.of_eq rfl rfl rfl rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- The frame of an effect's resolution seen from the other side (milestone M8b). -/
 theorem Run.Frame.unswap {g g₁ : GameState} (h : Run.Frame g.swap g₁) : Run.Frame g g₁.swap := by
@@ -475,7 +480,7 @@ theorem Resolve.wellFormed {g g' : GameState} (h : Resolve g g') (hw : WellForme
   induction h with
   | done => exact hw
   | step _ hm _ ih => exact ih (hm.wellFormed hw)
-  | trigger _ _ _ _ ht _ ih => exact ih (WellFormed.of_frame hw ht.frame)
+  | trigger _ _ _ _ ht _ ih => exact ih (WellFormed.of_frame hw ((Run.Frame.unpend _).trans ht.frame))
 
 /-- Resolving a Trainer card's effect, Knock Outs included, preserves well-formedness. -/
 theorem TRun.wellFormed {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : WellFormed g) :
@@ -592,7 +597,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
   | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2⟩
   | retreat ha hb hr he hp hs hbt hst hl hat =>
       rename_i a q b₁ b₂ _ _
-      refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩
+      refine ⟨hw.1, fun p hp => ?_, BenchOk.map hw.2.2 fun _ hq => hq.of_eq rfl rfl rfl rfl⟩
       rcases List.mem_append.1 hp with hp | hp
       · exact hw.2.1 p (by rw [hb]; exact List.mem_append_left _ hp)
       · cases hp with
@@ -613,7 +618,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
       exact WellFormed.of_frame (WellFormed.of_frame hw hr.frame) ht.frame
   | attackConfused ha hm hc hs hn hf => exact hw
   | knockOuts h _ ht => exact WellFormed.of_frame (h.wellFormed hw) ht.frame
-  | trigger _ _ _ ht => exact WellFormed.of_frame hw ht.frame
+  | trigger _ _ _ ht => exact WellFormed.of_frame hw ((Run.Frame.unpend _).trans ht.frame)
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2, hcc.benched ?_⟩
       intro p hp
