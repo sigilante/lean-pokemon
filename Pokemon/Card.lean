@@ -1155,8 +1155,10 @@ of today's Standard.
   attack, `Resolve.trigger` after a step of a Trainer, Stadium or Ability effect), so the triggers
   that fire are those of the opponent's Pokémon in play as the retreat, the step or the attack left
   them. "Their new Active Pokémon" is the opponent's Active Pokémon then (`counters`, `inflict`):
-  the Pokémon switched in, unless the rest of an attack's effect moved it (departures in the Known
-  gaps of `Pokemon/Rules.lean`).
+  the Pokémon switched in (a well-formed attack does nothing more to the player's Active Pokémon
+  after the switch). What can differ from print is WHICH holders fire, when the rest of the
+  attack's effect moves the opponent's Pokémon (departures in the Known gaps of
+  `Pokemon/Rules.lean`).
 
 All three belong to the player whose turn it is not, and their effects are written from that
 player's side: `.own` is the owner, `.opp` the player to move, so "the Attacking Pokémon" is the

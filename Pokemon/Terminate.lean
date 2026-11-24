@@ -289,7 +289,7 @@ theorem KOChain.length_le {n : Nat} {g g' : GameState} (h : KOChain n g g') :
 
 /-- A `Resolve` result from a state with no pending trigger is reached by a chain of batch steps.
 (Milestone MV7 added the hypothesis `g.pend = false`: from a state with a trigger pending the
-resolution is a chain to a `Calm` state, the triggers (`Resolve.trigger`), then a chain from their
+resolution is a chain to a state with both Active Spots filled (`BothActive`), the triggers (`Resolve.trigger`), then a chain from their
 result, which has none pending.) -/
 theorem Resolve.chain {g g' : GameState} (h : Resolve g g') (hp : g.pend = false) :
     ∃ n, KOChain n g g' := by

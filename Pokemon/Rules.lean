@@ -831,13 +831,23 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   well-formed attack does nothing more to the player's Active Pokémon, `Effect.switchSafe`, but may
   switch the opponent's Active Pokémon or put Pokémon into play) and what the `damaged` triggers do
   (their fragment has `putBench`) can change which of the opponent's Pokémon are in play, and
-  where, when the triggers are read; not checked against the card pool; (order, a switched-in
+  where, when the triggers are read. The card pool has the shape: three printed attacks switch
+  their user and then switch the opponent's Active Pokémon (Iron Bundle sv6-62 *Interjet*,
+  imported; Quaquaval ex sv2-52; Baltoy sv3-94), and against a holder whose trigger works only in
+  the Active Spot (Mismagius ex me2-36, not imported) the model fires nothing where print fires
+  (the holder was Active at the switch and is gusted to the Bench before the read) and fires where
+  print does not (a Benched holder gusted in, the record raised by another holder). A holder whose
+  effect falls on the player's Active Pokémon and that fires from either spot (Magcargo) is not
+  affected. Recording the holders at the event would remove this; (order, a switched-in
   Pokémon Knocked Out) a switched-in Pokémon at or above its HP (a static HP change that reads its
   spot or its Energy) gets the trigger's effect, and is then Knocked Out, and its replacement gets
   nothing: under a reading that takes the Knock Out first, "their new Active Pokémon" would be the
   replacement, and the model has fewer outcomes than that reading; (unreached states) a state with
   a trigger pending and an Active Spot empty takes the batch step first (no theorem says that no
-  play reaches one; the retreat and the switch leave both Active Spots filled). Multiplicity: an
+  play reaches one; the retreat and the switch leave both Active Spots filled) — if such a state were reached, the promotion would come before the read
+  and the triggers of the promoted Pokémon would be read, the flaw the ordering otherwise removes;
+  by inspection no primitive empties an Active Spot outside a Knock Out, and the batch step that
+  promotes runs only when no trigger is ready. Multiplicity: an
   attack switches the player's own Active Pokémon at most once on any path of its effect
   (`Attack.wf`: after `switch .own` the rest must be `Effect.ownFree`, which excludes it, and `iter`
   may not switch; by the definitions, not a stated theorem), so the stage-2 departure "two own
