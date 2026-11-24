@@ -1582,7 +1582,8 @@ theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
 effect is `skip` and that has no static effect, or a Tool that gives nothing (no attack, no
 Ability, no static effect). Such a card occupies the Stadium slot or a Pokémon's Tool place and
 does nothing. An importer writes these terms for Stadiums and Tools whose printed text the model
-does not express (triggered text outside the two shapes of milestone M8b, and static text outside
+does not express (triggered text outside the two shapes of milestone M8b and the event of milestone
+MV7, and static text outside
 the language of `Static`), so `Card.inert` tells "playable, effect not modelled" (an under-model of
 the printed card) from "playable, effect expressed" (a Stadium with an activated or, since milestone
 M6, a static effect; a Tool that gives an attack, an Ability or a static effect, and since milestone

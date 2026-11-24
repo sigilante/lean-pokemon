@@ -1488,7 +1488,8 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
           have e1 : a.cure.unlock.abW = a.abW := rfl
           have e2 : (Whose.mover .own q).abW = q.abW := rfl
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, ha, hb, abWo, optN,
-            abWs_append, abWs, e1, e2, List.length_append, List.length_cons]; omega
+            abWs_append, abWs, e1, e2, List.length_append, List.length_cons, Whose.noteBenched,
+            GameState.noteBenched]; omega
       | opp => exact Nat.le_refl _
   | @benchDamage g q b₁ b₂ w n h =>
       cases w with

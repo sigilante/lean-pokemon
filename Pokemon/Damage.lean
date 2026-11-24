@@ -1323,6 +1323,24 @@ theorem Promote.sim {f : InPlay → InPlay} {a₁ a₂ a₁' : Option InPlay} {b
           exact ⟨_, _, .pick, by simp only [Option.map_some, h2],
             by simp only [List.map_append, h1, h3]⟩
 
+/-- **Raising the `oppBenched` event commutes with the clamps** (milestone MV7): it sets the record
+from the opponent's triggers, which both states read alike. -/
+theorem GameState.noteBenched_clampAt {co cp cbo cbp : Cap} {k : Nat} {X₁ X₂ : GameState}
+    (h : X₁.clampAt co cp cbo cbp k = X₂.clampAt co cp cbo cbp k) :
+    X₁.noteBenched.clampAt co cp cbo cbp k = X₂.noteBenched.clampAt co cp cbo cbp k := by
+  have hp := GameState.pend_of_clampAt h
+  have hT := GameState.benchedTrigs_of_clampAt h
+  have e : ∀ X : GameState, X.noteBenched.clampAt co cp cbo cbp k =
+      { X.clampAt co cp cbo cbp k with pend := X.pend || !X.benchedTrigs.isEmpty } := fun _ => rfl
+  rw [e, e, h, hp, hT]
+
+theorem Whose.noteBenched_clampAt (w : Whose) {co cp cbo cbp : Cap} {k : Nat} {X₁ X₂ : GameState}
+    (h : X₁.clampAt co cp cbo cbp k = X₂.clampAt co cp cbo cbp k) :
+    (w.noteBenched X₁).clampAt co cp cbo cbp k = (w.noteBenched X₂).clampAt co cp cbo cbp k := by
+  cases w
+  · exact GameState.noteBenched_clampAt h
+  · exact h
+
 /-- **The kernel of `clamp k` is a simulation for the batch Knock Out step**, when every derived
 HP is at most `k`. -/
 theorem KOBatch.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (h : KOBatch g₁ g₁')

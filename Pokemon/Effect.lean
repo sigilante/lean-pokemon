@@ -360,6 +360,19 @@ moves to the Bench during their turn. -/
 def GameState.benchedTrigs (g : GameState) : List Ability :=
   optTrigs .oppBenched g.opp.active ++ g.opp.bench.flatMap (InPlay.trigs .oppBenched .bench)
 
+/-- **Raise the `oppBenched` event** (milestone MV7): the player to move's Active Pokémon has just
+moved to the Bench (a retreat, or a switch of their own Active Pokémon). The record
+`GameState.pend` is set when the opponent has such a trigger in play, and left as it was otherwise,
+so a game without one is unchanged. -/
+def GameState.noteBenched (g : GameState) : GameState :=
+  { g with pend := g.pend || !g.benchedTrigs.isEmpty }
+
+/-- The event of a switch of the `w` player's Active Pokémon: raised for the player's own (`.own`, in
+their turn); a switch of the opponent's Active Pokémon (`.opp`) is not "during their turn". -/
+def Whose.noteBenched : Whose → GameState → GameState
+  | .own, g => g.noteBenched
+  | .opp, g => g
+
 /-- The `oppBenched` triggers depend on the opponent's Pokémon in play only through their Abilities:
 a map of the Pokémon in play that keeps the Abilities (both clamps) keeps them. -/
 theorem GameState.benchedTrigs_of_map {f f' : InPlay → InPlay}
@@ -468,11 +481,12 @@ inductive Run : Effect → GameState → GameState → Prop where
   retreated or got there some other way), some things do go away—Special Conditions and any
   effects from attacks", rulebook 2023 p. 12; since milestone MV4 its attack locks end too,
   `InPlay.unlock`); `q` has moved to the Active Spot, which is recorded when the switch is the
-  player's own (milestone MV2, `Whose.mover`) -/
+  player's own (milestone MV2, `Whose.mover`); a switch of the player's own Active Pokémon raises
+  the `oppBenched` event (milestone MV7, `Whose.noteBenched`) -/
   | switch {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} (w : Whose)
       (ha : (g.side w).active = some a) (hb : (g.side w).bench = b₁ ++ q :: b₂) :
-      Run (.switch w) g
-        (g.updSide w fun s => { s with active := some (w.mover q), bench := b₁ ++ a.cure.unlock :: b₂ })
+      Run (.switch w) g (w.noteBenched
+        (g.updSide w fun s => { s with active := some (w.mover q), bench := b₁ ++ a.cure.unlock :: b₂ }))
   | switchNone {g : GameState} (w : Whose) (hb : (g.side w).bench = []) : Run (.switch w) g g
   /-- attack damage to one of the `w` player's Benched Pokémon (milestone M3) -/
   | benchDamage {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)

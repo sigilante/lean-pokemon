@@ -141,7 +141,10 @@ unchanged in statement (its attacks have `gx = false`).
 * static effects of Abilities, Stadiums and Tools outside the language of `Static` (since
   milestone M6 HP changes, damage bonuses and reductions and Retreat Cost changes are modelled;
   Bench size, damage prevention, Ability and Tool locks are not), and triggered Abilities other
-  than the two shapes of milestone M8b (`TrigEvent`); the model plays such text as no effect;
+  than the two shapes of milestone M8b and the `oppBenched` event of milestone MV7
+  (`TrigEvent`); the model plays such text as no effect; the `oppBenched` triggers, which can fire
+  before the attack, are admitted only with effects that recycle nothing (`Ability.trigOn`), so
+  they keep the discard piles and need no new clause (`TInv.move`, case `trigger`);
 * returning a card from play to the hand or deck (Scoop Up Cyclone, and the Abilities of Abra,
   Dudunsparce and Misty's Psyduck) and devolution are not in the model; with them a Pokémon card
   could re-enter play within a turn, and the potential that bounds Ability uses would need

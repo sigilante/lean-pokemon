@@ -147,7 +147,21 @@ per-turn part of the invariant is vacuous (`TInv.same'`). Witnesses (`Pokemon/Tr
 a `damaged` trigger that Knocks Out the attacker with the defender, the batch that follows with a
 `koByAttack` trigger that draws (forced when mandatory, declined when optional), the simultaneous
 win, and attacks that switch the opponent's Active Pokémon (`gust_quiet`, `pull_fires`,
-`hitRun_quiet`). Milestone M5 added Stadiums
+`hitRun_quiet`). Milestone MV7 (survey S20) added a third trigger event, "whenever your opponent's
+Active Pokémon moves to the Bench during their turn" (`TrigEvent.oppBenched`; Magcargo sv5-29,
+Mismagius ex me2-36), to the real move relation: a retreat and a switch of the player's own Active
+Pokémon inside any effect record the event in the state (`GameState.pend`, a `Bool`, set only when
+the opponent has such a trigger in play; enumerated by `Finite.states`, copied by both clamps);
+`Settled` now also asks that nothing be pending (the old meaning is `Calm`), so the triggers resolve
+before any other action, by the new move `Move.trigger` or, inside a Trainer, Stadium or Ability
+effect, by the new step `Resolve.trigger` after the step that raised the event. Recording the event
+at its source needs no Pokémon identity: Benching an identical copy of the old Active Pokémon raises
+nothing (`Benched.copy_quiet`). Such a trigger may fire before the attack, as often as the player
+switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store bound needs no
+new clause. Every theorem was re-proved; statements that spell out the moves from an unsettled state
+gained the alternative `TrigMove` (`Move.batch_of_not_settled`, `Move.after_attack`,
+`Move.after_attack_passTurn`), and a few hypotheses `¬ Settled` became `¬ Calm` (Known gaps of
+`Pokemon/Rules.lean`; witnesses in `Pokemon/Benched.lean`). Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
 Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and
@@ -433,13 +447,13 @@ came with milestone MV3), cost changes and every triggered effect
   `Move.pending_untouched`; restated by batch-KO: the same move may now fill the Active Spot again
   by a promotion);
 * the repeated check with its triggers ends (milestone M8b, `KOMove.acc`, `Move.unsettled_acc`: no
-  infinite sequence of moves through states that are not `Settled`, by the Prize cards left and
-  then the measure below);
+  infinite sequence of moves through states that are not `Settled`, by the pending-trigger record
+  (milestone MV7: no trigger sets it again), the Prize cards left and then the measure below);
 * the repeated check ends (`Pokemon/Terminate.lean`): a batch that does not end the game lowers
   twice the number of Pokémon in play plus the number of empty Active Spots
   (`KOBatch.koMeasure_lt`), so every chain of batches is finite (`KOBatch.acc`), every state has a
-  `Resolve` result, `Settled` or with an outcome (`Resolve.exists`), and `Resolve` takes at most
-  that measure plus one batches (`Resolve.chain_le`);
+  `Resolve` result, `Settled` or with an outcome (`Resolve.exists`), and `Resolve` from a state with
+  no pending trigger takes at most that measure plus one batches (`Resolve.chain_le`);
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at `bound` the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and
@@ -468,7 +482,7 @@ came with milestone MV3), cost changes and every triggered effect
   machine-checked, the appeal to Minsky's theorem is not), and nothing follows for the printed
   card pool. The start `start M a b` uses cards in the existing effect language; neither of its
   attacks is a GX attack, so the once-per-game GX rule (next item) does not restrict them; every configuration `M` reaches is encoded by a reachable state
-  (`Counter.simulate`, whose proof uses six fixed moves per machine step) (since milestone M8b `Encodes` also asks that no card of the game have a triggered Ability, which the start satisfies, since an attached Tool could otherwise fire a mandatory trigger), and the converse
+  (`Counter.simulate`, whose proof uses six fixed moves per machine step) (since milestone M8b `Encodes` also asks that no card of the game have a triggered Ability, which the start satisfies, since an attached Tool could otherwise fire a mandatory trigger; since milestone MV7 `Encodes` asks, through `Counter.Shape`, that no trigger be pending, which no move of the construction changes), and the converse
   direction (`Counter.halts_of_haltMarked`) covers every line of play, not only the intended
   one (a player who declines to attack, or attaches the Energy, decks out at their next draw,
   and the game ends without the mark). The construction relies on: (1) rest-of-game damage

@@ -255,7 +255,7 @@ theorem pull_hits {g' : GameState} {hb sw : Bool} (h : HitRun pull.script pullSt
               cases r with
               | damage hv h' =>
                   cases hv
-                  simp only [GameState.updSide, Option.some.injEq] at hp
+                  simp only [GameState.updSide, Option.some.injEq, Whose.noteBenched] at hp
                   subst hp
                   rw [hb' (by decide)]
                   simp only [Bool.or_eq_true]
@@ -303,7 +303,7 @@ theorem pull_fires :
               subst hq
               cases r2 with
               | damage hv h' =>
-                  simp only [GameState.updSide, Option.some.injEq] at h'
+                  simp only [GameState.updSide, Option.some.injEq, Whose.noteBenched] at h'
                   subst h'
                   have := hp.length_eq
                   simp [optTrigs, InPlay.trigs, InPlay.abilities] at this

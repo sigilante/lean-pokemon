@@ -139,7 +139,7 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
   | evolveBench => exact hi.keeps ⟨Nat.le_refl _, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
   | retreat =>
       refine hi.keeps ⟨?_, rfl, rfl, rfl⟩ fun _ => Nat.le_refl _
-      simp only [GameState.discAmt, cardsAmt_append]; omega
+      simp only [GameState.discAmt, cardsAmt_append, GameState.noteBenched]; omega
   | @item g' l₁ l₂ n e hh hbt hst hr hl =>
       have hx : Card.trainer n .item e ∈ g.cur.hand := by
         rw [hh]; exact List.mem_append_right _ (.head _)
@@ -361,7 +361,7 @@ theorem _root_.Pokemon.Move.abPot_le {g g' : GameState} (hm : Move g g')
           a.abW := rfl
       have e2 : q.moveUp.abW = q.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, ha, hb, abWo, optN, abWs_append, abWs, e, e2,
-        List.length_append, List.length_cons]; omega
+        List.length_append, List.length_cons, GameState.noteBenched]; omega
   | item _ _ _ hr => exact hr.abPot_le hw
   | supporter _ _ _ _ hr => exact hr.abPot_le hw
   | stadiumUse _ _ _ _ _ hr => exact hr.abPot_le hw
@@ -652,8 +652,10 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
   | evolveBench => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩
   | retreat =>
-      exact ⟨_, _, _, _, _, hi.same hwn (by simp only [GameState.discW, wsum_append]; omega)
-        (by simp only [GameState.discW, wsum_append]; omega) rfl rfl rfl rfl (fun _ => rfl)
+      exact ⟨_, _, _, _, _, hi.same hwn
+        (by simp only [GameState.discW, wsum_append, GameState.noteBenched]; omega)
+        (by simp only [GameState.discW, wsum_append, GameState.noteBenched]; omega) rfl rfl rfl rfl
+        (fun _ => rfl)
         (hpot rfl) (hstp rfl)⟩
   | stadium =>
       exact ⟨_, _, _, _, _, hi.same hwn (by simp only [GameState.discW, wsum_append]; omega)

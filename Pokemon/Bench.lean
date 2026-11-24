@@ -285,7 +285,7 @@ theorem gust_reachable :
       (.seq (.prim rfl rfl (.switch (b₁ := []) .opp rfl rfl)
           (.done (.inl (settled_of rfl rfl (by decide) (by decide) (fun p hp => by cases hp)
             (fun p hp => by
-            simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
+            simp only [GameState.updSide, List.nil_append, List.mem_singleton, Whose.noteBenched] at hp
             subst hp; decide)))))
         (.prim rfl rfl (.counters 5 rfl)
           (.step rfl (.go (by decide) rfl .keep (.pick (b₁ := [])))
@@ -330,7 +330,8 @@ theorem switch_cures :
       (.prim rfl rfl (.switch (b₁ := []) .own rfl rfl)
         (.done (.inl (settled_of rfl rfl (by decide) (by decide)
           (fun p hp => by
-            simp only [GameState.updSide, List.nil_append, List.mem_singleton] at hp
+            simp only [GameState.updSide, List.nil_append, List.mem_singleton, Whose.noteBenched,
+              GameState.noteBenched] at hp
             subst hp; decide)
           (fun p hp => by cases hp))))) rfl rfl rfl rfl
   exact ⟨switchStart_wellFormed, _, _, hm, rfl, rfl, ⟨rfl, rfl, rfl, rfl⟩, _, rfl, rfl, rfl, rfl,

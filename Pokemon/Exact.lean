@@ -291,6 +291,23 @@ theorem GameState.benchedTrigs_of_xclampAt {K : Nat} {co cp cb : Cap} {g₁ g₂
     g₂.benchedTrigs = g₁.benchedTrigs :=
   GameState.benchedTrigs_of_clampAt (GameState.xclampAt_iff.1 h).1
 
+/-- Raising the `oppBenched` event commutes with the exact-store clamp (milestone MV7). -/
+theorem GameState.noteBenched_xclampAt {K : Nat} {co cp cb : Cap} {X₁ X₂ : GameState}
+    (h : X₁.xclampAt K co cp cb = X₂.xclampAt K co cp cb) :
+    X₁.noteBenched.xclampAt K co cp cb = X₂.noteBenched.xclampAt K co cp cb := by
+  have hp := GameState.pend_of_xclampAt h
+  have hT := GameState.benchedTrigs_of_xclampAt h
+  have e : ∀ X : GameState, X.noteBenched.xclampAt K co cp cb =
+      { X.xclampAt K co cp cb with pend := X.pend || !X.benchedTrigs.isEmpty } := fun _ => rfl
+  rw [e, e, h, hp, hT]
+
+theorem Whose.noteBenched_xclampAt (w : Whose) {K : Nat} {co cp cb : Cap} {X₁ X₂ : GameState}
+    (h : X₁.xclampAt K co cp cb = X₂.xclampAt K co cp cb) :
+    (w.noteBenched X₁).xclampAt K co cp cb = (w.noteBenched X₂).xclampAt K co cp cb := by
+  cases w
+  · exact GameState.noteBenched_xclampAt h
+  · exact h
+
 theorem GameState.calm_of_xclamp {g₁ g₂ : GameState} (h : g₁.xclamp K = g₂.xclamp K)
     (hs : Calm g₁) (hH : g₁.HpBelow K) : Calm g₂ :=
   GameState.calm_of_clamp (GameState.clamp_of_xclamp h) hs hH
@@ -640,9 +657,9 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           rw [ha] at hc₂
           obtain ⟨a', rfl, hqa⟩ := agree_of_map hc₂
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
-          exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, by
-            simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, ha₂, he₂, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock]⟩
+          exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, Whose.noteBenched_xclampAt .own (by
+            simp only [GameState.xclampAt, GameState.updSide, ha₂, he₂, Option.map_some,
+              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock])⟩
       | opp =>
           simp only [GameState.side] at ha h
           rw [ha] at ha₂
@@ -650,7 +667,8 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
           exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, he₁, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock]⟩
+              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock,
+              Whose.noteBenched]⟩
   | switchNone w h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -1140,7 +1158,8 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       refine ⟨_, .retreat rfl rfl hr (hq.energy ▸ he) (by rw [hsf.retreatOf hq.sv]; exact hp)
         (by rw [hq.rot]; exact hs) hbt hs' hl hat, ?_⟩
       rw [e]
-      simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₂, Option.map_some,
+      refine GameState.noteBenched_xclampAt ?_
+      simp only [GameState.xclampAt, ha₂, he₂, Option.map_some,
         List.map_append, List.map_cons, InPlay.clampWith_moveUp, h1, h2, h3]
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hs' := hs₂ hst

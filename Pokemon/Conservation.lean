@@ -124,6 +124,7 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
       List.count_nil, optCardList, benchCardList, benchCardList_append, InPlay.cardList,
       InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
       InPlay.inflict_energy, InPlay.inflict_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
+      GameState.noteBenched, Whose.noteBenched,
       InPlay.unlock,
       $hs,*] <;>
     omega))

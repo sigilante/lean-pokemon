@@ -35,7 +35,9 @@ empty Active Spot promotes. If the removals or promotions leave another Pokémon
 (derived HP can change), the check repeats. The model follows the timing in two ways. Between
 moves: every move other than the batch step (`Move.knockOuts`) requires the state to be `Settled`:
 no Pokémon in play is at or above its HP, and both Active Spots are filled; from any other state
-the batch step is the only move (`Move.batch_of_not_settled`). So once a move leaves a Pokémon at
+the batch step is the only move (`Move.batch_of_not_settled`; since milestone MV7 `Settled` also
+asks that no triggered Ability be pending, `GameState.pend`, and a `Calm` state with one pending has
+the resolution of its triggers, `Move.trigger`, as only move). So once a move leaves a Pokémon at
 or above its HP, the next move Knocks it Out, with every other pending one, before anything else
 happens; nothing can read, heal or otherwise use an over-HP Pokémon between moves. Inside a move:
 an attack's effect is resolved as a whole by `Run`, so damage may exceed HP and the effect can read
@@ -734,8 +736,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   beyond a top-card filter, a place or an Energy count are not expressible); it is never used.
   Since milestone MV3 a static Ability may also prevent damage from attackers passing a filter
   (`SEff.prevent`, above). Absent: other static (passive) Abilities (other immunities, locks, cost changes and the like, about 57
-  in today's Standard by the same count), triggered Abilities other than on-play ones and the two
-  shapes of milestone M8b (survey S12: Checkup 5, moving between spots 8, attaching Energy 2, the
+  in today's Standard by the same count), triggered Abilities other than on-play ones, the two
+  shapes of milestone M8b and the `oppBenched` event of milestone MV7 (survey S12: Checkup 5, moving between spots 8, attaching Energy 2, the
   opponent's plays 6, end of turn 1, replacement effects 14, Knock Outs of other Pokémon or with
   Prize changes; 44 cards of the 67 after-event triggers are of other shapes), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
@@ -792,6 +794,39 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   printed condition (`cond`) or an effect outside the fragment never fires. The trigger chains end
   (`KOMove.acc`, `Move.unsettled_acc`): every Knock Out takes a Prize card, and nothing returns
   one; with Prize-changing triggers (absent) that argument fails;
+* triggers of the event "your opponent's Active Pokémon moves to the Bench during their turn"
+  (milestone MV7, survey S20; `TrigEvent.oppBenched`; Magcargo sv5-29, Mismagius ex me2-36). The
+  event is raised at its source, by `Move.retreat` and by a switch of the player's own Active
+  Pokémon with a Benched one (`Run.switch .own`) inside any effect of their turn, which set the
+  record `GameState.pend` when the opponent has such a trigger in play
+  (`GameState.noteBenched`); `Settled` requires the record clear, so the triggers resolve before
+  any other action: by `Move.trigger` after a retreat or an attack, and inside a Trainer, Stadium,
+  Ability or on-play effect by `Resolve.trigger`, after the step that raised it and its Knock
+  Outs, before the next step. The rulebook gives no time for a triggered Ability to resolve (it
+  orders effects only at Checkup, 2026 p. 15); the model's reading is "after the step that raised
+  it, once its Knock Outs are taken". Since the event is recorded by the switch itself, Pokémon
+  identity is not needed: Benching an identical copy of the old Active Pokémon raises nothing
+  (`Benched.copy_quiet`, the counterexample of survey S18's review). Departures: (fewer outcomes)
+  two switches of the player's own Active Pokémon inside one attack fire the triggers once, since
+  an attack resolves as a whole (no printed attack switches its user twice, S18 B1); a trigger
+  whose effect recycles a card from a discard pile never fires (`Ability.trigOn`: such a trigger
+  could fire on every Switch played in a turn, and the store bound keeps the discard piles before
+  the attack; no card of the census recycles); an `oppBenched` trigger with a printed condition
+  never fires, as for every trigger; (order) a trigger raised by an attack resolves after the
+  attack's `damaged` triggers and its Knock Out check, and one raised in a step that also causes a
+  Knock Out after that Knock Out, so "their new Active Pokémon" is the Active Pokémon when the
+  trigger resolves, which differs from print only when the switched-in Pokémon was Knocked Out in
+  between (more and fewer outcomes; it needs a Knock Out caused by a switch, through a static HP
+  change, or an attack that damages the Pokémon its user switched in). "Their new Active Pokémon" with
+  `.opp` effects from the owner's side is exact otherwise (`Benched.retreat_fires`,
+  `Benched.switch_fires`). "That Pokémon" (the Benched one: Team Rocket's Dugtrio) has no target
+  in the language and stays refused. The resolution adds no cascade: no effect of the fragment
+  switches, so a trigger never raises the event (`Move.unsettled_acc`: the record first, then the
+  Prize cards left, then `koMeasure`). Not modelled (survey S20 §a): the player's own Pokémon
+  moving between the Bench and the Active Spot (Yanmega ex, Clawitzer; 5 refused), Energy attached
+  from the hand (Gengar ex, Magearna; 2), the opponent's evolution (Team Rocket's Ampharos; 1) and
+  Item or Supporter plays (prevention; 3), Checkup changes (Magmortar, Pecharunt and 3 more), Knock
+  Outs of other Pokémon and Prize changes, replacement effects (Pikachu ex and 4 more);
 * start states are not required to be well formed; from a `WellFormed` start no reachable
   state without a winner is stuck (`Reach.progress`), and since milestone batch-KO no state at all
   is (`Move.exists_move`, with no hypothesis: the batch Knock Out step exists in every state that
@@ -1687,19 +1722,21 @@ inductive Move : GameState → GameState → Prop where
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon. The
   player chooses which Energy to discard ("you must discard 1 Energy from your Active Pokémon for
   each [✱] listed in its Retreat Cost", rulebook 2026 p. 12): `paid` is any sub-multiset of the
-  attached Energy and `rest` the others, each in attachment order (`Split .any`) -/
+  attached Energy and `rest` the others, each in attachment order (`Split .any`). Since milestone MV7
+  the retreat raises the `oppBenched` event (`GameState.noteBenched`): the opponent's triggers
+  resolve by the next move (`Move.trigger`) -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
       (hr : g.cur.retreated = false) (he : Split .any a.energy paid rest)
       (hp : paid.length = g.retreatOf a)
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
-      Move g { g with cur := { g.cur with
+      Move g ({ g with cur := { g.cur with
         active := some q.moveUp,
         bench := b₁ ++ { a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0,
           lk := {} } :: b₂,
-        discard := paid ++ g.cur.discard, retreated := true } }
+        discard := paid ++ g.cur.discard, retreated := true } } : GameState).noteBenched
   /-- play an Item card: it goes to the discard pile and its effect resolves, with Knock Outs
   taken at once in mid-effect (`TRun`); not while an Item lock is in effect. Its effect has no
   attack damage step (`Effect.hitFree`): Trainer cards place damage counters -/
@@ -1824,7 +1861,9 @@ inductive Move : GameState → GameState → Prop where
   attack sets the attacker's lock for its owner's next turn (`GameState.afterAttack`). A GX
   attack (`Attack.gx`) can be used only by a player who has not used one in this game, and
   using it records that (`PlayerState.gxUsed`). Since milestone M8b the attack ends with the
-  opponent's `damaged` triggers (`HitTrig`, `Fire`), resolved before the Knock Out check. -/
+  opponent's `damaged` triggers (`HitTrig`, `Fire`), resolved before the Knock Out check. Since
+  milestone MV7 an attack that switches the attacker to the Bench raises the `oppBenched` event
+  (`Run.switch .own`), resolved after the attack's Knock Outs by `Move.trigger`. -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
