@@ -83,8 +83,10 @@ theorem round (b : Nat) : Reach (S b) (S (b + 1)) :=
         (.prim rfl rfl (.handToBottom (List.Perm.refl _))
           (.done (.inl (settled_mon rfl rfl rfl rfl)))))
       rfl rfl))
-    rfl (.endTurn false false false false false false rfl rfl
-      (settled_mon rfl rfl rfl rfl).1 rfl .nil .nil))
+    rfl (.endTurn_of_zero false false false false false false rfl rfl
+      (settled_mon rfl rfl rfl rfl).1 rfl .nil .nil
+      (GameState.Plain.checkupMore (GameState.plain_of_plainB rfl) rfl)
+      (GameState.Plain.checkupMore (GameState.plain_of_plainB rfl) rfl)))
     rfl (.startTurn rfl rfl rfl (settled_mon rfl rfl rfl rfl).1 rfl))
     rfl (.stadiumUse rfl rfl rfl (settled_mon rfl rfl rfl rfl) rfl
       (.seq (.prim rfl rfl (.linger .own .always (.bonus 1) _)
@@ -92,8 +94,10 @@ theorem round (b : Nat) : Reach (S b) (S (b + 1)) :=
         (.prim rfl rfl (.handToBottom (List.Perm.refl _))
           (.done (.inl (settled_mon rfl rfl rfl rfl)))))
       rfl rfl))
-    rfl (.endTurn false false false false false false rfl rfl
-      (settled_mon rfl rfl rfl rfl).1 rfl .nil .nil))
+    rfl (.endTurn_of_zero false false false false false false rfl rfl
+      (settled_mon rfl rfl rfl rfl).1 rfl .nil .nil
+      (GameState.Plain.checkupMore (GameState.plain_of_plainB rfl) rfl)
+      (GameState.Plain.checkupMore (GameState.plain_of_plainB rfl) rfl)))
     rfl (.startTurn rfl rfl rfl (settled_mon rfl rfl rfl rfl).1 rfl)
 
 theorem reach_S (k : Nat) : Reach (S 0) (S k) := by
@@ -103,7 +107,7 @@ theorem reach_S (k : Nat) : Reach (S 0) (S k) := by
 
 theorem S_wellFormed : WellFormed (S 0) :=
   ⟨fun _ => ⟨by simp [S, spl], by simp [S, spl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem S_allCards : (S 0).allCards =
     [.energy .metal, .energy .metal, .pokemon guard, .energy .metal, .energy .metal,
@@ -292,8 +296,8 @@ theorem levincia_refused : ∀ g', Move W2 g' → g'.curIsFirst = true →
 the second draws and uses Levincia, whose effect acts for them. -/
 theorem levincia_second : Reach W2 W5 :=
   .step (.step (.step (.refl _) rfl
-    (.endTurn false false false false false false rfl rfl
-      (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl).1 rfl .nil .nil))
+    (.endTurn_of_zero false false false false false false rfl rfl
+      (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl).1 rfl .nil .nil (by decide) (by decide)))
     rfl (.startTurn rfl rfl rfl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl).1 rfl))
     rfl (.stadiumUse rfl rfl rfl (W_settled _ _ _ _ _ _ _ rfl rfl rfl rfl) rfl
       (.prim rfl rfl

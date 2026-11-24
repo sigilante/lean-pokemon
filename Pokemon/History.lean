@@ -120,7 +120,8 @@ def after2End : GameState :=
     stadium := none, stadiumPlayed := false, stadiumUsed := false }
 
 theorem after2_end : Move after2 after2End :=
-  .endTurn false false false false false false rfl rfl after2_settled.1 rfl .nil .nil
+  .endTurn_of_zero false false false false false false rfl rfl after2_settled.1 rfl .nil .nil
+    (by decide) (by decide)
 
 /-- **Witness: a history test false, then true across a turn boundary.** "If any of your Pokémon
 were Knocked Out during your opponent's last turn": false for the opponent while the turn in which
@@ -146,8 +147,8 @@ theorem koLast_forgotten :
       (Count.koLast .opp false).val g₃ = 0 :=
   ⟨_, _, after2_end,
     .startTurn rfl rfl rfl (by exact ((GameState.settled_iff _).2 (by decide)).1) rfl,
-    .endTurn false false false false false false rfl rfl
-      (by exact ((GameState.settled_iff _).2 (by decide)).1) rfl .nil .nil,
+    .endTurn_of_zero false false false false false false rfl rfl
+      (by exact ((GameState.settled_iff _).2 (by decide)).1) rfl .nil .nil (by decide) (by decide),
     rfl, rfl, rfl, rfl⟩
 
 end History

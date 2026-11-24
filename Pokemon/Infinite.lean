@@ -51,7 +51,7 @@ def st (n : Nat) : GameState :=
     true, false, false, false, none, none, false, false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
-  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>
+  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
     intro p hp <;> cases hp
 
 theorem start_damageBounded : DamageBounded start := by
@@ -140,8 +140,8 @@ theorem endTurn_pending_ko_reachable :
       ∃ g g', Reach g₀ g ∧ DamageBounded g ∧ g.between = false ∧ Move g g' ∧
         g'.curIsFirst ≠ g.curIsFirst ∧ g'.between = true ∧ ¬ DamageBounded g' := by
   refine ⟨start, start_wellFormed, start_damageBounded, st 5, _, reach_st 5,
-    st_damageBounded 5, rfl, .endTurn false false false false false false rfl rfl (st_damageBounded 5) rfl
-      .nil .nil,
+    st_damageBounded 5, rfl, .endTurn_of_zero false false false false false false rfl rfl (st_damageBounded 5) rfl
+      .nil .nil (by decide) (by decide),
     by decide, rfl, fun hk => ?_⟩
   have := hk .own .active _ rfl
   exact absurd this (by decide)

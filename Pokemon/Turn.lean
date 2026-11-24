@@ -78,16 +78,21 @@ theorem GameState.dealt_zero (g : GameState) : g.dealt 0 = 0 := by
   unfold GameState.dealt; split <;> rfl
 
 /-- The state `Move.endTurn` produces from `g`, with Checkup coin flips `fa sa ca` for the
-opponent's Active Pokémon `a` and `fb sb cb` for the player's own `b`, and the Benches after
-their Char counters, `bo` (the opponent's) and `bc` (the player's). -/
+opponent's Active Pokémon `a` and `fb sb cb` for the player's own `b`, the Benches after
+their Char counters, `bo` (the opponent's) and `bc` (the player's), and (milestone MV7b) the order
+of the static Checkup effects and the Special Conditions' step on each Active Pokémon (`oa`, `ob`:
+one entry per effect in force, `true` before the step; `GameState.checkupMoreBy`). -/
 def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List InPlay)
-    (g : GameState) : GameState :=
+    (g : GameState) (oa ob : List Bool) : GameState :=
   { cur := { g.opp with
-      active := some (a.checkup false fa sa ca), bench := bo,
+      active := some ((a.checkup false fa sa ca).addDamage
+        (g.checkupMoreBy .opp oa a (a.checkup false fa sa ca))), bench := bo,
       energyAttached := false, supporterPlayed := false, retreated := false,
       mods := g.opp.mods.shift, ko := g.opp.ko.shift },
     opp := { g.cur.unfresh with
-      active := some (b.unfresh.checkup true fb sb cb), bench := bc,
+      active := some ((b.unfresh.checkup true fb sb cb).addDamage
+        (g.checkupMoreBy .own ob b.unfresh (b.unfresh.checkup true fb sb cb))),
+      bench := bc,
       mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },
     curIsFirst := !g.curIsFirst, firstTurn := false, attacked := false,
     between := true, winner := g.winner, stadium := g.stadium, stadiumPlayed := false,
@@ -113,14 +118,16 @@ Char counter on a Benched Pokémon, `BenchChar` leaves the Bench as it is
 is the old statement. Milestone batch-KO replaced the first alternative, the eight Knock Out moves
 (`KOMove`), by the batch Knock Out step `KOBatch`, which takes them all at once; milestone M8b
 added the triggers the batch fires, `Fire`, after it; milestone MV7 the resolution of a pending
-trigger, `TrigMove`, which comes before the batch step.) -/
+trigger, `TrigMove`, which comes before the batch step; milestone MV7b the order `oa`, `ob` of the
+static Checkup effects, `GameState.checkupMoreBy`, one Boolean per Active Pokémon until the review
+of stage 2 and since then one entry per effect in force.) -/
 theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.attacked = true)
     (hb : g.between = false) :
     (∃ g₁ l, KOBatch g g₁ ∧ l.Perm (g.batchTrigs g₁) ∧ Fire .koByAttack l g₁ g') ∨ TrigMove g g' ∨
-      ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay),
+      ∃ (a b : InPlay) (fa sa ca fb sb cb : Bool) (bo bc : List InPlay) (oa ob : List Bool),
       g.opp.active = some a ∧ g.cur.active = some b ∧ DamageBounded g ∧
       BenchChar g.opp.bench bo ∧ BenchChar (g.cur.bench.map InPlay.unfresh) bc ∧
-      g' = g.passTurn fa sa ca fb sb cb a b bo bc := by
+      g' = g.passTurn fa sa ca fb sb cb a b bo bc oa ob := by
   cases hm with
   | playBasic _ _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
   | attach _ _ _ _ _ hat => exact absurd (ha.symm.trans hat) (by decide)
@@ -140,8 +147,8 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | attackConfused _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | knockOuts h hl ht => exact .inl ⟨_, _, h, hl, ht⟩
   | trigger hc hp hl ht => exact .inr (.inl ⟨hc, hp, _, hl, ht⟩)
-  | endTurn fa sa ca fb sb cb ha' hb' hk _ hco hcc =>
-      exact .inr (.inr ⟨_, _, fa, sa, ca, fb, sb, cb, _, _, ha', hb', hk, hco, hcc, rfl⟩)
+  | endTurn fa sa ca fb sb cb ha' hb' hk _ hco hcc _ oa ob =>
+      exact .inr (.inr ⟨_, _, fa, sa, ca, fb, sb, cb, _, _, oa, ob, ha', hb', hk, hco, hcc, rfl⟩)
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
 
@@ -204,12 +211,12 @@ theorem KOBatch.sameTurn {g g' : GameState} (h : KOBatch g g') : g.SameTurn g' :
   cases h <;> exact .refl _
 
 /-- Clearing the pending-trigger record changes no turn flag (milestone MV7). -/
-theorem GameState.SameTurn.unpend (g : GameState) : g.SameTurn { g with pend := false } :=
+theorem GameState.SameTurn.unpend (g : GameState) : g.SameTurn g.unpend :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- The resolution of pending triggers changes no turn flag (milestone MV7). -/
 theorem Fire.sameTurn_unpend {l : List Ability} {g g' : GameState}
-    (h : Fire .oppBenched l { g with pend := false } g') : g.SameTurn g' :=
+    (h : Fire .oppBenched l g.unpend g') : g.SameTurn g' :=
   (GameState.SameTurn.unpend g).trans h.zoneOnly.sameTurn
 
 theorem Resolve.sameTurn {g g' : GameState} (h : Resolve g g') : g.SameTurn g' := by

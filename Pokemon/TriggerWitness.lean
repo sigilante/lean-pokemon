@@ -75,7 +75,7 @@ def one : List Card := [.energy .fire]
 
 theorem start_wellFormed (opt : Bool) (pz : List Card) (hz : pz = two ∨ pz = one) :
     WellFormed (start opt pz) := by
-  refine ⟨fun _ => ⟨?_, ?_⟩, fun p hp => ?_, fun p hp => ?_⟩
+  refine ⟨fun _ => ⟨?_, ?_⟩, fun p hp => ?_, fun p hp => ?_, .of_b rfl⟩
   · rcases hz with rfl | rfl <;> simp [start, Trainer.side, two, one]
   · rcases hz with rfl | rfl <;> simp [start, Trainer.side, two, one]
   · simp only [start, Trainer.side, List.mem_singleton] at hp

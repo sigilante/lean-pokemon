@@ -214,7 +214,7 @@ theorem start2_damageBounded : DamageBounded start2 := by
   · cases hp
 
 theorem start2_wellFormed : WellFormed start2 := by
-  refine ⟨fun _ => ⟨by simp [start2, side], by simp [start2, side]⟩, ?_, ?_⟩ <;>
+  refine ⟨fun _ => ⟨by simp [start2, side], by simp [start2, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
     intro p hp <;> cases hp
 
 theorem reach_after2 : Reach start2 after2 :=

@@ -7,6 +7,7 @@ import Pokemon.Effect
 import Pokemon.Rules
 import Pokemon.Zone
 import Pokemon.Conservation
+import Pokemon.Marks
 import Pokemon.WellFormed
 import Pokemon.Damage
 import Pokemon.ZoneSim
@@ -41,6 +42,9 @@ import Pokemon.Trigger
 import Pokemon.TriggerWitness
 import Pokemon.Benched
 import Pokemon.Promoted
+import Pokemon.Gust
+import Pokemon.Checkup
+import Pokemon.SelfKO
 import Pokemon.NoTriggers
 import Pokemon.InPlayTests
 import Pokemon.Spread

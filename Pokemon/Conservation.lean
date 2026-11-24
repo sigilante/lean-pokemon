@@ -42,6 +42,46 @@ theorem benchCardList_setMarks (f : Marks → Marks) (b : List InPlay) :
   | nil => rfl
   | cons p ps ih => simp only [List.map, benchCardList, ih]; rfl
 
+/-- A map of Pokémon that keeps each one's cards keeps the cards of a Bench. -/
+theorem benchCardList_map {f : InPlay → InPlay} (hf : ∀ p, (f p).cardList = p.cardList)
+    (b : List InPlay) : benchCardList (b.map f) = benchCardList b := by
+  induction b with
+  | nil => rfl
+  | cons p ps ih => simp only [List.map, benchCardList, ih, hf]
+
+/-- The owed-trigger mark (milestone MV7b) moves no card. -/
+theorem optCardList_noteOwe (sp : Spot) (o : Option InPlay) :
+    optCardList (o.map (InPlay.noteOwe sp)) = optCardList o := by
+  cases o <;> rfl
+
+theorem benchCardList_noteOwe (sp : Spot) (b : List InPlay) :
+    benchCardList (b.map (InPlay.noteOwe sp)) = benchCardList b :=
+  benchCardList_map (f := InPlay.noteOwe sp) (fun _ => rfl) b
+
+theorem optCardList_clearOwe (o : Option InPlay) :
+    optCardList (o.map InPlay.clearOwe) = optCardList o := by
+  cases o <;> rfl
+
+theorem benchCardList_clearOwe (b : List InPlay) :
+    benchCardList (b.map InPlay.clearOwe) = benchCardList b :=
+  benchCardList_map (f := InPlay.clearOwe) (fun _ => rfl) b
+
+/-- Raising the `oppBenched` event moves no card. -/
+theorem GameState.allCards_noteBenched (g : GameState) : g.noteBenched.allCards = g.allCards := by
+  simp only [GameState.allCards, PlayerState.allCards, GameState.noteBenched, optCardList_noteOwe,
+    benchCardList_noteOwe]
+
+theorem Whose.allCards_noteBenched (w : Whose) (g : GameState) :
+    (w.noteBenched g).allCards = g.allCards := by
+  cases w
+  · exact g.allCards_noteBenched
+  · rfl
+
+/-- Clearing the record moves no card. -/
+theorem GameState.allCards_unpend (g : GameState) : g.unpend.allCards = g.allCards := by
+  simp only [GameState.allCards, PlayerState.allCards, GameState.unpend, optCardList_clearOwe,
+    benchCardList_clearOwe]
+
 theorem benchCardList_addDamage (n : Nat) (b : List InPlay) :
     benchCardList (b.map (InPlay.addDamage n)) = benchCardList b := by
   induction b with
@@ -124,7 +164,7 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
       List.count_nil, optCardList, benchCardList, benchCardList_append, InPlay.cardList,
       InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
       InPlay.inflict_energy, InPlay.inflict_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
-      GameState.noteBenched, Whose.noteBenched,
+      GameState.noteBenched, Whose.noteBenched, optCardList_noteOwe, benchCardList_noteOwe,
       InPlay.unlock,
       $hs,*] <;>
     omega))
@@ -194,6 +234,7 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchHeal n h => perm_count [h]
   | benchHealNone => exact .refl _
   | @switch g a q b₁ b₂ w ha hb =>
+      rw [Whose.allCards_noteBenched]
       cases w <;> simp only [GameState.side] at ha hb <;> perm_count [ha, hb, GameState.updSide]
   | switchNone => exact .refl _
   | @benchDamage g q b₁ b₂ w n h =>
@@ -333,7 +374,7 @@ theorem Resolve.perm {g g' : GameState} (h : Resolve g g') : g'.allCards.Perm g.
   induction h with
   | done => exact .refl _
   | step _ hm _ ih => exact ih.trans hm.perm
-  | trigger _ _ _ _ ht _ ih => exact ih.trans ht.perm
+  | trigger _ _ _ _ ht _ ih => exact ih.trans (ht.perm.trans (.of_eq (GameState.allCards_unpend _)))
 
 /-- Resolving a Trainer card's effect, Knock Outs included, permutes the cards in the game:
 a Knock Out in mid-effect moves the Knocked Out Pokémon's cards to its owner's discard pile and
@@ -374,7 +415,9 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
   | evolve hh ha he hfr hf => perm_count [hh, ha]
   | attachBench hh hf hb => perm_count [hh, hb]
   | evolveBench hh hb => perm_count [hh, hb]
-  | retreat ha hb hr he hp hs => perm_count [ha, hb, he.count]
+  | retreat ha hb hr he hp hs =>
+      rw [GameState.allCards_noteBenched]
+      perm_count [ha, hb, he.count]
   | item hh hbt hst hr =>
       refine hr.perm.trans ?_
       perm_count [hh]
@@ -396,11 +439,11 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
       rw [GameState.allCards_afterAttack]; exact ht.perm.trans hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | knockOuts h _ ht => exact ht.perm.trans h.perm
-  | trigger _ _ _ ht => exact ht.perm
+  | trigger _ _ _ ht => exact ht.perm.trans (.of_eq (GameState.allCards_unpend _))
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh, hco.cardList,
         hcc.cardList, benchCardList_unfresh]
-      perm_count [ha, hb, InPlay.checkup, InPlay.unfresh]
+      perm_count [ha, hb, InPlay.checkup, InPlay.unfresh, InPlay.addDamage]
   | startTurn hbt ha hb hk hd => perm_count [hd]
   | deckOut hbt ha hb hk hd => exact .refl _
 

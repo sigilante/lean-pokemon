@@ -1,13 +1,15 @@
-import Pokemon.Conservation
+import Pokemon.Marks
 
 /-!
 # Well-formed states, and no deadlock
 
 `WellFormed` (defined in `Rules`) asks that both players have Prize cards while there is no
-winner, and that every Benched Pokémon has no Special Condition (since milestone M3 a Benched
-Pokémon may be at or above its HP: that is a pending Knock Out, excluded by `Settled`).
+winner, that every Benched Pokémon has no Special Condition (since milestone M3 a Benched
+Pokémon may be at or above its HP: that is a pending Knock Out, excluded by `Settled`), and (since
+the review of milestone MV7b) that the owed-trigger marks are as play leaves them
+(`GameState.MarksOk`, `Pokemon/Marks.lean`).
 
-* `Move.wellFormed`, `Reach.wellFormed`: legal play preserves it.
+* `Move.wellFormed`, `Reach.wellFormed`: legal play preserves it (the marks by `Move.marksOk`).
 * `Move.exists_move`: every state has a legal move (no hypothesis); `Move.progress`,
   `Reach.progress`: from a well-formed state with no winner some move is legal. In particular a
   pending Knock Out can always be taken: the batch step exists from every state that is not
@@ -213,6 +215,7 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
           fun hb => by
             first
             | exact benched_update h hb ⟨rfl, rfl, rfl, rfl⟩
+            | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | @benchDamage g q b₁ b₂ w n h =>
       have hq : ∀ x, Benched x → Benched (x.hitBench n) := fun x hx => by
@@ -282,11 +285,15 @@ theorem benched_of_map {b b' : List InPlay}
     have := congrArg InPlay.poisonUp e; exact this
   exact ⟨er ▸ h2, ep ▸ h3, eb ▸ h4, eu ▸ h5⟩
 
-theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Frame g g') :
-    WellFormed g' := by
+theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Frame g g')
+    (hm : g'.MarksOk) : WellFormed g' := by
   obtain ⟨f1, f2, f3, f4, f5, _, _⟩ := hf
-  refine ⟨fun hn => ?_, f1 hw.2.1, f2 hw.2.2⟩
+  refine ⟨fun hn => ?_, f1 hw.2.1, f2 hw.2.2.1, hm⟩
   rw [f3, f4]; exact hw.1 (f5 ▸ hn)
+
+/-- Clearing the record keeps the frame (milestone MV7b). -/
+theorem Run.Frame.unpend (g : GameState) : Run.Frame g g.unpend :=
+  ⟨id, fun hb => hb.map fun _ hq => hq.of_eq rfl rfl rfl rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- The frame of an effect's resolution seen from the other side (milestone M8b). -/
 theorem Run.Frame.unswap {g g₁ : GameState} (h : Run.Frame g.swap g₁) : Run.Frame g g₁.swap := by
@@ -408,13 +415,14 @@ theorem KOBatch.wellFormed {g g' : GameState} (h : KOBatch g g') (hw : WellForme
   have hbc : BenchOk g.koStep.cur.bench :=
     PlayerState.koOut_benchOk (ta := g.koT .own .active) (tb := g.koT .own .bench) hw.2.1
   have hbo : BenchOk g.koStep.opp.bench :=
-    PlayerState.koOut_benchOk (ta := g.koT .opp .active) (tb := g.koT .opp .bench) hw.2.2
+    PlayerState.koOut_benchOk (ta := g.koT .opp .active) (tb := g.koT .opp .bench) hw.2.2.1
+  have hm := h.marksOk hw.2.2.2
   cases h with
-  | won _ hk => exact ⟨fun hn => absurd hn hk, hbc, hbo⟩
+  | won _ hk => exact ⟨fun hn => absurd hn hk, hbc, hbo, hm⟩
   | go _ hk hc ho =>
       obtain ⟨hn, h1, h2⟩ := GameState.koStep_winner_none hk
       have hp := hw.1 hn
-      refine ⟨fun _ => ⟨?_, ?_⟩, hc.benchOk hbc, ho.benchOk hbo⟩
+      refine ⟨fun _ => ⟨?_, ?_⟩, hc.benchOk hbc, ho.benchOk hbo, hm⟩
       · exact prizes_of_not_prizeWin (s := g.koOf .own) hp.1 (winWays_eq_zero h1).1
       · exact prizes_of_not_prizeWin (s := g.koOf .opp) hp.2 (winWays_eq_zero h2).1
 
@@ -475,13 +483,15 @@ theorem Resolve.wellFormed {g g' : GameState} (h : Resolve g g') (hw : WellForme
   induction h with
   | done => exact hw
   | step _ hm _ ih => exact ih (hm.wellFormed hw)
-  | trigger _ _ _ _ ht _ ih => exact ih (WellFormed.of_frame hw ht.frame)
+  | trigger _ _ _ _ ht _ ih =>
+      exact ih (WellFormed.of_frame hw ((Run.Frame.unpend _).trans ht.frame)
+        (ht.marksOk (GameState.unpend_marksOk hw.2.2.2.1)))
 
 /-- Resolving a Trainer card's effect, Knock Outs included, preserves well-formedness. -/
 theorem TRun.wellFormed {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : WellFormed g) :
     WellFormed g' := by
   induction h with
-  | prim _ _ hr hk => exact hk.wellFormed (WellFormed.of_frame hw hr.frame)
+  | prim _ _ hr hk => exact hk.wellFormed (WellFormed.of_frame hw hr.frame (hr.marksOk hw.2.2.2))
   | stop => exact hw
   | iteT _ _ _ _ ih => exact ih hw
   | iteF _ _ _ _ ih => exact ih hw
@@ -555,72 +565,77 @@ theorem UseAt.settled {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g
 /-- Marking a Pokémon as having used an Ability keeps well-formedness (milestone M8a). -/
 theorem UseAt.wellFormed {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁)
     (hw : WellFormed g) : WellFormed g₁ := by
+  have hm := h.marksOk hw.2.2.2
   cases h with
-  | active ha => exact hw
+  | active ha => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
   | bench hb =>
       exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 x (hb ▸ List.mem_append_right _
-        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
+        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2.1, hm⟩
 
 /-- A play from the hand keeps well-formedness (milestone M8a). -/
 theorem PlayFromHand.wellFormed {g g₁ : GameState} {x : InPlay} {w : PlayWay}
     (h : PlayFromHand g x w g₁) (hw : WellFormed g) : WellFormed g₁ := by
+  have hm := h.marksOk hw.2.2.2
   cases h with
   | basic hh hs hhp hb =>
-      refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩
+      refine ⟨hw.1, fun p hp => ?_, hw.2.2.1, hm⟩
       rcases List.mem_append.1 hp with hp | hp
       · exact hw.2.1 p hp
       · rw [List.mem_singleton] at hp; subst hp
         exact ⟨rfl, rfl, rfl, rfl⟩
-  | evolve => exact hw
-  | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2⟩
+  | evolve => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
+  | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2.1, hm⟩
 
 /-- Legal play preserves well-formedness. -/
 theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
     WellFormed g' := by
+  have hm := h.marksOk hw.2.2.2
   cases h with
   | playBasic hh hs hhp hb =>
-      refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩
+      refine ⟨hw.1, fun p hp => ?_, hw.2.2.1, hm⟩
       rcases List.mem_append.1 hp with hp | hp
       · exact hw.2.1 p hp
       · rw [List.mem_singleton] at hp; subst hp
         exact ⟨rfl, rfl, rfl, rfl⟩
-  | attach hh hf ha => exact hw
-  | evolve hh ha he hfr hf => exact hw
+  | attach hh hf ha => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
+  | evolve hh ha he hfr hf => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
   | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb =>
       exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 q (hb ▸ List.mem_append_right _
-        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
-  | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2⟩
+        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2.1, hm⟩
+  | evolveBench hh hb => exact ⟨hw.1, benched_update hb hw.2.1 ⟨rfl, rfl, rfl, rfl⟩, hw.2.2.1, hm⟩
   | retreat ha hb hr he hp hs hbt hst hl hat =>
       rename_i a q b₁ b₂ _ _
-      refine ⟨hw.1, fun p hp => ?_, hw.2.2⟩
+      refine ⟨hw.1, fun p hp => ?_, BenchOk.map hw.2.2.1 fun _ hq => hq.of_eq rfl rfl rfl rfl, hm⟩
       rcases List.mem_append.1 hp with hp | hp
       · exact hw.2.1 p (by rw [hb]; exact List.mem_append_left _ hp)
       · cases hp with
         | head => exact ⟨rfl, rfl, rfl, rfl⟩
         | tail _ hp =>
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
-  | item hh hbt hst hr => exact hr.wellFormed hw
-  | supporter hh hs hbt hst hr => exact hr.wellFormed hw
+  | item hh hbt hst hr => exact hr.wellFormed ⟨hw.1, hw.2.1, hw.2.2.1, hw.2.2.2⟩
+  | supporter hh hs hbt hst hr => exact hr.wellFormed ⟨hw.1, hw.2.1, hw.2.2.1, hw.2.2.2⟩
   | stadiumUse _ _ _ _ _ hr => exact hr.wellFormed hw
-  | stadium => exact hw
-  | tool => exact hw
+  | stadium => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
+  | tool => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
   | @toolBench l₁ l₂ n gr q b₁ b₂ hh hb =>
       exact ⟨hw.1, benched_update hb hw.2.1 (let h := hw.2.1 q (hb ▸ List.mem_append_right _
-        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2⟩
+        (.head _)); ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩), hw.2.2.1, hm⟩
   | ability hu _ _ _ _ _ _ _ _ hr => exact hr.wellFormed (hu.wellFormed hw)
   | onPlay hp _ _ _ _ _ hr => exact hr.wellFormed (hp.wellFormed hw)
-  | attack ha hm hc hs hn hf hbt hst hr _ _ _ _ ht =>
-      exact WellFormed.of_frame (WellFormed.of_frame hw hr.frame) ht.frame
-  | attackConfused ha hm hc hs hn hf => exact hw
-  | knockOuts h _ ht => exact WellFormed.of_frame (h.wellFormed hw) ht.frame
-  | trigger _ _ _ ht => exact WellFormed.of_frame hw ht.frame
+  | attack ha hm' hc hs hn hf hbt hst hr _ _ _ _ ht =>
+      have h1 := WellFormed.of_frame (WellFormed.of_frame hw hr.frame (hr.marksOk hw.2.2.2)) ht.frame
+        (ht.marksOk (hr.marksOk hw.2.2.2))
+      exact ⟨h1.1, h1.2.1, h1.2.2.1, hm⟩
+  | attackConfused ha hm' hc hs hn hf => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
+  | knockOuts h _ ht => exact WellFormed.of_frame (h.wellFormed hw) ht.frame hm
+  | trigger _ _ _ ht => exact WellFormed.of_frame hw ((Run.Frame.unpend _).trans ht.frame) hm
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
-      refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2, hcc.benched ?_⟩
+      refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2.1, hcc.benched ?_, hm⟩
       intro p hp
       obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
       exact hw.2.1 q hq
-  | startTurn hbt ha hb hk hd => exact hw
-  | deckOut hbt ha hb hk hd => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2⟩
+  | startTurn hbt ha hb hk hd => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
+  | deckOut hbt ha hb hk hd => exact ⟨fun hn => by simp at hn, hw.2.1, hw.2.2.1, hm⟩
 
 /-- Legal play from a well-formed state stays well formed. -/
 theorem Reach.wellFormed {g₀ g : GameState} (h₀ : WellFormed g₀) (h : Reach g₀ g) :

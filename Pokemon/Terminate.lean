@@ -319,8 +319,8 @@ with both Active Spots filled the first chain is empty (`Resolve.trigger_first`)
 theorem Resolve.chain_le_pend {g g' : GameState} (h : Resolve g g') :
     (∃ n, KOChain n g g' ∧ n ≤ g.koMeasure + 1) ∨
       ∃ n₁ g₁ l g₂ n₂, KOChain n₁ g g₁ ∧ n₁ ≤ g.koMeasure + 1 ∧ g₁.winner = none ∧
-        g₁.BothActive ∧ g₁.pend = true ∧ l.Perm g₁.benchedTrigs ∧
-        Fire .oppBenched l { g₁ with pend := false } g₂ ∧ KOChain n₂ g₂ g' ∧
+        g₁.BothActive ∧ g₁.pend = true ∧ l.Perm g₁.owedTrigs ∧
+        Fire .oppBenched l g₁.unpend g₂ ∧ KOChain n₂ g₂ g' ∧
         n₂ ≤ g₂.koMeasure + 1 := by
   induction h with
   | done => exact .inl ⟨0, .refl _, Nat.zero_le _⟩
@@ -340,7 +340,7 @@ from their result `g₂`. So inside a Trainer, Stadium or Ability effect the tri
 step see the Pokémon in play as that step left them. -/
 theorem Resolve.trigger_first {g g' : GameState} (h : Resolve g g') (hb : g.BothActive)
     (hp : g.pend = true) (hn : g.winner = none) :
-    ∃ l g₂ n, l.Perm g.benchedTrigs ∧ Fire .oppBenched l { g with pend := false } g₂ ∧
+    ∃ l g₂ n, l.Perm g.owedTrigs ∧ Fire .oppBenched l g.unpend g₂ ∧
       KOChain n g₂ g' ∧ n ≤ g₂.koMeasure + 1 := by
   cases h with
   | done h =>

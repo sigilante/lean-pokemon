@@ -79,7 +79,7 @@ theorem reach_wgs (k : Nat) : Reach (wgs 0 false) (wgs (3 * k) (decide (0 < k)))
 
 theorem wgs_wellFormed : WellFormed (wgs 0 false) :=
   ⟨fun _ => ⟨by simp [wgs, wpl], by simp [wgs, Recycle.pl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem wgs_allCards : (wgs 0 false).allCards =
     [.energy .metal, .pokemon warden, .energy .metal, .pokemon Recycle.guard] := rfl
@@ -190,7 +190,7 @@ theorem reach_kgs (k : Nat) :
 
 theorem kgs_wellFormed (u : AbilityUse) : WellFormed (kgs u [ironDefender] [] 0 false) :=
   ⟨fun _ => ⟨by simp [kgs, kpl], by simp [kgs, Recycle.pl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem kgs_allCards (u : AbilityUse) : (kgs u [ironDefender] [] 0 false).allCards =
     [ironDefender, .energy .metal, .pokemon (keeper u), .energy .metal,
@@ -308,12 +308,12 @@ effect rises by one). -/
 theorem once_again : ∃ g g', Reach (cgs true 1) g ∧ g.curIsFirst = true ∧ g.between = false ∧
     Move g g' ∧ g'.cur.mods.now.bonus = g.cur.mods.now.bonus + 1 := by
   refine ⟨_, _, .step (.step (.step (.step (.refl _) rfl
-      (.endTurn false false false false false false rfl rfl (cgs_settled true 1).1 rfl .nil .nil))
+      (.endTurn_of_zero false false false false false false rfl rfl (cgs_settled true 1).1 rfl .nil .nil (by decide) (by decide)))
       rfl (.startTurn rfl rfl rfl
         (settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl).1 rfl))
-      rfl (.endTurn false false false false false false rfl rfl
+      rfl (.endTurn_of_zero false false false false false false rfl rfl
         (settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl).1 rfl
-        .nil .nil))
+        .nil .nil (by decide) (by decide)))
       rfl (.startTurn rfl rfl rfl
         (settled_two rfl rfl (show 0 < 10 by decide) (show 0 < 10 by decide) rfl rfl).1 rfl),
     rfl, rfl, .ability (ab := charge) (.active rfl) (.head _) rfl rfl (fun _ => rfl) trivial rfl

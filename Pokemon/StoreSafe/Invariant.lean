@@ -238,7 +238,7 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         exact abilitiesRec_nil (hN _ hc) hmc (ab.script_mem _)
       exact hi.keeps (h.keeps.1.trans hkf) fun s => Nat.le_of_eq ((ht.slotAmt s).trans (h.keeps.2 s))
   | trigger _ _ hl ht =>
-      have k := ht.keeps fun ab hab => GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab)
+      have k := ht.keeps fun ab hab => GameState.owedTrigs_recFilters (hl.mem_iff.1 hab)
       exact hi.keeps ⟨k.disc, k.attacked, k.gxCur, k.gxOpp⟩ fun s => Nat.le_of_eq (ht.slotAmt s)
   | endTurn =>
       exact hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _) (Nat.add_comm _ _)
@@ -920,17 +920,17 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       have hf := ht.flags_keep
       have z := ht.zoneOnly
       have hrec : ∀ ab ∈ l, (ab.script TrigEvent.oppBenched.place).recFilters = [] :=
-        fun ab hab => GameState.benchedTrigs_recFilters (hl.mem_iff.1 hab)
+        fun ab hab => GameState.owedTrigs_recFilters (hl.mem_iff.1 hab)
       have hW : g.discW Card.wAmt ≤ g'.discW Card.wAmt :=
         ht.disc_mono Card.wAmt_tw (fun ab hab => Effect.recOk_nil (hrec ab hab)) (fun _ hy => hy)
       have hAl : g.discW Card.alAmt ≤ g'.discW Card.alAmt :=
         ht.disc_mono Card.alAmt_tw (fun ab hab => Effect.recOk_nil (hrec ab hab)) (fun _ hy => hy)
       exact ⟨_, _, _, _, _, hi.same hwn hW hAl hf.attacked z.cur_supporterPlayed hf.gxCur hf.gxOpp
         (fun s => ht.slotAmt s) (hpot z.first) (hstp z.first)⟩
-  | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc =>
+  | @endTurn a b bo bc fa sa ca fb sb cb ha hb hk hbt hco hcc hpd oa ob =>
       refine ⟨_, _, _, _, _, hi.endTurn rfl (Nat.add_comm _ _) (Nat.add_comm _ _)
         (Nat.add_comm _ _) (Nat.add_comm _ _) rfl (Nat.add_comm _ _) ?_⟩
-      have hperm := (Move.endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc).perm
+      have hperm := (Move.endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc hpd oa ob).perm
       exact Nat.le_trans (GameState.abPot_le_bound _) (by rw [hperm.length_eq]; exact hK)
   | startTurn => exact ⟨_, _, _, _, _, hi.same hwn (Nat.le_refl _) (Nat.le_refl _) rfl rfl rfl rfl
       (fun _ => rfl) (hpot rfl) (hstp rfl)⟩

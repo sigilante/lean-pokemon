@@ -331,12 +331,10 @@ theorem Resolve.clamp_sim {k : Nat} {g₁ g₁' : GameState} (h : Resolve g₁ g
       intro g₂ hH hc
       have hcl₂ := GameState.bothActive_of_clampAt hc hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_clampAt hc).trans hp
-      have hT := GameState.benchedTrigs_of_clampAt hc
-      have hc₀ : ({ g₀ with pend := false } : GameState).clamp k =
-          ({ g₂ with pend := false } : GameState).clamp k :=
-        congrArg (fun g : GameState => { g with pend := false }) hc
+      have hT := GameState.owedTrigs_of_clampAt hc
+      have hc₀ : g₀.unpend.clamp k = g₂.unpend.clamp k := GameState.unpend_clampAt hc
       obtain ⟨m₂, ht₂, hcm⟩ := ht.clamp_sim hc₀
-      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ht.perm]; exact hH) hcm
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ht.perm, GameState.allCards_unpend]; exact hH) hcm
       exact ⟨g₂', .trigger (by rw [GameState.winner_of_clamp hc]; exact hn) hcl₂ hp₂
         (hT ▸ hl) ht₂ hr₂, hc'⟩
 

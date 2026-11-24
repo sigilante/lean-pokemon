@@ -1097,7 +1097,14 @@ inductive SAmt where
   Active Spot from attacks of Pokémon whose top card passes `fr` is 0 (step 5 of the damage
   calculation, with the defender's other effects; `GameState.sPrevent`). A flag, not an amount: it
   is read, never stored, and an attack whose damage "isn't affected by any effects on your
-  opponent's Active Pokémon" (`Ign.fx`) is not prevented. -/
+  opponent's Active Pokémon" (`Ign.fx`) is not prevented.
+* `condMore c n` (milestone MV7b, survey S20 §a T1): during Pokémon Checkup, `n` more damage
+  counters on the affected Pokémon if it has the Special Condition `c` ("During Pokémon Checkup,
+  put 3 more damage counters on your opponent's Burned Pokémon", Magmortar sv9-21: `sel = opp`,
+  `c = burned`, `n = 3`; Pecharunt svp-129, "As long as this Pokémon is in the Active Spot, put 5
+  more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup": `src = some
+  .active`, `c = poisoned`, `n = 5`). Read by `Move.endTurn` (`GameState.checkupMoreBy`), never
+  stored. -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -1106,6 +1113,7 @@ inductive SEff where
   | retreatPlus (n : Nat)
   | retreatMinus (n : Nat)
   | prevent (fr : Filter)
+  | condMore (c : Condition) (n : Nat)
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative
@@ -1156,8 +1164,9 @@ of today's Standard.
   that fire are those of the opponent's Pokémon in play as the retreat, the step or the attack left
   them. "Their new Active Pokémon" is the opponent's Active Pokémon then (`counters`, `inflict`):
   the Pokémon switched in (a well-formed attack does nothing more to the player's Active Pokémon
-  after the switch). What can differ from print is WHICH holders fire, when the rest of the
-  attack's effect moves the opponent's Pokémon (departures in the Known gaps of
+  after the switch). The holders that fire are those at the event (milestone MV7b): the event marks
+  them (`InPlay.owe`) and the resolution fires the marked ones (`GameState.owedTrigs`), wherever
+  the rest of the attack has moved them (`Pokemon/Gust.lean`; departures in the Known gaps of
   `Pokemon/Rules.lean`).
 
 All three belong to the player whose turn it is not, and their effects are written from that

@@ -56,7 +56,7 @@ def g0 : GameState :=
     true, false, false, false, none, none, false, false, false⟩
 
 theorem g0_wellFormed : WellFormed g0 := by
-  refine ⟨fun _ => ⟨by simp [g0, side], by simp [g0, side]⟩, fun p hp => ?_, fun p hp => by cases hp⟩
+  refine ⟨fun _ => ⟨by simp [g0, side], by simp [g0, side]⟩, fun p hp => ?_, (fun p hp => by cases hp), .of_b rfl⟩
   simp only [g0, side, List.mem_singleton] at hp
   subst hp
   exact ⟨rfl, rfl, rfl, rfl⟩
@@ -80,10 +80,11 @@ def endT (g : GameState) : GameState :=
 
 theorem endT_move {g : GameState} {a b : InPlay} (ha : g.opp.active = some a)
     (hb : g.cur.active = some b) (hk : DamageBounded g) (hbt : g.between = false)
+    (hz₁ : g.checkupMore .opp a = 0) (hz₂ : g.checkupMore .own b.unfresh = 0)
     (hpd : g.pend = false := by first | rfl | assumption) :
     Move g (endT g) := by
-  have := Move.endTurn false false false false false false ha hb hk hbt (BenchChar.refl _)
-    (BenchChar.refl _) hpd
+  have := Move.endTurn_of_zero false false false false false false ha hb hk hbt (BenchChar.refl _)
+    (BenchChar.refl _) hz₁ hz₂ hpd
   simp only [endT, ha, hb, Option.map_some]
   exact this
 
@@ -118,11 +119,11 @@ def g3 : GameState := startT (endT g2)
 
 theorem g1_g3 : Reach g1 g3 := by
   have s1 : Settled g1 := (GameState.settled_iff _).2 (by decide)
-  have m1 : Move g1 (endT g1) := endT_move rfl rfl s1.1 rfl
+  have m1 : Move g1 (endT g1) := endT_move rfl rfl s1.1 rfl (by decide) (by decide)
   have s2 : Settled (endT g1) := (GameState.settled_iff _).2 (by decide)
   have m2 : Move (endT g1) g2 := startT_move rfl rfl rfl s2.1 rfl
   have s3 : Settled g2 := (GameState.settled_iff _).2 (by decide)
-  have m3 : Move g2 (endT g2) := endT_move rfl rfl s3.1 rfl
+  have m3 : Move g2 (endT g2) := endT_move rfl rfl s3.1 rfl (by decide) (by decide)
   have s4 : Settled (endT g2) := (GameState.settled_iff _).2 (by decide)
   have m4 : Move (endT g2) g3 := startT_move rfl rfl rfl s4.1 rfl
   exact .step (.step (.step (.step (.refl _) rfl m1) rfl m2) rfl m3) rfl m4
@@ -215,11 +216,11 @@ def g5 : GameState := startT (endT (startT (endT g4)))
 
 theorem g4_g5 : Reach g4 g5 := by
   have s1 : Settled g4 := (GameState.settled_iff _).2 (by decide)
-  have m1 : Move g4 (endT g4) := endT_move rfl rfl s1.1 rfl
+  have m1 : Move g4 (endT g4) := endT_move rfl rfl s1.1 rfl (by decide) (by decide)
   have s2 : Settled (endT g4) := (GameState.settled_iff _).2 (by decide)
   have m2 : Move (endT g4) (startT (endT g4)) := startT_move rfl rfl rfl s2.1 rfl
   have s3 : Settled (startT (endT g4)) := (GameState.settled_iff _).2 (by decide)
-  have m3 : Move (startT (endT g4)) (endT (startT (endT g4))) := endT_move rfl rfl s3.1 rfl
+  have m3 : Move (startT (endT g4)) (endT (startT (endT g4))) := endT_move rfl rfl s3.1 rfl (by decide) (by decide)
   have s4 : Settled (endT (startT (endT g4))) := (GameState.settled_iff _).2 (by decide)
   have m4 : Move (endT (startT (endT g4))) g5 := startT_move rfl rfl rfl s4.1 rfl
   exact .step (.step (.step (.step (.refl _) rfl m1) rfl m2) rfl m3) rfl m4

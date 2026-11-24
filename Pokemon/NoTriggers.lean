@@ -135,19 +135,13 @@ theorem GameState.BenchedFree.benchedTrigs {g : GameState} (h : g.BenchedFree) :
   unfold GameState.benchedTrigs
   rw [h1, h2]; rfl
 
-/-- **With no trigger to record, raising the event changes nothing** (milestone MV7): the retreat
-and the switch of the player's own Active Pokémon give the states they gave before MV7. -/
-theorem GameState.noteBenched_of_nil {g : GameState} (h : g.benchedTrigs = []) :
-    g.noteBenched = g := by
-  unfold GameState.noteBenched
-  rw [h]
-  cases g; rename_i pend
-  cases pend <;> rfl
-
 /-- The record after raising the event, when the opponent has no `oppBenched` trigger in play. -/
 theorem GameState.noteBenched_pend_of_nil {g : GameState} (h : g.noteBenched.benchedTrigs = []) :
     g.noteBenched.pend = g.pend := by
-  rw [GameState.noteBenched_of_nil (g := g) h]
+  have e : g.noteBenched.benchedTrigs = g.benchedTrigs :=
+    GameState.benchedTrigs_of_map (f := InPlay.noteOwe .active) (f' := InPlay.noteOwe .bench)
+      (fun _ => rfl) (fun _ => rfl) rfl rfl
+  rw [GameState.noteBenched_of_nil (g := g) (e ▸ h)]
 
 /-- An effect's resolution keeps the record when no card of the game has an `oppBenched`
 trigger. -/

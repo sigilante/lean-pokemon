@@ -364,16 +364,50 @@ theorem Fire.exists {ev : TrigEvent} : ∀ {l : List Ability},
 theorem Calm.bothActive {g : GameState} (h : Calm g) : g.BothActive :=
   ⟨Option.isSome_iff_ne_none.2 h.2.1, Option.isSome_iff_ne_none.2 h.2.2⟩
 
+/-- An owed trigger (milestone MV7b) is an `oppBenched` trigger of a Pokémon at some spot. -/
+theorem GameState.mem_owedTrigs {g : GameState} {ab : Ability} (h : ab ∈ g.owedTrigs) :
+    ∃ (p : InPlay) (sp : Spot), ab ∈ p.trigs .oppBenched sp := by
+  have hp : ∀ p : InPlay, ab ∈ p.owed → ∃ (q : InPlay) (sp : Spot), ab ∈ q.trigs .oppBenched sp :=
+    fun p hp => by
+    unfold InPlay.owed at hp
+    split at hp
+    · nomatch hp
+    · exact ⟨p, _, hp⟩
+  rcases List.mem_append.1 h with h | h
+  · cases ha : g.opp.active with
+    | none => rw [ha] at h; nomatch h
+    | some p => rw [ha] at h; exact hp p h
+  · obtain ⟨p, _, h'⟩ := List.mem_flatMap.1 h
+    exact hp p h'
+
+theorem GameState.owedTrigs_trigOk {g : GameState} {ab : Ability} (h : ab ∈ g.owedTrigs) :
+    (ab.script TrigEvent.oppBenched.place).trigOk = true := by
+  obtain ⟨_, _, h⟩ := GameState.mem_owedTrigs h
+  exact InPlay.trigOk_of_mem_trigs h
+
+/-- **An owed trigger recycles nothing** (milestone MV7b), as every `oppBenched` trigger. -/
+theorem GameState.owedTrigs_recFilters {g : GameState} {ab : Ability} (h : ab ∈ g.owedTrigs) :
+    (ab.script TrigEvent.oppBenched.place).recFilters = [] := by
+  obtain ⟨_, _, h⟩ := GameState.mem_owedTrigs h
+  exact InPlay.recFilters_of_mem_trigs h rfl
+
+/-- Clearing the record keeps both Active Spots filled. -/
+theorem GameState.BothActive.unpend {g : GameState} (h : g.BothActive) : g.unpend.BothActive := by
+  refine ⟨?_, ?_⟩
+  · exact h.1
+  · show (g.opp.active.map InPlay.clearOwe).isSome = true
+    rw [Option.isSome_map]; exact h.2
+
 /-- **Pending triggers can always be resolved** (milestone MV7): from a state with both Active
-Spots filled, the opponent's `oppBenched` triggers have a resolution (every one resolving) on the
+Spots filled, the owed `oppBenched` triggers have a resolution (every one resolving) on the
 state with the record cleared. -/
 theorem GameState.BothActive.trigs_exist {g : GameState} (h : g.BothActive) :
-    ∃ g', Fire .oppBenched g.benchedTrigs { g with pend := false } g' :=
-  Fire.exists (fun _ hab => GameState.benchedTrigs_trigOk hab) (g := { g with pend := false }) h
+    ∃ g', Fire .oppBenched g.owedTrigs g.unpend g' :=
+  Fire.exists (fun _ hab => GameState.owedTrigs_trigOk hab) (g := g.unpend) h.unpend
 
 /-- `GameState.BothActive.trigs_exist` from a `Calm` state. -/
 theorem Calm.trigs_exist {g : GameState} (h : Calm g) :
-    ∃ g', Fire .oppBenched g.benchedTrigs { g with pend := false } g' :=
+    ∃ g', Fire .oppBenched g.owedTrigs g.unpend g' :=
   h.bothActive.trigs_exist
 
 end Pokemon

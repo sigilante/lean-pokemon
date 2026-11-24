@@ -60,7 +60,7 @@ def s0 (hand : List Card) (opt : Bool) : GameState :=
     false, false, false⟩
 
 theorem s0_wellFormed (hand : List Card) (opt : Bool) : WellFormed (s0 hand opt) := by
-  refine ⟨fun _ => ⟨by simp [s0, pl], by simp [s0, pl]⟩, ?_, ?_⟩ <;> intro p hp <;>
+  refine ⟨fun _ => ⟨by simp [s0, pl], by simp [s0, pl]⟩, ?_, ?_, .of_b rfl⟩ <;> intro p hp <;>
     simp [s0, pl] at hp <;> subst hp <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem s0_settled (hand : List Card) (opt : Bool) : Settled (s0 hand opt) := by
@@ -106,7 +106,7 @@ theorem retreat_forced :
   intro g₂ hm
   rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, l, hl, ht⟩
   · exact absurd (retreat_raises false).2.2.1 hb.not_calm
-  · have e : (s1 false).benchedTrigs = [surge false] := rfl
+  · have e : (s1 false).owedTrigs = [surge false] := rfl
     rw [e] at hl
     rw [List.perm_singleton.1 hl] at ht
     cases ht with
@@ -194,7 +194,7 @@ theorem copy_quiet_all : ∀ g₂ g₃, Move (s1 false) g₂ → Move g₂ g₃ 
   intro g₂ g₃ hm h3
   rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, l, hl, ht⟩
   · exact absurd (retreat_raises false).2.2.1 hb.not_calm
-  have e : (s1 false).benchedTrigs = [surge false] := rfl
+  have e : (s1 false).owedTrigs = [surge false] := rfl
   rw [e] at hl
   rw [List.perm_singleton.1 hl] at ht
   cases ht with
@@ -261,7 +261,7 @@ def t0 : GameState :=
     false, false, false⟩
 
 theorem t0_wellFormed : WellFormed t0 := by
-  refine ⟨fun _ => ⟨by simp [t0, pl], by simp [t0, pl]⟩, ?_, ?_⟩ <;> intro p hp <;>
+  refine ⟨fun _ => ⟨by simp [t0, pl], by simp [t0, pl]⟩, ?_, ?_, .of_b rfl⟩ <;> intro p hp <;>
     simp [t0, pl] at hp <;> subst hp <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 theorem t0_settled : Settled t0 :=

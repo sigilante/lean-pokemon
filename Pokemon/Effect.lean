@@ -360,12 +360,48 @@ moves to the Bench during their turn. -/
 def GameState.benchedTrigs (g : GameState) : List Ability :=
   optTrigs .oppBenched g.opp.active ++ g.opp.bench.flatMap (InPlay.trigs .oppBenched .bench)
 
+/-- Mark a Pokémon at `sp` as owing its `oppBenched` triggers (milestone MV7b): `owe := some sp` if
+it has one there, unchanged otherwise. -/
+def InPlay.noteOwe (sp : Spot) (p : InPlay) : InPlay :=
+  { p with owe := if (p.trigs .oppBenched sp).isEmpty then p.owe else some sp }
+
+/-- Clear a Pokémon's owed trigger (milestone MV7b). -/
+def InPlay.clearOwe (p : InPlay) : InPlay := { p with owe := none }
+
+/-- The triggers a Pokémon owes (milestone MV7b): its `oppBenched` triggers at the spot recorded
+when the event happened, read on the Pokémon as it is now (wherever it has moved since). -/
+def InPlay.owed (p : InPlay) : List Ability :=
+  match p.owe with
+  | none => []
+  | some sp => p.trigs .oppBenched sp
+
+/-- The owed triggers of an optional Pokémon. -/
+def optOwed : Option InPlay → List Ability
+  | none => []
+  | some p => p.owed
+
+/-- **The owed triggers** (milestone MV7b): those of the opponent's Pokémon in play marked at the
+event (`InPlay.owe`), whatever spot each is in now. These fire when the event resolves
+(`Move.trigger`, `Resolve.trigger`). -/
+def GameState.owedTrigs (g : GameState) : List Ability :=
+  optOwed g.opp.active ++ g.opp.bench.flatMap InPlay.owed
+
+/-- The record cleared (milestone MV7b): nothing pending, and no Pokémon of the opponent marked. -/
+def GameState.unpend (g : GameState) : GameState :=
+  { g with pend := false, opp := { g.opp with active := g.opp.active.map InPlay.clearOwe,
+                                              bench := g.opp.bench.map InPlay.clearOwe } }
+
 /-- **Raise the `oppBenched` event** (milestone MV7): the player to move's Active Pokémon has just
 moved to the Bench (a retreat, or a switch of their own Active Pokémon). The record
-`GameState.pend` is set when the opponent has such a trigger in play, and left as it was otherwise,
-so a game without one is unchanged (`GameState.noteBenched_of_nil`; for play, `Reach.pend_false`). -/
+`GameState.pend` is set when the opponent has such a trigger in play, and left as it was otherwise;
+since milestone MV7b each of the opponent's Pokémon that has such a trigger where it is now is
+marked with that spot (`InPlay.noteOwe`), so the triggers that fire are those of the holders AT THE
+EVENT, wherever later steps move them. A game without such a trigger is unchanged
+(`GameState.noteBenched_of_nil`; for play, `Reach.pend_false`). -/
 def GameState.noteBenched (g : GameState) : GameState :=
-  { g with pend := g.pend || !g.benchedTrigs.isEmpty }
+  { g with pend := g.pend || !g.benchedTrigs.isEmpty,
+           opp := { g.opp with active := g.opp.active.map (InPlay.noteOwe .active),
+                               bench := g.opp.bench.map (InPlay.noteOwe .bench) } }
 
 /-- The event of a switch of the `w` player's Active Pokémon: raised for the player's own (`.own`, in
 their turn); a switch of the opponent's Active Pokémon (`.opp`) is not "during their turn". -/
@@ -393,6 +429,33 @@ theorem GameState.benchedTrigs_of_map {f f' : InPlay → InPlay}
   cases g.opp.active with
   | none => rfl
   | some p => simp only [Option.map_some, optTrigs, htr]
+
+/-- A Pokémon's owed triggers depend on it only through its Abilities and its mark (milestone
+MV7b). -/
+theorem InPlay.owed_of {p q : InPlay} (hab : q.abilities = p.abilities) (ho : q.owe = p.owe) :
+    q.owed = p.owed := by
+  unfold InPlay.owed InPlay.trigs
+  rw [ho, hab]
+
+/-- The owed triggers depend on the opponent's Pokémon in play only through their Abilities and
+marks: a map of the Pokémon in play that keeps both (both clamps) keeps them (milestone MV7b). -/
+theorem GameState.owedTrigs_of_map {f f' : InPlay → InPlay}
+    (hab : ∀ p, (f p).abilities = p.abilities ∧ (f p).owe = p.owe)
+    (hab' : ∀ p, (f' p).abilities = p.abilities ∧ (f' p).owe = p.owe)
+    {g g' : GameState} (ha : g'.opp.active = g.opp.active.map f)
+    (hb : g'.opp.bench = g.opp.bench.map f') : g'.owedTrigs = g.owedTrigs := by
+  have hfl : ∀ (b : List InPlay), (b.map f').flatMap InPlay.owed = b.flatMap InPlay.owed :=
+    fun b => by
+      induction b with
+      | nil => rfl
+      | cons p ps ih =>
+          simp only [List.map_cons, List.flatMap_cons, ih,
+            InPlay.owed_of (hab' p).1 (hab' p).2]
+  unfold GameState.owedTrigs
+  rw [ha, hb, hfl]
+  cases g.opp.active with
+  | none => rfl
+  | some p => simp only [Option.map_some, optOwed, InPlay.owed_of (hab p).1 (hab p).2]
 
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g

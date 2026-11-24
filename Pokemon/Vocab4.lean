@@ -100,7 +100,7 @@ def start : GameState :=
     true, false, false, false, none, none, false, false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
-  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩
+  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_, .of_b rfl⟩
   · intro p hp
     simp only [start, side, List.mem_singleton] at hp
     subst hp

@@ -177,7 +177,7 @@ def start1 : GameState :=
 
 theorem start1_wellFormed : WellFormed start1 := by
   refine ⟨fun _ => ⟨by simp [start1, side], by simp [start1, side]⟩, fun p hp => ?_,
-    fun p hp => by cases hp⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
   simp only [start1, side, List.mem_singleton] at hp
   subst hp; exact benched_ofBasic (by decide)
 
@@ -236,7 +236,7 @@ def start2 : GameState :=
 theorem start2_wellFormed : WellFormed start2 := by
   refine ⟨fun _ => ⟨by simp [start2, side], by simp [start2, side]⟩,
     (fun p hp => by cases hp),
-    fun p hp => ?_⟩
+    fun p hp => ?_, .of_b rfl⟩
   simp only [start2, side, List.mem_singleton] at hp
   subst hp; exact benched_ofBasic (by decide)
 
@@ -294,7 +294,7 @@ def start3 : GameState :=
 theorem start3_wellFormed : WellFormed start3 := by
   refine ⟨fun _ => ⟨by simp [start3, side], by simp [start3, side]⟩,
     (fun p hp => by cases hp),
-    fun p hp => ?_⟩
+    fun p hp => ?_, .of_b rfl⟩
   simp only [start3, side, List.mem_singleton] at hp
   subst hp; exact benched_ofBasic (by decide)
 

@@ -62,7 +62,7 @@ theorem reach_T (k : Nat) : Reach S0 (T k) := by
 
 theorem S0_wellFormed : WellFormed S0 :=
   ⟨fun _ => ⟨by simp [S0, pl], by simp [S0, pl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩
+    (fun p hp => by cases hp), .of_b rfl⟩
 
 theorem S0_allCards : S0.allCards =
     [pump, .energy .metal, .pokemon guard, .energy .metal, .pokemon guard] := rfl
@@ -155,7 +155,7 @@ theorem iter_weaken_breaks_bound :
       g₀.AbilitySafe ∧ g₀.StadiumSafe ∧ (∀ B, ∃ g, Reach g₀ g ∧ ¬ g.BoundedStores B) ∧
       ¬ ∃ L : List GameState, ∀ g, Reach g₀ g → g.xclamp K ∈ L := by
   refine ⟨W0, ⟨fun _ => ⟨by simp [W0, pl], by simp [W0, pl]⟩, (fun p hp => by cases hp),
-    (fun p hp => by cases hp)⟩, fun h => absurd (h sap (by rw [W0_allCards]; simp)) (by decide),
+    (fun p hp => by cases hp), .of_b rfl⟩, fun h => absurd (h sap (by rw [W0_allCards]; simp)) (by decide),
     GameState.GXOnly.of_noAttacks (by rw [W0_allCards]; decide),
     by unfold GameState.RecycleSafe; rw [W0_allCards]; decide,
     by unfold GameState.AbilitySafe; rw [W0_allCards]; decide,

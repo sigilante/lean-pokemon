@@ -81,7 +81,7 @@ def start : GameState :=
     false, false⟩
 
 theorem start_wellFormed : WellFormed start := by
-  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_⟩ <;>
+  refine ⟨fun _ => ⟨by simp [start, side], by simp [start, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
     intro p hp <;> cases hp
 
 theorem start_settled : Settled start := (GameState.settled_iff _).2 (by decide)
