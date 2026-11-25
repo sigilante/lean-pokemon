@@ -372,6 +372,10 @@ def filter_eval(f, card):
     kind = card[0]
     if h == 'any':
         return True
+    if h == 'nameIn':
+        # `Filter.nameInEval` (milestone MV9)
+        n = card_name(card)
+        return n is not None and n in f[1]
     if h in ('namePrefix', 'nameHas'):
         # `Filter.nameEval` (milestone MV4)
         n = card_name(card)
@@ -407,6 +411,14 @@ def filter_eval(f, card):
             return any(a['name'] == f[1] for a in p['attacks'])
         if h == 'hasAbility':
             return bool(p['abilities'])
+        # milestone MV9
+        if h == 'megaEx':
+            return p['ruleBox'] == ('megaEx',)
+        if h == 'resists':
+            r = p['resistance']
+            return r is not None and r[1][1] == f[1]
+        if h == 'abilityNamed':
+            return any(ab['name'] == f[1] for ab in p['abilities'])
         return False
     if kind == 'trainer':
         if h == 'named':

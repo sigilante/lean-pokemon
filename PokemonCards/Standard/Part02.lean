@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,34 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Sunflora (sv6-7). Records: sv6-7, sv6-169. Caveats: energyOfCount. -/
+def sv6_7 : Card := .pokemon
+  { name := "Sunflora", stage := .stage1, evolvesFrom := some "Sunkern",
+    hp := 10, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Redirected Sunlight", cost := [.grass], damage := 0,
+        effect := .damage (.count (.energyAll .opp (.energyOf .fire)) 6),
+        gx := false },
+      { name := "Mega Drain", cost := [.grass, .colorless], damage := 5,
+        effect := .heal 3,
+        gx := false }] }
+
+/-- Heracross (sv6-8). Records: sv6-8. -/
+def sv6_8 : Card := .pokemon
+  { name := "Heracross", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Body Slam", cost := [.grass, .colorless, .colorless], damage := 6,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false },
+      { name := "Seismic Toss", cost := [.grass, .colorless, .colorless, .colorless], damage := 13,
+        effect := .skip,
+        gx := false }] }
 
 /-- Phantump (sv6-12). Records: sv6-12. -/
 def sv6_12 : Card := .pokemon
@@ -1410,6 +1438,20 @@ def sv6pt5_25 : Card := .pokemon
         effect := .damage (.add (.const 10) (.per .opp 3)),
         gx := false }] }
 
+/-- Slither Wing (sv6pt5-26). Records: sv6pt5-26. -/
+def sv6pt5_26 : Card := .pokemon
+  { name := "Slither Wing", stage := .basic, evolvesFrom := none,
+    hp := 14, type := .fighting, retreat := 3, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Iron Smasher", cost := [.fighting, .colorless], damage := 0,
+        effect := .ite (.countGe (.inPlay .opp (.and .pokemon (.or (.or (.or (.nameIn ["Ciphermaniac's Codebreaking", "Future Booster Energy Capsule", "Iron Boulder", "Iron Boulder ex", "Iron Bundle", "Iron Crown", "Iron Crown ex", "Iron Hands", "Iron Jugulis", "Iron Leaves", "Iron Leaves ex", "Iron Moth", "Iron Thorns", "Iron Thorns ex", "Iron Treads", "Iron Valiant", "Reboot Pod"]) (.and (.named "Miraidon") (.hasAttack "Peak Acceleration"))) (.and (.named "Miraidon") (.hasAttack "C.O.D.E.: Protect"))) (.and (.named "Miraidon ex") (.hasAttack "Repulsion Bolt"))))) 1) (.damage (.const 14)) (.damage (.const 2)),
+        gx := false },
+      { name := "Smashing Wing", cost := [.fighting, .fighting, .colorless], damage := 13,
+        effect := .ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all),
+        gx := false }] }
+
 /-- Zubat (sv6pt5-27). Records: sv6pt5-27. -/
 def sv6pt5_27 : Card := .pokemon
   { name := "Zubat", stage := .basic, evolvesFrom := none,
@@ -1790,44 +1832,10 @@ def sv7_20 : Card := .pokemon
         effect := .choice (.damage (.const 12)) (.damage (.const 6)),
         gx := false }] }
 
-/-- Reshiram (sv7-22). Records: sv7-22. -/
-def sv7_22 : Card := .pokemon
-  { name := "Reshiram", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Heat Blast", cost := [.fire, .colorless, .colorless], damage := 9,
-        effect := .skip,
-        gx := false }] }
-
-/-- Salandit (sv7-23). Records: sv7-23, me2pt5-34. -/
-def sv7_23 : Card := .pokemon
-  { name := "Salandit", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ember", cost := [.fire], damage := 3,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Salazzle (sv7-24). Records: sv7-24, me2pt5-35, me2pt5-224. -/
-def sv7_24 : Card := .pokemon
-  { name := "Salazzle", stage := .stage1, evolvesFrom := some "Salandit",
-    hp := 12, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Sudden Scorching", cost := [.colorless, .colorless], damage := 0,
-        effect := .seq (.ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip) (.ite (.evolved .own) (.ite (.countGe (.pile .opp .hand .any) 2) (.move .opp .hand .discard .any (.exactly 2)) (.move .opp .hand .discard .any .all)) .skip),
-        gx := false },
-      { name := "Flamethrower", cost := [.fire, .colorless, .colorless], damage := 13,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_7,
+  sv6_8,
   sv6_12,
   sv6_13,
   sv6_14,
@@ -1942,6 +1950,7 @@ def cards : List Card := [
   sv6pt5_23,
   sv6pt5_24,
   sv6pt5_25,
+  sv6pt5_26,
   sv6pt5_27,
   sv6pt5_28,
   sv6pt5_30,
@@ -1974,10 +1983,7 @@ def cards : List Card := [
   sv7_17,
   sv7_18,
   sv7_19,
-  sv7_20,
-  sv7_22,
-  sv7_23,
-  sv7_24]
+  sv7_20]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

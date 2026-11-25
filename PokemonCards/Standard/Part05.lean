@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 5 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,70 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part05
 open Pokemon
+
+/-- Impidimp (sv9-71). Records: sv9-71. -/
+def sv9_71 : Card := .pokemon
+  { name := "Impidimp", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gentle Slap", cost := [.psychic], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Morgrem (sv9-72). Records: sv9-72. -/
+def sv9_72 : Card := .pokemon
+  { name := "Morgrem", stage := .stage1, evolvesFrom := some "Impidimp",
+    hp := 9, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Light Punch", cost := [.psychic], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Smash Kick", cost := [.psychic, .colorless], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
+/-- Grimmsnarl (sv9-73). Records: sv9-73. Caveats: printedRetreat. -/
+def sv9_73 : Card := .pokemon
+  { name := "Grimmsnarl", stage := .stage2, evolvesFrom := some "Morgrem",
+    hp := 17, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Shadowy Knot", cost := [.psychic], damage := 0,
+        effect := .damage (.count (.retreat .opp) 5),
+        gx := false },
+      { name := "Mega Punch", cost := [.psychic, .colorless], damage := 12,
+        effect := .skip,
+        gx := false }] }
+
+/-- Milcery (sv9-74). Records: sv9-74. -/
+def sv9_74 : Card := .pokemon
+  { name := "Milcery", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Tackle", cost := [.colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Alcremie ex (sv9-75). Records: sv9-75. Caveats: noopUse. -/
+def sv9_75 : Card := .pokemon
+  { name := "Alcremie ex", stage := .stage1, evolvesFrom := some "Milcery",
+    hp := 25, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .ex, tera := false,
+    abilities := [
+      { name := "Confectionary Gift", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.ite (.countGe (.bench .own .pokemon) 1) (.choice (.heal 3) (.benchHeal 3)) (.heal 3))) }],
+    attacks := [
+      { name := "Whipped Shot", cost := [.psychic, .colorless, .colorless], damage := 16,
+        effect := .skip,
+        gx := false }] }
 
 /-- Cubone (sv9-76). Records: sv9-76. -/
 def sv9_76 : Card := .pokemon
@@ -224,6 +288,20 @@ def sv9_91 : Card := .pokemon
         gx := false },
       { name := "Suffocating Gas", cost := [.darkness, .colorless], damage := 2,
         effect := .skip,
+        gx := false }] }
+
+/-- Weezing (sv9-92). Records: sv9-92. Caveats: usedLastBench. -/
+def sv9_92 : Card := .pokemon
+  { name := "Weezing", stage := .stage1, evolvesFrom := some "Koffing",
+    hp := 13, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pervasive Gas", cost := [.darkness], damage := 3,
+        effect := .inflict .confused,
+        gx := false, selfLock := .note },
+      { name := "Crazy Blast", cost := [.darkness, .colorless], damage := 0,
+        effect := .ite (.usedLast .own) (.damage (.const 17)) (.damage (.const 5)),
         gx := false }] }
 
 /-- Paldean Wooper (sv9-93). Records: sv9-93, me2-102. -/
@@ -1823,86 +1901,13 @@ def sv10_118 : Card := .pokemon
         effect := .ite (.atLeast .opp 1) (.damage (.const 12)) (.damage (.const 6)),
         gx := false }] }
 
-/-- Team Rocket's Nidoking ex (sv10-119). Records: sv10-119, sv10-216, sv10-233. Caveats: poisonStrength. -/
-def sv10_119 : Card := .pokemon
-  { name := "Team Rocket's Nidoking ex", stage := .stage2, evolvesFrom := some "Team Rocket's Nidorino",
-    hp := 33, type := .darkness, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .ex, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tainted Horn", cost := [.darkness, .darkness, .colorless], damage := 10,
-        effect := .seq (.inflict .poisoned) (.poisonUp 7),
-        gx := false },
-      { name := "Kingly Impact", cost := [.darkness, .darkness, .darkness, .colorless], damage := 24,
-        effect := .skip,
-        gx := false }] }
-
-/-- Team Rocket's Zubat (sv10-120). Records: sv10-120. -/
-def sv10_120 : Card := .pokemon
-  { name := "Team Rocket's Zubat", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Poison Spray", cost := [.darkness], damage := 0,
-        effect := .inflict .poisoned,
-        gx := false }] }
-
-/-- Team Rocket's Golbat (sv10-121). Records: sv10-121. -/
-def sv10_121 : Card := .pokemon
-  { name := "Team Rocket's Golbat", stage := .stage1, evolvesFrom := some "Team Rocket's Zubat",
-    hp := 8, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Sneaky Bite", use := .onPlay .evolve,
-        spot := none, cond := none,
-        effect := .fx (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 2) (.benchCounters .opp 2)) (.counters 2)) }],
-    attacks := [
-      { name := "Confuse Ray", cost := [.darkness], damage := 3,
-        effect := .inflict .confused,
-        gx := false }] }
-
-/-- Team Rocket's Muk (sv10-124). Records: sv10-124. Caveats: perPokemon. -/
-def sv10_124 : Card := .pokemon
-  { name := "Team Rocket's Muk", stage := .stage1, evolvesFrom := some "Team Rocket's Grimer",
-    hp := 15, type := .darkness, retreat := 4, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gooped Up", cost := [.darkness, .colorless], damage := 4,
-        effect := .seq (.inflict .confused) (.linger .opp .next (.lock .retreat)),
-        gx := false },
-      { name := "Hazardous Venom", cost := [.darkness, .darkness, .colorless], damage := 0,
-        effect := .damage (.count (.conds .opp) 10),
-        gx := false }] }
-
-/-- Team Rocket's Koffing (sv10-125). Records: sv10-125. Caveats: trigDamaged, upTo0. -/
-def sv10_125 : Card := .pokemon
-  { name := "Team Rocket's Koffing", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Smog Signals", use := .triggered .damaged false,
-        spot := some .active, cond := none,
-        effect := .fx (.seq (.seq (.putBench .own .deck (.and .pokemon (.nameHas "Koffing"))) (.putBench .own .deck (.and .pokemon (.nameHas "Koffing")))) .shuffle) }],
-    attacks := [
-      { name := "Leaking Gas", cost := [.darkness, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Team Rocket's Weezing (sv10-126). Records: sv10-126, sv10-199. -/
-def sv10_126 : Card := .pokemon
-  { name := "Team Rocket's Weezing", stage := .stage1, evolvesFrom := some "Team Rocket's Koffing",
-    hp := 13, type := .darkness, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Explode Together Now", cost := [.darkness, .colorless], damage := 0,
-        effect := .damage (.add (.count (.inPlay .own (.and .pokemon (.or (.nameHas "Koffing") (.nameHas "Weezing")))) 4) (.count (.inPlay .opp (.and .pokemon (.or (.nameHas "Koffing") (.nameHas "Weezing")))) 4)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv9_71,
+  sv9_72,
+  sv9_73,
+  sv9_74,
+  sv9_75,
   sv9_76,
   sv9_77,
   sv9_78,
@@ -1919,6 +1924,7 @@ def cards : List Card := [
   sv9_89,
   sv9_90,
   sv9_91,
+  sv9_92,
   sv9_93,
   sv9_94,
   sv9_96,
@@ -2046,13 +2052,7 @@ def cards : List Card := [
   sv10_114,
   sv10_116,
   sv10_117,
-  sv10_118,
-  sv10_119,
-  sv10_120,
-  sv10_121,
-  sv10_124,
-  sv10_125,
-  sv10_126]
+  sv10_118]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2088,7 +2088,7 @@ counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
-theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Spiky Energy", "Team Rocket's Koffing"] := by decide +kernel
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Spiky Energy"] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel

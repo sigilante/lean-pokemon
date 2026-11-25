@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 3 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,42 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part03
 open Pokemon
+
+/-- Reshiram (sv7-22). Records: sv7-22. -/
+def sv7_22 : Card := .pokemon
+  { name := "Reshiram", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Heat Blast", cost := [.fire, .colorless, .colorless], damage := 9,
+        effect := .skip,
+        gx := false }] }
+
+/-- Salandit (sv7-23). Records: sv7-23, me2pt5-34. -/
+def sv7_23 : Card := .pokemon
+  { name := "Salandit", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Ember", cost := [.fire], damage := 3,
+        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
+        gx := false }] }
+
+/-- Salazzle (sv7-24). Records: sv7-24, me2pt5-35, me2pt5-224. -/
+def sv7_24 : Card := .pokemon
+  { name := "Salazzle", stage := .stage1, evolvesFrom := some "Salandit",
+    hp := 12, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Sudden Scorching", cost := [.colorless, .colorless], damage := 0,
+        effect := .seq (.ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip) (.ite (.evolved .own) (.ite (.countGe (.pile .opp .hand .any) 2) (.move .opp .hand .discard .any (.exactly 2)) (.move .opp .hand .discard .any .all)) .skip),
+        gx := false },
+      { name := "Flamethrower", cost := [.fire, .colorless, .colorless], damage := 13,
+        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
+        gx := false }] }
 
 /-- Turtonator (sv7-25). Records: sv7-25, sv7-146. Caveats: perPokemon, recoil. -/
 def sv7_25 : Card := .pokemon
@@ -544,6 +580,20 @@ def sv7_87 : Card := .pokemon
         gx := false },
       { name := "Crabhammer", cost := [.colorless, .colorless, .colorless], damage := 5,
         effect := .skip,
+        gx := false }] }
+
+/-- Falinks (sv7-88). Records: sv7-88. Caveats: usedLastBench. -/
+def sv7_88 : Card := .pokemon
+  { name := "Falinks", stage := .basic, evolvesFrom := none,
+    hp := 11, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Form Ranks", cost := [.colorless], damage := 0,
+        effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
+        gx := false, selfLock := .note },
+      { name := "All-Out Attack", cost := [.colorless, .colorless], damage := 0,
+        effect := .ite (.usedLast .own) (.damage (.const 12)) (.damage (.const 3)),
         gx := false }] }
 
 /-- Koraidon (sv7-90). Records: sv7-90. -/
@@ -1827,64 +1877,11 @@ def sv8_105 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Flygon ex (sv8-106). Records: sv8-106, sv8-222. Caveats: benchMods. -/
-def sv8_106 : Card := .pokemon
-  { name := "Flygon ex", stage := .stage2, evolvesFrom := some "Vibrava",
-    hp := 31, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .ex, tera := true,
-    abilities := [],
-    attacks := [
-      { name := "Reversing Storm", cost := [.fighting], damage := 13,
-        effect := .choice (.switch .own) .skip,
-        gx := false },
-      { name := "Sonic Peridot", cost := [.water, .fighting, .metal], damage := 0,
-        effect := .seq (.ite (.top .opp .ex) (.damage (.const 10) { weak := true, resist := true }) .skip) (.benchSome .opp 5 .ex true 10),
-        gx := false }] }
-
-/-- Drilbur (sv8-108). Records: sv8-108. -/
-def sv8_108 : Card := .pokemon
-  { name := "Drilbur", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fighting, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Burrow", cost := [.colorless], damage := 0,
-        effect := .move .opp (.top 1) .discard .any .all,
-        gx := false },
-      { name := "Mud-Slap", cost := [.fighting], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Excadrill (sv8-109). Records: sv8-109. -/
-def sv8_109 : Card := .pokemon
-  { name := "Excadrill", stage := .stage1, evolvesFrom := some "Drilbur",
-    hp := 12, type := .fighting, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Digging Claw", cost := [.colorless], damage := 2,
-        effect := .move .opp (.top 1) .discard .any .all,
-        gx := false },
-      { name := "Drill Smash", cost := [.fighting, .colorless], damage := 0,
-        effect := .ite (.countGe (.bench .own (.ptype .metal)) 1) (.damage (.const 14)) (.damage (.const 6)),
-        gx := false }] }
-
-/-- Landorus (sv8-110). Records: sv8-110. Caveats: mayFail. -/
-def sv8_110 : Card := .pokemon
-  { name := "Landorus", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .fighting, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Fist of Focus", cost := [.fighting], damage := 3,
-        effect := .attach .own .discard .energy .active .any,
-        gx := false },
-      { name := "Buster Swing", cost := [.fighting, .colorless, .colorless, .colorless], damage := 0,
-        effect := .damage (.const 13) { resist := true },
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_22,
+  sv7_23,
+  sv7_24,
   sv7_25,
   sv7_26,
   sv7_27,
@@ -1929,6 +1926,7 @@ def cards : List Card := [
   sv7_85,
   sv7_86,
   sv7_87,
+  sv7_88,
   sv7_90,
   sv7_91,
   sv7_94,
@@ -2030,11 +2028,7 @@ def cards : List Card := [
   sv8_102,
   sv8_103,
   sv8_104,
-  sv8_105,
-  sv8_106,
-  sv8_108,
-  sv8_109,
-  sv8_110]
+  sv8_105]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

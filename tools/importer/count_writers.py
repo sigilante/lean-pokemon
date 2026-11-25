@@ -42,6 +42,11 @@ def load(d):
                 info['hp'] = int(re.search(r'hp := (\d+)', p).group(1))
                 info['tera'] = re.search(r'tera := (\w+)', p).group(1) == 'true'
                 info['abilities'] = not re.search(r'abilities := \[\]', p)
+                # importer 0.16.0 (milestone MV9): the printed Resistance type and the Ability names
+                mr = re.search(r'resistance := some \(\.(\w+),', p)
+                info['resist'] = mr.group(1) if mr else None
+                ab = p.split('abilities := [', 1)[1].split('attacks := [', 1)[0] if 'abilities := [' in p else ''
+                info['abNames'] = re.findall(r'\{ name := "([^"]*)", use :=', ab)
             elif ctor == 'energy':
                 ms = re.match(r'def \S+ : Card := \.energy \(\.special "([^"]*)"', p)
                 if ms:
@@ -106,6 +111,11 @@ def parse_app(s, i):
             j = s.index('"', i + 1)
             args.append(s[i + 1:j])
             i = j + 1
+        elif s[i] == '[':
+            # importer 0.16.0: the name list of `Filter.nameIn`
+            j = s.index(']', i)
+            args.append(re.findall(r'"([^"]*)"', s[i:j]))
+            i = j + 1
         elif s[i] == '(':
             a, i = parse_filter(s, i)
             args.append(a)
@@ -149,6 +159,15 @@ def ev(f, c):
         return pk and c['tera']
     if h == 'hasAbility':
         return pk and c['abilities']
+    # importer 0.16.0 (milestone MV9)
+    if h == 'megaEx':
+        return pk and c['ruleBox'] == 'megaEx'
+    if h == 'resists':
+        return pk and c['resist'] == f[1][0]
+    if h == 'abilityNamed':
+        return pk and f[1] in c['abNames']
+    if h == 'nameIn':
+        return c['name'] is not None and c['name'] in f[1]
     if h == 'named':
         return c['name'] == f[1]
     if h == 'namePrefix':

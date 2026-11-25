@@ -328,6 +328,21 @@ inductive Filter where
   Pokémon", Victini sv5-30; "for each Special Energy card attached to this Pokémon", Cinccino
   sv5-137) -/
   | specialEnergy
+  /-- (milestone MV9) a Mega Evolution Pokémon ex (`RuleBox.megaEx`: "Search your deck for a Mega
+  Evolution Pokémon ex", Mega Signal me1-121) -/
+  | megaEx
+  /-- (milestone MV9) a Pokémon card with a printed Resistance to type `t` ("Pokémon with Fighting
+  Resistance", Fletchling me3-66) -/
+  | resists (t : EType)
+  /-- (milestone MV9) a Pokémon card with a printed Ability of this name ("Pokémon that have the Hide
+  'n' Sneak Ability", Dhelmise me5-39); an Ability a Tool gives is not read, as `hasAbility` -/
+  | abilityNamed (n : String)
+  /-- (milestone MV9) a card whose printed name is one of `ns`. The importer writes a printed subtype
+  that the model's cards do not carry, "Ancient" or "Future", as the list of the names whose every
+  record in the card data has that subtype (it refuses the phrase if some name has the subtype on
+  one record and not on another), so that the filter and the printed subtype agree on every card
+  of the data -/
+  | nameIn (ns : List String)
   | and (a b : Filter)
   | or (a b : Filter)
   | not (a : Filter)
@@ -1623,6 +1638,13 @@ def Filter.nameEval (sub : Bool) (x : String) (c : Card) : Bool :=
   | some n => if sub then nameContains x n else nameStarts x n
   | none => false
 
+/-- The list filter (milestone MV9): is the card's printed name one of `ns`? A Basic Energy card has
+no name the filters read. -/
+def Filter.nameInEval (ns : List String) (c : Card) : Bool :=
+  match c.name? with
+  | some n => ns.any fun x => decide (x = n)
+  | none => false
+
 /-- Does the card pass the filter? -/
 def Filter.eval : Filter → Card → Bool
   | .any, _ => true
@@ -1648,6 +1670,10 @@ def Filter.eval : Filter → Card → Bool
   | .tera, .pokemon p => p.tera
   | .hasAttack n, .pokemon p => p.attacks.any fun a => decide (a.name = n)
   | .hasAbility, .pokemon p => !p.abilities.isEmpty
+  | .megaEx, .pokemon p => decide (p.ruleBox = .megaEx)
+  | .resists t, .pokemon p => decide ((p.resistance.map Prod.fst) = some t)
+  | .abilityNamed n, .pokemon p => p.abilities.any fun a => decide (a.name = n)
+  | .nameIn ns, c => Filter.nameInEval ns c
   | .and a b, c => a.eval c && b.eval c
   | .or a b, c => a.eval c || b.eval c
   | .namePrefix x, c => Filter.nameEval false x c
