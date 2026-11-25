@@ -36,6 +36,9 @@ def c(cls, what, reason='', sent=''):
 
 
 # ---------------------------------------------------------------- card-level kinds
+# importer 0.15.0 (milestone MV8): the Special Energy cards whose riders the model does not express (S22 §1)
+c('M', 'Special Energy riders (on-attach, end-of-turn discard, return after discard, effect prevention, Special Condition '
+       'immunity, Bench damage prevention, Prize change)', r'^Special Energy: rider not modelled')
 c('M', 'Special Energy (cards and text)', r'^Special Energy$|card named in text is a Special Energy')
 c('M', 'Special Energy (cards and text)', '', r'Special Energy|Team Rocket\'s Energy|Voltaic Lightning Energy|Shadowy Darkness Energy|Spiky Energy')
 c('M', 'Trainer played as a Pokémon (Fossils)', r'^Trainer played as a Pokémon$|^Ability$')

@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 5 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,62 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part05
 open Pokemon
+
+/-- Cubone (sv9-76). Records: sv9-76. -/
+def sv9_76 : Card := .pokemon
+  { name := "Cubone", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stampede", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Light Punch", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Swinub (sv9-77). Records: sv9-77, sv9-165. -/
+def sv9_77 : Card := .pokemon
+  { name := "Swinub", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Call for Family", cost := [.colorless], damage := 0,
+        effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
+        gx := false },
+      { name := "Lunge Out", cost := [.fighting], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Piloswine (sv9-78). Records: sv9-78. -/
+def sv9_78 : Card := .pokemon
+  { name := "Piloswine", stage := .stage1, evolvesFrom := some "Swinub",
+    hp := 10, type := .fighting, retreat := 3, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Strength", cost := [.colorless], damage := 2,
+        effect := .skip,
+        gx := false },
+      { name := "Impaling Tusk", cost := [.fighting, .fighting], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
+/-- Mamoswine ex (sv9-79). Records: sv9-79, sv9-174. -/
+def sv9_79 : Card := .pokemon
+  { name := "Mamoswine ex", stage := .stage2, evolvesFrom := some "Piloswine",
+    hp := 34, type := .fighting, retreat := 4, weakness := some .grass,
+    resistance := none, ruleBox := .ex, tera := false,
+    abilities := [
+      { name := "Mammoth Hauler", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle)) }],
+    attacks := [
+      { name := "Rumbling March", cost := [.fighting, .fighting], damage := 0,
+        effect := .damage (.add (.const 18) (.count (.bench .own (.stage .stage2)) 4)),
+        gx := false }] }
 
 /-- Larvitar (sv9-80). Records: sv9-80. -/
 def sv9_80 : Card := .pokemon
@@ -390,7 +446,7 @@ def sv9_113 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Salamence ex (sv9-114). Records: sv9-114, sv9-177, sv9-187. Caveats: benchMods. -/
+/-- Salamence ex (sv9-114). Records: sv9-114, sv9-177, sv9-187. Caveats: benchMods, discardUnits. -/
 def sv9_114 : Card := .pokemon
   { name := "Salamence ex", stage := .stage2, evolvesFrom := some "Shelgon",
     hp := 32, type := .dragon, retreat := 2, weakness := none,
@@ -719,6 +775,9 @@ def sv9_150 : Card := .trainer "Levincia" .stadium
 def sv9_154 : Card := .trainer "Postwick" .stadium
     .skip [
       { sel := .all, filt := .and .pokemon (.namePrefix "Hop's "), tgt := none, src := none, need := none, eff := .bonus 3 .any }]
+
+/-- Spiky Energy (sv9-159). Records: sv9-159, sv9-190. Caveats: trigAttached, trigAttacker, trigDamaged. -/
+def sv9_159 : Card := .energy (.special "Spiky Energy" [[.colorless]] { grant := { holder := .pokemon, attacks := [], abilities := [{ name := "Spiky Energy", use := .triggered .damaged false, spot := some .active, cond := none, effect := .fx (.counters 2) }] } })
 
 /-- Yanma (sv10-2). Records: sv10-2, sv10-183. -/
 def sv10_2 : Card := .pokemon
@@ -1107,7 +1166,7 @@ def sv10_41 : Card := .pokemon
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 4)) (.damage (.const 8))),
         gx := false }] }
 
-/-- Blaziken (sv10-42). Records: sv10-42, sv10-192. Caveats: benchMods. -/
+/-- Blaziken (sv10-42). Records: sv10-42, sv10-192. Caveats: benchMods, discardUnits. -/
 def sv10_42 : Card := .pokemon
   { name := "Blaziken", stage := .stage2, evolvesFrom := some "Combusken",
     hp := 17, type := .fire, retreat := 2, weakness := some .water,
@@ -1249,7 +1308,7 @@ def sv10_59 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Abomasnow (sv10-60). Records: sv10-60. -/
+/-- Abomasnow (sv10-60). Records: sv10-60. Caveats: energyOfCount. -/
 def sv10_60 : Card := .pokemon
   { name := "Abomasnow", stage := .stage1, evolvesFrom := some "Snover",
     hp := 15, type := .water, retreat := 4, weakness := some .metal,
@@ -1842,69 +1901,12 @@ def sv10_126 : Card := .pokemon
         effect := .damage (.add (.count (.inPlay .own (.and .pokemon (.or (.nameHas "Koffing") (.nameHas "Weezing")))) 4) (.count (.inPlay .opp (.and .pokemon (.or (.nameHas "Koffing") (.nameHas "Weezing")))) 4)),
         gx := false }] }
 
-/-- Marnie's Purrloin (sv10-130). Records: sv10-130. -/
-def sv10_130 : Card := .pokemon
-  { name := "Marnie's Purrloin", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Pointy Nails", cost := [.darkness], damage := 0,
-        effect := .ite (.top .opp .ex) (.damage (.const 6)) (.damage (.const 2)),
-        gx := false }] }
-
-/-- Marnie's Liepard (sv10-131). Records: sv10-131. -/
-def sv10_131 : Card := .pokemon
-  { name := "Marnie's Liepard", stage := .stage1, evolvesFrom := some "Marnie's Purrloin",
-    hp := 10, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Pointy Claws", cost := [.darkness, .darkness], damage := 0,
-        effect := .ite (.top .opp .ex) (.damage (.const 14)) (.damage (.const 7)),
-        gx := false }] }
-
-/-- Marnie's Scraggy (sv10-132). Records: sv10-132. -/
-def sv10_132 : Card := .pokemon
-  { name := "Marnie's Scraggy", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Crunch", cost := [.darkness, .darkness, .colorless], damage := 5,
-        effect := .ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Marnie's Scrafty (sv10-133). Records: sv10-133. Caveats: recoil. -/
-def sv10_133 : Card := .pokemon
-  { name := "Marnie's Scrafty", stage := .stage1, evolvesFrom := some "Marnie's Scraggy",
-    hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rear Kick", cost := [.darkness], damage := 4,
-        effect := .skip,
-        gx := false },
-      { name := "Wild Tackle", cost := [.darkness, .darkness, .colorless], damage := 16,
-        effect := .selfDamage 3,
-        gx := false }] }
-
-/-- Marnie's Impidimp (sv10-134). Records: sv10-134. -/
-def sv10_134 : Card := .pokemon
-  { name := "Marnie's Impidimp", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Filch", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Corkscrew Punch", cost := [.darkness], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv9_76,
+  sv9_77,
+  sv9_78,
+  sv9_79,
   sv9_80,
   sv9_81,
   sv9_82,
@@ -1963,6 +1965,7 @@ def cards : List Card := [
   sv9_149,
   sv9_150,
   sv9_154,
+  sv9_159,
   sv10_2,
   sv10_4,
   sv10_5,
@@ -2049,18 +2052,13 @@ def cards : List Card := [
   sv10_121,
   sv10_124,
   sv10_125,
-  sv10_126,
-  sv10_130,
-  sv10_131,
-  sv10_132,
-  sv10_133,
-  sv10_134]
+  sv10_126]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
 
 /-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a
-Tool that gives nothing). -/
+Tool that gives nothing, a Special Energy card whose payload models nothing or sets `rest`). -/
 theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel
 
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
@@ -2090,13 +2088,19 @@ counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
-theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Team Rocket's Koffing"] := by decide +kernel
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Spiky Energy", "Team Rocket's Koffing"] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
 theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedUp` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedUp : (cards.filter (Card.hasTrig .movedUp)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedDown` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedDown : (cards.filter (Card.hasTrig .movedDown)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel

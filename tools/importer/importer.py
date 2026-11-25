@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.14.0'
+VERSION = '0.15.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -65,6 +65,9 @@ MECHS = [
     # importer 0.14.0: the event of milestone MV7 ("your opponent's Active Pokémon moves to the Bench"), refused
     ('triggered text of the MV7 event (the opponent\'s Active Pokémon moves to the Bench): "that Pokémon" or an effect '
      'the model cannot resolve', r'^Ability: triggered \(MV7 oppBenched\)'),
+    # importer 0.15.0: the events of milestone MV7c ("when this Pokémon moves from …"), refused
+    ('triggered text of the MV7c events (this Pokémon moves between the Bench and the Active Spot): an effect outside '
+     'the trigger fragment or not translated', r'^Ability: triggered \(MV7c '),
     ("triggered Ability of other shapes (another Pokémon's Knock Out, replacement, Checkup, opponent's action, move "
      "between spots)", r'^Ability: triggered'),
     ('Ability with a first-turn rule ("once during your first turn", "can\'t use … during your first turn")',
@@ -79,6 +82,11 @@ MECHS = [
      r'^Pokémon Tool: '),
     ('Pokémon Tool in other card text', r'Pokémon Tool|\bTools?\b'),
     ('Stadium in other card text', r'Stadium'),
+    # importer 0.15.0 (milestone MV8): a Special Energy card with a rider the model does not express
+    ('Special Energy card: a rider the model does not express (on-attach effect, end-of-turn discard, return after a '
+     'discard, prevention of effects, Special Condition immunity, Bench damage prevention, Prize change)',
+     r'^Special Energy: rider not modelled'),
+    ('Special Energy card: other', r'^Special Energy: '),
     ('Special Energy (card or text)', r'^Special Energy$|Special Energy'),
     ('Trainer played as a Pokémon', r'^Trainer played as a Pokémon$'),
 ] + [
@@ -231,7 +239,7 @@ def run(data, out, survey=None):
         src.append('/-- Every card of this part passes the per-card checks (`Card.importOk`). -/')
         src.append('theorem cards_ok : cards.all Card.importOk = true := by decide +kernel\n')
         src.append('/-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a\n'
-                   'Tool that gives nothing). -/')
+                   'Tool that gives nothing, a Special Energy card whose payload models nothing or sets `rest`). -/')
         src.append('theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel\n')
         src.append('/-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/')
         src.append('theorem cards_nodup : nodupFp cards = true := by decide +kernel\n')
@@ -303,9 +311,10 @@ def run(data, out, survey=None):
            '/-- **No imported card is inert.** No imported Stadium or Tool is a card the model plays with no\n'
            'effect (`Card.inert`): every imported Stadium has an activated or (milestone M6) a static effect the\n'
            'model expresses, every imported Tool gives an attack, an Ability (since importer 0.6.0 a triggered one,\n'
-           'milestone M8b) or a static effect. (Triggered Stadium and Tool text outside the two shapes of milestone\n'
-           'M8b, and static text outside the model\'s `Static`, which the model would play as inert, is refused by\n'
-           'the importer.) -/',
+           'milestone M8b) or a static effect, and (since importer 0.15.0, milestone MV8) every imported Special Energy\n'
+           'card has a payload that models something and does not set `EnergyText.rest`. (Triggered Stadium and Tool\n'
+           'text outside the shapes the model has, static text outside the model\'s `Static`, and Special Energy cards\n'
+           'with a rider the model lacks, which the model would play as inert, are refused by the importer.) -/',
            'theorem notInert : ∀ c ∈ all, c.inert = false := by\n'
            '  have h : all.all (fun c => !c.inert) = true := by\n'
            '    simp only [all, List.all_append, '
@@ -429,11 +438,11 @@ def run(data, out, survey=None):
     files['PokemonCards/Standard.lean'] = '\n'.join(src)
 
     # ---------------------------------------------------------------- TSVs
-    rows = [('id', 'name', 'kind', 'status', 'caveats', 'records', 'lean_name', 'static_kinds', 'vacuous_parts')]
+    rows = [('id', 'name', 'kind', 'status', 'caveats', 'records', 'lean_name', 'static_kinds', 'special_parts')]
     for recs, r in all_imported:
         rows.append((recs[0]['id'], recs[0]['name'], kind_of(recs[0]), status_of(r), ','.join(sorted(r['caveats'])),
                      ' '.join(x['id'] for x in recs), emit.ident(term_of[id(recs)][0]),
-                     ','.join(static_kinds(r['term'])), '; '.join(vacuous_parts(r['term']))))
+                     ','.join(static_kinds(r['term'])), '; '.join(special_parts(r['term']))))
     files['tools/importer/out/imported.tsv'] = tsv(rows)
     rows = [('id', 'name', 'kind', 'mechanisms', 'reasons', 'records')]
     for recs, r in not_imp:
@@ -588,8 +597,9 @@ def ko_bound_check(imported):
     Pokémon's or a Tool's on itself (`sel = self`) or a Stadium's; a Pokémon has at most one Tool and the game one Stadium,
     so a Pokémon's derived HP (`GameState.hpOf`) is at most the largest printed HP, plus the largest HP units of one
     Pokémon card's own static effects (a constant plus `k` for each of its E Energy cards), plus the largest of a Tool's
-    and of a Stadium's: 76 + 4E counters for today's pool, as the caveat says. Fails if the pool changes that."""
-    pk, tool, stad, kmax = 0, 0, 0, 0
+    and of a Stadium's, plus (since importer 0.15.0) the HP bonus of a Special Energy card for each Energy card: 76 + 6E counters
+    for today's pool, as the caveat says. Fails if the pool changes that."""
+    pk, tool, stad, kmax, egain = 0, 0, 0, 0, 0
     for _, r in imported:
         t = r['term']
         for x in card_statics(t):
@@ -606,13 +616,18 @@ def ko_bound_check(imported):
             elif t[0] == 'tool':
                 assert k == 0
                 tool = max(tool, c)
+            elif t[0] == 'energy':
+                # importer 0.15.0: a Special Energy card's HP bonus to its holder (Growing Grass Energy); several can be
+                # attached, so it counts per Energy card, beside a Pokémon's own "+k for each Energy"
+                assert k == 0
+                egain = max(egain, c)
             else:
                 pk = max(pk, c)
                 kmax = max(kmax, k)
     a = max(printed_hp(r['term']) for _, r in imported)
-    assert (a + pk + tool + stad, kmax) == (76, 4), (a, pk, tool, stad, kmax)
+    assert (a + pk + tool + stad, kmax + egain) == (76, 6), (a, pk, tool, stad, kmax, egain)
     # two 60-card decks: at most 60 Energy cards on one Pokémon (its owner's)
-    assert 76 + 4 * 60 < TR.KO_COUNTERS
+    assert 76 + 6 * 60 < TR.KO_COUNTERS
 
 
 def static_source(c):
@@ -722,6 +737,9 @@ def card_attacks(term):
         return term[1]['attacks']
     if term[0] == 'tool':
         return term[2]['attacks']
+    if term[0] == 'energy' and term[1][0] == 'special' and 'grant' in term[1][3]:
+        # importer 0.15.0 (milestone MV8): a Special Energy card's grant, by the Tool path
+        return term[1][3]['grant']['attacks']
     return []
 
 
@@ -731,6 +749,8 @@ def card_abilities(term):
         return term[1]['abilities']
     if term[0] == 'tool':
         return term[2]['abilities']
+    if term[0] == 'energy' and term[1][0] == 'special' and 'grant' in term[1][3]:
+        return term[1][3]['grant']['abilities']
     return []
 
 
@@ -756,6 +776,10 @@ TRIG_LISTS = [
      lambda t: bool(term_trigs(t, 'koByAttack'))),
     ('trigBenched', 'with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7)',
      '(Card.hasTrig .oppBenched)', lambda t: bool(term_trigs(t, 'oppBenched'))),
+    ('trigMovedUp', 'with or giving a triggered Ability on `TrigEvent.movedUp` (milestone MV7c)',
+     '(Card.hasTrig .movedUp)', lambda t: bool(term_trigs(t, 'movedUp'))),
+    ('trigMovedDown', 'with or giving a triggered Ability on `TrigEvent.movedDown` (milestone MV7c)',
+     '(Card.hasTrig .movedDown)', lambda t: bool(term_trigs(t, 'movedDown'))),
     ('trigLingers', 'whose triggered Abilities write a lingering modifier', 'Card.trigLingers',
      lambda t: any(T.lingers(e) for ab in term_trigs(t) for e in T.ability_scripts(ab))),
     ('trigRecycles', 'whose triggered Abilities can return a card from a discard pile', 'Card.trigRecycles',
@@ -872,6 +896,9 @@ def card_statics(term):
         return [x for ab in term[1]['abilities'] for x in ab_statics(ab)]
     if term[0] == 'tool':
         return list(term[2].get('statics') or []) + [x for ab in term[2]['abilities'] for x in ab_statics(ab)]
+    if term[0] == 'energy' and term[1][0] == 'special' and 'grant' in term[1][3]:
+        g = term[1][3]['grant']
+        return list(g.get('statics') or []) + [x for ab in g['abilities'] for x in ab_statics(ab)]
     if term[0] == 'trainer' and term[2] == ('stadium',) and len(term) > 4:
         return list(term[4])
     return []
@@ -882,7 +909,7 @@ def card_statics(term):
 STATIC_KINDS = [('Hp', 'HP', 'Static.isHp', ('hpPlus', 'hpMinus')),
                 ('Bonus', 'damage bonus', 'Static.isBonus', ('bonus',)),
                 ('Reduce', 'damage reduction', 'Static.isReduce', ('reduce',)),
-                ('Retreat', 'Retreat Cost', 'Static.isRetreat', ('retreatPlus', 'retreatMinus'))]
+                ('Retreat', 'Retreat Cost', 'Static.isRetreat', ('retreatPlus', 'retreatMinus', 'noRetreat'))]
 
 
 def static_kinds(term):
@@ -926,10 +953,11 @@ def reads_special(x):
     return False
 
 
-def vacuous_parts(term):
-    """The parts of an imported card (attacks, Abilities, a Trainer's effect) that read Special Energy cards. No imported
-    card is a Special Energy card, so in a game of imported cards such a part never finds one: S11 §15's vacuous effects
-    (they are counted as exact; a part may also do other things, e.g. Mow Rotom's damage)."""
+def special_parts(term):
+    """The parts of an imported card (attacks, Abilities, a Trainer's effect) that read Special Energy cards (by kind or
+    by name). Until importer 0.14.0 no imported card was a Special Energy card, so such a part never found one (S11 §15's
+    vacuous effects; the TSV column was `vacuous_parts`); since importer 0.15.0 eight Special Energy cards are imported
+    and these parts are live."""
     if term[0] == 'trainer':
         return ['(card)'] if reads_special(term) else []
     if term[0] != 'pokemon':
@@ -1097,11 +1125,13 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
     L.append('By records: imported exactly %d, with caveats %d, not imported %d (of %d).' % (
         rc['imported exactly'], rc['imported with caveats'], rc['not imported'], recs_n))
     L.append('')
-    vac = [(recs, r) for recs, r in results if r['ok'] and vacuous_parts(r['term'])]
-    L.append('Vacuous in the imported pool (column `vacuous_parts` of imported.tsv): %d imported cards have a part that '
-             'reads Special Energy cards, which no imported card is, so in a game of imported cards that part never finds '
-             'one (counted by status as usual; S11 §15): %s.' % (
-                 len(vac), '; '.join('%s %s (%s, %s)' % (recs[0]['id'], recs[0]['name'], ', '.join(vacuous_parts(r['term'])),
+    vac = [(recs, r) for recs, r in results if r['ok'] and special_parts(r['term'])]
+    L.append('Readers of Special Energy cards (column `special_parts` of imported.tsv, `vacuous_parts` until importer '
+             '0.14.0): %d imported cards have a part that reads Special Energy cards by kind or name. Until 0.14.0 no '
+             'imported card was a Special Energy card and these parts were vacuous in a game of imported cards (S11 '
+             '§15); since 0.15.0 the imported Special Energy cards make them live, each read by card (`Filter.weight`: '
+             'a filter other than `Filter.energy` counts and discards cards): %s.' % (
+                 len(vac), '; '.join('%s %s (%s, %s)' % (recs[0]['id'], recs[0]['name'], ', '.join(special_parts(r['term'])),
                                                         status_of(r)) for recs, r in vac)))
     L.append('')
     cav = collections.Counter()

@@ -164,8 +164,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   card carries a payload (`EnergyText`): static effects and triggered Abilities given to its holder
   by the Tool path (`EnergyText.grant`; `Pokemon/EnergyText.lean`), provision that depends on the
   holder or on the other attached cards (`EnergyText.alt`, `EnergyCard.unitsAt`), and a holder
-  restriction (`EnergyText.only`, `Card.attachOk`; `Pokemon/Provision.lean`). Expressible (not
-  imported): Growing Grass, Voltaic Lightning, Magnetic Metal, Spiky, Prism, Neo Upper, Luminous and
+  restriction (`EnergyText.only`, `Card.attachOk`; `Pokemon/Provision.lean`). Expressible (imported since
+  importer 0.15.0, with caveats where these departures bear): Growing Grass, Voltaic Lightning, Magnetic Metal, Spiky, Prism, Neo Upper, Luminous and
   Team Rocket's Energy. Departures of these: Team Rocket's Energy cannot be moved by an effect onto a
   Pokémon that is not a Team Rocket's Pokémon, where print lets it move and then discards it ("If this
   card is attached to anything other than a Team Rocket's Pokémon, discard this card"; a subset of
@@ -954,13 +954,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   changes the one after;
 * triggers of the player's own moves between the Bench and the Active Spot (milestone MV7c, survey
   S20 §a group (a); `TrigEvent.movedUp`, `TrigEvent.movedDown`): "Once during your turn, when this
-  Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3, expressible (not
-  imported), with one attach step per Energy) and "Once during your turn, when this Pokémon moves
+  Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3, expressible, with
+  one attach step per Energy) and "Once during your turn, when this Pokémon moves
   from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic Water Energy
-  cards from your hand to this Pokémon." (Clawitzer me1-38, expressible (not imported); "this
+  cards from your hand to this Pokémon." (Clawitzer me1-38, expressible; "this
   Pokémon" on the Bench is one Benched Pokémon chosen when the trigger resolves, `SelfOp.atS`: a
-  superset). Neither card is imported: the importer still refuses both for the trigger class, and
-  Yanmega ex also for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your
+  superset). Since importer 0.15.0 Clawitzer is imported, with caveats (survey S11); Yanmega ex is
+  still refused, for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your
   Benched Pokémon"). The witnesses are test cards in `Pokemon/Moved.lean` (`Moved.yanC`, with one
   Grass Energy, and `Moved.clawC`, with one Water Energy), not the printed cards. The triggers
   belong to the player to move and resolve from that player's side (`FireMine`: `Fire` on the

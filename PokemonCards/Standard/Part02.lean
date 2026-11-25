@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,17 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Phantump (sv6-12). Records: sv6-12. -/
+def sv6_12 : Card := .pokemon
+  { name := "Phantump", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Leech Seed", cost := [.grass, .colorless], damage := 2,
+        effect := .heal 2,
+        gx := false }] }
 
 /-- Trevenant (sv6-13). Records: sv6-13. -/
 def sv6_13 : Card := .pokemon
@@ -111,7 +122,7 @@ def sv6_28 : Card := .pokemon
         effect := .inflict .burned,
         gx := false }] }
 
-/-- Torkoal (sv6-30). Records: sv6-30, sv6-172. Caveats: perPokemon. -/
+/-- Torkoal (sv6-30). Records: sv6-30, sv6-172. Caveats: discardUnits, perPokemon. -/
 def sv6_30 : Card := .pokemon
   { name := "Torkoal", stage := .basic, evolvesFrom := none,
     hp := 13, type := .fire, retreat := 3, weakness := some .water,
@@ -746,7 +757,7 @@ def sv6_103 : Card := .pokemon
         effect := .choice (.damage (.const 4)) .skip,
         gx := false }] }
 
-/-- Greninja ex (sv6-106). Records: sv6-106, sv6-198, sv6-214. Caveats: benchMods, searchAny. -/
+/-- Greninja ex (sv6-106). Records: sv6-106, sv6-198, sv6-214. Caveats: benchMods, discardUnits, searchAny. -/
 def sv6_106 : Card := .pokemon
   { name := "Greninja ex", stage := .stage2, evolvesFrom := some "Frogadier",
     hp := 31, type := .fighting, retreat := 1, weakness := some .psychic,
@@ -785,7 +796,7 @@ def sv6_109 : Card := .pokemon
         effect := .ite (.cond .opp .poisoned) (.damage (.const 13)) (.damage (.const 3)),
         gx := false }] }
 
-/-- Okidogi (sv6-111). Records: sv6-111, sv6pt5-74, sv8pt5-57. -/
+/-- Okidogi (sv6-111). Records: sv6-111, sv6pt5-74, sv8pt5-57. Caveats: energyOfCount. -/
 def sv6_111 : Card := .pokemon
   { name := "Okidogi", stage := .basic, evolvesFrom := none,
     hp := 13, type := .fighting, retreat := 2, weakness := some .psychic,
@@ -922,7 +933,7 @@ def sv6_121 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Heatran (sv6-123). Records: sv6-123. Caveats: anyAmount60, trigAttacker, trigDamaged. -/
+/-- Heatran (sv6-123). Records: sv6-123. Caveats: anyAmount60, energyOfBasic, energyOfCount, trigAttacker, trigDamaged. -/
 def sv6_123 : Card := .pokemon
   { name := "Heatran", stage := .basic, evolvesFrom := none,
     hp := 14, type := .metal, retreat := 4, weakness := some .fire,
@@ -1143,7 +1154,7 @@ def sv6_152 : Card := .trainer "Hyper Aroma" .item
 def sv6_155 : Card := .trainer "Lana's Aid" .supporter
     (.seq (.ite (.countGe (.pile .own .discard (.or (.and .pokemon .noRuleBox) .basicEnergy)) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own .discard .hand (.or (.and .pokemon .noRuleBox) .basicEnergy) (.upTo 3)))
 
-/-- Lucky Helmet (sv6-158). Records: sv6-158. Caveats: trigDamaged. -/
+/-- Lucky Helmet (sv6-158). Records: sv6-158. Caveats: trigAttached, trigDamaged. -/
 def sv6_158 : Card := .tool "Lucky Helmet"
   { holder := .pokemon,
     attacks := [],
@@ -1163,6 +1174,9 @@ def sv6_163 : Card := .trainer "Secret Box" .item
 /-- Unfair Stamp (sv6-165). Records: sv6-165. Caveats: aceSpec, koCheckup. -/
 def sv6_165 : Card := .trainer "Unfair Stamp" .item
     (.seq (.ite (.countGe (.koLast .own false) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.ite (.countGe (.pile .own .hand .any) 1) .skip (.ite (.countGe (.pile .opp .deck .any) 1) .skip (.ite (.countGe (.pile .opp .hand .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))))) (.seq (.seq (.move .own .hand .shuffle .any .all) (.move .opp .hand .shuffle .any .all)) (.seq (.move .own (.top 5) .hand .any .all) (.move .opp (.top 2) .hand .any .all)))))
+
+/-- Luminous Energy (sv6-226). Records: sv6-226. -/
+def sv6_226 : Card := .energy (.special "Luminous Energy" [[.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless]] { alt := some (.otherSpecial, [[.colorless]]) })
 
 /-- Rowlet (sv6pt5-3). Records: sv6pt5-3. -/
 def sv6pt5_3 : Card := .pokemon
@@ -1424,7 +1438,7 @@ def sv6pt5_28 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .all }] }
 
-/-- Absol (sv6pt5-30). Records: sv6pt5-30. -/
+/-- Absol (sv6pt5-30). Records: sv6pt5-30. Caveats: energyOfCount. -/
 def sv6pt5_30 : Card := .pokemon
   { name := "Absol", stage := .basic, evolvesFrom := none,
     hp := 11, type := .darkness, retreat := 1, weakness := some .grass,
@@ -1812,33 +1826,9 @@ def sv7_24 : Card := .pokemon
         effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
         gx := false }] }
 
-/-- Turtonator (sv7-25). Records: sv7-25, sv7-146. Caveats: perPokemon, recoil. -/
-def sv7_25 : Card := .pokemon
-  { name := "Turtonator", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .fire, retreat := 3, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ring of Fire", cost := [.fire, .colorless, .colorless], damage := 5,
-        effect := .seq (.inflict .burned) (.linger .opp .next (.lock .retreat)),
-        gx := false },
-      { name := "Inferno Onrush", cost := [.fire, .fire, .colorless, .colorless], damage := 18,
-        effect := .selfDamage 6,
-        gx := false }] }
-
-/-- Scorbunny (sv7-26). Records: sv7-26, me2pt5-36, me2pt5-225. -/
-def sv7_26 : Card := .pokemon
-  { name := "Scorbunny", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Quick Attack", cost := [.colorless], damage := 0,
-        effect := .choice (.damage (.const 2)) (.damage (.const 1)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_12,
   sv6_13,
   sv6_14,
   sv6_17,
@@ -1934,6 +1924,7 @@ def cards : List Card := [
   sv6_161,
   sv6_163,
   sv6_165,
+  sv6_226,
   sv6pt5_3,
   sv6pt5_4,
   sv6pt5_5,
@@ -1986,15 +1977,13 @@ def cards : List Card := [
   sv7_20,
   sv7_22,
   sv7_23,
-  sv7_24,
-  sv7_25,
-  sv7_26]
+  sv7_24]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
 
 /-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a
-Tool that gives nothing). -/
+Tool that gives nothing, a Special Energy card whose payload models nothing or sets `rest`). -/
 theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel
 
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
@@ -2031,6 +2020,12 @@ theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label 
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
 theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedUp` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedUp : (cards.filter (Card.hasTrig .movedUp)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedDown` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedDown : (cards.filter (Card.hasTrig .movedDown)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel
