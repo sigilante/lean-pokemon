@@ -25,13 +25,14 @@ Existential witnesses (one play exists; nothing is claimed about every resolutio
   empty in its owner's turn; the batch step promotes `yan`, and its trigger resolves inside the
   Ability's resolution (`Resolve.trigger`);
 * `once_per_turn`: retreat, trigger, Switch, Switch: `yan` moves up a second time in the turn and
-  nothing is pending afterwards.
+  nothing is pending afterwards (with the universal lemma `InPlay.noteMove_of_used`);
+* `copy_quiet`: putting a second `yan` onto the Bench from the hand is no move between the Bench and
+  the Active Spot: the play is legal and leaves nothing pending (with the universal lemma
+  `PlayFromHand.pend`: no play from the hand changes the record).
 
 Universal statements (over every move or every resolution from the state named):
 * `up_forced`: the mandatory drawing variant (`up false`) cannot be skipped: every move after the
   retreat gives the owner the card;
-* `second_switch_quiet`: every resolution of the second Switch of `once_per_turn` leaves nothing
-  pending (the limit is spent);
 * `checkup_promotion_quiet`: between turns (after Pokémon Checkup, which is in no player's turn), a
   Knock Out of the Active Pokémon of the player about to move and the promotion of `yan` raise
   nothing: every move leaves nothing pending;
@@ -246,9 +247,9 @@ theorem _root_.Pokemon.InPlay.noteMove_of_used {ev : TrigEvent} {sp : Spot} {p :
 
 /-- **Once per turn** (an existential witness): retreat (`yan` moves up and its trigger fires),
 then two Switch cards (`yan` down, then up again): after the second Switch nothing is pending, `yan`
-is Active with the one Grass Energy of the first trigger, and the state is `Settled`. Every
-resolution of the second Switch marks nothing: `yan` has spent its limit (`InPlay.used`,
-`InPlay.noteMove_of_used`). -/
+is Active with the one Grass Energy of the first trigger, and the state is `Settled`. That no
+resolution of the second Switch can mark `yan` is the universal lemma `InPlay.noteMove_of_used`: a
+Pokémon that has spent its limit (`InPlay.used`) is not marked. -/
 theorem once_per_turn :
     ∃ g₁ g₂ g₃ g₄, Move y0 g₁ ∧ Move g₁ g₂ ∧ Move g₂ g₃ ∧ Move g₃ g₄ ∧
       g₄.cur.active.map InPlay.top = some yanC ∧
@@ -366,5 +367,20 @@ theorem gust_quiet :
       | touchActive he => simp [Effect.touch] at he
       | touchBench he => simp [Effect.touch] at he
       | zone hw => simp [Effect.zSide] at hw
+
+/-- A play from the hand changes neither the record nor any mark (no event is raised by putting a
+Pokémon into play or evolving it). -/
+theorem _root_.Pokemon.PlayFromHand.pend {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g₁.pend = g.pend := by
+  cases h <;> rfl
+
+/-- **Benching a copy raises nothing** (an existential witness, with the universal lemma
+`PlayFromHand.pend`): from `y0` with a `yan` card in the hand, playing it onto the Bench beside the
+other `yan` leaves nothing pending and the state `Settled`. -/
+theorem copy_quiet :
+    ∃ g', Move (tp (ps [.pokemon yanC] [] (InPlay.ofBasic sitterC) [InPlay.ofBasic yanC]) foe) g' ∧
+      g'.cur.bench.map InPlay.top = [yanC, yanC] ∧ g'.pend = false ∧ Settled g' :=
+  ⟨_, .playBasic (l₁ := []) (l₂ := []) rfl rfl (by decide) (by decide) rfl
+    ((GameState.settled_iff _).2 (by decide)) rfl, rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩
 
 end Pokemon.Moved
