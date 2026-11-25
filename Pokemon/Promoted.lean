@@ -140,10 +140,11 @@ theorem promoted_quiet : ∀ g₁ g₂ g₃, Move g0 g₁ → g₁.attacked = tr
   subst ha'
   obtain rfl := hd.nil_of rfl
   cases ht
-  rcases h2.batch_of_not_settled (fun h => absurd h.2.2.2 (by decide)) with ⟨_, _, hb, -⟩ | ⟨-, -, l, hl, ht⟩
+  rcases h2.batch_of_not_settled (fun h => absurd h.2.2.2 (by decide)) with ⟨_, _, hb, -⟩ | ⟨-, -, ho⟩
   · rcases hb.not_ready with h | h
     · exact absurd h (by decide)
     · exact absurd ⟨rfl, rfl⟩ h
+  obtain ⟨l, hl, ht⟩ := ho.opp_inv rfl rfl
   rw [List.perm_singleton.1 (show l.Perm [surge false] from hl)] at ht
   cases ht with
   | decline ho => cases ho
@@ -174,7 +175,8 @@ theorem promoted_quiet : ∀ g₁ g₂ g₃, Move g0 g₁ → g₁.attacked = tr
     | won _ hw => exact absurd rfl hw
     | go _ _ hc _ =>
         cases hc
-        simp only [GameState.withPlay, Option.map_some]
+        rw [GameState.afterBatch_active_map (fun p => InPlay.noteMove_rot _ _ p)]
+        simp only [Option.map_some]
         intro h
         cases h
   · exact absurd hp (by decide)
@@ -191,8 +193,7 @@ theorem promoted_runs :
     .seq (.damage (.const 10 _) rfl) (.switch (b₁ := []) (b₂ := []) .own rfl rfl)
   refine ⟨_, _, _, .attack (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl g0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl, rfl,
-    .trigger (l := [surge false]) ⟨rfl, rfl⟩ rfl (.refl _)
-      (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _)),
+    .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [surge false]) rfl rfl (.refl _) (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _))),
     .knockOuts (l := []) (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide)) (by decide) .keep
       (.pick (b₁ := [InPlay.ofBasic (watcherC false)]) (b₂ := []))) .nil (.nil _),
     rfl, rfl, rfl⟩
@@ -241,10 +242,11 @@ theorem held_fires : ∀ g₁ g₂, Move (h0 10) g₁ → g₁.attacked = true �
   subst ha'
   obtain rfl := hd.nil_of rfl
   cases ht
-  rcases h2.batch_of_not_settled (fun h => absurd h.2.2.2 (by decide)) with ⟨_, _, hb, -⟩ | ⟨-, -, l, hl, ht⟩
+  rcases h2.batch_of_not_settled (fun h => absurd h.2.2.2 (by decide)) with ⟨_, _, hb, -⟩ | ⟨-, -, ho⟩
   · rcases hb.not_ready with h | h
     · exact absurd h (by decide)
     · exact absurd ⟨rfl, rfl⟩ h
+  obtain ⟨l, hl, ht⟩ := ho.opp_inv rfl rfl
   rw [List.perm_singleton.1 (show l.Perm [prose] from hl)] at ht
   cases ht with
   | decline ho => cases ho
@@ -268,7 +270,7 @@ theorem held_fires_ko :
     .seq (.damage (.const 10 _) rfl) (.switch (b₁ := []) (b₂ := []) .own rfl rfl)
   refine ⟨_, _, _, .attack (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl h0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl,
-    .trigger (l := [prose]) ⟨rfl, rfl⟩ rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _)),
+    .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [prose]) rfl rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _))),
     .knockOuts (l := []) (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide)) (by decide) .keep
       (.pick (b₁ := []) (b₂ := []))) .nil (.nil _),
     rfl, rfl⟩
@@ -284,7 +286,7 @@ theorem switch_attack_fires :
   exact ⟨_, _, .attack (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl
       ((GameState.settled_iff _).2 (by decide))
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl,
-    .trigger (l := [prose]) ⟨rfl, rfl⟩ rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _)),
+    .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [prose]) rfl rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _))),
     rfl, (GameState.settled_iff _).2 (by decide)⟩
 
 end Pokemon.Promoted

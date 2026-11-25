@@ -534,15 +534,50 @@ theorem Fire.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card}
       exact Nat.le_trans h1 h2
   | decline _ _ ih => intro hl hC; exact ih (fun ab hab => hl ab (.tail _ hab)) hC
 
+/-- The player to move's own triggers (milestone MV7c) keep the weight of the discard piles: they
+recycle nothing. -/
+theorem FireMine.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {u d : List Ability}
+    {g g' : GameState} (h : FireMine u d g g')
+    (hu : ∀ ab ∈ u, (ab.script TrigEvent.movedUp.place).recFilters = [])
+    (hd : ∀ ab ∈ d, (ab.script TrigEvent.movedDown.place).recFilters = []) :
+    g.discW w ≤ g'.discW w := by
+  obtain ⟨g₁, g₂, h₁, h₂, rfl⟩ := h
+  have a := h₁.disc_mono (C := g.swap.allCards) hw (fun ab hab => Effect.recOk_nil (hu ab hab))
+    fun _ hy => hy
+  have b := h₂.disc_mono (C := g₁.allCards) hw (fun ab hab => Effect.recOk_nil (hd ab hab))
+    fun _ hy => hy
+  rw [GameState.swap_discW] at a
+  rw [GameState.swap_discW]
+  exact Nat.le_trans a b
+
+/-- **The resolution of the owed triggers keeps the weight of the discard piles** (milestone
+MV7c): none of them recycles. -/
+theorem Owed.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {g g' : GameState} (h : Owed g g') :
+    g.discW w ≤ g'.discW w := by
+  have e : g.unpend.discW w = g.discW w := rfl
+  rw [← e]
+  cases h with
+  | mineFirst hu hd hl hm ht =>
+      exact Nat.le_trans
+        (hm.disc_mono hw (fun ab hab => GameState.upOwed_recFilters (hu.mem_iff.1 hab))
+          (fun ab hab => GameState.downOwed_recFilters (hd.mem_iff.1 hab)))
+        (ht.disc_mono (C := _) hw
+          (fun ab hab => Effect.recOk_nil (GameState.owedTrigs_recFilters (hl.mem_iff.1 hab)))
+          (fun _ hy => hy))
+  | oppFirst hu hd hl ht hm =>
+      exact Nat.le_trans
+        (ht.disc_mono (C := _) hw
+          (fun ab hab => Effect.recOk_nil (GameState.owedTrigs_recFilters (hl.mem_iff.1 hab)))
+          (fun _ hy => hy))
+        (hm.disc_mono hw (fun ab hab => GameState.upOwed_recFilters (hu.mem_iff.1 hab))
+          (fun ab hab => GameState.downOwed_recFilters (hd.mem_iff.1 hab)))
+
 theorem Resolve.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {g g' : GameState}
     (h : Resolve g g') : g.discW w ≤ g'.discW w := by
   induction h with
   | done => exact Nat.le_refl _
   | step _ hm _ ih => exact Nat.le_trans (hm.disc_mono w) ih
-  | trigger _ _ _ hl ht _ ih =>
-      exact Nat.le_trans (ht.disc_mono hw
-        (fun ab hab => Effect.recOk_nil (GameState.owedTrigs_recFilters (hl.mem_iff.1 hab)))
-        (fun _ hy => hy)) ih
+  | trigger _ _ _ ho _ ih => exact Nat.le_trans (ho.disc_mono hw) ih
 
 theorem TRun.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} {e : Effect}
     {g g' : GameState} (h : TRun e g g') :
@@ -610,9 +645,9 @@ theorem Resolve.flags_keep {g g' : GameState} (h : Resolve g g') : Flags g g' :=
   induction h with
   | done => exact Flags.refl _
   | step _ hm _ ih => exact hm.flags_keep.trans ih
-  | trigger _ _ _ _ ht _ ih =>
-      have h₁ := ht.flags_keep
-      exact ⟨ih.attacked.trans h₁.attacked, ih.gxCur.trans h₁.gxCur, ih.gxOpp.trans h₁.gxOpp⟩
+  | trigger _ _ _ ho _ ih =>
+      have z := ho.zoneOnly
+      exact ⟨ih.attacked.trans z.attacked, ih.gxCur.trans z.cur_gxUsed, ih.gxOpp.trans z.opp_gxUsed⟩
 
 theorem TRun.flags_keep {e : Effect} {g g' : GameState} (h : TRun e g g') : Flags g g' := by
   induction h with
@@ -672,6 +707,19 @@ theorem Fire.keeps {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : F
     rw [GameState.discAmt_eq, GameState.discAmt_eq]; exact this,
    hf.attacked, hf.gxCur, hf.gxOpp⟩
 
+/-- **The resolution of the owed triggers keeps what `Keeps` asks** (milestone MV7c): none of them
+recycles, and they change no flag. -/
+theorem Owed.keeps {g g' : GameState} (h : Owed g g') : Keeps g g' :=
+  have z := h.zoneOnly
+  ⟨by
+    have := h.disc_mono (w := Card.amt) Card.amt_tw
+    rw [GameState.discAmt_eq, GameState.discAmt_eq]; exact this,
+   z.attacked, z.cur_gxUsed, z.opp_gxUsed⟩
+
+theorem Owed.slotAmt {g g' : GameState} (h : Owed g g') (s : Slot) :
+    g'.slotAmt s = g.slotAmt s := by
+  simp only [GameState.slotAmt, h.zoneOnly.cur_mods, h.zoneOnly.opp_mods]; rfl
+
 theorem Resolve.keeps {g g' : GameState} (h : Resolve g g') :
     Keeps g g' ∧ ∀ s, g'.slotAmt s = g.slotAmt s := by
   induction h with
@@ -679,11 +727,11 @@ theorem Resolve.keeps {g g' : GameState} (h : Resolve g g') :
   | step _ hm _ ih =>
       obtain ⟨k₁, s₁⟩ := hm.keeps
       exact ⟨k₁.trans ih.1, fun s => (ih.2 s).trans (s₁ s)⟩
-  | trigger _ _ _ hl ht _ ih =>
-      have k₁ := ht.keeps (fun ab hab => GameState.owedTrigs_recFilters (hl.mem_iff.1 hab))
+  | trigger _ _ _ ho _ ih =>
+      have k₁ := ho.keeps
       exact ⟨⟨Nat.le_trans k₁.disc ih.1.disc, ih.1.attacked.trans k₁.attacked,
         ih.1.gxCur.trans k₁.gxCur, ih.1.gxOpp.trans k₁.gxOpp⟩,
-        fun s => (ih.2 s).trans (ht.slotAmt s)⟩
+        fun s => (ih.2 s).trans (ho.slotAmt s)⟩
 
 theorem TRun.keeps {e : Effect} {g g' : GameState} (h : TRun e g g') (hn : e.recFilters = []) :
     Keeps g g' :=
@@ -1192,6 +1240,15 @@ def InPlay.abW (p : InPlay) : Nat := (if p.used then 0 else 1) + (if p.fresh the
 theorem InPlay.abW_le (p : InPlay) : p.abW ≤ 3 := by
   unfold InPlay.abW; split <;> split <;> omega
 
+/-- Marking a Pokémon that moved (milestone MV7c) spends its "once during your turn" limit: its
+weight does not rise. -/
+theorem InPlay.abW_noteMove (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).abW ≤ p.abW := by
+  unfold InPlay.noteMove
+  split
+  · simp only [InPlay.abW]; split <;> split <;> simp_all
+  · exact Nat.le_refl _
+
 def abWs : List InPlay → Nat
   | [] => 0
   | p :: ps => p.abW + abWs ps
@@ -1485,10 +1542,10 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
       cases w with
       | own =>
           simp only [GameState.side] at ha hb
-          have e1 : a.cure.unlock.abW = a.abW := rfl
-          have e2 : (Whose.mover .own q).abW = q.abW := rfl
+          have e1 : (Whose.noteDown .own a.cure.unlock).abW ≤ a.abW := InPlay.abW_noteMove _ _ _
+          have e2 : (Whose.noteUp .own (Whose.mover .own q)).abW ≤ q.abW := InPlay.abW_noteMove _ _ _
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, ha, hb, abWo, optN,
-            abWs_append, abWs, e1, e2, List.length_append, List.length_cons, Whose.noteBenched,
+            abWs_append, abWs, List.length_append, List.length_cons, Whose.noteBenched,
             GameState.noteBenched]; omega
       | opp => exact Nat.le_refl _
   | @benchDamage g q b₁ b₂ w n h =>
@@ -1599,12 +1656,28 @@ theorem KOBatch.abPot_le {g g' : GameState} (h : KOBatch g g') (hw : g'.winner =
   have hw' : g.koStep.winner = none := pw ▸ hw
   obtain ⟨-, -, h2⟩ := GameState.koStep_winner_none hw'
   have hpw := (winWays_eq_zero h2).1
-  have hcur : g'.cur.abPot = (g.koOf .own).abPot := by
+  have hcur : g'.cur.abPot ≤ (g.koOf .own).abPot := by
     cases h with
-    | won => rfl
-    | go _ _ hc _ =>
+    | won => exact Nat.le_refl _
+    | @go ac ao bc bo _ _ hc _ =>
         obtain ⟨e1, e2⟩ := hc.abPot
-        exact PlayerState.abPot_congr e1 e2
+        have k1 : abWo (if g.promoUp then ac.map (InPlay.noteMove .movedUp .active) else ac) ≤
+            abWo ac := by
+          split
+          · cases ac with
+            | none => exact Nat.le_refl _
+            | some x => exact InPlay.abW_noteMove _ _ x
+          · exact Nat.le_refl _
+        have k2 : optN (if g.promoUp then ac.map (InPlay.noteMove .movedUp .active) else ac) =
+            optN ac := by
+          split
+          · cases ac <;> rfl
+          · rfl
+        have e : (g.koOf .own).abPot = g.koStep.cur.abPot := rfl
+        rw [e]
+        simp only [PlayerState.abPot] at e1 e2 ⊢
+        simp only [GameState.afterBatch, GameState.withPlay, k2]
+        omega
   have hk : (g.koOf .own).abPot ≤ g.cur.abPot + 2 * g.koVal .own :=
     PlayerState.koOut_abPot (g.koT .own .active) (g.koT .own .bench) g.cur
   have hpr : g'.opp.prizes = g.opp.prizes.drop (g.koVal .own) := p2
@@ -1624,7 +1697,7 @@ theorem KOBatch.abPot_le {g g' : GameState} (h : KOBatch g g') (hw : g'.winner =
               simp only [List.length_drop, List.length_cons] at this
               omega
         omega
-  simp only [GameState.abPot, hcur]
+  simp only [GameState.abPot]
   omega
 
 /-- An effect of the trigger fragment never raises the potential of the opponent of the player it
@@ -1682,6 +1755,42 @@ theorem Fire.abPot_le {ev : TrigEvent} {l : List Ability} {g g' : GameState}
       exact Nat.le_trans ih h3
   | decline _ _ ih => exact ih
 
+/-- Triggers resolved on the exchanged state do not raise the potential of the player to move of
+the state before the exchange (milestone MV7c): each step is a resolution from that player's side,
+and no resolution raises their potential (`Run.abPot_le`). -/
+theorem Fire.swap_abPot_le {ev : TrigEvent} {l : List Ability} {g g' : GameState}
+    (h : Fire ev l g g') : g'.swap.abPot ≤ g.swap.abPot := by
+  induction h with
+  | nil => exact Nat.le_refl _
+  | @run ab l g g₁ g₂ hk hr _ ih =>
+      have h1 := hr.abPot_le
+      rw [GameState.swap_swap] at ih
+      exact Nat.le_trans ih h1
+  | decline _ _ ih => exact ih
+
+/-- **The player to move's own triggers do not raise their potential** (milestone MV7c). -/
+theorem FireMine.abPot_le {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :
+    g'.abPot ≤ g.abPot := by
+  obtain ⟨g₁, g₂, h₁, h₂, rfl⟩ := h
+  have a := h₁.swap_abPot_le
+  have b := h₂.swap_abPot_le
+  rw [GameState.swap_swap] at a
+  exact Nat.le_trans b a
+
+/-- **The resolution of the owed triggers does not raise the potential** (milestone MV7c). -/
+theorem Owed.abPot_le {g g' : GameState} (h : Owed g g') : g'.abPot ≤ g.abPot := by
+  have e : g.unpend.abPot = g.abPot := by
+    have ea : abWo (g.cur.active.map InPlay.clearOwe) = abWo g.cur.active := by
+      cases g.cur.active <;> rfl
+    have en : optN (g.cur.active.map InPlay.clearOwe) = optN g.cur.active := by
+      cases g.cur.active <;> rfl
+    simp only [GameState.abPot, GameState.unpend, PlayerState.abPot, ea, en,
+      abWs_map (f := InPlay.clearOwe) (fun _ => rfl), List.length_map]
+  rw [← e]
+  cases h with
+  | mineFirst _ _ _ hm ht => exact Nat.le_trans ht.abPot_le hm.abPot_le
+  | oppFirst _ _ _ ht hm => exact Nat.le_trans hm.abPot_le ht.abPot_le
+
 /-- A resolution that ends with no winner passed only through states with no winner. -/
 theorem Resolve.winner_back {g g' : GameState} (h : Resolve g g') (hw : g'.winner = none) :
     g.winner = none := by
@@ -1708,7 +1817,7 @@ theorem Resolve.abPot_le {g g' : GameState} (h : Resolve g g') (hw : g'.winner =
   induction h with
   | done => exact Nat.le_refl _
   | step _ hm hr ih => exact Nat.le_trans (ih hw) (hm.abPot_le (hr.winner_back hw))
-  | trigger _ _ _ _ ht _ ih => exact Nat.le_trans (ih hw) ht.abPot_le
+  | trigger _ _ _ ho _ ih => exact Nat.le_trans (ih hw) ho.abPot_le
 
 /-- A Trainer effect's resolution does not raise the potential, unless it ends the game. -/
 theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : g'.winner = none) :

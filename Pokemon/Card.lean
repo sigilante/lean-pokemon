@@ -1169,31 +1169,67 @@ of today's Standard.
   the rest of the attack has moved them (`Pokemon/Gust.lean`; departures in the Known gaps of
   `Pokemon/Rules.lean`).
 
-All three belong to the player whose turn it is not, and their effects are written from that
-player's side: `.own` is the owner, `.opp` the player to move, so "the Attacking Pokémon" is the
-opponent's Active Pokémon (`counters`, `inflict`, `discardEnergy .opp .active`). -/
+* `movedUp`, `movedDown` (milestone MV7c; survey S20 §a, group (a)): "Once during your turn, when
+  this Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3) and "Once
+  during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this
+  Ability. …" (Clawitzer me1-38). The "once during your turn" limit is part of the event: the
+  holder's `InPlay.used` flag (shared with activated Abilities, exact for one-Ability cards) is
+  set when the event marks it, and a holder with the flag set is not marked. Raised for the player
+  to move's own Pokémon, in their turn: by a retreat (`Move.retreat`: the retreating Pokémon moves
+  down, the one switched in moves up), by a switch of their own Active Pokémon inside any effect of
+  their turn (`Run.switch .own`, including `SelfOp.switchIn`), and (`movedUp`) by the promotion of a
+  Benched Pokémon after a Knock Out of their Active Pokémon in their own turn (`KOBatch`,
+  `GameState.promoUp`; not between turns, at Checkup, which is no player's turn, and not for the
+  opponent's promotion, in a turn that is not the opponent's). The event marks the holder
+  (`InPlay.owe`: `some .active` moved up, `some .bench` moved down, `InPlay.noteMove`) and sets the
+  record (`GameState.pend`); the resolution (`Owed`) fires the marked holders' triggers with "this
+  Pokémon" at its new place (`TrigEvent.place`), before anything else, as for `oppBenched`.
+
+`damaged`, `koByAttack` and `oppBenched` belong to the player whose turn it is not, and their effects
+are written from that player's side: `.own` is the owner, `.opp` the player to move, so "the
+Attacking Pokémon" is the opponent's Active Pokémon (`counters`, `inflict`, `discardEnergy .opp
+.active`). `movedUp` and `movedDown` belong to the player to move (`TrigEvent.mine`), and their
+effects are written from that player's side too: `.own` is the owner, the player to move. -/
 inductive TrigEvent where
   | damaged
   | koByAttack
   | oppBenched
+  | movedUp
+  | movedDown
   deriving DecidableEq
 
 /-- Where "this Pokémon" is when a trigger on the event resolves: in the Active Spot for `damaged`;
 nowhere in play for `koByAttack` (it has been Knocked Out), so an effect on it is not tracked; for
-`oppBenched` not tracked either (the trigger's Pokémon may be Active or Benched). -/
+`oppBenched` not tracked either (the trigger's Pokémon may be Active or Benched); (milestone MV7c) in
+the Active Spot for `movedUp` (the Pokémon has just moved there, and nothing moves the player's
+Active Pokémon before the resolution: a well-formed attack switches it at most once, `Attack.wf`, and
+the trigger fragment has no switch), on the Bench for `movedDown` (where an effect on "this Pokémon"
+acts on one Benched Pokémon chosen when it resolves, `SelfOp.atS`: a superset). -/
 def TrigEvent.place : TrigEvent → Option Spot
   | .damaged => some .active
   | .koByAttack => none
   | .oppBenched => none
+  | .movedUp => some .active
+  | .movedDown => some .bench
 
 /-- Does the event fire only after the turn's attack (milestone MV7)? `damaged` and `koByAttack` do;
-`oppBenched` fires at any time of the turn, as often as the player switches, so its effects must
-recycle nothing (`Ability.trigOn`): the per-turn store invariant needs the discard piles kept before
-the attack (`StoreSafe`, clause 3 (a)). -/
+`oppBenched` (and, milestone MV7c, `movedUp`, `movedDown`) fire at any time of the turn, as often as
+the player switches, so their effects must recycle nothing (`Ability.trigOn`): the per-turn store
+invariant needs the discard piles kept before the attack (`StoreSafe`, clause 3 (a)). -/
 def TrigEvent.late : TrigEvent → Bool
   | .damaged => true
   | .koByAttack => true
   | .oppBenched => false
+  | .movedUp => false
+  | .movedDown => false
+
+/-- Does a trigger of the event belong to the player to move (milestone MV7c)? `movedUp` and
+`movedDown` do (the player's own Pokémon moved in their turn); the other three belong to the
+player whose turn it is not. -/
+def TrigEvent.mine : TrigEvent → Bool
+  | .movedUp => true
+  | .movedDown => true
+  | _ => false
 
 /-- The use limit of an Ability (survey S9 part 2, `ability_kind`): "Once during your turn, you
 may …" (`once`: once per turn for each Pokémon in play that has it); "As often as you like during
@@ -1201,8 +1237,9 @@ your turn, you may …" (`unlimited`); or a trigger on entering play from the ha
 may", so optional); or (milestone M6) static (`static ss`: never used; its static effects `ss` are
 in force while the Pokémon is in play, `Pokemon/Static.lean`); or (milestone M8b) triggered by the
 event `ev` (`triggered ev opt`; `opt`: "you may", so the owner may decline it; otherwise it must
-resolve). Other triggered Abilities (S12, S20: Checkup, the player's own moves between spots,
-attaching Energy, the opponent's plays, replacement effects) have no constructor. -/
+resolve). The events are those of `TrigEvent` (since milestone MV7c the player's own moves between
+the Bench and the Active Spot too); other triggered Abilities (S12, S20: attaching Energy, the
+opponent's evolution and plays, replacement effects) have no constructor. -/
 inductive AbilityUse where
   | once
   | unlimited

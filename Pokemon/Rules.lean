@@ -1206,24 +1206,21 @@ def ListNoOwe (b : List InPlay) : Prop := ∀ p ∈ b, p.owe = none
 /-- No Pokémon of the player in play carries an owed-trigger mark (milestone MV7b). -/
 def PlayerState.NoMarks (s : PlayerState) : Prop := OptNoOwe s.active ∧ ListNoOwe s.bench
 
-/-- **Marks only while a trigger is pending, and only on the non-mover's Pokémon** (milestone MV7b,
-after review): no Pokémon of the player to move carries an owed-trigger mark (`InPlay.owe`), and
-the opponent's carry none unless a trigger is pending (`GameState.pend`). Marks are written only
-by `GameState.noteBenched`, on the opponent's Pokémon that have an `oppBenched` trigger, which
-sets the record, and cleared by every resolution (`GameState.unpend`); play keeps this
+/-- **Marks only while a trigger is pending** (milestone MV7b, after review; since milestone MV7c on
+both sides): no Pokémon carries an owed-trigger mark (`InPlay.owe`) unless a trigger is pending
+(`GameState.pend`). Marks are written only where the record is set: on the opponent's Pokémon that
+have an `oppBenched` trigger (`GameState.noteBenched`), and (milestone MV7c) on the player to move's
+Pokémon that moved and owe a `movedUp` or `movedDown` trigger (`InPlay.noteMove`, by a retreat, a
+switch, whose `noteBenched` then sets the record, or a promotion in the batch Knock Out step, which
+sets it itself); every resolution clears them all (`GameState.unpend`). Play keeps this
 (`Move.marksOk`, `Reach.marksOk`), and it is part of `WellFormed`, so a start state with a stale
-mark (which would fire at the next event as an owed trigger) is not well formed. -/
+mark (which would fire at the next event as an owed trigger) is not well formed. Until milestone MV7c
+the first conjunct was that the player to move's Pokémon carry no mark at all. -/
 def GameState.MarksOk (g : GameState) : Prop :=
-  g.cur.NoMarks ∧ (g.pend = false → g.opp.NoMarks)
-
-/-- `PlayerState.NoMarks`, decided. -/
-def PlayerState.noMarksB (s : PlayerState) : Bool :=
-  (match s.active with
-    | none => true
-    | some p => p.owe.isNone) && s.bench.all fun p => p.owe.isNone
+  g.pend = false → g.cur.NoMarks ∧ g.opp.NoMarks
 
 /-- `GameState.MarksOk`, decided. -/
-def GameState.marksOkB (g : GameState) : Bool := g.cur.noMarksB && (g.pend || g.opp.noMarksB)
+def GameState.marksOkB (g : GameState) : Bool := g.pend || (g.cur.noMarksB && g.opp.noMarksB)
 
 theorem PlayerState.NoMarks.of_b {s : PlayerState} (h : s.noMarksB = true) : s.NoMarks := by
   unfold PlayerState.noMarksB at h
@@ -1235,12 +1232,10 @@ theorem PlayerState.NoMarks.of_b {s : PlayerState} (h : s.noMarksB = true) : s.N
 
 /-- A state whose `GameState.marksOkB` computes to `true` has `MarksOk` (for witnesses). -/
 theorem GameState.MarksOk.of_b {g : GameState} (h : g.marksOkB = true) : g.MarksOk := by
+  intro hp
   unfold GameState.marksOkB at h
-  rw [Bool.and_eq_true] at h
-  refine ⟨.of_b h.1, fun hp => .of_b ?_⟩
-  have h2 := h.2
-  rw [hp, Bool.false_or] at h2
-  exact h2
+  rw [hp, Bool.false_or, Bool.and_eq_true] at h
+  exact ⟨.of_b h.1, .of_b h.2⟩
 
 /-- Well-formed states: while there is no winner both players have Prize cards left, every
 Benched Pokémon is `Benched` (no Special Condition), and (milestone MV7b, after review) the
@@ -1431,6 +1426,42 @@ def GameState.withPlay (g : GameState) (ac : Option InPlay) (bc : List InPlay)
   { g with cur := { g.cur with active := ac, bench := bc },
            opp := { g.opp with active := ao, bench := bo } }
 
+/-- Does the batch Knock Out step from `g` promote a Pokémon of the player to move in their own turn
+(milestone MV7c)? Their Active Pokémon was in play and the check removes it (so the opponent
+takes at least one Prize card for it, or the game ends), during the turn proper
+(`between = false`: a promotion between turns, after Pokémon Checkup, is in no player's turn). The
+Pokémon promoted has then moved from its owner's Bench to the Active Spot during its owner's turn,
+the `movedUp` event. The opponent's promotion, in a turn that is not theirs, raises nothing. -/
+def GameState.promoUp (g : GameState) : Bool :=
+  !g.between && g.cur.active.isSome && g.koStep.cur.active.isNone
+
+/-- Does the promoted Pokémon `ac` (the player to move's Active Spot after the promotions) owe a
+`movedUp` trigger (milestone MV7c)? -/
+def GameState.promoFires (g : GameState) (ac : Option InPlay) : Bool :=
+  g.promoUp && (ac.map (InPlay.fires .movedUp .active)).getD false
+
+/-- **The state after a batch that goes on** (milestone MV7c; before it, `g.koStep.withPlay ac bc ao
+bo`): the check, the promotions to `ac`, `bc` and `ao`, `bo`, and, when the player to move's
+promoted Pokémon owes a `movedUp` trigger (`GameState.promoFires`), that Pokémon marked
+(`InPlay.noteMove`) and the record set. -/
+def GameState.afterBatch (g : GameState) (ac : Option InPlay) (bc : List InPlay)
+    (ao : Option InPlay) (bo : List InPlay) : GameState :=
+  { g.koStep.withPlay (if g.promoUp then ac.map (InPlay.noteMove .movedUp .active) else ac) bc ao bo
+    with pend := g.pend || g.promoFires ac }
+
+/-- The player to move's Active Pokémon after a batch: the one promoted (or kept), marked when it
+owes a `movedUp` trigger; a reading `f` that the mark does not change reads it as promoted. -/
+theorem GameState.afterBatch_active_map {β : Type} {f : InPlay → β}
+    (hf : ∀ p, f (p.noteMove .movedUp .active) = f p) (g : GameState) (ac : Option InPlay)
+    (bc : List InPlay) (ao : Option InPlay) (bo : List InPlay) :
+    (g.afterBatch ac bc ao bo).cur.active.map f = ac.map f := by
+  show (if g.promoUp then ac.map (InPlay.noteMove .movedUp .active) else ac).map f = ac.map f
+  split
+  · cases ac with
+    | none => rfl
+    | some p => simp only [Option.map_some, hf]
+  · rfl
+
 /-- **The batch Knock Out step.** From a state that is not `Calm` (a Pokémon in play has damage
 at least its HP, or an Active Spot is empty) and has no trigger ready to resolve (`hq`, milestone
 MV7: no trigger pending, `GameState.pend = false`, or an Active Spot empty; a pending trigger
@@ -1464,7 +1495,7 @@ inductive KOBatch : GameState → GameState → Prop where
       (hc : Promote g.koStep.cur.active g.koStep.cur.bench ac bc)
       (ho : Promote g.koStep.opp.active g.koStep.opp.bench ao bo)
       (hq : g.pend = false ∨ ¬ g.BothActive := by first | exact .inl rfl | assumption) :
-      KOBatch g (g.koStep.withPlay ac bc ao bo)
+      KOBatch g (g.afterBatch ac bc ao bo)
 
 /-- `Calm`, decided. -/
 def GameState.calmB (g : GameState) : Bool :=
@@ -1505,6 +1536,32 @@ instance (g : GameState) : Decidable (Calm g) :=
 instance (g : GameState) : Decidable (Settled g) :=
   decidable_of_iff _ (GameState.settled_iff g).symm
 
+/-- **The player to move's own triggers** (milestone MV7c): the `movedUp` triggers `u`, then the
+`movedDown` triggers `d`, each in the order given, resolved from that player's side. `Fire` resolves
+the triggers of the player whose turn it is not, on the exchanged state (`GameState.swap`); run on
+the exchanged state `g.swap`, it resolves them on `g` itself, from the player to move's side, and
+the result is exchanged back. -/
+def FireMine (u d : List Ability) (g g' : GameState) : Prop :=
+  ∃ g₁ g₂, Fire .movedUp u g.swap g₁ ∧ Fire .movedDown d g₁ g₂ ∧ g' = g₂.swap
+
+/-- **The resolution of the owed triggers** (milestone MV7c; before it, the `oppBenched` triggers
+alone): the triggers marked at the event, read on `g` (`GameState.owedTrigs` of the opponent,
+`GameState.upOwed` and `GameState.downOwed` of the player to move), resolved on the state with the
+record and every mark cleared (`GameState.unpend`): the player to move's own (`FireMine`) and the
+opponent's (`Fire .oppBenched`), each player's in any order (`List.Perm`; "you may" ones
+declinable), the player to move's first (`mineFirst`) or the opponent's first (`oppFirst`). The
+rulebook gives no order for triggered Abilities of both players at once (it orders effects only at
+Pokémon Checkup, 2026 p. 15); the two constructors cover the two players' blocks in either order,
+not interleavings of the two blocks, and within the player to move's block the `movedUp` triggers
+come before the `movedDown` ones (Known gaps). -/
+inductive Owed (g : GameState) : GameState → Prop where
+  | mineFirst {u d l : List Ability} {g₁ g' : GameState} (hu : u.Perm g.upOwed)
+      (hd : d.Perm g.downOwed) (hl : l.Perm g.owedTrigs) (hm : FireMine u d g.unpend g₁)
+      (ht : Fire .oppBenched l g₁ g') : Owed g g'
+  | oppFirst {u d l : List Ability} {g₁ g' : GameState} (hu : u.Perm g.upOwed)
+      (hd : d.Perm g.downOwed) (hl : l.Perm g.owedTrigs) (ht : Fire .oppBenched l g.unpend g₁)
+      (hm : FireMine u d g₁ g') : Owed g g'
+
 /-- `Resolve g g'`: take every pending Knock Out now. Batch Knock Out steps (`KOBatch`: the check
 of every Pokémon in play at once, the Prize cards, the outcome, then the promotions) are made one
 after another until the state is `Settled` or the game is over. Stopping earlier is not allowed:
@@ -1519,9 +1576,8 @@ inductive Resolve : GameState → GameState → Prop where
   | done {g : GameState} (h : Settled g ∨ g.winner ≠ none) : Resolve g g
   | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOBatch g g₁)
       (hr : Resolve g₁ g') : Resolve g g'
-  | trigger {g g₁ g' : GameState} {l : List Ability} (hn : g.winner = none) (hb : g.BothActive)
-      (hp : g.pend = true) (hl : l.Perm g.owedTrigs)
-      (ht : Fire .oppBenched l g.unpend g₁) (hr : Resolve g₁ g') : Resolve g g'
+  | trigger {g g₁ g' : GameState} (hn : g.winner = none) (hb : g.BothActive)
+      (hp : g.pend = true) (ho : Owed g g₁) (hr : Resolve g₁ g') : Resolve g g'
 
 /-- **Resolution of a Trainer card's effect**, with the rulebook's Knock Out timing: a Pokémon
 whose damage reaches its HP at any time other than during an attack or Checkup is Knocked Out
@@ -1940,8 +1996,8 @@ inductive Move : GameState → GameState → Prop where
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g ({ g with cur := { g.cur with
-        active := some q.moveUp,
-        bench := b₁ ++ { a with
+        active := some (q.moveUp.noteMove .movedUp .active),
+        bench := b₁ ++ InPlay.noteMove .movedDown .bench { a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0,
           lk := {} } :: b₂,
         discard := paid ++ g.cur.discard, retreated := true } } : GameState).noteBenched
@@ -2115,8 +2171,7 @@ inductive Move : GameState → GameState → Prop where
   (`GameState.unpend`). Before any
   other move, the batch Knock Out step included: every other move needs `Settled`, or (`endTurn`,
   `startTurn`, `deckOut`) `pend = false`, and the batch step needs no trigger ready (`KOBatch`) -/
-  | trigger {g g' : GameState} {l : List Ability} (hb : g.BothActive) (hp : g.pend = true)
-      (hl : l.Perm g.owedTrigs) (ht : Fire .oppBenched l g.unpend g') :
+  | trigger {g g' : GameState} (hb : g.BothActive) (hp : g.pend = true) (ho : Owed g g') :
       Move g g'
   /-- end the turn: Pokémon Checkup on both Active Pokémon, with coin flips `fa`, `sa`, `ca`
   (Burn, Sleep, Char) for the opponent's and `fb`, `sb`, `cb` for the player's own, and the Char
@@ -2210,8 +2265,32 @@ theorem KOBatch.not_ready {g g' : GameState} (h : KOBatch g g') :
   cases h <;> assumption
 
 /-- The batch Knock Out step keeps the pending-trigger record (milestone MV7). -/
-theorem KOBatch.pend_eq {g g' : GameState} (h : KOBatch g g') : g'.pend = g.pend := by
-  cases h <;> rfl
+theorem KOBatch.pend_cases {g g' : GameState} (h : KOBatch g g') :
+    g'.pend = g.pend ∨ (g'.pend = true ∧ g.promoUp = true) := by
+  cases h with
+  | won => exact .inl rfl
+  | @go ac ao bc bo _ _ _ _ _ =>
+      show (g.pend || g.promoFires ac) = g.pend ∨ ((g.pend || g.promoFires ac) = true ∧ _)
+      cases hf : g.promoFires ac
+      · exact .inl (Bool.or_false _)
+      · refine .inr ⟨Bool.or_true _, ?_⟩
+        simp only [GameState.promoFires, Bool.and_eq_true] at hf
+        exact hf.1
+
+/-- The batch Knock Out step keeps the record unless it promotes the player to move's Pokémon in
+their own turn (milestone MV7c; before it, always). -/
+theorem KOBatch.pend_eq_of {g g' : GameState} (h : KOBatch g g') (hn : g.promoUp = false) :
+    g'.pend = g.pend := by
+  rcases h.pend_cases with e | ⟨-, e⟩
+  · exact e
+  · rw [hn] at e; cases e
+
+/-- The batch Knock Out step never clears the record. -/
+theorem KOBatch.pend_mono {g g' : GameState} (h : KOBatch g g') (hp : g.pend = true) :
+    g'.pend = true := by
+  rcases h.pend_cases with e | ⟨e, -⟩
+  · exact e.trans hp
+  · exact e
 
 /-- When the check ends the game, the batch Knock Out step is the check alone. -/
 theorem KOBatch.eq_of_won {g g' : GameState} (h : KOBatch g g') (hw : g.koStep.winner ≠ none) :
@@ -2272,8 +2351,7 @@ theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
 with both Active Spots filled and a trigger pending, the owed `oppBenched` triggers fire, in
 any order, on the state with the record cleared. -/
 def TrigMove (g g' : GameState) : Prop :=
-  g.BothActive ∧ g.pend = true ∧
-    ∃ l, l.Perm g.owedTrigs ∧ Fire .oppBenched l g.unpend g'
+  g.BothActive ∧ g.pend = true ∧ Owed g g'
 
 /-- **From a state that is not `Settled` the only moves are the batch Knock Out step and the
 resolution of pending triggers**: every other move needs `Settled` (`endTurn`, `startTurn` and
@@ -2287,7 +2365,7 @@ theorem Move.batch_of_not_settled {g g' : GameState} (hm : Move g g') (hu : ¬ S
     ⟨hk, by rw [hb]; exact Option.some_ne_none _, by rw [ha]; exact Option.some_ne_none _, hp⟩
   cases hm with
   | knockOuts h hl ht => exact .inl ⟨_, _, h, hl, ht⟩
-  | trigger hc hp hl ht => exact .inr ⟨hc, hp, _, hl, ht⟩
+  | trigger hc hp ho => exact .inr ⟨hc, hp, ho⟩
   | endTurn _ _ _ _ _ _ ha hb hk _ _ _ hpd => exact absurd (of hk ha hb hpd) hu
   | startTurn _ ha hb hk _ hpd => exact absurd (of hk ha hb hpd) hu
   | deckOut _ ha hb hk _ hpd => exact absurd (of hk ha hb hpd) hu

@@ -72,8 +72,8 @@ theorem s0_settled (hand : List Card) (opt : Bool) : Settled (s0 hand opt) := by
 /-- The state after the retreat (`sitter` moved up, `runner` Benched), with the event raised. -/
 def s1 (opt : Bool) : GameState :=
   ({ s0 [nestCard] opt with cur := { (s0 [nestCard] opt).cur with
-      active := some (InPlay.ofBasic sitterC).moveUp,
-      bench := [] ++ { InPlay.ofBasic runnerC with
+      active := some ((InPlay.ofBasic sitterC).moveUp.noteMove .movedUp .active),
+      bench := [] ++ InPlay.noteMove .movedDown .bench { InPlay.ofBasic runnerC with
         energy := [], rot := .none, poisoned := false, burned := false, poisonUp := 0,
         lk := {} } :: [],
       discard := [] ++ (s0 [nestCard] opt).cur.discard, retreated := true } } : GameState).noteBenched
@@ -94,9 +94,10 @@ def burnt : InPlay := (InPlay.ofBasic sitterC).moveUp.inflict .burned
 theorem retreat_fires (opt : Bool) :
     ∃ g₂, Move (s1 opt) g₂ ∧ g₂.cur.active = some burnt ∧ g₂.opp.hand = [.energy .grass] ∧
       Settled g₂ := by
-  refine ⟨_, .trigger (l := [surge opt]) (retreat_raises opt).2.2.1.bothActive (retreat_raises opt).2.1
-    (by cases opt <;> exact .refl _)
-    (.run (by cases opt <;> rfl) (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _)), rfl, rfl, ?_⟩
+  refine ⟨_, .trigger (retreat_raises opt).2.2.1.bothActive (retreat_raises opt).2.1
+    (.of_opp (l := [surge opt]) (by cases opt <;> rfl) (by cases opt <;> rfl)
+      (by cases opt <;> exact .refl _)
+      (.run (by cases opt <;> rfl) (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _))), rfl, rfl, ?_⟩
   cases opt <;> exact (GameState.settled_iff _).2 (by decide)
 
 /-- **The mandatory trigger cannot be skipped**: every move after the retreat Burns the new Active
@@ -104,9 +105,10 @@ Pokémon and gives the owner the card. -/
 theorem retreat_forced :
     ∀ g₂, Move (s1 false) g₂ → g₂.cur.active = some burnt ∧ g₂.opp.hand = [.energy .grass] := by
   intro g₂ hm
-  rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, l, hl, ht⟩
+  rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, ho⟩
   · exact absurd (retreat_raises false).2.2.1 hb.not_calm
-  · have e : (s1 false).owedTrigs = [surge false] := rfl
+  · obtain ⟨l, hl, ht⟩ := ho.opp_inv rfl rfl
+    have e : (s1 false).owedTrigs = [surge false] := rfl
     rw [e] at hl
     rw [List.perm_singleton.1 hl] at ht
     cases ht with
@@ -136,8 +138,9 @@ draws nothing. -/
 theorem retreat_declined :
     ∃ g₂, Move (s1 true) g₂ ∧ g₂.cur.active = some (InPlay.ofBasic sitterC).moveUp ∧
       g₂.opp.hand = [] ∧ Settled g₂ :=
-  ⟨_, .trigger (l := [surge true]) (retreat_raises true).2.2.1.bothActive (retreat_raises true).2.1 (.refl _)
-    (.decline rfl (.nil _)), rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩
+  ⟨_, .trigger (retreat_raises true).2.2.1.bothActive (retreat_raises true).2.1
+    (.of_opp (l := [surge true]) rfl rfl (.refl _) (.decline rfl (.nil _))), rfl, rfl,
+    (GameState.settled_iff _).2 (by decide)⟩
 
 /-- **A Switch fires the trigger inside the Item's resolution** (`Resolve.trigger`). -/
 theorem switch_fires (opt : Bool) :
@@ -145,9 +148,10 @@ theorem switch_fires (opt : Bool) :
       g'.opp.hand = [.energy .grass] ∧ Settled g' := by
   refine ⟨_, .item (l₁ := []) (l₂ := []) rfl rfl (s0_settled _ opt)
     (.prim rfl rfl (.switch (b₁ := []) .own rfl rfl)
-      (.trigger (l := [surge opt]) rfl ⟨rfl, rfl⟩
-        (by cases opt <;> rfl) (by cases opt <;> exact .refl _)
-        (.run (by cases opt <;> rfl) (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _))
+      (.trigger rfl ⟨rfl, rfl⟩ (by cases opt <;> rfl)
+        (.of_opp (l := [surge opt]) (by cases opt <;> rfl) (by cases opt <;> rfl)
+          (by cases opt <;> exact .refl _)
+          (.run (by cases opt <;> rfl) (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _)))
         (.done (.inl (by cases opt <;> exact (GameState.settled_iff _).2 (by decide))))))
     rfl rfl rfl rfl, ?_, ?_, ?_⟩ <;> cases opt <;> first | rfl | exact (GameState.settled_iff _).2 (by decide)
 
@@ -160,8 +164,9 @@ theorem copy_quiet :
       g₃.cur.bench = [InPlay.ofBasic runnerC, InPlay.ofBasic runnerC] ∧
       g₃.cur.active = g₂.cur.active ∧ g₃.opp.hand = g₂.opp.hand ∧ g₂.opp.hand = [.energy .grass] ∧
       Settled g₃ := by
-  refine ⟨_, _, .trigger (l := [surge false]) (retreat_raises false).2.2.1.bothActive (retreat_raises false).2.1
-      (.refl _) (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _)),
+  refine ⟨_, _, .trigger (retreat_raises false).2.2.1.bothActive (retreat_raises false).2.1
+      (.of_opp (l := [surge false]) rfl rfl (.refl _)
+        (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _))),
     .item (l₁ := []) (l₂ := []) rfl rfl ((GameState.settled_iff _).2 (by decide))
       (.prim rfl rfl (.zone rfl (.putBench (.take rfl .nil) rfl (by decide) (by decide)))
         (.done (.inl ((GameState.settled_iff _).2 (by decide))))) rfl rfl rfl rfl,
@@ -177,11 +182,11 @@ theorem one_split {α : Type} {x q : α} {b₁ b₂ : List α} (h : [x] = b₁ +
 
 /-- The Nest Item's effect raises nothing. -/
 theorem nest_pend {X Y : GameState} (h : TRun (.putBench .own .deck (.named "Runner")) X Y)
-    (hp : X.pend = false) : Y.pend = false := by
+    (hp : X.pend = false) (hf : X.EvFree .movedUp) : Y.pend = false := by
   cases h with
   | stop => exact hp
   | prim _ _ hr hk =>
-      refine hk.pend_false ?_
+      refine hk.pend_false ?_ (hf.of_perm hr.perm)
       cases hr with
       | @zone _ w _ _ _ _ => cases w <;> exact hp
       | touchActive he => simp [Effect.touch] at he
@@ -192,8 +197,9 @@ resolution of its trigger, and then every move (the Nest Item among them), leave
 pending. -/
 theorem copy_quiet_all : ∀ g₂ g₃, Move (s1 false) g₂ → Move g₂ g₃ → g₃.pend = false := by
   intro g₂ g₃ hm h3
-  rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, l, hl, ht⟩
+  rcases hm.batch_of_not_settled (retreat_raises false).2.2.2 with ⟨g₁, l, hb, -⟩ | ⟨-, -, ho⟩
   · exact absurd (retreat_raises false).2.2.1 hb.not_calm
+  obtain ⟨l, hl, ht⟩ := ho.opp_inv rfl rfl
   have e : (s1 false).owedTrigs = [surge false] := rfl
   rw [e] at hl
   rw [List.perm_singleton.1 hl] at ht
@@ -225,7 +231,7 @@ theorem copy_quiet_all : ∀ g₂ g₃, Move (s1 false) g₂ → Move g₂ g₃ 
       have hh' : [nestCard] = _ ++ _ :: _ := hh
       obtain ⟨rfl, he, rfl⟩ := one_split hh'
       cases he
-      exact nest_pend hr rfl
+      exact nest_pend hr rfl (by unfold GameState.EvFree; decide)
   | supporter hh =>
       have hh' : [nestCard] = _ ++ _ :: _ := hh
       obtain ⟨-, he, -⟩ := one_split hh'
@@ -271,6 +277,9 @@ theorem t0_settled : Settled t0 :=
 
 theorem t0_benchedFree : t0.BenchedFree := by unfold GameState.BenchedFree; decide
 
+theorem t0_moveFree : t0.MoveFree :=
+  ⟨t0_benchedFree, by unfold GameState.EvFree; decide, by unfold GameState.EvFree; decide⟩
+
 /-- **With no such trigger, a retreat raises nothing, in every continuation**: from the
 well-formed, `Settled` start `t0` the retreat is a legal move to a `Settled` state with nothing
 pending, and every state reached by any play from `t0` has nothing pending (`Reach.pend_false`). -/
@@ -279,6 +288,6 @@ theorem retreat_quiet :
       Settled g) ∧ ∀ g, Reach t0 g → g.pend = false :=
   ⟨⟨_, .retreat (b₁ := []) (b₂ := []) rfl rfl rfl .nil rfl rfl rfl t0_settled rfl rfl, rfl, rfl,
       (GameState.settled_iff _).2 (by decide)⟩,
-    fun _ h => h.pend_false t0_benchedFree rfl⟩
+    fun _ h => h.pend_false t0_moveFree t0_wellFormed.2.2.2 rfl⟩
 
 end Pokemon.Benched

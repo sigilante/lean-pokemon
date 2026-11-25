@@ -116,7 +116,7 @@ theorem double_ko_then_draw (opt : Bool) :
   have hb : KOBatch (hit opt two) _ :=
     .go hu hw (ac := some (InPlay.ofBasic big)) (bc := []) (ao := some (InPlay.ofBasic big))
       (bo := []) (by cases opt <;> exact .pick (b₁ := [])) (by cases opt <;> exact .pick (b₁ := []))
-  have ht : (hit opt two).batchTrigs ((hit opt two).koStep.withPlay (some (InPlay.ofBasic big)) [] (some (InPlay.ofBasic big)) []) = [lastWord opt] := by
+  have ht : (hit opt two).batchTrigs ((hit opt two).afterBatch (some (InPlay.ofBasic big)) [] (some (InPlay.ofBasic big)) []) = [lastWord opt] := by
     cases opt <;> rfl
   refine ⟨_, Move.knockOuts (l := [lastWord opt]) hb (ht ▸ List.Perm.refl _)
     (.run rfl (.draw (c := .energy .grass) (d := []) (by cases opt <;> rfl)) (.nil _)),
@@ -166,7 +166,7 @@ theorem draw_declined :
   have hb : KOBatch (hit true two) _ :=
     .go hu hw (ac := some (InPlay.ofBasic big)) (bc := []) (ao := some (InPlay.ofBasic big))
       (bo := []) (.pick (b₁ := [])) (.pick (b₁ := []))
-  have ht : (hit true two).batchTrigs ((hit true two).koStep.withPlay (some (InPlay.ofBasic big)) [] (some (InPlay.ofBasic big)) []) = [lastWord true] := rfl
+  have ht : (hit true two).batchTrigs ((hit true two).afterBatch (some (InPlay.ofBasic big)) [] (some (InPlay.ofBasic big)) []) = [lastWord true] := rfl
   exact ⟨_, Move.knockOuts (l := [lastWord true]) hb (ht ▸ List.Perm.refl _) (.decline rfl (.nil _)),
     rfl, rfl⟩
 

@@ -60,7 +60,7 @@ theorem Move.after_attack {g g' : GameState} (hm : Move g g') (ha : g.attacked =
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | attackConfused _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | knockOuts h hl ht => exact .inl ⟨_, _, h, hl, ht⟩
-  | trigger hc hp hl ht => exact .inr (.inl ⟨hc, hp, _, hl, ht⟩)
+  | trigger hc hp ho => exact .inr (.inl ⟨hc, hp, ho⟩)
   | endTurn => exact .inr (.inr ⟨rfl, rfl, rfl⟩)
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
   | deckOut hbt => exact absurd (hbt.symm.trans hb) (by decide)
@@ -146,7 +146,7 @@ theorem Move.after_attack_passTurn {g g' : GameState} (hm : Move g g') (ha : g.a
   | attack _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | attackConfused _ _ _ _ hn => exact absurd (ha.symm.trans hn) (by decide)
   | knockOuts h hl ht => exact .inl ⟨_, _, h, hl, ht⟩
-  | trigger hc hp hl ht => exact .inr (.inl ⟨hc, hp, _, hl, ht⟩)
+  | trigger hc hp ho => exact .inr (.inl ⟨hc, hp, ho⟩)
   | endTurn fa sa ca fb sb cb ha' hb' hk _ hco hcc _ oa ob =>
       exact .inr (.inr ⟨_, _, fa, sa, ca, fb, sb, cb, _, _, oa, ob, ha', hb', hk, hco, hcc, rfl⟩)
   | startTurn hbt => exact absurd (hbt.symm.trans hb) (by decide)
@@ -219,11 +219,15 @@ theorem Fire.sameTurn_unpend {l : List Ability} {g g' : GameState}
     (h : Fire .oppBenched l g.unpend g') : g.SameTurn g' :=
   (GameState.SameTurn.unpend g).trans h.zoneOnly.sameTurn
 
+/-- The resolution of the owed triggers changes no turn flag (milestone MV7c). -/
+theorem Owed.sameTurn {g g' : GameState} (h : Owed g g') : g.SameTurn g' :=
+  (GameState.SameTurn.unpend g).trans h.zoneOnly.sameTurn
+
 theorem Resolve.sameTurn {g g' : GameState} (h : Resolve g g') : g.SameTurn g' := by
   induction h with
   | done => exact .refl _
   | step _ hm _ ih => exact hm.sameTurn.trans ih
-  | trigger _ _ _ _ ht _ ih => exact ht.sameTurn_unpend.trans ih
+  | trigger _ _ _ ho _ ih => exact ho.sameTurn.trans ih
 
 theorem TRun.sameTurn {e : Effect} {g g' : GameState} (h : TRun e g g') : g.SameTurn g' := by
   induction h with
@@ -280,8 +284,8 @@ theorem Resolve.stFlags {g g' : GameState} (h : Resolve g g') :
   induction h with
   | done => exact ⟨rfl, rfl⟩
   | step _ hm _ ih => exact ⟨ih.1.trans hm.stFlags.1, ih.2.trans hm.stFlags.2⟩
-  | trigger _ _ _ _ ht _ ih =>
-      exact ⟨ih.1.trans ht.zoneOnly.stadiumPlayed, ih.2.trans ht.zoneOnly.stadiumUsed⟩
+  | trigger _ _ _ ho _ ih =>
+      exact ⟨ih.1.trans ho.zoneOnly.stadiumPlayed, ih.2.trans ho.zoneOnly.stadiumUsed⟩
 
 theorem TRun.stFlags {e : Effect} {g g' : GameState} (h : TRun e g g') :
     g'.stadiumPlayed = g.stadiumPlayed ∧ g'.stadiumUsed = g.stadiumUsed := by
@@ -342,7 +346,7 @@ theorem Move.flagsOk {g g' : GameState} (hm : Move g g') (hc : g.FlagsOk) : g'.F
   | endTurn => exact ⟨fun hf => (by cases hf), fun _ => rfl⟩
   | startTurn => exact ⟨hc.1, fun hb => by cases hb⟩
   | knockOuts h _ ht => exact hc.of_sameTurn (h.sameTurn.trans ht.zoneOnly.sameTurn)
-  | trigger _ _ _ ht => exact hc.of_sameTurn ht.sameTurn_unpend
+  | trigger _ _ ho => exact hc.of_sameTurn ho.sameTurn
   | _ => exact hc
 
 theorem Reach.flagsOk {g₀ g : GameState} (h : Reach g₀ g) (hc : g₀.FlagsOk) : g.FlagsOk := by
@@ -365,7 +369,7 @@ theorem Move.firstTurn_no_attack {g g' : GameState} (hc : g.FlagsOk) (hf : g.fir
   | attack _ _ _ _ _ hf' => exact absurd (hf.symm.trans hf') (by decide)
   | attackConfused _ _ _ _ _ hf' => exact absurd (hf.symm.trans hf') (by decide)
   | knockOuts h _ ht => exact (h.sameTurn.trans ht.zoneOnly.sameTurn).2.2.1.trans ha
-  | trigger _ _ _ ht => exact ht.sameTurn_unpend.2.2.1.trans ha
+  | trigger _ _ ho => exact ho.sameTurn.2.2.1.trans ha
   | _ => first | exact ha | rfl
 
 /-- **The starting player cannot play a Supporter on the first turn of the game**: no move made
@@ -384,7 +388,7 @@ theorem Move.firstTurn_no_supporter {g g' : GameState} (hf : g.firstTurn = true)
   | attackConfused _ _ _ _ _ hf₀ => exact absurd (hf.symm.trans hf₀) (by decide)
   | endTurn => cases hf'
   | knockOuts h _ ht => exact (h.sameTurn.trans ht.zoneOnly.sameTurn).2.2.2.2.2.2
-  | trigger _ _ _ ht => exact ht.sameTurn_unpend.2.2.2.2.2.2
+  | trigger _ _ ho => exact ho.sameTurn.2.2.2.2.2.2
   | _ => rfl
 
 /-- **On the first turn of the game the player to move is the starting player**, with

@@ -280,6 +280,18 @@ theorem Fire.xclamp_sim {K : Nat} {co cp cb : Cap} {ev : TrigEvent} {l : List Ab
   exact ⟨g₂', h₂, GameState.xclampAt_iff.2 ⟨e, by rw [z₁.cur_mods, z₂.cur_mods, h1],
     by rw [z₁.opp_mods, z₂.opp_mods, h2]⟩⟩
 
+/-- **The resolution of the owed triggers is simulated under the exact-store clamp** (milestone
+MV7c): the clamp part by `Owed.clamp_sim`, the stores because triggers write none. -/
+theorem Owed.xclamp_sim {K : Nat} {co cp cb : Cap} {g₁ g₁' g₂ : GameState} (h : Owed g₁ g₁')
+    (hc : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) :
+    ∃ g₂', Owed g₂ g₂' ∧ g₁'.xclampAt K co cp cb = g₂'.xclampAt K co cp cb := by
+  obtain ⟨hc', h1, h2⟩ := GameState.xclampAt_iff.1 hc
+  obtain ⟨g₂', h₂, e⟩ := h.clamp_sim hc'
+  have z₁ := h.zoneOnly
+  have z₂ := h₂.zoneOnly
+  exact ⟨g₂', h₂, GameState.xclampAt_iff.2 ⟨e, by rw [z₁.cur_mods, z₂.cur_mods]; exact h1,
+    by rw [z₁.opp_mods, z₂.opp_mods]; exact h2⟩⟩
+
 /-- The pending-trigger record and the pending triggers are read through the exact-store clamp
 (milestone MV7). -/
 theorem GameState.pend_of_xclampAt {K : Nat} {co cp cb : Cap} {g₁ g₂ : GameState}
@@ -307,7 +319,10 @@ theorem GameState.xclampAt_noteBenched (K : Nat) (co cp cb : Cap) (X : GameState
   have e2 : InPlay.clampWith K cb ∘ InPlay.noteOwe .bench =
       InPlay.noteOwe .bench ∘ InPlay.clampWith K cb :=
     funext fun p => InPlay.clampWith_noteOwe K cb .bench p
-  conv => rhs; unfold GameState.noteBenched; rw [hT]
+  have hM : (X.xclampAt K co cp cb).cur.noMarksB = X.cur.noMarksB :=
+    PlayerState.noMarksB_map (f := InPlay.clampWith K co) (f' := InPlay.clampWith K cb)
+      (fun _ => rfl) (fun _ => rfl) rfl rfl
+  conv => rhs; unfold GameState.noteBenched; rw [hT, hM]
   simp only [GameState.noteBenched, GameState.xclampAt, Option.map_map, List.map_map, e1, e2]
 
 theorem GameState.xclampAt_unpend (K : Nat) (co cp cb : Cap) (X : GameState) :
@@ -316,7 +331,9 @@ theorem GameState.xclampAt_unpend (K : Nat) (co cp cb : Cap) (X : GameState) :
     funext fun p => InPlay.clampWith_clearOwe K cp p
   have e2 : InPlay.clampWith K cb ∘ InPlay.clearOwe = InPlay.clearOwe ∘ InPlay.clampWith K cb :=
     funext fun p => InPlay.clampWith_clearOwe K cb p
-  simp only [GameState.unpend, GameState.xclampAt, Option.map_map, List.map_map, e1, e2]
+  have e3 : InPlay.clampWith K co ∘ InPlay.clearOwe = InPlay.clearOwe ∘ InPlay.clampWith K co :=
+    funext fun p => InPlay.clampWith_clearOwe K co p
+  simp only [GameState.unpend, GameState.xclampAt, Option.map_map, List.map_map, e1, e2, e3]
 
 /-- Raising the `oppBenched` event commutes with the exact-store clamp (milestone MV7). -/
 theorem GameState.noteBenched_xclampAt {K : Nat} {co cp cb : Cap} {X₁ X₂ : GameState}
@@ -362,11 +379,10 @@ theorem KOBatch.xclamp_sim {g₁ g₁' g₂ : GameState} (h : KOBatch g₁ g₁'
         (b₂ := g₂.koStep.opp.bench) (by rw [hg]; exact ha₂) (by rw [hg]; exact he₂)
       refine ⟨_, .go (fun hs => hu (GameState.calm_of_xclamp hc.symm hs hH₂))
         (by rw [hwk]; exact hw) hpc' hpo' (GameState.notReady_of_clampAt (GameState.xclampAt_iff.1 hc).1 hq), ?_⟩
-      have e : ∀ X : GameState, ∀ a b c d, (X.withPlay a b c d).xclamp K =
-          (X.xclamp K).withPlay (a.map (InPlay.clampWith K .hp)) (b.map (InPlay.clampWith K .hp))
-            (c.map (InPlay.clampWith K .hp)) (d.map (InPlay.clampWith K .hp)) :=
-        fun _ _ _ _ _ => rfl
-      rw [e, e, hks, hac, hbc, hao, hbo]
+      obtain ⟨hc', hm1, hm2⟩ := GameState.xclampAt_iff.1 hc
+      obtain ⟨hks', -, -⟩ := GameState.xclampAt_iff.1 hks
+      exact GameState.xclampAt_iff.2 ⟨GameState.afterBatch_clampAt hc' hks' hac.symm hbc.symm
+        hao.symm hbo.symm, hm1, hm2⟩
 
 /-- The kernel of `xclamp` is a simulation for taking the Knock Outs. -/
 theorem Resolve.xclamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
@@ -384,17 +400,13 @@ theorem Resolve.xclamp_sim {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
       obtain ⟨m₂, hm₂, hcm⟩ := hm.xclamp_sim hc (GameState.hpBelow_of_hpBound hH)
       obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm hm.perm]; exact hH) hcm
       exact ⟨g₂', .step (by rw [GameState.winner_of_xclamp hc]; exact hn) hm₂ hr₂, hc'⟩
-  | @trigger g₀ g₃ g' l hn hcl hp hl ht _ ih =>
+  | @trigger g₀ g₃ g' hn hcl hp ho _ ih =>
       intro g₂ hH hc
       have hcl₂ := GameState.bothActive_of_clampAt (GameState.xclampAt_iff.1 hc).1 hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_xclampAt hc).trans hp
-      have hT := GameState.owedTrigs_of_xclampAt hc
-      have hc₀ : g₀.unpend.xclamp K = g₂.unpend.xclamp K :=
-        GameState.unpend_xclampAt hc
-      obtain ⟨m₂, ht₂, hcm⟩ := ht.xclamp_sim hc₀
-      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ht.perm, GameState.allCards_unpend]; exact hH) hcm
-      exact ⟨g₂', .trigger (by rw [GameState.winner_of_xclamp hc]; exact hn) hcl₂ hp₂
-        (by rw [hT]; exact hl) ht₂ hr₂, hc'⟩
+      obtain ⟨m₂, ho₂, hcm⟩ := ho.xclamp_sim hc
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ho.perm, GameState.allCards_unpend]; exact hH) hcm
+      exact ⟨g₂', .trigger (by rw [GameState.winner_of_xclamp hc]; exact hn) hcl₂ hp₂ ho₂ hr₂, hc'⟩
 
 /-! ## Inside an attack's effect -/
 
@@ -687,7 +699,9 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
           exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, Whose.noteBenched_xclampAt .own (by
             simp only [GameState.xclampAt, GameState.updSide, ha₂, he₂, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock])⟩
+              List.map_append, List.map_cons, Whose.mover, Whose.noteUp, Whose.noteDown,
+              InPlay.clampWith_noteMove, InPlay.clampWith_moveUp, h1, h2, h3,
+              InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock])⟩
       | opp =>
           simp only [GameState.side] at ha h
           rw [ha] at ha₂
@@ -695,8 +709,8 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
           exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, he₁, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock,
-              Whose.noteBenched]⟩
+              List.map_append, List.map_cons, Whose.mover, Whose.noteUp, Whose.noteDown, id, h1, h2, h3,
+              InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock, Whose.noteBenched]⟩
   | switchNone w h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -1124,14 +1138,11 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
   have hs₂ := fun hs => GameState.settled_of_xclamp hc hs hH
   obtain ⟨c₂, a₂, e₁, e₂, hg, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
   cases h with
-  | @trigger _ l hcl hp hl ht =>
+  | @trigger _ hcl hp ho =>
       have hcl₂ := GameState.bothActive_of_clampAt (GameState.xclampAt_iff.1 hc).1 hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_xclampAt hc).trans hp
-      have hT := GameState.owedTrigs_of_xclampAt hc
-      have hc₀ : g₁.unpend.xclamp k = g₂.unpend.xclamp k :=
-        GameState.unpend_xclampAt hc
-      obtain ⟨g₂', ht₂, hc'⟩ := ht.xclamp_sim hc₀
-      exact ⟨g₂', .trigger hcl₂ hp₂ (by rw [hT]; exact hl) ht₂, hc'⟩
+      obtain ⟨g₂', ho₂, hc'⟩ := ho.xclamp_sim hc
+      exact ⟨g₂', .trigger hcl₂ hp₂ ho₂, hc'⟩
   | playBasic hh hs hhp hb hbt hst hat =>
       have hs' := hs₂ hst
       subst hg
@@ -1187,7 +1198,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       rw [e]
       refine GameState.noteBenched_xclampAt ?_
       simp only [GameState.xclampAt, ha₂, he₂, Option.map_some,
-        List.map_append, List.map_cons, InPlay.clampWith_moveUp, h1, h2, h3]
+        List.map_append, List.map_cons, InPlay.clampWith_noteMove, InPlay.clampWith_moveUp, h1, h2, h3]
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hs' := hs₂ hst
       have hx : Card.trainer n .item e ∈ g₁.cur.hand := by

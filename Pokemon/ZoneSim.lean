@@ -310,6 +310,39 @@ theorem Fire.clamp_sim {co cp cbo cbp : Cap} {k : Nat} {ev : TrigEvent} {l : Lis
       obtain ⟨h₂, ht, hc₂⟩ := ih hc
       exact ⟨h₂, .decline ho ht, hc₂⟩
 
+/-- **The player to move's own triggers are simulated under any clamp** (milestone MV7c): they are
+`Fire` on the exchanged state, whose clamp has the caps exchanged. -/
+theorem FireMine.clamp_sim {co cp cbo cbp : Cap} {k : Nat} {u d : List Ability}
+    {g₁ g₁' : GameState} (h : FireMine u d g₁ g₁') : ∀ {g₂ : GameState},
+      g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k →
+      ∃ g₂', FireMine u d g₂ g₂' ∧ g₁'.clampAt co cp cbo cbp k = g₂'.clampAt co cp cbo cbp k := by
+  obtain ⟨x₁, x₂, h₁, h₂, rfl⟩ := h
+  intro g₂ hc
+  have hs : g₁.swap.clampAt cp co cbp cbo k = g₂.swap.clampAt cp co cbp cbo k := by
+    rw [GameState.swap_clampAt, GameState.swap_clampAt, hc]
+  obtain ⟨y₁, f₁, c₁⟩ := h₁.clamp_sim hs
+  obtain ⟨y₂, f₂, c₂⟩ := h₂.clamp_sim c₁
+  exact ⟨y₂.swap, ⟨y₁, y₂, f₁, f₂, rfl⟩, by rw [GameState.swap_clampAt, GameState.swap_clampAt, c₂]⟩
+
+/-- **The resolution of the owed triggers is simulated under any clamp** (milestone MV7c): the
+owed lists are read through the clamp and each block is simulated. -/
+theorem Owed.clamp_sim {co cp cbo cbp : Cap} {k : Nat} {g₁ g₁' : GameState} (h : Owed g₁ g₁') :
+    ∀ {g₂ : GameState}, g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k →
+      ∃ g₂', Owed g₂ g₂' ∧ g₁'.clampAt co cp cbo cbp k = g₂'.clampAt co cp cbo cbp k := by
+  intro g₂ hc
+  have hU := GameState.upOwed_of_clampAt hc
+  have hT := GameState.owedTrigs_of_clampAt hc
+  have hc₀ := GameState.unpend_clampAt hc
+  cases h with
+  | mineFirst hu hd hl hm ht =>
+      obtain ⟨m₂, hm₂, c₁⟩ := hm.clamp_sim hc₀
+      obtain ⟨g₂', ht₂, c₂⟩ := ht.clamp_sim c₁
+      exact ⟨g₂', .mineFirst (hU.1 ▸ hu) (hU.2 ▸ hd) (hT ▸ hl) hm₂ ht₂, c₂⟩
+  | oppFirst hu hd hl ht hm =>
+      obtain ⟨m₂, ht₂, c₁⟩ := ht.clamp_sim hc₀
+      obtain ⟨g₂', hm₂, c₂⟩ := hm.clamp_sim c₁
+      exact ⟨g₂', .oppFirst (hU.1 ▸ hu) (hU.2 ▸ hd) (hT ▸ hl) ht₂ hm₂, c₂⟩
+
 /-- The kernel of `clamp k` is a simulation for taking the Knock Outs, when `hpBound` of the cards
 is at most `k` (milestone M6 added the hypothesis: derived HP must be at most the cap). -/
 theorem Resolve.clamp_sim {k : Nat} {g₁ g₁' : GameState} (h : Resolve g₁ g₁') :
@@ -327,15 +360,12 @@ theorem Resolve.clamp_sim {k : Nat} {g₁ g₁' : GameState} (h : Resolve g₁ g
       obtain ⟨m₂, hm₂, hcm⟩ := hm.clamp_sim hc (GameState.hpBelow_of_hpBound hH)
       obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm hm.perm]; exact hH) hcm
       exact ⟨g₂', .step (by rw [GameState.winner_of_clamp hc]; exact hn) hm₂ hr₂, hc'⟩
-  | @trigger g₀ g₃ g' l hn hcl hp hl ht _ ih =>
+  | @trigger g₀ g₃ g' hn hcl hp ho _ ih =>
       intro g₂ hH hc
       have hcl₂ := GameState.bothActive_of_clampAt hc hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_clampAt hc).trans hp
-      have hT := GameState.owedTrigs_of_clampAt hc
-      have hc₀ : g₀.unpend.clamp k = g₂.unpend.clamp k := GameState.unpend_clampAt hc
-      obtain ⟨m₂, ht₂, hcm⟩ := ht.clamp_sim hc₀
-      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ht.perm, GameState.allCards_unpend]; exact hH) hcm
-      exact ⟨g₂', .trigger (by rw [GameState.winner_of_clamp hc]; exact hn) hcl₂ hp₂
-        (hT ▸ hl) ht₂ hr₂, hc'⟩
+      obtain ⟨m₂, ho₂, hcm⟩ := ho.clamp_sim hc
+      obtain ⟨g₂', hr₂, hc'⟩ := ih (by rw [hpBound_perm ho.perm, GameState.allCards_unpend]; exact hH) hcm
+      exact ⟨g₂', .trigger (by rw [GameState.winner_of_clamp hc]; exact hn) hcl₂ hp₂ ho₂ hr₂, hc'⟩
 
 end Pokemon

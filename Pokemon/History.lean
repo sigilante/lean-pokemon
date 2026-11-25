@@ -68,7 +68,8 @@ theorem Move.retreat_movedUp {g : GameState} {a q : InPlay} {b₁ b₂ : List In
     (hst : Settled g) (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
     ∃ g' a', Move g g' ∧ g'.cur.active = some a' ∧ a'.top = q.top ∧
       (Test.movedUp .own).eval g' a' = true :=
-  ⟨_, _, .retreat ha hb hr he hp hs hbt hst hl hat, rfl, rfl, rfl⟩
+  ⟨_, _, .retreat ha hb hr he hp hs hbt hst hl hat, rfl, InPlay.noteMove_top _ _ _,
+    InPlay.noteMove_movedUp _ _ _⟩
 
 /-- Evolving the Active Pokémon makes "this Pokémon evolved during this turn" true for it. -/
 theorem Move.evolve_evolved {g : GameState} {l₁ l₂ : List Card} {p : PokemonCard}
