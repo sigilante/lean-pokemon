@@ -8,14 +8,18 @@ it is (`InPlay.owe`), and the resolution of the pending triggers fires the marke
 (`GameState.owedTrigs`) and clears every mark (`GameState.unpend`). The review of stage 2 found
 that nothing excluded a start state whose Pokémon already carry marks with no trigger pending: such
 a mark fires at the next event as an owed trigger. `GameState.MarksOk` (in `Rules`, part of
-`WellFormed`) says that no Pokémon of the player to move carries a mark and that the opponent's
-carry none unless a trigger is pending. This file proves that every move keeps it:
+`WellFormed`) says that no Pokémon carries a mark unless a trigger is pending (until milestone MV7c:
+none on the player to move's Pokémon at all, and none on the opponent's unless a trigger is
+pending; since MV7c the player's own moves mark the player's own Pokémon, `InPlay.noteMove`). This
+file proves that every move keeps it:
 
-* `Run.marks`: an effect's resolution keeps the mover's Pokémon unmarked, never clears the record,
-  and marks the opponent's Pokémon only by raising the event, which sets the record; an effect of
-  the trigger fragment (`Effect.trigOk`, no switch) changes neither the record nor any mark;
-* `Fire.marks`, `KOBatch.marks`: triggers and the batch Knock Out step change no mark and keep the
-  record;
+* `Run.marks`: an effect's resolution never clears the record and keeps `MarksOk`: it marks
+  Pokémon (of either player) only by a switch of the player's own Active Pokémon, which raises the
+  events and sets the record when it marks; an effect of the trigger fragment (`Effect.trigOk`, no
+  switch) changes neither the record nor any mark;
+* `Fire.marks`, `FireMine.marks`, `Owed.marksOk`: triggers change no mark and keep the record, and
+  the resolution of the owed triggers leaves none; `KOBatch.marksOk`: the batch Knock Out step marks
+  the player's promoted Pokémon only when it sets the record;
 * `Move.marksOk`, `Reach.marksOk`: legal play keeps `MarksOk`.
 -/
 

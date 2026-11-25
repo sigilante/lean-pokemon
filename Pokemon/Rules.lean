@@ -848,10 +848,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   unreached states) a marked holder that leaves play before the resolution loses its trigger, where
   print resolves it: only the batch step removes Pokémon, and it runs with a trigger pending only
   when an Active Spot is empty (`KOBatch`), a state no play is known to reach (next item). Marks
-  exist only while a trigger is pending and only on the opponent's Pokémon (`GameState.MarksOk`,
-  part of `WellFormed` since the review of stage 2 and kept by every move, `Move.marksOk`,
-  `Reach.marksOk`: marks are written only by `noteBenched`, which sets the record, and cleared by
-  every resolution, `GameState.unpend`); a start state with a stale mark, which would fire at the
+  exist only while a trigger is pending (`GameState.MarksOk`, part of `WellFormed` since the review
+  of stage 2 and kept by every move, `Move.marksOk`, `Reach.marksOk`: marks are written only where
+  the record is set, by `noteBenched` and, since milestone MV7c, by the player's own moves, and
+  cleared by every resolution, `GameState.unpend`; until MV7c they were only on the opponent's
+  Pokémon); a start state with a stale mark, which would fire at the
   next event as an owed trigger, is not well formed and is reached from no start with `MarksOk`
   (`Gust.stale_mark_excluded`); what remains is that the theorems which do not assume `WellFormed`
   (or `MarksOk`) admit such starts; (order, a switched-in
@@ -889,12 +890,69 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`GameState.BenchedFree`) and nothing pending at the start never has one pending
   (`Reach.pend_false`), resolves none (`Reach.not_trigMove`), and has the old `Settled`
   (`Reach.settled_iff_calm`); its retreats and switches give the old states
-  (`GameState.noteBenched_of_nil`); `Benched.retreat_quiet` is a witness. Not modelled (survey S20
-  §a): the player's own Pokémon moving between the Bench and the Active Spot (Yanmega ex,
-  Clawitzer; 5 refused), Energy attached from the hand (Gengar ex, Magearna; 2), the opponent's
-  evolution (Team Rocket's Ampharos; 1) and Item or Supporter plays (prevention; 3), Knock Outs of
-  other Pokémon and Prize changes, replacement effects (Pikachu ex and 4 more); Checkup changes are
-  the next item;
+  (`GameState.noteBenched_of_nil`); `Benched.retreat_quiet` is a witness (since milestone MV7c the
+  hypotheses are `MoveFree` and `MarksOk`, next item). Not modelled (survey S20 §a): Energy attached
+  from the hand (Gengar ex, Magearna; 2), the opponent's evolution (Team Rocket's Ampharos; 1) and
+  Item or Supporter plays (prevention; 3), Knock Outs of other Pokémon and Prize changes,
+  replacement effects (Pikachu ex and 4 more); the player's own moves are the next item, Checkup
+  changes the one after;
+* triggers of the player's own moves between the Bench and the Active Spot (milestone MV7c, survey
+  S20 §a group (a); `TrigEvent.movedUp`, `TrigEvent.movedDown`): "Once during your turn, when this
+  Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3, exact with one
+  attach step per Energy) and "Once during your turn, when this Pokémon moves from the Active Spot to
+  your Bench, you may use this Ability. Attach up to 2 Basic Water Energy cards from your hand to
+  this Pokémon." (Clawitzer me1-38; "this Pokémon" on the Bench is one Benched Pokémon chosen when
+  the trigger resolves, `SelfOp.atS`: a superset). The triggers belong to the player to move and
+  resolve from that player's side (`FireMine`: `Fire` on the exchanged state). Raised where the
+  Pokémon moves: by a retreat (`Move.retreat`; the retreating Pokémon moves down, the one switched
+  in moves up), by a switch of the player's own Active Pokémon inside any effect of their turn
+  (`Run.switch .own`, `Whose.noteUp`, `Whose.noteDown`; `SelfOp.switchIn` included), and
+  (`movedUp`) by the promotion of a Benched Pokémon after a Knock Out of the player's Active Pokémon
+  during their turn proper (`GameState.promoUp`, `GameState.afterBatch`: the batch Knock Out step
+  inside a Trainer, Stadium or Ability effect, or after the player's own attack). Promotion is a
+  move from the Bench to the Active Spot ("The player whose Pokémon was Knocked Out chooses a new
+  Active Pokémon from their Bench", rulebook 2026 p. 14), so the model fires the trigger when it
+  happens in the owner's turn (`Moved.promotion_fires`); after Pokémon Checkup (`between`) it is in
+  no player's turn and fires nothing (`Moved.checkup_promotion_quiet`), nor does the opponent's
+  promotion in the player's turn (`Moved.opp_promotion_quiet`), nor a gust of the opponent's
+  Pokémon (`switch .opp`, made in the player's turn, `Moved.gust_quiet`). The event marks the
+  holder (`InPlay.noteMove`: `owe` its new spot) and spends its "once during your turn" limit
+  (`InPlay.used`, shared with activated Abilities: exact for one-Ability cards, which every card of
+  this kind is); a holder that has spent it is not marked (`InPlay.noteMove_of_used`,
+  `Moved.once_per_turn`). The record is set by the retreat and the switch when a Pokémon of the
+  player to move carries a mark (`GameState.noteBenched`) and by the batch step when the promoted
+  Pokémon owes its trigger (`GameState.promoFires`). Resolution: `Owed` fires the owed triggers of
+  both players (`GameState.upOwed`, `GameState.downOwed`, `GameState.owedTrigs`) before anything
+  else, as for `oppBenched` (`Moved.retreat_fires_up`, `Moved.retreat_fires_down`,
+  `Moved.uturn_fires`: before the attack's Knock Out check), mandatory ones forced
+  (`Moved.up_forced`) and optional ones declinable (`Moved.up_declined`). Departures: (fewer
+  outcomes) the limit is spent at the event, so a declined optional trigger has spent it too, and
+  the same Pokémon moving again in the same turn fires nothing, where print, read as "you may use
+  this Ability" once a turn, would allow it then; (order) when both players owe triggers at once (a
+  retreat or switch raises `oppBenched` for the opponent and `movedUp`/`movedDown` for the player),
+  `Owed` resolves the two players' blocks in either order but does not interleave them, and within
+  the player's block the `movedUp` triggers come before the `movedDown` ones; the rulebook orders
+  effects only at Checkup (2026 p. 15) and no printed pair is known for which interleaving matters;
+  (unreached states) a marked holder Knocked Out before the resolution loses its trigger, as for
+  `oppBenched`; (fewer outcomes, existing) `InPlay.movedUp`, the flag read by "if this Pokémon moved
+  from your Bench to the Active Spot this turn" (Keldeo ex), is still not set by a promotion. Not
+  modelled (refused): Cobalion ex me4-64 ("Move any amount of Metal Energy from your other Pokémon
+  to this Pokémon": `iter`, outside the trigger fragment), Latios me1-101 (the event is another
+  named Pokémon's move), Palafin sv6-60 (a switch with a deck card). Termination: the trigger
+  fragment has no switch, so no trigger raises a move event, but a trigger can Knock Out the
+  player's Active Pokémon (an HP Tool discarded) and the promotion can raise `movedUp` again; each
+  such batch Knocks Out the player's Active Pokémon and so takes a Prize card, and the measure of
+  `Move.unsettled_acc` and `Resolve.exists` is now the Prize cards left first, then the record,
+  then `koMeasure` (`GameState.koVal_pos_of_promoUp`). The bounds `Resolve.chain_le`,
+  `Resolve.chain_le_pend`, `Resolve.trigger_first` keep their shape for games with no `movedUp`
+  trigger (`GameState.EvFree .movedUp`, a new hypothesis); with one, a resolution may alternate
+  batches and trigger resolutions (each extra one after a Prize card). Store bound: the triggers can
+  fire before the attack, as often as the player moves Pokémon, so `Ability.trigOn` admits them only
+  when their effect recycles nothing (`TrigEvent.late = false`), and the per-turn invariant holds as
+  for `oppBenched` (`Owed.keeps`, `Owed.abPot_le`: the "once" flag set at the event only lowers the
+  Ability potential, `InPlay.abW_noteMove`). A game with no trigger of a move event
+  (`GameState.MoveFree`) from a start with nothing pending and no mark never has one pending
+  (`Reach.pend_false`, whose hypotheses became `MoveFree` and `MarksOk`);
 * static changes of Pokémon Checkup (milestone MV7b, survey S20 §a T1): "During Pokémon Checkup,
   put N more damage counters on your opponent's Burned / Poisoned Pokémon" (Magmortar sv9-21,
   Pecharunt svp-129 "as long as this Pokémon is in the Active Spot"; the Stadium Perilous Jungle
@@ -1239,8 +1297,8 @@ theorem GameState.MarksOk.of_b {g : GameState} (h : g.marksOkB = true) : g.Marks
 
 /-- Well-formed states: while there is no winner both players have Prize cards left, every
 Benched Pokémon is `Benched` (no Special Condition), and (milestone MV7b, after review) the
-owed-trigger marks are as play leaves them (`GameState.MarksOk`: none on the mover's Pokémon, and
-none at all unless a trigger is pending). `Move` preserves it (`Move.wellFormed`). Damage on
+owed-trigger marks are as play leaves them (`GameState.MarksOk`: none at all unless a trigger is
+pending; until milestone MV7c also none on the mover's Pokémon). `Move` preserves it (`Move.wellFormed`). Damage on
 Benched Pokémon below HP is part of `Settled`, not of `WellFormed`: since milestone M3 an effect or
 an evolution can leave a Benched Pokémon at or above its HP, and it is then Knocked Out by the next
 moves. -/
@@ -1415,7 +1473,9 @@ def GameState.koStep (g : GameState) : GameState :=
       | some o => some o }
 
 /-- A player with an empty Active Spot promotes one of their Benched Pokémon; a player whose Active
-Spot is filled keeps it. `Promote a b a' b'`: the Active Spot and Bench `a`, `b` become `a'`, `b'`. -/
+Spot is filled keeps it. `Promote a b a' b'`: the Active Spot and Bench `a`, `b` become `a'`, `b'`.
+The player to move's promoted Pokémon is marked afterwards when the promotion is a `movedUp` event
+(milestone MV7c, `GameState.afterBatch`). -/
 inductive Promote : Option InPlay → List InPlay → Option InPlay → List InPlay → Prop where
   | keep {a : InPlay} {b : List InPlay} : Promote (some a) b (some a) b
   | pick {q : InPlay} {b₁ b₂ : List InPlay} : Promote none (b₁ ++ q :: b₂) (some q) (b₁ ++ b₂)
@@ -1472,7 +1532,10 @@ are filled: a player with no Pokémon left has lost, so the game is over). The p
 a nondeterministic choice, which covers its owner's. When both players promote, the two choices
 are made together: no rule found says who chooses first (the 2023 rulebook says only "The player
 whose Pokémon was Knocked Out chooses a new Active Pokémon from their Bench", p. 14), and since
-nothing is checked between them every order gives the same states.
+nothing is checked between them every order gives the same states. Since milestone MV7c the result
+is `GameState.afterBatch`: when the player to move's Active Pokémon was Knocked Out in their own
+turn and the Pokémon promoted owes a `movedUp` trigger, it is marked and the record set (the only
+way the batch step changes the record, `KOBatch.pend_cases`).
 
 The promotions can change derived HP (a Pokémon whose static bonus needs the Bench, or the Active
 Spot, has moved), and the check removes Pokémon whose static effects gave HP to others; so after a
@@ -1570,8 +1633,9 @@ batch-KO the steps were single Knock Outs and promotions (`KOMove`), in any orde
 MV7 a pending trigger (`GameState.pend`, raised by the step just taken) is resolved too, first,
 before any batch step, when both Active Spots are filled (`trigger`: the owed `oppBenched`
 triggers, those of the opponent's Pokémon marked at the event (milestone MV7b,
-`GameState.owedTrigs`), in any order, by `Fire`; `Resolve.trigger_first`); the Knock Outs of the step and of the
-triggers are then taken by batch steps. -/
+`GameState.owedTrigs`), in any order, by `Fire`; since milestone MV7c the owed triggers of both
+players, `Owed`; `Resolve.trigger_first`); the Knock Outs of the step and of the triggers are then
+taken by batch steps. -/
 inductive Resolve : GameState → GameState → Prop where
   | done {g : GameState} (h : Settled g ∨ g.winner ≠ none) : Resolve g g
   | step {g g₁ g' : GameState} (hn : g.winner = none) (hm : KOBatch g g₁)
@@ -1988,7 +2052,9 @@ inductive Move : GameState → GameState → Prop where
   each [✱] listed in its Retreat Cost", rulebook 2026 p. 12): `paid` is any sub-multiset of the
   attached Energy and `rest` the others, each in attachment order (`Split .any`). Since milestone MV7
   the retreat raises the `oppBenched` event (`GameState.noteBenched`): the opponent's triggers
-  resolve by the next move (`Move.trigger`) -/
+  resolve by the next move (`Move.trigger`); since milestone MV7c it also raises the player's own
+  `movedUp` (the Pokémon switched in) and `movedDown` (the retreating one) events
+  (`InPlay.noteMove`) -/
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
       (hr : g.cur.retreated = false) (he : Split .any a.energy paid rest)
@@ -2166,9 +2232,9 @@ inductive Move : GameState → GameState → Prop where
       (hl : l.Perm (g.batchTrigs g₁)) (ht : Fire .koByAttack l g₁ g') : Move g g'
   /-- resolve the pending triggers (milestone MV7): from a state with both Active Spots filled and a
   trigger pending (`GameState.pend`, set by the move before), the owed triggers fire (since milestone
-  MV7b those of the opponent's Pokémon marked at the event, `GameState.owedTrigs`), in any order
-  (`Fire`; a "you may" one can be declined), and the record and the marks are cleared
-  (`GameState.unpend`). Before any
+  MV7b those of the opponent's Pokémon marked at the event, `GameState.owedTrigs`; since milestone
+  MV7c also the player to move's own marked ones, `Owed`), each player's in any order (`Fire`; a
+  "you may" one can be declined), and the record and the marks are cleared (`GameState.unpend`). Before any
   other move, the batch Knock Out step included: every other move needs `Settled`, or (`endTurn`,
   `startTurn`, `deckOut`) `pend = false`, and the batch step needs no trigger ready (`KOBatch`) -/
   | trigger {g g' : GameState} (hb : g.BothActive) (hp : g.pend = true) (ho : Owed g g') :
@@ -2348,8 +2414,8 @@ theorem PlayFromHand.hand {g g₁ : GameState} {x : InPlay} {w : PlayWay}
   | evolveBench hh => exact ⟨_, _, hh⟩
 
 /-- The resolution of pending triggers (milestone MV7), `Move.trigger` spelled out: from a state
-with both Active Spots filled and a trigger pending, the owed `oppBenched` triggers fire, in
-any order, on the state with the record cleared. -/
+with both Active Spots filled and a trigger pending, the owed triggers fire (`Owed`; until milestone
+MV7c the `oppBenched` ones alone), on the state with the record cleared. -/
 def TrigMove (g g' : GameState) : Prop :=
   g.BothActive ∧ g.pend = true ∧ Owed g g'
 

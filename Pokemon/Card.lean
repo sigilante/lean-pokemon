@@ -1402,7 +1402,8 @@ Knocked Out": `spot = some .active`), with no further printed condition (a trigg
 never fires: conditions on a trigger, such as Adversity Policy's Weakness, are not expressible), and
 whose effect is in the trigger fragment (`Effect.trigOk`; a trigger outside it never fires, which
 under-models the card). Since milestone MV7 an event that can fire before the turn's attack
-(`TrigEvent.late = false`: `oppBenched`) also needs an effect that recycles nothing
+(`TrigEvent.late = false`: `oppBenched`, and since milestone MV7c `movedUp`, `movedDown`) also needs
+an effect that recycles nothing
 (`Effect.recFilters = []`): such a trigger can fire many times in one turn, and the store bound
 (`StoreSafe`) keeps the discard piles' Item writers before the attack; a trigger of that event whose
 effect recycles never fires (an under-model; no card of the census recycles, survey S20). -/

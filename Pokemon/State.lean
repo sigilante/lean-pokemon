@@ -129,12 +129,15 @@ structure InPlay where
   `Move.attack` and `Move.attackConfused`, and cleared when the Pokémon moves to the Bench (retreat,
   `Effect.switch`: `InPlay.unlock`) or evolves -/
   lk : LockState := {}
-  /-- an owed trigger (milestone MV7b, survey S20): `some sp` when this Pokémon was at `sp` and had
-  an `oppBenched` trigger there (`InPlay.trigs .oppBenched sp ≠ []`) at the moment its owner's
-  opponent's Active Pokémon moved to the Bench (`GameState.noteBenched`). The mark travels with the
-  Pokémon (a later switch in the same attack moves it, mark and all), is read when the triggers
-  resolve (`GameState.owedTrigs`: the triggers of the Pokémon at the spot recorded) and is cleared
-  there (`GameState.unpend`). -/
+  /-- an owed trigger (milestone MV7b, survey S20): on the opponent of the player to move, `some sp`
+  when this Pokémon was at `sp` and had an `oppBenched` trigger there (`InPlay.trigs .oppBenched sp
+  ≠ []`) at the moment its owner's opponent's Active Pokémon moved to the Bench
+  (`GameState.noteBenched`); on the player to move (milestone MV7c), `some .active` when this
+  Pokémon has just moved from the Bench to the Active Spot and owes a `movedUp` trigger, `some
+  .bench` when it has just moved to the Bench and owes a `movedDown` one (`InPlay.noteMove`). The
+  mark travels with the Pokémon (a later switch in the same attack moves it, mark and all), is read
+  when the triggers resolve (`GameState.owedTrigs`, `GameState.upOwed`, `GameState.downOwed`) and
+  is cleared there (`GameState.unpend`). -/
   owe : Option Spot := none
 
 namespace InPlay
@@ -541,8 +544,9 @@ structure GameState where
   stadiumUsed : Bool
   /-- is a triggered Ability pending? (milestone MV7, survey S20) Set at the source of an event that
   the opponent of the player to move has a trigger for (`TrigEvent.oppBenched`: a retreat, or a switch
-  of the player's own Active Pokémon inside an effect), cleared when the triggers resolve
-  (`Move.trigger`, `Resolve.trigger`). `Settled` requires it to be `false`, so a pending trigger
+  of the player's own Active Pokémon inside an effect) or (milestone MV7c) that the player to move
+  has one for (`movedUp`, `movedDown`: a retreat, a switch, a promotion in their own turn), cleared
+  when the triggers resolve (`Move.trigger`, `Resolve.trigger`). `Settled` requires it to be `false`, so a pending trigger
   resolves before any other action. Defaults to `false`: a state written without it has nothing
   pending. WHICH triggers are owed is recorded on the opponent's Pokémon themselves, at the event
   (milestone MV7b: `InPlay.owe`, read by `GameState.owedTrigs`); this flag says that an event is
