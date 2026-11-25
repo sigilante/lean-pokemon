@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 6 of 10 (150 cards).
+Imported Standard cards, part 6 of 11 (150 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,34 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part06
 open Pokemon
+
+/-- Team Rocket's Nidoran♂ (sv10-117). Records: sv10-117. -/
+def sv10_117 : Card := .pokemon
+  { name := "Team Rocket's Nidoran♂", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pierce", cost := [.darkness], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Hammer In", cost := [.darkness, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Team Rocket's Nidorino (sv10-118). Records: sv10-118. -/
+def sv10_118 : Card := .pokemon
+  { name := "Team Rocket's Nidorino", stage := .stage1, evolvesFrom := some "Team Rocket's Nidoran♂",
+    hp := 10, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Hammer In", cost := [.darkness, .colorless], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Horn Rend", cost := [.darkness, .darkness, .colorless], damage := 0,
+        effect := .ite (.atLeast .opp 1) (.damage (.const 12)) (.damage (.const 6)),
+        gx := false }] }
 
 /-- Team Rocket's Nidoking ex (sv10-119). Records: sv10-119, sv10-216, sv10-233. Caveats: poisonStrength. -/
 def sv10_119 : Card := .pokemon
@@ -447,6 +475,10 @@ def sv10_169 : Card := .trainer "Spikemuth Gym" .stadium
 /-- Team Rocket's Ariana (sv10-171). Records: sv10-171, sv10-224, sv10-237, me2pt5-202. -/
 def sv10_171 : Card := .trainer "Team Rocket's Ariana" .supporter
     (.seq (.ite (.countGe (.inPlay .own (.and .pokemon (.not (.and .pokemon (.namePrefix "Team Rocket's "))))) 1) (.ite (.countGe (.pile .own .hand .any) 5) (.move .own (.top 0) .hand .any (.exactly 1)) .skip) .skip) (.seq (.ite (.countGe (.inPlay .own (.and .pokemon (.not (.and .pokemon (.namePrefix "Team Rocket's "))))) 1) .skip (.ite (.countGe (.pile .own .hand .any) 8) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.inPlay .own (.and .pokemon (.not (.and .pokemon (.namePrefix "Team Rocket's "))))) 1) (.drawTo .own 5) (.drawTo .own 8)))))
+
+/-- Team Rocket's Factory (sv10-173). Records: sv10-173, me2pt5-203. -/
+def sv10_173 : Card := .trainer "Team Rocket's Factory" .stadium
+    (.ite (.countGe (.played .own (.and (.kind .supporter) (.nameHas "Team Rocket"))) 1) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own (.top 2) .hand .any .all)) (.move .own (.top 0) .hand .any (.exactly 1)))
 
 /-- Team Rocket's Great Ball (sv10-175). Records: sv10-175, me2pt5-205. -/
 def sv10_175 : Card := .trainer "Team Rocket's Great Ball" .item
@@ -1743,47 +1775,10 @@ def zsv10pt5_41 : Card := .pokemon
         effect := .damage (.add (.const 8) (.count (.energy .opp .energy) 3)),
         gx := false }] }
 
-/-- Golett (zsv10pt5-42). Records: zsv10pt5-42, zsv10pt5-122. -/
-def zsv10pt5_42 : Card := .pokemon
-  { name := "Golett", stage := .basic, evolvesFrom := none,
-    hp := 9, type := .psychic, retreat := 3, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Best Punch", cost := [.colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 6)) .skip,
-        gx := false }] }
-
-/-- Golurk (zsv10pt5-43). Records: zsv10pt5-43, zsv10pt5-123. -/
-def zsv10pt5_43 : Card := .pokemon
-  { name := "Golurk", stage := .stage1, evolvesFrom := some "Golett",
-    hp := 16, type := .psychic, retreat := 4, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Double Smash", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 8)) (.damage (.const 16))),
-        gx := false },
-      { name := "Golurk Hammer", cost := [.psychic, .psychic, .colorless, .colorless, .colorless], damage := 20,
-        effect := .skip,
-        gx := false }] }
-
-/-- Drilbur (zsv10pt5-45). Records: zsv10pt5-45, zsv10pt5-124. -/
-def zsv10pt5_45 : Card := .pokemon
-  { name := "Drilbur", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Mud-Slap", cost := [.fighting], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Corkscrew Punch", cost := [.fighting, .fighting], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_117,
+  sv10_118,
   sv10_119,
   sv10_120,
   sv10_121,
@@ -1824,6 +1819,7 @@ def cards : List Card := [
   sv10_168,
   sv10_169,
   sv10_171,
+  sv10_173,
   sv10_175,
   sv10_176,
   sv10_178,
@@ -1930,10 +1926,7 @@ def cards : List Card := [
   zsv10pt5_34,
   zsv10pt5_37,
   zsv10pt5_40,
-  zsv10pt5_41,
-  zsv10pt5_42,
-  zsv10pt5_43,
-  zsv10pt5_45]
+  zsv10pt5_41]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

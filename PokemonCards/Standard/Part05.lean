@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 5 of 10 (150 cards).
+Imported Standard cards, part 5 of 11 (150 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,34 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part05
 open Pokemon
+
+/-- Mimikyu ex (sv9-69). Records: sv9-69. -/
+def sv9_69 : Card := .pokemon
+  { name := "Mimikyu ex", stage := .basic, evolvesFrom := none,
+    hp := 19, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Mischievous Hands", cost := [.psychic, .colorless], damage := 0,
+        effect := .ite (.countGe (.bench .opp .any) 2) (.choice (.seq (.counters 3) (.benchSome .opp 1 .any false 3)) (.benchSome .opp 2 .any false 3)) (.seq (.counters 3) (.benchSome .opp 1 .any false 3)),
+        gx := false },
+      { name := "Ghostly Trip", cost := [.psychic, .psychic, .colorless], damage := 12,
+        effect := .inflict .confused,
+        gx := false }] }
+
+/-- Dhelmise (sv9-70). Records: sv9-70. Caveats: perPokemon. -/
+def sv9_70 : Card := .pokemon
+  { name := "Dhelmise", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bind Down", cost := [.psychic, .colorless, .colorless], damage := 6,
+        effect := .linger .opp .next (.lock .retreat),
+        gx := false },
+      { name := "Anchor Smash", cost := [.psychic, .psychic, .colorless, .colorless], damage := 13,
+        effect := .skip,
+        gx := false }] }
 
 /-- Impidimp (sv9-71). Records: sv9-71. -/
 def sv9_71 : Card := .pokemon
@@ -1873,36 +1901,10 @@ def sv10_116 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Team Rocket's Nidoran♂ (sv10-117). Records: sv10-117. -/
-def sv10_117 : Card := .pokemon
-  { name := "Team Rocket's Nidoran♂", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Pierce", cost := [.darkness], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Hammer In", cost := [.darkness, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Team Rocket's Nidorino (sv10-118). Records: sv10-118. -/
-def sv10_118 : Card := .pokemon
-  { name := "Team Rocket's Nidorino", stage := .stage1, evolvesFrom := some "Team Rocket's Nidoran♂",
-    hp := 10, type := .darkness, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Hammer In", cost := [.darkness, .colorless], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Horn Rend", cost := [.darkness, .darkness, .colorless], damage := 0,
-        effect := .ite (.atLeast .opp 1) (.damage (.const 12)) (.damage (.const 6)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv9_69,
+  sv9_70,
   sv9_71,
   sv9_72,
   sv9_73,
@@ -2050,9 +2052,7 @@ def cards : List Card := [
   sv10_111,
   sv10_112,
   sv10_114,
-  sv10_116,
-  sv10_117,
-  sv10_118]
+  sv10_116]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

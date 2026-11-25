@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 2 of 10 (150 cards).
+Imported Standard cards, part 2 of 11 (150 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,17 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Sunkern (sv6-6). Records: sv6-6. -/
+def sv6_6 : Card := .pokemon
+  { name := "Sunkern", stage := .basic, evolvesFrom := none,
+    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bullet Seed", cost := [.grass], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.choice (.damage (.const 3)) (.damage (.const 4))))),
+        gx := false }] }
 
 /-- Sunflora (sv6-7). Records: sv6-7, sv6-169. Caveats: energyOfCount. -/
 def sv6_7 : Card := .pokemon
@@ -1480,6 +1491,20 @@ def sv6pt5_28 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .all }] }
 
+/-- Crobat (sv6pt5-29). Records: sv6pt5-29. Caveats: poisonStrength. -/
+def sv6pt5_29 : Card := .pokemon
+  { name := "Crobat", stage := .stage2, evolvesFrom := some "Golbat",
+    hp := 13, type := .darkness, retreat := 0, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Shadowy Envoy", use := .once,
+        spot := none, cond := some (.countGe (.played .own (.and (.kind .supporter) (.named "Janine's Secret Art"))) 1),
+        effect := .fx (.seq (.seq (.ite (.countGe (.pile .own .hand .any) 8) (.move .own (.top 0) .hand .any (.exactly 1)) .skip) (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.drawTo .own 8)) }],
+    attacks := [
+      { name := "Poison Fang", cost := [.darkness, .colorless], damage := 12,
+        effect := .seq (.inflict .poisoned) (.poisonUp 1),
+        gx := false }] }
+
 /-- Absol (sv6pt5-30). Records: sv6pt5-30. Caveats: energyOfCount. -/
 def sv6pt5_30 : Card := .pokemon
   { name := "Absol", stage := .basic, evolvesFrom := none,
@@ -1810,30 +1835,9 @@ def sv7_18 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Ponyta (sv7-19). Records: sv7-19. -/
-def sv7_19 : Card := .pokemon
-  { name := "Ponyta", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flop", cost := [.fire], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Rapidash (sv7-20). Records: sv7-20. -/
-def sv7_20 : Card := .pokemon
-  { name := "Rapidash", stage := .stage1, evolvesFrom := some "Ponyta",
-    hp := 12, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Burning Run", cost := [.fire, .colorless], damage := 0,
-        effect := .choice (.damage (.const 12)) (.damage (.const 6)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_6,
   sv6_7,
   sv6_8,
   sv6_12,
@@ -1953,6 +1957,7 @@ def cards : List Card := [
   sv6pt5_26,
   sv6pt5_27,
   sv6pt5_28,
+  sv6pt5_29,
   sv6pt5_30,
   sv6pt5_31,
   sv6pt5_32,
@@ -1981,9 +1986,7 @@ def cards : List Card := [
   sv7_15,
   sv7_16,
   sv7_17,
-  sv7_18,
-  sv7_19,
-  sv7_20]
+  sv7_18]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

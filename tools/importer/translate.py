@@ -927,6 +927,44 @@ def parse_count(x, ctx):
     raise Refuse('count not expressible: ' + x)
 
 
+# importer 0.16.0 (milestone MV9, survey S23 group B3): "you played X from your hand during this turn" and "you didn't
+# play X …" (also "… this turn" without "during", in Abilities; "they played X from their hand this turn" in a
+# Stadium, read for the player who uses it): `Count.played .own f`, the Supporter card the player played from the hand
+# this turn (`PlayerState.supCard`, written by `Move.supporter` when the card is played, cleared when the player's next
+# turn starts). Only a Supporter is recorded, so X must be a kind of Supporter ("a Supporter card", "a Future Supporter
+# card", "a Supporter card that has \"Team Rocket\" in its name") or the name of a Supporter card; the filter is
+# conjoined with `kind supporter`. The rulebook allows one Supporter a turn, so the one record is the whole history.
+PLAYED_RX = re.compile(r"^(?:you|they) (played|didn't play) (.+?) from (?:your|their) hand (?:during )?this turn$")
+
+
+def parse_test_played(c, ctx):
+    m = PLAYED_RX.match(c)
+    if not m:
+        return None
+    x = m.group(2)
+    f = parse_filter(x, ctx)
+    if f[0] == 'named' and KNOWN_NAMES.get(f[1]) != {'Supporter'}:
+        raise Refuse('condition not expressible: a played card that is not a Supporter (only the Supporter is recorded): '
+                     + c)
+    if f[0] != 'named' and not supporter_filter(f):
+        raise Refuse('condition not expressible: a played card that is not a Supporter (only the Supporter is recorded): '
+                     + c)
+    if not supporter_filter(f):
+        f = ('and', ('kind', ('supporter',)), f)
+    return [('countGe', ('played', OWN, f), 1)], m.group(1) == "didn't play"
+
+
+def supporter_filter(f):
+    """Only Supporter cards pass the filter (it names the Supporter kind in a conjunction)."""
+    if f == ('kind', ('supporter',)):
+        return True
+    if f[0] == 'and':
+        return supporter_filter(f[1]) or supporter_filter(f[2])
+    if f[0] == 'or':
+        return supporter_filter(f[1]) and supporter_filter(f[2])
+    return False
+
+
 def parse_test(c, ctx):
     """A condition 'If C, ...' to (tests, negated): the condition holds iff some test holds
     (or, when negated, iff none does)."""
@@ -934,6 +972,9 @@ def parse_test(c, ctx):
     # importer 0.9.0: a misprint in the data ("this Pokémon has any Fire Energy attaches", Zekrom)
     c = c.replace(' Energy attaches', ' Energy attached')
     r = parse_test_s16(c, ctx)
+    if r is not None:
+        return r
+    r = parse_test_played(c, ctx)
     if r is not None:
         return r
     opp_a = "your opponent's Active Pokémon"
@@ -4643,6 +4684,25 @@ def translate_stadium(c, res, text, joined):
                   joined))
         return res
     t = text[0]
+    guard = None
+    # importer 0.16.0 (milestone MV9): "Once during each player's turn, if they played X from their hand this turn, they
+    # may Y" (Team Rocket's Factory sv10-173): Y under the test of the Supporter record (`parse_test_played`), with no
+    # resolution when it fails (`NO_PLAY`: the Stadium cannot be used)
+    mg = re.match(r"^Once during each player's turn, if (they (?:played|didn't play) .+? from their hand this turn), "
+                  r"they may (.+)$", t)
+    if mg:
+        ctx0 = {'kind': 'trainer', 'name': name, 'base': None, 'cost': None}
+        try:
+            r0 = parse_test_played(mg.group(1), ctx0)
+        except Refuse as r:
+            B.append(('Stadium: activated effect not expressible: ' + r.reason, t))
+            return res
+        if r0 is None:
+            B.append(('Stadium: activated effect not expressible: a condition on the history of the turn', t))
+            return res
+        (gt,), gneg = r0
+        guard = (gt, gneg)
+        t = "Once during each player's turn, that player may " + mg.group(2)
     if t.startswith("Once during each player's turn"):
         m = STADIUM_USE.match(t)
         if not m:
@@ -4677,6 +4737,9 @@ def translate_stadium(c, res, text, joined):
             effs.append(it.e)
         effs = [no_effect_trainer(seq(*effs), t, res['caveats'])]
         e = seq(*([cost] if cost else []), *effs)
+        if guard is not None and e != SKIP:
+            gt, gneg = guard
+            e = ite(gt, NO_PLAY, e) if gneg else ite(gt, e, NO_PLAY)
         if e == SKIP or not (T.hit_free(e) and T.bench_hit_free(e)):
             B.append(('Stadium: activated effect not expressible: empty or with attack damage', t))
             return res
@@ -5237,7 +5300,8 @@ def ability_refusal(t):
         return 'Ability: first-turn limit'
     # milestone MV2: "if any of your Pokémon were Knocked Out during your opponent's last turn" is a test
     # (`Count.koLast`, `parse_test`); other history conditions are not
-    if re.search(r'if you played .+ this turn|last turn',
+    # importer 0.16.0: "if you played X from your hand this turn" is a test (`Count.played`, `parse_test_played`)
+    if re.search(r'if you played (?!.+ from your hand (?:during )?this turn).+ this turn|last turn',
                  re.sub(r"if any of your Pokémon were Knocked Out (?:by damage from an attack )?during your opponent's "
                         r"last turn", '', t)):
         return 'Ability: condition on the history of the turn (this turn, last turn)'

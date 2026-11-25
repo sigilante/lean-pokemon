@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 3 of 10 (150 cards).
+Imported Standard cards, part 3 of 11 (150 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,28 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part03
 open Pokemon
+
+/-- Ponyta (sv7-19). Records: sv7-19. -/
+def sv7_19 : Card := .pokemon
+  { name := "Ponyta", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Flop", cost := [.fire], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Rapidash (sv7-20). Records: sv7-20. -/
+def sv7_20 : Card := .pokemon
+  { name := "Rapidash", stage := .stage1, evolvesFrom := some "Ponyta",
+    hp := 12, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Burning Run", cost := [.fire, .colorless], damage := 0,
+        effect := .choice (.damage (.const 12)) (.damage (.const 6)),
+        gx := false }] }
 
 /-- Reshiram (sv7-22). Records: sv7-22. -/
 def sv7_22 : Card := .pokemon
@@ -1849,36 +1871,10 @@ def sv8_103 : Card := .pokemon
         effect := .seq (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)) (.linger .own .next (.reduce 10)),
         gx := false }] }
 
-/-- Trapinch (sv8-104). Records: sv8-104. -/
-def sv8_104 : Card := .pokemon
-  { name := "Trapinch", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Call for Family", cost := [.colorless], damage := 0,
-        effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
-        gx := false },
-      { name := "Bite", cost := [.fighting, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Vibrava (sv8-105). Records: sv8-105, sv8-206. Caveats: perPokemon. -/
-def sv8_105 : Card := .pokemon
-  { name := "Vibrava", stage := .stage1, evolvesFrom := some "Trapinch",
-    hp := 9, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Screech", cost := [.colorless], damage := 0,
-        effect := .linger .opp .after (.expose 5),
-        gx := false },
-      { name := "Cutting Wind", cost := [.fighting, .colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_19,
+  sv7_20,
   sv7_22,
   sv7_23,
   sv7_24,
@@ -2026,9 +2022,7 @@ def cards : List Card := [
   sv8_98,
   sv8_99,
   sv8_102,
-  sv8_103,
-  sv8_104,
-  sv8_105]
+  sv8_103]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2090,6 +2084,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Drifloon", "Tornadus", "Volcarona", "Donphan", "Vibrava"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Drifloon", "Tornadus", "Volcarona", "Donphan"] := by decide +kernel
 
 end PokemonCards.Standard.Part03

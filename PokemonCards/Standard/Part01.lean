@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 1 of 10 (150 cards).
+Imported Standard cards, part 1 of 11 (150 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -1164,6 +1164,20 @@ def sv5_79 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .this }] }
 
+/-- Iron Valiant (sv5-80). Records: sv5-80. -/
+def sv5_80 : Card := .pokemon
+  { name := "Iron Valiant", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Calculation", cost := [.psychic], damage := 0,
+        effect := .look .own (.top 4) .any (.exactly 0) (.put .top) .top,
+        gx := false },
+      { name := "Majestic Sword", cost := [.psychic, .psychic, .colorless], damage := 0,
+        effect := .ite (.countGe (.played .own (.and (.kind .supporter) (.or (.or (.or (.nameIn ["Ciphermaniac's Codebreaking", "Future Booster Energy Capsule", "Iron Boulder", "Iron Boulder ex", "Iron Bundle", "Iron Crown", "Iron Crown ex", "Iron Hands", "Iron Jugulis", "Iron Leaves", "Iron Leaves ex", "Iron Moth", "Iron Thorns", "Iron Thorns ex", "Iron Treads", "Iron Valiant", "Reboot Pod"]) (.and (.named "Miraidon") (.hasAttack "Peak Acceleration"))) (.and (.named "Miraidon") (.hasAttack "C.O.D.E.: Protect"))) (.and (.named "Miraidon ex") (.hasAttack "Repulsion Bolt"))))) 1) (.damage (.const 20)) (.damage (.const 10)),
+        gx := false }] }
+
 /-- Meditite (sv5-82). Records: sv5-82. -/
 def sv5_82 : Card := .pokemon
   { name := "Meditite", stage := .basic, evolvesFrom := none,
@@ -1767,17 +1781,6 @@ def sv6_4 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Sunkern (sv6-6). Records: sv6-6. -/
-def sv6_6 : Card := .pokemon
-  { name := "Sunkern", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bullet Seed", cost := [.grass], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.choice (.damage (.const 3)) (.damage (.const 4))))),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1877,6 +1880,7 @@ def cards : List Card := [
   sv5_74,
   sv5_75,
   sv5_79,
+  sv5_80,
   sv5_82,
   sv5_83,
   sv5_85,
@@ -1928,8 +1932,7 @@ def cards : List Card := [
   sv5_162,
   sv6_1,
   sv6_2,
-  sv6_4,
-  sv6_6]
+  sv6_4]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

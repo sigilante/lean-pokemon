@@ -16,12 +16,13 @@ import PokemonCards.Standard.Part07
 import PokemonCards.Standard.Part08
 import PokemonCards.Standard.Part09
 import PokemonCards.Standard.Part10
+import PokemonCards.Standard.Part11
 import PokemonCards.Props
 
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1497 terms, for 1505 of the pool's 2161 cards: 8 cards share the term of another,
+/-- Every imported card (1504 terms, for 1512 of the pool's 2161 cards: 8 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -33,7 +34,8 @@ def all : List Card :=
   Part07.cards ++
   Part08.cards ++
   Part09.cards ++
-  Part10.cards
+  Part10.cards ++
+  Part11.cards
 
 /-- The imported cards whose term is that of an earlier card in `all` (their records differ only in
 text read as a reminder): representative record id, name, and the id of the card whose term it is. -/
@@ -78,11 +80,10 @@ def notImported : List (String × String × String) := [
   ("sv5-73", "Elgyem", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("sv5-76", "Ribombee", "unhandled sentence: During your next turn, if the Defending Pokémon is Knocked Out, take 2 more Prize cards."),
   ("sv5-77", "Scream Tail", "unhandled sentence: Heal 100 damage from 1 of your Benched Ancient Pokémon."),
-  ("sv5-80", "Iron Valiant", "not modelled (Known gaps, MV2): history: the Supporter played this turn: If you played a Future Supporter card from your hand during this turn, this attack does 100 more damage."),
   ("sv5-84", "Relicanth", "Ability: static, attacks (use of other attacks): Each of your evolved Pokémon can use any attack from its previous Evolutions. (You still need the necessary Energy to use each attack.)"),
   ("sv5-92", "Mudsdale", "unhandled sentence: Attach a Basic Fighting Energy card from your discard pile to each of your Benched Pokémon."),
   ("sv5-96", "Great Tusk", "condition not expressible: your Benched Pokémon have any damage counters on them: If your Benched Pokémon have any damage counters on them, this attack does 80 more damage."),
-  ("sv5-97", "Great Tusk", "not modelled (Known gaps, MV2): history: the Supporter played this turn: If you played an Ancient Supporter card from your hand during this turn, discard 3 more cards in this way."),
+  ("sv5-97", "Great Tusk", "unhandled sentence: Discard 3 more cards in this way."),
   ("sv5-104", "Gengar ex", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): Whenever your opponent attaches an Energy card from their hand to 1 of their Pokémon, put 2 damage counters on that Pokémon."),
   ("sv5-107", "Sableye", "unhandled sentence: You may move any number of damage counters from your opponent's Benched Pokémon to their Active Pokémon."),
   ("sv5-111", "Scizor ex", "unhandled sentence: Discard up to 2 Metal Energy from this Pokémon."),
@@ -152,7 +153,7 @@ def notImported : List (String × String × String) := [
   ("sv6-141", "Bloodmoon Ursaluna ex", "Ability: static, cost (attack cost or Energy provision): Blood Moon used by this Pokémon costs Colorless less for each Prize card your opponent has taken."),
   ("sv6-144", "Caretaker", "condition not expressible: you drew any cards in this way and if Community Center is in play: If you drew any cards in this way and if Community Center is in play, shuffle this Caretaker into your deck instead of discarding it."),
   ("sv6-145", "Carmine", "condition not expressible: you go first: If you go first, you may use this card during your first turn."),
-  ("sv6-146", "Community Center", "Stadium: activated effect not expressible: a condition on the history of the turn: Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."),
+  ("sv6-146", "Community Center", "Stadium: activated effect not expressible: unhandled sentence: Once during each player's turn, that player may heal 10 damage from each of their Pokémon."),
   ("sv6-149", "Festival Grounds", "Stadium: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions."),
   ("sv6-150", "Handheld Fan", "Pokémon Tool: triggered (M8b shape), effect sentence not translated (unhandled sentence): Move an Energy from your opponent's Active Pokémon to 1 of your opponent's Benched Pokémon."),
   ("sv6-153", "Jamming Tower", "Stadium: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect."),
@@ -173,7 +174,6 @@ def notImported : List (String × String × String) := [
   ("sv6pt5-17", "Hypno", "unhandled sentence: During your opponent's next turn, if they attach an Energy card from their hand to the Defending Pokémon, their turn ends."),
   ("sv6pt5-21", "Cresselia", "unhandled sentence: Heal 20 damage from each of your Pokémon."),
   ("sv6pt5-22", "Sylveon", "unhandled sentence: Choose 1 of your opponent's Benched Pokémon."),
-  ("sv6pt5-29", "Crobat", "Ability: condition on the history of the turn (this turn, last turn): Once during your turn, if you played Janine's Secret Art from your hand this turn, you may draw cards until you have 8 cards in your hand."),
   ("sv6pt5-33", "Inkay", "unhandled sentence: Look at the top card of your opponent's deck."),
   ("sv6pt5-34", "Malamar", "unhandled sentence: This attack does 120 damage to the new Active Pokémon."),
   ("sv6pt5-35", "Yveltal", "unhandled sentence: Put 2 damage counters on each of your opponent's Pokémon that has any damage counters on it."),
@@ -389,7 +389,6 @@ def notImported : List (String × String × String) := [
   ("sv10-161", "Arven's Sandwich", "condition not expressible: that Pokémon is an Arven's Pokémon: If that Pokémon is an Arven's Pokémon, heal 100 damage from it instead."),
   ("sv10-170", "Team Rocket's Archer", "unhandled sentence: You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn."),
   ("sv10-172", "Team Rocket's Bother-Bot", "unhandled sentence: Turn 1 of your opponent's face-down Prize cards face up and choose a random card from your opponent's hand."),
-  ("sv10-173", "Team Rocket's Factory", "Stadium: activated effect not expressible: a condition on the history of the turn: Once during each player's turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."),
   ("sv10-174", "Team Rocket's Giovanni", "unhandled sentence: Switch your Active Team Rocket's Pokémon with 1 of your Benched Team Rocket's Pokémon."),
   ("sv10-177", "Team Rocket's Proton", "condition not expressible: you go first: If you go first, you may use this card during your first turn."),
   ("sv10-180", "Team Rocket's Watchtower", "Stadium: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): Colorless Pokémon in play (both yours and your opponent's) have no Abilities."),
@@ -501,7 +500,6 @@ def notImported : List (String × String × String) := [
   ("me2pt5-40", "Golduck", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): Pokémon in play (both yours and your opponent's) lose any Ability that requires the Pokémon using it to Knock Out itself."),
   ("me2pt5-51", "N's Vanilluxe", "unhandled sentence: Double the number of damage counters on each of your opponent's Pokémon."),
   ("me2pt5-61", "Mega Eelektross ex", "unhandled sentence: You may discard 2 Lightning Energy from this Pokémon and make your opponent's Active Pokémon Paralyzed."),
-  ("me2pt5-64", "Heliolisk", "Ability: condition on the history of the turn (this turn, last turn): Once during your turn, if you played Canari from your hand this turn, you may use this Ability. Search your deck for up to 2 Basic Lightning Energy cards and attach them to this Pokémon. Then, shuffle your deck."),
   ("me2pt5-67", "Tapu Koko", "condition not expressible: you go first: If you go first, you can use this attack during your first turn."),
   ("me2pt5-83", "Marill", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
   ("me2pt5-85", "Misdreavus", "unhandled sentence: Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it."),
@@ -519,7 +517,6 @@ def notImported : List (String × String × String) := [
   ("me2pt5-148", "Kingambit", "Ability: static, cond (a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage)): Attacks used by this Pokémon do 30 more damage to your opponent's Active Pokémon for each Prize card your opponent has taken (before applying Weakness and Resistance)."),
   ("me2pt5-151", "Dragonair", "Ability: condition on this Pokémon, which may be on the Bench: this Pokémon has any Energy attached: Once during your turn, if this Pokémon has any Energy attached, you may use this Ability. Search your deck for an Evolution Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."),
   ("me2pt5-157", "Noivern", "unhandled sentence: During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon."),
-  ("me2pt5-162", "Team Rocket's Kangaskhan ex", "not modelled (Known gaps, MV2): history: the Supporter played this turn: If you played a Supporter card that has \"Team Rocket\" in its name from your hand during this turn, this attack does 100 more damage."),
   ("me2pt5-175", "Larry's Komala", "unhandled sentence: Attach an Energy card from your hand to your Active Larry's Pokémon."),
   ("me2pt5-182", "Anthea & Concordia", "unhandled sentence: You can use this card only if you have N's Darmanitan, N's Zoroark ex, N's Vanilluxe, N's Klinklang, N's Reshiram, and N's Zekrom in play."),
   ("me2pt5-186", "Counter Gain", "Pokémon Tool: static, cost (attack cost or Energy provision): If you have more Prize cards remaining than your opponent, attacks used by the Pokémon this card is attached to cost Colorless less."),
@@ -533,7 +530,6 @@ def notImported : List (String × String × String) := [
   ("me3-29", "Dedenne", "unhandled sentence: Choose Basic Lightning Energy cards from your discard pile up to the amount of Energy attached to all of your opponent's Pokémon and attach them to your Lightning Pokémon in any way you like."),
   ("me3-31", "Mega Clefable ex", "Ability: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Prevent all effects of your opponent's Pokémon's Abilities done to this Pokémon."),
   ("me3-39", "Hippopotas", "unhandled sentence: During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips a coin."),
-  ("me3-40", "Hippowdon", "not modelled (Known gaps, MV2): history: the Supporter played this turn: If you played Tarragon from your hand during this turn, discard the top 3 cards of your opponent's deck."),
   ("me3-41", "Landorus", "unhandled sentence: Put an Energy attached to this Pokémon into your hand."),
   ("me3-46", "Hawlucha", "condition not expressible: your Benched Pokémon have any damage counters on them: If your Benched Pokémon have any damage counters on them, this attack does 60 more damage."),
   ("me3-47", "Mega Zygarde ex", "unhandled sentence: For each of your opponent's Pokémon, flip a coin."),
@@ -566,7 +562,6 @@ def notImported : List (String × String × String) := [
   ("me4-30", "Emolga", "unhandled sentence: Put this Pokémon and all attached cards into your hand."),
   ("me4-33", "Deoxys", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Pokémon that have an Ability."),
   ("me4-35", "Mega Floette ex", "unhandled sentence: Heal 30 damage from each Pokémon (both yours and your opponent's)."),
-  ("me4-36", "Espurr", "not modelled (Known gaps, MV2): history: the Supporter played this turn: If you played Emma from your hand during this turn, this attack does 60 more damage."),
   ("me4-38", "Phantump", "Ability: first-turn limit: Once during your turn, you may use this Ability. Choose a card in your hand that evolves from this Pokémon and put it onto this Pokémon to evolve it. If you do, place 2 damage counters on the Pokémon you evolved in this way. You can't use this Ability during your first turn."),
   ("me4-39", "Trevenant", "unhandled sentence: During your opponent's next turn, Energy can't be attached from your opponent's hand to the Defending Pokémon."),
   ("me4-41", "Gourgeist ex", "not modelled (Known gaps, MV2): spread: target filtered by its damage: This attack does 50 more damage for each of your Benched Pokémon that has any damage counters on it."),
@@ -700,13 +695,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-132", "Bubbly Water Energy", "Special Energy: rider not modelled: Special Condition recovery and immunity (no static form): The Water Pokémon this card is attached to recovers from all Special Conditions and can't be affected by any Special Conditions."),
   ("me6-134", "Nitro Fire Energy", "Special Energy: rider not modelled: return after a discard by the holder's attack (no machinery): If this card is discarded by an effect of an attack used by the Fire Pokémon this card is attached to, put this card into your hand after attack damage and effects.")]
 
-/-- **The count.** `all` has 1497 entries. -/
-theorem all_length : all.length = 1497 := by decide +kernel
+/-- **The count.** `all` has 1504 entries. -/
+theorem all_length : all.length = 1504 := by decide +kernel
 
-/-- `notImported` has 656 entries. -/
-theorem notImported_length : notImported.length = 656 := by decide +kernel
+/-- `notImported` has 649 entries. -/
+theorem notImported_length : notImported.length = 649 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1497 + 8 + 656 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1504 + 8 + 649 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -714,7 +709,7 @@ theorem pool_size : all.length + sameTerm.length + notImported.length = 2161 := 
 
 /-- Every imported card passes the per-card checks. -/
 theorem all_ok : all.all Card.importOk = true := by
-  simp only [all, List.all_append, Part01.cards_ok, Part02.cards_ok, Part03.cards_ok, Part04.cards_ok, Part05.cards_ok, Part06.cards_ok, Part07.cards_ok, Part08.cards_ok, Part09.cards_ok, Part10.cards_ok, Bool.and_self]
+  simp only [all, List.all_append, Part01.cards_ok, Part02.cards_ok, Part03.cards_ok, Part04.cards_ok, Part05.cards_ok, Part06.cards_ok, Part07.cards_ok, Part08.cards_ok, Part09.cards_ok, Part10.cards_ok, Part11.cards_ok, Bool.and_self]
 
 /-- **No imported card is inert.** No imported Stadium or Tool is a card the model plays with no
 effect (`Card.inert`): every imported Stadium has an activated or (milestone M6) a static effect the
@@ -725,7 +720,7 @@ text outside the shapes the model has, static text outside the model's `Static`,
 with a rider the model lacks, which the model would play as inert, are refused by the importer.) -/
 theorem notInert : ∀ c ∈ all, c.inert = false := by
   have h : all.all (fun c => !c.inert) = true := by
-    simp only [all, List.all_append, Part01.cards_notInert, Part02.cards_notInert, Part03.cards_notInert, Part04.cards_notInert, Part05.cards_notInert, Part06.cards_notInert, Part07.cards_notInert, Part08.cards_notInert, Part09.cards_notInert, Part10.cards_notInert, Bool.and_self]
+    simp only [all, List.all_append, Part01.cards_notInert, Part02.cards_notInert, Part03.cards_notInert, Part04.cards_notInert, Part05.cards_notInert, Part06.cards_notInert, Part07.cards_notInert, Part08.cards_notInert, Part09.cards_notInert, Part10.cards_notInert, Part11.cards_notInert, Bool.and_self]
   intro c hc
   simpa using List.all_eq_true.1 h c hc
 
@@ -864,13 +859,43 @@ theorem cross_8_10 : crossOk Part08.cards Part10.cards = true := by decide +kern
 /-- No card of part 9 is the same term as a card of part 10. -/
 theorem cross_9_10 : crossOk Part09.cards Part10.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1497 distinct
+/-- No card of part 1 is the same term as a card of part 11. -/
+theorem cross_1_11 : crossOk Part01.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 2 is the same term as a card of part 11. -/
+theorem cross_2_11 : crossOk Part02.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 3 is the same term as a card of part 11. -/
+theorem cross_3_11 : crossOk Part03.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 4 is the same term as a card of part 11. -/
+theorem cross_4_11 : crossOk Part04.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 5 is the same term as a card of part 11. -/
+theorem cross_5_11 : crossOk Part05.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 6 is the same term as a card of part 11. -/
+theorem cross_6_11 : crossOk Part06.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 7 is the same term as a card of part 11. -/
+theorem cross_7_11 : crossOk Part07.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 8 is the same term as a card of part 11. -/
+theorem cross_8_11 : crossOk Part08.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 9 is the same term as a card of part 11. -/
+theorem cross_9_11 : crossOk Part09.cards Part11.cards = true := by decide +kernel
+
+/-- No card of part 10 is the same term as a card of part 11. -/
+theorem cross_10_11 : crossOk Part10.cards Part11.cards = true := by decide +kernel
+
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1504 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=
   nodup_of_nodupFp (by
-    simp only [all, nodupFp_append, crossOk_append_left, Part01.cards_nodup, Part02.cards_nodup, Part03.cards_nodup, Part04.cards_nodup, Part05.cards_nodup, Part06.cards_nodup, Part07.cards_nodup, Part08.cards_nodup, Part09.cards_nodup, Part10.cards_nodup,
-      cross_1_2, cross_1_3, cross_2_3, cross_1_4, cross_2_4, cross_3_4, cross_1_5, cross_2_5, cross_3_5, cross_4_5, cross_1_6, cross_2_6, cross_3_6, cross_4_6, cross_5_6, cross_1_7, cross_2_7, cross_3_7, cross_4_7, cross_5_7, cross_6_7, cross_1_8, cross_2_8, cross_3_8, cross_4_8, cross_5_8, cross_6_8, cross_7_8, cross_1_9, cross_2_9, cross_3_9, cross_4_9, cross_5_9, cross_6_9, cross_7_9, cross_8_9, cross_1_10, cross_2_10, cross_3_10, cross_4_10, cross_5_10, cross_6_10, cross_7_10, cross_8_10, cross_9_10, Bool.and_self])
+    simp only [all, nodupFp_append, crossOk_append_left, Part01.cards_nodup, Part02.cards_nodup, Part03.cards_nodup, Part04.cards_nodup, Part05.cards_nodup, Part06.cards_nodup, Part07.cards_nodup, Part08.cards_nodup, Part09.cards_nodup, Part10.cards_nodup, Part11.cards_nodup,
+      cross_1_2, cross_1_3, cross_2_3, cross_1_4, cross_2_4, cross_3_4, cross_1_5, cross_2_5, cross_3_5, cross_4_5, cross_1_6, cross_2_6, cross_3_6, cross_4_6, cross_5_6, cross_1_7, cross_2_7, cross_3_7, cross_4_7, cross_5_7, cross_6_7, cross_1_8, cross_2_8, cross_3_8, cross_4_8, cross_5_8, cross_6_8, cross_7_8, cross_1_9, cross_2_9, cross_3_9, cross_4_9, cross_5_9, cross_6_9, cross_7_9, cross_8_9, cross_1_10, cross_2_10, cross_3_10, cross_4_10, cross_5_10, cross_6_10, cross_7_10, cross_8_10, cross_9_10, cross_1_11, cross_2_11, cross_3_11, cross_4_11, cross_5_11, cross_6_11, cross_7_11, cross_8_11, cross_9_11, cross_10_11, Bool.and_self])
 
 /-- The imported cards that write a stored amount (`Effect.writes`, `Mod.isAmt`: a damage bonus or reduction, and since
 milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`), by name. -/
@@ -909,7 +934,7 @@ Abilities; not Stadiums, whose uses are bounded per turn), by name: the recycler
 theorem freeRecyclers : (all.filter fun c => !c.freeRec.isEmpty).map Card.label = ["Lana's Aid", "Night Stretcher", "Miracle Headset", "Max Rod", "Energy Recycler", "Sacred Ash", "Energy Retrieval", "Tarragon", "Great Haul Net"] := by decide +kernel
 
 /-- The imported Stadiums and Pokémon Tools, by name (milestone M5; none is `Card.inert`, `notInert`). -/
-theorem stadiumsAndTools : (all.filter fun c => c.isStadium || c.isTool).map Card.label = ["Paradise Resort", "Full Metal Lab", "Hero's Cape", "Maximum Belt", "Perilous Jungle", "Lucky Helmet", "Academy at Night", "Deluxe Bomb", "Gravity Gemstone", "Amulet of Hope", "Gravity Mountain", "Lively Stadium", "Levincia", "Postwick", "Cynthia's Power Weight", "Granite Cave", "Spikemuth Gym", "Brave Bangle", "Air Balloon", "Punk Helmet", "Light Ball", "Team Rocket's Hypnotizer", "Thick Scale", "Core Memory", "Prism Tower"] := by decide +kernel
+theorem stadiumsAndTools : (all.filter fun c => c.isStadium || c.isTool).map Card.label = ["Paradise Resort", "Full Metal Lab", "Hero's Cape", "Maximum Belt", "Perilous Jungle", "Lucky Helmet", "Academy at Night", "Deluxe Bomb", "Gravity Gemstone", "Amulet of Hope", "Gravity Mountain", "Lively Stadium", "Levincia", "Postwick", "Cynthia's Power Weight", "Granite Cave", "Spikemuth Gym", "Team Rocket's Factory", "Brave Bangle", "Air Balloon", "Punk Helmet", "Light Ball", "Team Rocket's Hypnotizer", "Thick Scale", "Core Memory", "Prism Tower"] := by decide +kernel
 
 /-- The imported Stadiums whose effect can return a card from a discard pile (`Card.allRec`; not
 free recyclers, `Card.freeRec`, since their uses are bounded per turn), by name. -/
@@ -951,28 +976,28 @@ theorem xfinite (g₀ : GameState) (hg : ∀ x ∈ g₀.allCards, x ∈ all) :
 
 /-- The imported cards with a static HP effect (milestone M6), by name (9). Checked part by part. -/
 theorem staticHp : (all.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape", "Okidogi", "Gravity Mountain", "Lively Stadium", "Cynthia's Power Weight", "Conkeldurr", "Tyrantrum", "Growing Grass Energy", "Alolan Exeggutor"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_staticHp, Part02.cards_staticHp, Part03.cards_staticHp, Part04.cards_staticHp, Part05.cards_staticHp, Part06.cards_staticHp, Part07.cards_staticHp, Part08.cards_staticHp, Part09.cards_staticHp, Part10.cards_staticHp, List.cons_append, List.nil_append,
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticHp, Part02.cards_staticHp, Part03.cards_staticHp, Part04.cards_staticHp, Part05.cards_staticHp, Part06.cards_staticHp, Part07.cards_staticHp, Part08.cards_staticHp, Part09.cards_staticHp, Part10.cards_staticHp, Part11.cards_staticHp, List.cons_append, List.nil_append,
     List.append_nil]
 
 /-- The imported cards with a static damage bonus effect (milestone M6), by name (12). Checked part by part. -/
 theorem staticBonus : (all.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Maximum Belt", "Okidogi", "Carracosta", "Victini", "Lilligant", "Postwick", "Cynthia's Roserade", "Brave Bangle", "Serperior ex", "Garganacl", "Light Ball", "Voltaic Lightning Energy"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_staticBonus, Part02.cards_staticBonus, Part03.cards_staticBonus, Part04.cards_staticBonus, Part05.cards_staticBonus, Part06.cards_staticBonus, Part07.cards_staticBonus, Part08.cards_staticBonus, Part09.cards_staticBonus, Part10.cards_staticBonus, List.cons_append, List.nil_append,
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticBonus, Part02.cards_staticBonus, Part03.cards_staticBonus, Part04.cards_staticBonus, Part05.cards_staticBonus, Part06.cards_staticBonus, Part07.cards_staticBonus, Part08.cards_staticBonus, Part09.cards_staticBonus, Part10.cards_staticBonus, Part11.cards_staticBonus, List.cons_append, List.nil_append,
     List.append_nil]
 
 /-- The imported cards with a static damage reduction effect (milestone M6), by name (16). Checked part by part. -/
 theorem staticReduce : (all.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig", "Full Metal Lab", "Tangrowth", "Dubwool", "Cetitan", "Bronzong", "Furfrou", "Regirock", "Mudsdale", "Granite Cave", "Bouffalant ex", "Klinklang", "Dewgong", "Mega Diancie ex", "Thick Scale", "Kakuna"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_staticReduce, Part02.cards_staticReduce, Part03.cards_staticReduce, Part04.cards_staticReduce, Part05.cards_staticReduce, Part06.cards_staticReduce, Part07.cards_staticReduce, Part08.cards_staticReduce, Part09.cards_staticReduce, Part10.cards_staticReduce, List.cons_append, List.nil_append,
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticReduce, Part02.cards_staticReduce, Part03.cards_staticReduce, Part04.cards_staticReduce, Part05.cards_staticReduce, Part06.cards_staticReduce, Part07.cards_staticReduce, Part08.cards_staticReduce, Part09.cards_staticReduce, Part10.cards_staticReduce, Part11.cards_staticReduce, List.cons_append, List.nil_append,
     List.append_nil]
 
 /-- The imported cards with a static Retreat Cost effect (milestone M6), by name (8). Checked part by part. -/
 theorem staticRetreat : (all.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Paradise Resort", "Archaludon", "Gravity Gemstone", "Latias ex", "Toedscruel", "Air Balloon", "Magnetic Metal Energy", "Altaria"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_staticRetreat, Part02.cards_staticRetreat, Part03.cards_staticRetreat, Part04.cards_staticRetreat, Part05.cards_staticRetreat, Part06.cards_staticRetreat, Part07.cards_staticRetreat, Part08.cards_staticRetreat, Part09.cards_staticRetreat, Part10.cards_staticRetreat, List.cons_append, List.nil_append,
+  simp only [all, List.filter_append, List.map_append, Part01.cards_staticRetreat, Part02.cards_staticRetreat, Part03.cards_staticRetreat, Part04.cards_staticRetreat, Part05.cards_staticRetreat, Part06.cards_staticRetreat, Part07.cards_staticRetreat, Part08.cards_staticRetreat, Part09.cards_staticRetreat, Part10.cards_staticRetreat, Part11.cards_staticRetreat, List.cons_append, List.nil_append,
     List.append_nil]
 
 /-- Every printed HP of an imported Pokémon is at most 38 counters. -/
 theorem printedHp_le : ∀ c ∈ all, c.printedHp ≤ 38 := by
   have h : all.all (fun c => decide (c.printedHp ≤ 38)) = true := by
-    simp only [all, List.all_append, Part01.cards_printedHp, Part02.cards_printedHp, Part03.cards_printedHp, Part04.cards_printedHp, Part05.cards_printedHp, Part06.cards_printedHp, Part07.cards_printedHp, Part08.cards_printedHp, Part09.cards_printedHp, Part10.cards_printedHp, Bool.and_self]
+    simp only [all, List.all_append, Part01.cards_printedHp, Part02.cards_printedHp, Part03.cards_printedHp, Part04.cards_printedHp, Part05.cards_printedHp, Part06.cards_printedHp, Part07.cards_printedHp, Part08.cards_printedHp, Part09.cards_printedHp, Part10.cards_printedHp, Part11.cards_printedHp, Bool.and_self]
   intro c hc
   exact of_decide_eq_true (List.all_eq_true.1 h c hc)
 
@@ -980,7 +1005,7 @@ theorem printedHp_le : ∀ c ∈ all, c.printedHp ≤ 38 := by
 the N of "+N HP for each Energy") are at most 25 counters. -/
 theorem hpGain_le : ∀ c ∈ all, c.hpGain ≤ 25 := by
   have h : all.all (fun c => decide (c.hpGain ≤ 25)) = true := by
-    simp only [all, List.all_append, Part01.cards_hpGain, Part02.cards_hpGain, Part03.cards_hpGain, Part04.cards_hpGain, Part05.cards_hpGain, Part06.cards_hpGain, Part07.cards_hpGain, Part08.cards_hpGain, Part09.cards_hpGain, Part10.cards_hpGain, Bool.and_self]
+    simp only [all, List.all_append, Part01.cards_hpGain, Part02.cards_hpGain, Part03.cards_hpGain, Part04.cards_hpGain, Part05.cards_hpGain, Part06.cards_hpGain, Part07.cards_hpGain, Part08.cards_hpGain, Part09.cards_hpGain, Part10.cards_hpGain, Part11.cards_hpGain, Bool.and_self]
   intro c hc
   exact of_decide_eq_true (List.all_eq_true.1 h c hc)
 
@@ -1004,7 +1029,7 @@ theorem hpOf_le_120 (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) (hn :
 `reduce` constants of its static effects) are at most 5 counters. -/
 theorem reduceGain_le : ∀ c ∈ all, c.reduceGain ≤ 5 := by
   have h : all.all (fun c => decide (c.reduceGain ≤ 5)) = true := by
-    simp only [all, List.all_append, Part01.cards_reduceGain, Part02.cards_reduceGain, Part03.cards_reduceGain, Part04.cards_reduceGain, Part05.cards_reduceGain, Part06.cards_reduceGain, Part07.cards_reduceGain, Part08.cards_reduceGain, Part09.cards_reduceGain, Part10.cards_reduceGain, Bool.and_self]
+    simp only [all, List.all_append, Part01.cards_reduceGain, Part02.cards_reduceGain, Part03.cards_reduceGain, Part04.cards_reduceGain, Part05.cards_reduceGain, Part06.cards_reduceGain, Part07.cards_reduceGain, Part08.cards_reduceGain, Part09.cards_reduceGain, Part10.cards_reduceGain, Part11.cards_reduceGain, Bool.and_self]
   intro c hc
   exact of_decide_eq_true (List.all_eq_true.1 h c hc)
 
@@ -1024,41 +1049,42 @@ stored damage reduction) and that no damage reduction be stored at the start; it
 is not covered by `Reach.finite`; every game of imported cards is `StoreSafe` (`storeSafe`), and
 `StoreSafe.xfinite` (`xfinite`) applies to all of them. -/
 theorem untame : (all.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle", "Trevenant", "Torkoal", "Houndoom", "Varoom", "Drifloon", "Tornadus", "Volcarona", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Paras", "Hop's Corviknight", "Shelgon", "Hop's Rookidee", "Clamperl", "Virizion", "Sigilyph", "Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi", "Chikorita", "Stunfisk", "Carkol", "Registeel ex", "Mega Pyroar ex", "Metang", "Mabosstiff", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_untame, Part02.cards_untame, Part03.cards_untame, Part04.cards_untame, Part05.cards_untame, Part06.cards_untame, Part07.cards_untame, Part08.cards_untame, Part09.cards_untame, Part10.cards_untame, List.cons_append, List.nil_append]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_untame, Part02.cards_untame, Part03.cards_untame, Part04.cards_untame, Part05.cards_untame, Part06.cards_untame, Part07.cards_untame, Part08.cards_untame, Part09.cards_untame, Part10.cards_untame, Part11.cards_untame, List.cons_append, List.nil_append,
+    List.append_nil]
 
 /-- The imported cards with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name (17). Checked part by part. -/
 theorem trigDamaged : (all.filter (Card.hasTrig .damaged)).map Card.label = ["Roselia", "Roserade", "Iron Jugulis", "Heatran", "Lucky Helmet", "Deluxe Bomb", "Bruxish", "Spiky Energy", "Team Rocket's Koffing", "Scolipede", "Punk Helmet", "Numel", "Hop's Pincurchin ex", "Mega Scrafty ex", "Team Rocket's Hypnotizer", "Qwilfish", "Sandslash"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_trigDamaged, Part02.cards_trigDamaged, Part03.cards_trigDamaged, Part04.cards_trigDamaged, Part05.cards_trigDamaged, Part06.cards_trigDamaged, Part07.cards_trigDamaged, Part08.cards_trigDamaged, Part09.cards_trigDamaged, Part10.cards_trigDamaged]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_trigDamaged, Part02.cards_trigDamaged, Part03.cards_trigDamaged, Part04.cards_trigDamaged, Part05.cards_trigDamaged, Part06.cards_trigDamaged, Part07.cards_trigDamaged, Part08.cards_trigDamaged, Part09.cards_trigDamaged, Part10.cards_trigDamaged, Part11.cards_trigDamaged]
   all_goals rfl
 
 /-- The imported cards with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name (4). Checked part by part. -/
 theorem trigKO : (all.filter (Card.hasTrig .koByAttack)).map Card.label = ["Amulet of Hope", "Maractus", "Flygon", "Pecharunt"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_trigKO, Part02.cards_trigKO, Part03.cards_trigKO, Part04.cards_trigKO, Part05.cards_trigKO, Part06.cards_trigKO, Part07.cards_trigKO, Part08.cards_trigKO, Part09.cards_trigKO, Part10.cards_trigKO]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_trigKO, Part02.cards_trigKO, Part03.cards_trigKO, Part04.cards_trigKO, Part05.cards_trigKO, Part06.cards_trigKO, Part07.cards_trigKO, Part08.cards_trigKO, Part09.cards_trigKO, Part10.cards_trigKO, Part11.cards_trigKO]
   all_goals rfl
 
 /-- The imported cards with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name (2). Checked part by part. -/
 theorem trigBenched : (all.filter (Card.hasTrig .oppBenched)).map Card.label = ["Magcargo", "Mismagius ex"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_trigBenched, Part02.cards_trigBenched, Part03.cards_trigBenched, Part04.cards_trigBenched, Part05.cards_trigBenched, Part06.cards_trigBenched, Part07.cards_trigBenched, Part08.cards_trigBenched, Part09.cards_trigBenched, Part10.cards_trigBenched]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_trigBenched, Part02.cards_trigBenched, Part03.cards_trigBenched, Part04.cards_trigBenched, Part05.cards_trigBenched, Part06.cards_trigBenched, Part07.cards_trigBenched, Part08.cards_trigBenched, Part09.cards_trigBenched, Part10.cards_trigBenched, Part11.cards_trigBenched]
   all_goals rfl
 
 /-- The imported cards with or giving a triggered Ability on `TrigEvent.movedUp` (milestone MV7c) (milestone M8b), by name (0). Checked part by part. -/
 theorem trigMovedUp : (all.filter (Card.hasTrig .movedUp)).map Card.label = [] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_trigMovedUp, Part02.cards_trigMovedUp, Part03.cards_trigMovedUp, Part04.cards_trigMovedUp, Part05.cards_trigMovedUp, Part06.cards_trigMovedUp, Part07.cards_trigMovedUp, Part08.cards_trigMovedUp, Part09.cards_trigMovedUp, Part10.cards_trigMovedUp]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_trigMovedUp, Part02.cards_trigMovedUp, Part03.cards_trigMovedUp, Part04.cards_trigMovedUp, Part05.cards_trigMovedUp, Part06.cards_trigMovedUp, Part07.cards_trigMovedUp, Part08.cards_trigMovedUp, Part09.cards_trigMovedUp, Part10.cards_trigMovedUp, Part11.cards_trigMovedUp]
   all_goals rfl
 
 /-- The imported cards with or giving a triggered Ability on `TrigEvent.movedDown` (milestone MV7c) (milestone M8b), by name (1). Checked part by part. -/
 theorem trigMovedDown : (all.filter (Card.hasTrig .movedDown)).map Card.label = ["Clawitzer"] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_trigMovedDown, Part02.cards_trigMovedDown, Part03.cards_trigMovedDown, Part04.cards_trigMovedDown, Part05.cards_trigMovedDown, Part06.cards_trigMovedDown, Part07.cards_trigMovedDown, Part08.cards_trigMovedDown, Part09.cards_trigMovedDown, Part10.cards_trigMovedDown]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_trigMovedDown, Part02.cards_trigMovedDown, Part03.cards_trigMovedDown, Part04.cards_trigMovedDown, Part05.cards_trigMovedDown, Part06.cards_trigMovedDown, Part07.cards_trigMovedDown, Part08.cards_trigMovedDown, Part09.cards_trigMovedDown, Part10.cards_trigMovedDown, Part11.cards_trigMovedDown]
   all_goals rfl
 
 /-- The imported cards whose triggered Abilities write a lingering modifier (milestone M8b), by name (0). Checked part by part. -/
 theorem trigLingers : (all.filter Card.trigLingers).map Card.label = [] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_trigLingers, Part02.cards_trigLingers, Part03.cards_trigLingers, Part04.cards_trigLingers, Part05.cards_trigLingers, Part06.cards_trigLingers, Part07.cards_trigLingers, Part08.cards_trigLingers, Part09.cards_trigLingers, Part10.cards_trigLingers]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_trigLingers, Part02.cards_trigLingers, Part03.cards_trigLingers, Part04.cards_trigLingers, Part05.cards_trigLingers, Part06.cards_trigLingers, Part07.cards_trigLingers, Part08.cards_trigLingers, Part09.cards_trigLingers, Part10.cards_trigLingers, Part11.cards_trigLingers]
   all_goals rfl
 
 /-- The imported cards whose triggered Abilities can return a card from a discard pile (milestone M8b), by name (0). Checked part by part. -/
 theorem trigRecycles : (all.filter Card.trigRecycles).map Card.label = [] := by
-  simp only [all, List.filter_append, List.map_append, Part01.cards_trigRecycles, Part02.cards_trigRecycles, Part03.cards_trigRecycles, Part04.cards_trigRecycles, Part05.cards_trigRecycles, Part06.cards_trigRecycles, Part07.cards_trigRecycles, Part08.cards_trigRecycles, Part09.cards_trigRecycles, Part10.cards_trigRecycles]
+  simp only [all, List.filter_append, List.map_append, Part01.cards_trigRecycles, Part02.cards_trigRecycles, Part03.cards_trigRecycles, Part04.cards_trigRecycles, Part05.cards_trigRecycles, Part06.cards_trigRecycles, Part07.cards_trigRecycles, Part08.cards_trigRecycles, Part09.cards_trigRecycles, Part10.cards_trigRecycles, Part11.cards_trigRecycles]
   all_goals rfl
 
 /-- **Every imported trigger fires wherever its place allows, and resolves an effect of the fragment**
@@ -1071,7 +1097,7 @@ no turn flag (`Run.zoneOnly`) and always has a resolution with both Active Spots
 theorem triggers_fire : ∀ c ∈ all, ∀ ab ∈ c.abilities, ∀ ev, ab.use.event = some ev → ∀ sp : Spot,
     ab.trigOn ev sp = ab.spotOk sp ∧ (ab.script ev.place).trigOk = true := by
   have h : all.all Card.trigsOk = true := by
-    simp only [all, List.all_append, Part01.cards_trigsOk, Part02.cards_trigsOk, Part03.cards_trigsOk, Part04.cards_trigsOk, Part05.cards_trigsOk, Part06.cards_trigsOk, Part07.cards_trigsOk, Part08.cards_trigsOk, Part09.cards_trigsOk, Part10.cards_trigsOk, Bool.and_self]
+    simp only [all, List.all_append, Part01.cards_trigsOk, Part02.cards_trigsOk, Part03.cards_trigsOk, Part04.cards_trigsOk, Part05.cards_trigsOk, Part06.cards_trigsOk, Part07.cards_trigsOk, Part08.cards_trigsOk, Part09.cards_trigsOk, Part10.cards_trigsOk, Part11.cards_trigsOk, Bool.and_self]
   intro c hc ab hab ev he sp
   exact trigOn_of_trigsOk (List.all_eq_true.1 h c hc) hab he sp
 

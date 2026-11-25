@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 7 of 10 (150 cards).
+Imported Standard cards, part 7 of 11 (150 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,45 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part07
 open Pokemon
+
+/-- Golett (zsv10pt5-42). Records: zsv10pt5-42, zsv10pt5-122. -/
+def zsv10pt5_42 : Card := .pokemon
+  { name := "Golett", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Best Punch", cost := [.colorless, .colorless], damage := 0,
+        effect := .choice (.damage (.const 6)) .skip,
+        gx := false }] }
+
+/-- Golurk (zsv10pt5-43). Records: zsv10pt5-43, zsv10pt5-123. -/
+def zsv10pt5_43 : Card := .pokemon
+  { name := "Golurk", stage := .stage1, evolvesFrom := some "Golett",
+    hp := 16, type := .psychic, retreat := 4, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Double Smash", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 8)) (.damage (.const 16))),
+        gx := false },
+      { name := "Golurk Hammer", cost := [.psychic, .psychic, .colorless, .colorless, .colorless], damage := 20,
+        effect := .skip,
+        gx := false }] }
+
+/-- Drilbur (zsv10pt5-45). Records: zsv10pt5-45, zsv10pt5-124. -/
+def zsv10pt5_45 : Card := .pokemon
+  { name := "Drilbur", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Mud-Slap", cost := [.fighting], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Corkscrew Punch", cost := [.fighting, .fighting], damage := 3,
+        effect := .skip,
+        gx := false }] }
 
 /-- Timburr (zsv10pt5-47). Records: zsv10pt5-47, zsv10pt5-125. -/
 def zsv10pt5_47 : Card := .pokemon
@@ -1757,47 +1796,11 @@ def me2_35 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Mismagius ex (me2-36). Records: me2-36, me2-112. Caveats: trigBenched. -/
-def me2_36 : Card := .pokemon
-  { name := "Mismagius ex", stage := .stage1, evolvesFrom := some "Misdreavus",
-    hp := 26, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
-    abilities := [
-      { name := "Swirling Prose", use := .triggered .oppBenched false,
-        spot := some .active, cond := none,
-        effect := .fx (.inflict .confused) }],
-    attacks := [
-      { name := "Hexa-Magic", cost := [.psychic, .psychic], damage := 15,
-        effect := .choice (.drawTo .own 6) .skip,
-        gx := false }] }
-
-/-- Snubbull (me2-37). Records: me2-37. -/
-def me2_37 : Card := .pokemon
-  { name := "Snubbull", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tackle", cost := [.psychic, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Granbull (me2-38). Records: me2-38. -/
-def me2_38 : Card := .pokemon
-  { name := "Granbull", stage := .stage1, evolvesFrom := some "Snubbull",
-    hp := 13, type := .psychic, retreat := 2, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bite", cost := [.psychic, .colorless], damage := 5,
-        effect := .skip,
-        gx := false },
-      { name := "Finishing Blow", cost := [.psychic, .psychic, .colorless], damage := 0,
-        effect := .ite (.atLeast .opp 1) (.damage (.const 18)) (.damage (.const 9)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  zsv10pt5_42,
+  zsv10pt5_43,
+  zsv10pt5_45,
   zsv10pt5_47,
   zsv10pt5_48,
   zsv10pt5_49,
@@ -1944,10 +1947,7 @@ def cards : List Card := [
   me2_32,
   me2_33,
   me2_34,
-  me2_35,
-  me2_36,
-  me2_37,
-  me2_38]
+  me2_35]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1989,7 +1989,7 @@ theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.labe
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
-theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = ["Mismagius ex"] := by decide +kernel
+theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedUp` (milestone MV7c) (milestone M8b), by name. -/
 theorem cards_trigMovedUp : (cards.filter (Card.hasTrig .movedUp)).map Card.label = [] := by decide +kernel
