@@ -819,9 +819,11 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,465 are imported (1,097 exactly, 368 with
-caveats) as 1,458 distinct terms, and 696 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.13.0, which since 0.13.0 writes the precondition that a
+damage reduction). Of the pool's 2,161 cards, 1,479 are imported (1,099 exactly, 380 with
+caveats) as 1,472 distinct terms, and 682 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.14.0, which since 0.14.0 translates the MV7 and MV7b
+vocabulary: `TrigEvent.oppBenched` triggers, static Checkup changes `SEff.condMore`, and "is Knocked
+Out" written as damage counters above every derived HP; since 0.13.0 it writes the precondition that a
 Trainer or an activated Ability can do something where public information decides it,
 `tools/importer/noop.py`, and since 0.12.0 the MV6 vocabulary: fixed windows
 `Effect.look`, `Qty.most`, the defender modifiers `Mod.weaken` and `Mod.expose`, named-attack bonuses
