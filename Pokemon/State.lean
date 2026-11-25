@@ -238,7 +238,17 @@ def markUsed (p : InPlay) : InPlay := { p with used := true }
 
 /-- The units of Energy attached to this Pokémon (`Card.provides`), which pay attack costs
 (`Pays`). -/
-def units (p : InPlay) : List (List EType) := p.energy.flatMap Card.provides
+def units (p : InPlay) : List (List EType) := p.energy.flatMap (Card.unitsOn p.top p.energy)
+
+/-- How many units of Energy the card `c` provides attached to this Pokémon (milestone MV8; what a
+Retreat Cost reads, `retreatPaid`). -/
+def unitCount (p : InPlay) (c : Card) : Nat := (c.unitsOn p.top p.energy).length
+
+/-- **The Energy attached to this Pokémon, counted under the filter `f`** (milestone MV8): each
+attached card weighs what `Filter.weight` says ("for each Energy attached" counts what the cards
+provide; card filters count cards). What `Count.energy` and `Count.energyAll` read. -/
+def energyCount (f : Filter) (p : InPlay) : Nat :=
+  (p.energy.map (f.weightOn p.top p.energy)).sum
 
 /-- Change the markers. -/
 def setMarks (f : Marks → Marks) (p : InPlay) : InPlay := { p with marks := f p.marks }
@@ -690,10 +700,10 @@ def Count.val : Count → GameState → Nat
   | .pile w z f, g => (z.get (g.side w)).countP f.eval
   | .prizes w, g => (g.side w).prizes.length
   | .bench w f, g => ((g.side w).bench.map InPlay.top).countP fun p => f.eval (.pokemon p)
-  | .energy w f, g => (((g.side w).active.map InPlay.energy).getD []).countP f.eval
+  | .energy w f, g => ((g.side w).active.map (InPlay.energyCount f)).getD 0
   | .energyAll w f, g =>
-      ((((g.side w).active.map InPlay.energy).getD []) ++
-        ((g.side w).bench.map InPlay.energy).flatten).countP f.eval
+      ((g.side w).active.map (InPlay.energyCount f)).getD 0 +
+        ((g.side w).bench.map (InPlay.energyCount f)).sum
   | .koLast w atk, g => if cond atk (g.side w).ko.lastAtk (g.side w).ko.last then 1 else 0
   | .inPlay w f, g =>
       (((g.side w).active.map InPlay.top).toList ++ (g.side w).bench.map InPlay.top).countP

@@ -166,6 +166,62 @@ def Qty.ok : Qty → Filter → List Card → List Card → Prop
   | .all, f, _, r => ∀ x ∈ r, f.eval x = false
   | .most n, f, t, r => t.length ≤ n ∧ (t.length < n → ∀ x ∈ r, f.eval x = false)
 
+/-- **The quantity of an Energy discard, by the Energy the cards provide** (milestone MV8;
+`discardEnergy`), each card `x` counting `w x` Energy (`Filter.weightOn`: "Energy" counts what the
+card provides, a card filter counts cards): "discard `n` Energy" takes cards that provide at least
+`n` with none superfluous (`retreatPaid`, as a Retreat Cost); "up to `n`" takes such a payment of
+some `m ≤ n`; "all" every card passing the filter; "as many as possible, up to `n`" a payment of
+`n`, or else every card passing the filter, which then provide fewer than `n`. With one-unit Energy
+it is `Qty.ok` (`Qty.okE_ones`). -/
+def Qty.okE (w : Card → Nat) : Qty → Filter → List Card → List Card → Prop
+  | .upTo n, _, t, _ => ∃ m ≤ n, retreatPaid m (t.map w) = true
+  | .exactly n, _, t, _ => retreatPaid n (t.map w) = true
+  | .all, f, _, r => ∀ x ∈ r, f.eval x = false
+  | .most n, f, t, r => retreatPaid n (t.map w) = true ∨
+      ((t.map w).sum < n ∧ ∀ x ∈ r, f.eval x = false)
+
+theorem map_ones_sum {t : List Card} {w : Card → Nat} (h : ∀ x ∈ t, w x = 1) :
+    (t.map w).sum = t.length := by
+  induction t with
+  | nil => rfl
+  | cons x t ih =>
+      rw [List.map_cons, List.sum_cons, List.length_cons, h x (.head _),
+        ih fun y hy => h y (.tail _ hy)]
+      exact Nat.add_comm _ _
+
+/-- **With one-unit cards an Energy discard counts cards**: `Qty.okE` is `Qty.ok` when every card
+taken counts 1. -/
+theorem Qty.okE_ones {w : Card → Nat} {q : Qty} {f : Filter} {t r : List Card}
+    (h : ∀ x ∈ t, w x = 1) : q.okE w f t r ↔ q.ok f t r := by
+  have h1 : ∀ u ∈ t.map w, u = 1 := by
+    intro u hu
+    obtain ⟨x, hx, rfl⟩ := List.mem_map.1 hu
+    exact h x hx
+  have hl : (t.map w).length = t.length := List.length_map _
+  have hs := map_ones_sum h
+  have hm : ∀ n, (∃ m ≤ n, retreatPaid m (t.map w) = true) ↔ t.length ≤ n := fun n => by
+    constructor
+    · rintro ⟨m, hm, hp⟩
+      rw [retreatPaid_ones h1, hl] at hp
+      omega
+    · intro hn
+      exact ⟨t.length, hn, by rw [retreatPaid_ones h1, hl]⟩
+  cases q with
+  | upTo n => exact hm n
+  | exactly n => simp only [Qty.okE, Qty.ok]; rw [retreatPaid_ones h1, hl]
+  | all => exact Iff.rfl
+  | most n =>
+      simp only [Qty.okE, Qty.ok]
+      rw [retreatPaid_ones h1, hl, hs]
+      constructor
+      · rintro (h | ⟨h, h'⟩)
+        · exact ⟨Nat.le_of_eq h, fun h' => absurd h (Nat.ne_of_lt h')⟩
+        · exact ⟨Nat.le_of_lt h, fun _ => h'⟩
+      · rintro ⟨h, h'⟩
+        rcases Nat.lt_or_eq_of_le h with h | h
+        · exact .inr ⟨h, h' h⟩
+        · exact .inl h
+
 /-- `Put d t s s'`: the cards `t` are put at the destination `d` of the state `s`. -/
 inductive Put : Dst → List Card → PlayerState → PlayerState → Prop where
   | hand (t : List Card) (s : PlayerState) : Put .hand t s { s with hand := t ++ s.hand }
@@ -255,12 +311,13 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
   | putBenchNone (w : Whose) (src : Src) (f : Filter) (s : PlayerState) :
       ZStep (.putBench w src f) s s
   | discardActive {w : Whose} {f : Filter} {q : Qty} {s : PlayerState} {a : InPlay}
-      {t r : List Card} (ha : s.active = some a) (hs : Split f a.energy t r) (hq : q.ok f t r) :
+      {t r : List Card} (ha : s.active = some a) (hs : Split f a.energy t r)
+      (hq : q.okE (f.weightOn a.top a.energy) f t r) :
       ZStep (.discardEnergy w .active f q) s
         { s with active := some { a with energy := r }, discard := t ++ s.discard }
   | discardBench {w : Whose} {f : Filter} {q : Qty} {s : PlayerState} {p : InPlay}
       {b₁ b₂ : List InPlay} {t r : List Card} (hb : s.bench = b₁ ++ p :: b₂)
-      (hs : Split f p.energy t r) (hq : q.ok f t r) :
+      (hs : Split f p.energy t r) (hq : q.okE (f.weightOn p.top p.energy) f t r) :
       ZStep (.discardEnergy w .bench f q) s
         { s with bench := b₁ ++ { p with energy := r } :: b₂, discard := t ++ s.discard }
   | discardNone {w : Whose} {f : Filter} {q : Qty} {s : PlayerState} (hb : s.bench = []) :

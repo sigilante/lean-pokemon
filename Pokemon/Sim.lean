@@ -1247,7 +1247,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1.lt_bound hH (w := .own) (sp := .active) ha))
       obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      refine ⟨_, .retreat rfl rfl hr (hq.energy ▸ he) (by rw [hsf.retreatOf hq.sv]; exact hp)
+      refine ⟨_, .retreat rfl rfl hr (hq.energy ▸ he) (by rw [hsf.retreatOf hq.sv]; unfold InPlay.unitCount; rw [hq.top, hq.energy]; exact hp)
         (by rw [hq.rot]; exact hs) hbt hs' (by rw [hfl.2.2.1]; exact hl) hat, ?_⟩
       rw [e]
       refine GameState.noteBenched_clampAt ?_
@@ -1344,7 +1344,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
+      refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.top, hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) (by exact hn) (by exact hf) (by exact hbt) hs' hr'
         (by rw [hfl.2.1]; exact hl) (by exact hgx) hw hd' ht₂ (by rw [hq.lk]; exact hlk), ?_⟩
       have := congrArg (GameState.afterAttack atk.lockSet atk.gx) hc'''
@@ -1355,7 +1355,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .attackConfused rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
+      exact ⟨_, .attackConfused rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.top, hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl) hgx hw (by rw [hq.lk]; exact hlk), by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩

@@ -90,7 +90,8 @@ word on the damage steps, survey S9 against S8 F2; S8 records no later change to
   However, the ✱ means that any type of Energy can be used"; S8 D2): `Pays`, a matching of cost
   symbols to units of attached Energy. A Retreat Cost is paid by discarding "1 Energy from your
   Active Pokémon for each ✱ listed in its Retreat Cost" (p. 12); with Basic Energy only, one
-  Energy card is one unit, as `retreat` counts.
+  Energy card is one unit; since milestone MV8 the cost is paid by what the cards provide
+  (`retreatPaid`; Known gaps).
 * Weakness and Resistance (2023 p. 14: "If the attack does damage, your opponent's Active
   Pokémon takes more damage if it has Weakness to the attacker's type. It takes less damage from
   a Pokémon if it has Resistance to that Pokémon's type", and "Don't apply Weakness and
@@ -119,32 +120,38 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   unit of attached Energy of that type and each Colorless symbol by any unit, every unit paying
   one symbol (`Pays`, decided by `payable`); a Basic Energy card provides one unit of its type
   (`Card.provides`); since milestone MV5 a Special Energy card (`EnergyCard.special`) provides a
-  fixed list of units, each of one or several types, whatever Pokémon holds it. Absent: every rider
-  of the printed Special Energy cards (survey S18 §A: static, triggered, on-attach,
-  return-to-hand and discard text; restrictions on the holder), provision that depends on the
-  holder (Prism, Neo Upper, Ignition Energy) or on other attached cards (Luminous Energy), cost
-  changes ("this attack costs ✱ less") and Energy that provides nothing in some states. Every
+  list of units, each of one or several types. Since milestone MV8 (survey S22, `Pokemon/Units.lean`)
+  every place that reads Energy by what it provides reads it through `Card.unitsOn` (what a card
+  provides attached to a given holder): attack costs (`InPlay.units`); the Retreat Cost, paid by
+  discarding cards that provide at least the cost with no card superfluous (`retreatPaid`); "for
+  each Energy attached" (`Count.energy`, `Count.energyAll` under `Filter.energy`: what the cards
+  provide; under any other filter, cards: `Filter.weight`); "discard `n` Energy" (`discardEnergy`,
+  `Qty.okE`: cards that provide `n`, none superfluous; "up to `n`" a payment of at most `n`). With
+  Basic Energy only each of these is the old card count (`InPlay.energyCount_basic`,
+  `retreatPaid_basic`, `Qty.okE_basic`). Readings, no rule found in the 2026 rulebook (which never
+  mentions Special Energy): that "discard 1 Energy … for each [✱] listed in its Retreat Cost" (2026
+  p. 12; glossary p. 45: "discard Energy from the retreating Pokémon equal to the Retreat Cost") and
+  "discard `n` Energy" count what the cards provide, that a card providing more than is still needed
+  may be discarded (a 2-unit card for a cost of 1) and that no card may be discarded that the payment
+  does not need; a card that provides nothing is never discarded by a payment (it is by "discard all
+  Energy"). What stays by card: `Filter.energyOf t` reads Basic Energy only (it also writes "Basic
+  [◉] Energy card" in a hand, deck or discard pile), so "a [◉] Energy attached" and "for each [◉]
+  Energy attached" do not see a Special Energy card that provides `t` (Luminous, Prism, Neo Upper,
+  Legacy, Team Rocket's Energy): fewer than print in counts, tests and discards; `Count.energyTypes`
+  counts types of Basic Energy cards, as printed; the static amount "for each [◉] Energy attached"
+  (`SAmt.perEnergy`) and the static Energy condition (`Static.need`) count cards passing the filter
+  (fewer than print for a card that provides 2, under `Filter.energy`). Deck construction is not
+  modelled (the 4-copy rule, which counts Special Energy, rulebook 2026 PDF p. 21; ACE SPEC). In a
+  game that contains a Special Energy card, `Filter.energy` passes it and the name filters
+  (`named`, `namePrefix`, `nameHas`) read its name, so a term that writes `Filter.energy` for
+  printed "Basic Energy card" over-reads there. Absent: every rider of the printed Special Energy
+  cards (survey S18 §A: static, triggered, on-attach, return-to-hand and discard text; restrictions
+  on the holder), provision that depends on the holder (Prism, Neo Upper, Ignition Energy) or on
+  other attached cards (Luminous Energy), and cost changes ("this attack costs ✱ less"). Every
   Special Energy card is therefore an under-model, marked `Card.inert`: neither a superset nor a
   subset of the printed card in general (Team Rocket's Energy without its holder restriction allows
-  more; Spiky Energy without its trigger does less), so an importer must refuse it or caveat it.
-  Deck construction is not modelled (the 4-copy rule, which counts Special Energy, rulebook 2026
-  PDF p. 21; ACE SPEC). Three further readings by card where print reads
-  Energy by what it provides, all vacuous for games without a Special Energy card: "for each
-  Energy attached" (`Count.energy`, `Count.energyAll`) counts one per card, so a card that
-  provides 2 units counts 1 (fewer than print); "discard 2 Energy" (`discardEnergy` with an exact
-  quantity) needs 2 cards; and the type admits a Special Energy card that provides nothing, which
-  would still pay one symbol of a Retreat Cost (more than print; no printed card is of this form).
-  In a game that contains a Special Energy card, `Filter.energy` passes it and the name filters
-  (`named`, `namePrefix`, `nameHas`) read its name, so a term that writes `Filter.energy` for
-  printed "Basic Energy card" over-reads there; `energyOf`, `Count.energyTypes` and
-  `Filter.basicEnergy` read Basic Energy only. "Fire Energy" in a count or test reads `Filter.energyOf`, Basic Energy only,
-  so a Special Energy card that provides Fire is not counted (a subset of print, which counts Energy
-  by what it provides; vacuous for decks without Special Energy). A Retreat Cost is still paid by
-  discarding that many Energy cards, which with one-unit Energy is the rulebook's rule; a Special
-  Energy card that provides 2 units (Team Rocket's Energy) pays one symbol of the Retreat Cost in
-  the model, where print, read by units, would let it pay two:
-  a subset of print for such cards, unverified against a ruling (the rule: "you must discard 1
-  Energy from your Active Pokémon for each [✱] listed in its Retreat Cost", 2026 p. 12); the player chooses which (`Move.retreat`: any sub-multiset,
+  more; Spiky Energy without its trigger does less), so an importer must refuse it or caveat it. The
+  player chooses which Energy to discard when retreating (`Move.retreat`: any sub-multiset,
   `Split .any`; until survey S14 only the most recently attached Energy could be discarded, which
   forbade keeping the Energy an attack needs; `Retreat.discard_first`, `Retreat.discard_second`);
 * Weakness is ×2 to one type and Resistance −N to one type, as printed today (S9: every Standard
@@ -2096,7 +2103,9 @@ inductive Move : GameState → GameState → Prop where
   /-- retreat: discard Energy equal to the retreat cost and swap with a Benched Pokémon. The
   player chooses which Energy to discard ("you must discard 1 Energy from your Active Pokémon for
   each [✱] listed in its Retreat Cost", rulebook 2026 p. 12): `paid` is any sub-multiset of the
-  attached Energy and `rest` the others, each in attachment order (`Split .any`). Since milestone MV7
+  attached Energy and `rest` the others, each in attachment order (`Split .any`). Since milestone
+  MV8 the cost is paid by the Energy the cards provide (`retreatPaid`: at least the cost, no card
+  superfluous; with one-unit Energy, exactly as many cards as the cost, `retreatPaid_ones`). Since milestone MV7
   the retreat raises the `oppBenched` event (`GameState.noteBenched`): the opponent's triggers
   resolve by the next move (`Move.trigger`); since milestone MV7c it also raises the player's own
   `movedUp` (the Pokémon switched in) and `movedDown` (the retreating one) events
@@ -2104,7 +2113,7 @@ inductive Move : GameState → GameState → Prop where
   | retreat {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} {paid rest : List Card}
       (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
       (hr : g.cur.retreated = false) (he : Split .any a.energy paid rest)
-      (hp : paid.length = g.retreatOf a)
+      (hp : retreatPaid (g.retreatOf a) (paid.map a.unitCount) = true)
       (hs : a.rot.canAct = true) (hbt : g.between = false) (hst : Settled g)
       (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
       Move g ({ g with cur := { g.cur with

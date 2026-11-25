@@ -184,6 +184,132 @@ theorem Qty.exists_ok {q : Qty} (hq : q.canFail = false) (f : Filter) (l : List 
       obtain ⟨t, r, hs, h1, h2⟩ := Split.takeMost f n l
       exact ⟨t, r, hs, h1, h2⟩
 
+/-! ### Energy discards by what the cards provide (milestone MV8) -/
+
+/-- A split can take any sub-list of what it takes, the rest kept. -/
+theorem Split.of_sublist {f : Filter} {l t r : List Card} (h : Split f l t r) :
+    ∀ {t' : List Card}, t'.Sublist t → ∃ r', Split f l t' r' := by
+  induction h with
+  | nil =>
+      intro t' hs
+      rw [List.sublist_nil.1 hs]
+      exact ⟨[], .nil⟩
+  | @take x l t r hx _ ih =>
+      intro t' hs
+      cases hs with
+      | cons _ hs =>
+          obtain ⟨r', h'⟩ := ih hs
+          exact ⟨x :: r', .keep h'⟩
+      | cons_cons _ hs =>
+          obtain ⟨r', h'⟩ := ih hs
+          exact ⟨r', .take hx h'⟩
+  | @keep x l t r _ ih =>
+      intro t' hs
+      obtain ⟨r', h'⟩ := ih hs
+      exact ⟨x :: r', .keep h'⟩
+
+/-- A split shares out the weights. -/
+theorem Split.sum_map {f : Filter} {l t r : List Card} (h : Split f l t r) (w : Card → Nat) :
+    (l.map w).sum = (t.map w).sum + (r.map w).sum := by
+  induction h with
+  | nil => rfl
+  | take _ _ ih => simp only [List.map_cons, List.sum_cons, ih]; omega
+  | keep _ ih => simp only [List.map_cons, List.sum_cons, ih]; omega
+
+theorem sum_map_erase {w : Card → Nat} {x : Card} : ∀ {t : List Card}, x ∈ t →
+    ((t.erase x).map w).sum + w x = (t.map w).sum ∧ (t.erase x).length + 1 = t.length
+  | y :: t, hx => by
+      rw [List.erase_cons]
+      cases h : (y == x) with
+      | true =>
+          have := eq_of_beq h; subst this
+          simp only [ite_true, List.map_cons, List.sum_cons, List.length_cons]
+          exact ⟨Nat.add_comm _ _, trivial⟩
+      | false =>
+          have hne : y ≠ x := fun e => by subst e; simp at h
+          have hx' : x ∈ t := by
+            cases hx with
+            | head => exact absurd rfl hne
+            | tail _ h => exact h
+          simp only [Bool.false_eq_true, ite_false, List.map_cons, List.sum_cons, List.length_cons]
+          obtain ⟨h1, h2⟩ := sum_map_erase (w := w) hx'
+          exact ⟨by rw [Nat.add_assoc, h1], by rw [h2]⟩
+
+theorem all_false {p : Nat → Bool} : ∀ {l : List Nat}, l.all p = false → ∃ u ∈ l, p u = false
+  | [], h => nomatch h
+  | u :: l, h => by
+      rw [List.all_cons] at h
+      cases hu : p u with
+      | false => exact ⟨u, .head _, hu⟩
+      | true =>
+          rw [hu, Bool.true_and] at h
+          obtain ⟨v, hv, hp⟩ := all_false h
+          exact ⟨v, .tail _ hv, hp⟩
+
+/-- **Cards that provide at least `n` hold a payment of `n` with no card superfluous** (milestone
+MV8): drop superfluous cards one at a time. -/
+theorem exists_paid_sublist (w : Card → Nat) (n : Nat) :
+    ∀ (t : List Card), n ≤ (t.map w).sum →
+      ∃ t' : List Card, t'.Sublist t ∧ retreatPaid n (t'.map w) = true
+  | t, h => by
+    cases hp : retreatPaid n (t.map w) with
+    | true => exact ⟨t, List.Sublist.refl t, hp⟩
+    | false =>
+        unfold retreatPaid at hp
+        rw [Nat.ble_eq_true_of_le h, Bool.true_and] at hp
+        obtain ⟨u, hu, hn⟩ := all_false hp
+        obtain ⟨x, hx, rfl⟩ := List.mem_map.1 hu
+        have hn' : n ≤ (t.map w).sum - w x := by
+          apply Nat.le_of_not_lt
+          intro hlt
+          rw [(Nat.blt_eq ▸ hlt : Nat.blt _ _ = true)] at hn
+          exact Bool.noConfusion hn
+        obtain ⟨hs, hl⟩ := sum_map_erase (w := w) hx
+        have hlen : (t.erase x).length < t.length := by rw [← hl]; exact Nat.lt_succ_self _
+        have hle : n ≤ ((t.erase x).map w).sum := by
+          clear hp hu hn hlen
+          omega
+        obtain ⟨t', h1, h2⟩ := exists_paid_sublist w n (t.erase x) hle
+        exact ⟨t', h1.trans List.erase_sublist, h2⟩
+  termination_by t => t.length
+
+/-- **An Energy discard of `n` is possible exactly when the cards passing the filter provide at
+least `n`** (milestone MV8), the cards failing the filter weighing nothing. -/
+theorem Split.exists_paid {f : Filter} {w : Card → Nat} (hw : ∀ x, f.eval x = false → w x = 0)
+    {l : List Card} {n : Nat} (h : n ≤ (l.map w).sum) :
+    ∃ t r, Split f l t r ∧ retreatPaid n (t.map w) = true := by
+  obtain ⟨t, r, hs, hr⟩ := Split.takeAll f l
+  have h0 : (r.map w).sum = 0 := by
+    have : ∀ x ∈ r, w x = 0 := fun x hx => hw x (hr x hx)
+    clear hs hr h
+    induction r with
+    | nil => rfl
+    | cons y r ih =>
+        rw [List.map_cons, List.sum_cons, this y (.head _), ih fun z hz => this z (.tail _ hz)]
+  have hsum := hs.sum_map w
+  obtain ⟨t', h1, h2⟩ := exists_paid_sublist w n t (by omega)
+  obtain ⟨r', h3⟩ := hs.of_sublist h1
+  exact ⟨t', r', h3, h2⟩
+
+/-- An Energy discard that cannot fail has a resolution (milestone MV8, `Qty.okE`). -/
+theorem Qty.exists_okE {q : Qty} (hq : q.canFail = false) {f : Filter} {w : Card → Nat}
+    (l : List Card) :
+    ∃ t r, Split f l t r ∧ q.okE w f t r := by
+  cases q with
+  | upTo n => exact ⟨[], l, Split.keepAll f l, 0, Nat.zero_le _, rfl⟩
+  | exactly n => simp [Qty.canFail] at hq
+  | all =>
+      obtain ⟨t, r, hs, hr⟩ := Split.takeAll f l
+      exact ⟨t, r, hs, hr⟩
+  | most n =>
+      obtain ⟨t, r, hs, hr⟩ := Split.takeAll f l
+      cases Nat.lt_or_ge ((t.map w).sum) n with
+      | inl hlt => exact ⟨t, r, hs, .inr ⟨hlt, hr⟩⟩
+      | inr hge =>
+          obtain ⟨t', h1, h2⟩ := exists_paid_sublist w n t hge
+          obtain ⟨r', h3⟩ := hs.of_sublist h1
+          exact ⟨t', r', h3, .inl h2⟩
+
 theorem Put.exists (d : Dst) (t : List Card) (s : PlayerState) : ∃ s', Put d t s s' := by
   cases d with
   | hand => exact ⟨_, .hand t s⟩
@@ -215,13 +341,14 @@ theorem ZStep.exists_of_trigOk {e : Effect} {w : Whose} (hw : e.zSide = some w)
     cases sp with
     | active =>
         obtain ⟨a, ha'⟩ := isSome_iff'.1 ha
-        obtain ⟨t, r, hs, hq'⟩ := Qty.exists_ok hq f a.energy
+        obtain ⟨t, r, hs, hq'⟩ := Qty.exists_okE hq a.energy
         exact ⟨_, .discardActive (w := w') ha' hs hq', rfl⟩
     | bench =>
         cases hb : s.bench with
         | nil => exact ⟨_, .discardNone (w := w') (f := f) (q := q) hb, ha⟩
         | cons p b =>
-            obtain ⟨t, r, hs, hq'⟩ := Qty.exists_ok hq f p.energy
+            obtain ⟨t, r, hs, hq'⟩ :=
+              Qty.exists_okE hq p.energy
             exact ⟨_, .discardBench (w := w') (b₁ := []) (by rw [hb]; rfl) hs hq', ha⟩
   case moveEnergy w' f => exact ⟨_, .moveNone w' f s, ha⟩
   case discardTools w' sp =>

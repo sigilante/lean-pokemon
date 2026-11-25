@@ -64,7 +64,7 @@ Bench to the Active Spot this turn" holds for it. -/
 theorem Move.retreat_movedUp {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay}
     {paid rest : List Card} (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
     (hr : g.cur.retreated = false) (he : Split .any a.energy paid rest)
-    (hp : paid.length = g.retreatOf a) (hs : a.rot.canAct = true) (hbt : g.between = false)
+    (hp : retreatPaid (g.retreatOf a) (paid.map a.unitCount) = true) (hs : a.rot.canAct = true) (hbt : g.between = false)
     (hst : Settled g) (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
     ∃ g' a', Move g g' ∧ g'.cur.active = some a' ∧ a'.top = q.top ∧
       (Test.movedUp .own).eval g' a' = true :=

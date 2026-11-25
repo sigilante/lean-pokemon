@@ -70,8 +70,7 @@ theorem attach_special : ∃ g a, Move sStart g ∧ g.cur.active = some a ∧ a.
     Pays [.psychic, .darkness] a.units :=
   ⟨_, _, .attach (t := .special "Team Rocket's Energy" [[.psychic, .darkness], [.psychic, .darkness]])
       (l₁ := []) (l₂ := []) rfl rfl rfl rfl sStart_settled rfl, rfl, rfl,
-    payable_iff.1 (by simp [InPlay.units, Card.provides, EnergyCard.units, payable, pick,
-      EType.paidBy, rotomIn, InPlay.ofBasic])⟩
+    payable_iff.1 (by decide)⟩
 
 /-- "Discard a Special Energy from your opponent's Active Pokémon" (Victini sv5-30, Cobalion
 zsv10pt5-66). -/
@@ -84,7 +83,7 @@ def sHit : GameState :=
 /-- **Witness: the Special Energy is discarded, the Basic Energy stays.** -/
 theorem singeOff_discards : ∃ g, Run singeOff sHit g ∧
     g.opp.active = some { sick with energy := [.energy .fire] } ∧ g.opp.discard = [spiky] :=
-  ⟨_, .zone rfl (.discardActive rfl (.take rfl (.keep .nil)) (by show [spiky].length ≤ 1; decide)), rfl, rfl⟩
+  ⟨_, .zone rfl (.discardActive rfl (.take rfl (.keep .nil)) ⟨1, Nat.le_refl _, by decide⟩), rfl, rfl⟩
 
 /-- **The filter takes no Basic Energy**: from Basic Fire Energy alone, the only split by
 `specialEnergy` takes nothing, so the discard leaves the Pokémon as it was. -/

@@ -136,13 +136,13 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
       have hm := ha.active
       rw [hac] at hm
       obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
-      refine ⟨_, .discardActive ha₂ (by rw [hag.energy]; exact hs) hq,
+      refine ⟨_, .discardActive ha₂ (by rw [hag.energy]; exact hs) (by rw [hag.top, hag.energy]; exact hq),
         ⟨ha.deck, ha.hand, by simp only [ha.discard], ?_, ha.bench⟩⟩
       simp only [Option.map_some, InPlay.clamp_of_agree (hag.setEnergy r)]
   | @discardBench w f q s p b₁ b₂ t r hb hs hq =>
       obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
       have hp := InPlay.agree_of_clamp h2
-      refine ⟨_, .discardBench hb₂ (by rw [hp.energy]; exact hs) hq,
+      refine ⟨_, .discardBench hb₂ (by rw [hp.energy]; exact hs) (by rw [hp.top, hp.energy]; exact hq),
         ⟨ha.deck, ha.hand, by simp only [ha.discard], ha.active, ?_⟩⟩
       simp only [List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hp.setEnergy r)]
   | discardNone hb =>

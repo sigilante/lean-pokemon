@@ -450,8 +450,9 @@ inductive Pile where
 /-- A number read from the state (milestone MV), for amounts ("30 damage for each card in your
 hand") and tests ("if you have 3 or more Benched Pokémon"): the cards passing a filter in one of
 the `w` player's hand, deck or discard pile; the `w` player's Prize cards left; the `w` player's
-Benched Pokémon whose card passes a filter; the Energy cards passing a filter attached to the `w`
-player's Active Pokémon, or to all of the `w` player's Pokémon in play. No count reads damage, so
+Benched Pokémon whose card passes a filter; the Energy passing a filter attached to the `w`
+player's Active Pokémon, or to all of the `w` player's Pokémon in play (since milestone MV8 counted by
+what the cards provide under `Filter.energy`, by cards under every other filter: `Filter.weight`). No count reads damage, so
 both clamps keep every count exact (`Count.val_clampAt`, `Count.val_xclampAt`). -/
 inductive Count where
   | pile (w : Whose) (z : Pile) (f : Filter)
@@ -1680,6 +1681,98 @@ Other cards provide nothing. -/
 def Card.provides : Card → List (List EType)
   | .energy t => t.units
   | _ => []
+
+/-- **The Energy a card provides while attached** (milestone MV8): the units the card `c` provides
+attached to a Pokémon whose top card is `top` and whose attached Energy cards are `att` (`c` among
+them). Every function of the model that reads Energy by what it provides reads it through this one:
+attack costs (`InPlay.units`, `Pays`), the Retreat Cost (`retreatPaid`) and the counts of Energy
+attached (`Filter.weight`, `InPlay.energyCount`). For a Basic Energy card it is one unit of its
+type (`Card.unitsOn_basic`). -/
+def Card.unitsOn (_top : PokemonCard) (_att : List Card) (c : Card) : List (List EType) :=
+  c.provides
+
+/-- **How many Energy an attached card counts for under the filter `f`** (milestone MV8), the card
+providing the units `us`: "Energy" (`Filter.energy`: "for each Energy attached", "discard 2 Energy")
+counts the units the card provides; every other filter is a card filter and counts the card once if
+it passes ("Basic Energy card", "Special Energy card", a name, and `Filter.energyOf t`, which reads
+Basic Energy only: Known gaps). With one-unit Basic Energy every case is the card count
+(`Filter.weight_basic`). -/
+def Filter.weight (f : Filter) (us : List (List EType)) (c : Card) : Nat :=
+  match f with
+  | .energy => us.length
+  | _ => if f.eval c then 1 else 0
+
+/-- `Filter.weight` for a card attached to a Pokémon whose top card is `top` and whose attached
+Energy is `att`. -/
+def Filter.weightOn (f : Filter) (top : PokemonCard) (att : List Card) (c : Card) : Nat :=
+  f.weight (c.unitsOn top att) c
+
+/-- A card that fails the filter weighs nothing: under `Filter.energy` it is not an Energy card,
+and provides nothing. -/
+theorem Filter.weightOn_of_eval {f : Filter} {top : PokemonCard} {att : List Card} {c : Card}
+    (h : f.eval c = false) : f.weightOn top att c = 0 := by
+  unfold Filter.weightOn Filter.weight Card.unitsOn
+  split
+  · cases c with
+    | energy t => exact absurd h (by simp [Filter.eval])
+    | _ => rfl
+  · rw [h]; rfl
+
+/-- **With Basic Energy the weights are the card counts**: a Basic Energy card weighs 1 under every
+filter it passes. -/
+theorem Filter.weight_basic (f : Filter) (top : PokemonCard) (att : List Card) (t : BasicEnergy) :
+    f.weightOn top att (.energy (.basic t)) = if f.eval (.energy (.basic t)) then 1 else 0 := by
+  unfold Filter.weightOn Filter.weight
+  split
+  · rfl
+  · rfl
+
+/-- **A Retreat Cost of `n` is paid by discarding cards that provide `us` units** (milestone MV8):
+together they provide at least `n` Energy, and none of them is superfluous (without any one of them
+the rest would provide fewer than `n`). With one-unit cards this is "exactly `n` cards"
+(`retreatPaid_ones`); a card that provides 2 pays 2 symbols, and may be discarded for a cost of 1
+when no smaller payment is chosen; a card that provides nothing can never be discarded. A reading of
+"discard 1 Energy from your Active Pokémon for each [✱] listed in its Retreat Cost" (rulebook 2026
+p. 12), Known gaps. -/
+def retreatPaid (n : Nat) (us : List Nat) : Bool :=
+  Nat.ble n us.sum && us.all fun u => Nat.blt (us.sum - u) n
+
+/-- With one-unit cards, a Retreat Cost of `n` is paid by exactly `n` cards. -/
+theorem retreatPaid_ones {n : Nat} {us : List Nat} (h : ∀ u ∈ us, u = 1) :
+    retreatPaid n us = true ↔ us.length = n := by
+  have hs : us.sum = us.length := by
+    induction us with
+    | nil => rfl
+    | cons u us ih =>
+        rw [List.sum_cons, List.length_cons, h u (.head _), ih fun v hv => h v (.tail _ hv)]
+        exact Nat.add_comm _ _
+  unfold retreatPaid
+  rw [hs, Bool.and_eq_true, List.all_eq_true, Nat.ble_eq]
+  constructor
+  · rintro ⟨h1, h2⟩
+    cases us with
+    | nil => simp only [List.length_nil] at h1 ⊢; omega
+    | cons u us =>
+        have h3 := h2 u (.head _)
+        rw [Nat.blt_eq, h u (.head _)] at h3
+        simp only [List.length_cons] at h1 h3 ⊢
+        omega
+  · intro hl
+    refine ⟨Nat.le_of_eq hl.symm, fun u hu => ?_⟩
+    rw [h u hu, Nat.blt_eq]
+    have : 0 < us.length := List.length_pos_of_mem hu
+    omega
+
+/-- A cost of 0 is paid by discarding nothing, and nothing pays a positive cost. -/
+theorem retreatPaid_nil (n : Nat) : retreatPaid n [] = true ↔ n = 0 := by
+  simp only [retreatPaid, List.sum_nil, List.all_nil, Bool.and_true, Nat.ble_eq]
+  exact Nat.le_zero
+
+/-- The units paid cover the cost. -/
+theorem retreatPaid_le {n : Nat} {us : List Nat} (h : retreatPaid n us = true) : n ≤ us.sum := by
+  unfold retreatPaid at h
+  rw [Bool.and_eq_true, Nat.ble_eq] at h
+  exact h.1
 
 /-- The constant a test compares damage with (0 for the tests that do not read damage). -/
 def Test.bound : Test → Nat

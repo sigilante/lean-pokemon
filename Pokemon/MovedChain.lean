@@ -71,11 +71,11 @@ theorem both_orders :
         (.refl _) (.refl _)
         ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
             (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩
-        (.run rfl (.zone rfl (.discardActive rfl (.take rfl .nil) (by simp [Qty.ok]))) (.nil _))),
+        (.run rfl (.zone rfl (.discardActive rfl (.take rfl .nil) fun _ h => nomatch h)) (.nil _))),
       rfl, rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩,
     ⟨_, .trigger ⟨rfl, rfl⟩ rfl (.oppFirst (u := [buzz]) (d := []) (l := [strip]) (.refl _)
         (.refl _) (.refl _)
-        (.run rfl (.zone rfl (.discardActive rfl .nil (by simp [Qty.ok]))) (.nil _))
+        (.run rfl (.zone rfl (.discardActive rfl .nil fun _ h => nomatch h)) (.nil _))
         ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
             (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩),
       rfl, rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩⟩

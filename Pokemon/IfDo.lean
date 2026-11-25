@@ -226,21 +226,23 @@ theorem Effect.forUpTo_all {P : Effect → Bool} (hP : ∀ a b, P (.choice a b) 
         h (n + 1) (Nat.le_refl _), Bool.and_self]
 
 /-- An `exactly i` discard of Energy from the `w` player's Active Pokémon has a resolution only if
-at least `i` Energy cards are attached: so "discard any amount" is covered by `forUpTo` up to the
-Energy attached. -/
+the attached Energy passing the filter counts at least `i` (`InPlay.energyCount`; since milestone MV8
+by what the cards provide, under `Filter.energy`): so "discard any amount" is covered by `forUpTo` up
+to the Energy attached. -/
 theorem discardActive_le {w : Whose} {f : Filter} {i : Nat} {g g' : GameState}
     (h : Run (.discardEnergy w .active f (.exactly i)) g g') :
-    ∃ a, (g.side w).active = some a ∧ i ≤ a.energy.length := by
+    ∃ a, (g.side w).active = some a ∧ i ≤ a.energyCount f := by
   cases h with
   | zone hw hz =>
       simp only [Effect.zSide, Option.some.injEq] at hw
       subst hw
       cases hz with
-      | discardActive ha hs hq =>
+      | @discardActive _ _ _ _ a _ _ ha hs hq =>
           refine ⟨_, ha, ?_⟩
-          simp only [Qty.ok] at hq
-          rw [← hq]
-          exact Split.taken_le hs
+          have h1 := retreatPaid_le hq
+          have h2 := hs.sum_map (Filter.weightOn f a.top a.energy)
+          unfold InPlay.energyCount
+          omega
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
 
@@ -409,12 +411,13 @@ theorem Run.ifDone_discardHand {w : Whose} {f : Filter} {n : Nat} {b : Effect} {
 /-! ### "Discard N Energy from this Pokémon" -/
 
 /-- **Feasibility**: "discard `n` Energy [passing `f`] from your Active Pokémon" has a resolution
-exactly when that many are attached. -/
+exactly when that many are attached (since milestone MV8 counted by what the cards provide under
+`Filter.energy`, `Count.energy`; a payment with no card superfluous exists, `Split.exists_paid`). -/
 theorem Run.discardActive_exists {w : Whose} {f : Filter} {n : Nat} {g : GameState} {a : InPlay}
     (ha : (g.side w).active = some a) :
     (∃ g₁, Run (.discardEnergy w .active f (.exactly n)) g g₁) ↔
       n ≤ (Count.energy w f).val g := by
-  have hv : (Count.energy w f).val g = a.energy.countP f.eval := by
+  have hv : (Count.energy w f).val g = a.energyCount f := by
     simp only [Count.val, ha, Option.map_some, Option.getD_some]
   rw [hv]
   constructor
@@ -426,20 +429,24 @@ theorem Run.discardActive_exists {w : Whose} {f : Filter} {n : Nat} {g : GameSta
         cases hz with
         | discardActive ha' hs hq =>
             obtain rfl : a = _ := Option.some.inj (ha.symm.trans ha')
-            simp only [Qty.ok] at hq
-            rw [← hq]
-            exact Split.taken_count hs
+            have h1 := retreatPaid_le hq
+            have h2 := hs.sum_map (Filter.weightOn f a.top a.energy)
+            unfold InPlay.energyCount
+            omega
     | touchActive he => simp [Effect.touch] at he
     | touchBench he => simp [Effect.touch] at he
   · intro h
-    obtain ⟨t, r, hs, ht⟩ := Split.exists_exactly f a.energy h
+    obtain ⟨t, r, hs, ht⟩ :=
+      Split.exists_paid (fun _ hx => Filter.weightOn_of_eval hx) (l := a.energy) h
     exact ⟨_, .zone rfl (.discardActive ha hs ht)⟩
 
 /-- **The action is performed**: every resolution takes `n` Energy passing `f` off the Active
-Pokémon and puts them on the discard pile. -/
+Pokémon and puts them on the discard pile (since milestone MV8 `n` Energy by what the cards provide,
+`retreatPaid`; with one-unit Energy, `n` cards: `retreatPaid_ones`). -/
 theorem Run.discardActive_does {w : Whose} {f : Filter} {n : Nat} {g g' : GameState}
     (h : Run (.discardEnergy w .active f (.exactly n)) g g') :
-    ∃ a t r, (g.side w).active = some a ∧ Split f a.energy t r ∧ t.length = n ∧
+    ∃ a t r, (g.side w).active = some a ∧ Split f a.energy t r ∧
+      retreatPaid n (t.map (f.weightOn a.top a.energy)) = true ∧
       (g'.side w).active = some { a with energy := r } ∧
       (g'.side w).discard = t ++ (g.side w).discard := by
   cases h with
@@ -460,9 +467,12 @@ theorem Run.discardActive_ne {w : Whose} {f : Filter} {n : Nat} {g g' : GameStat
   obtain ⟨a, t, r, -, -, ht, -, hd⟩ := Run.discardActive_does h
   rw [e] at hd
   have hl := congrArg List.length hd
-  rw [List.length_append, ht] at hl
-  clear hd e h
-  omega
+  rw [List.length_append] at hl
+  cases t with
+  | nil => exact absurd ((retreatPaid_nil n).1 ht) (Nat.ne_of_gt hn)
+  | cons x t =>
+      simp only [List.length_cons] at hl
+      omega
 
 /-- **"Discard N Energy from this Pokémon. If you do, B" is exact**, with the count test on the
 attacker's Energy. -/
