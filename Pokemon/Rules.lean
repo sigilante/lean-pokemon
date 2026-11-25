@@ -121,14 +121,30 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   one symbol (`Pays`, decided by `payable`); a Basic Energy card provides one unit of its type
   (`Card.provides`); since milestone MV5 a Special Energy card (`EnergyCard.special`) provides a
   list of units, each of one or several types. Since milestone MV8 (survey S22, `Pokemon/Units.lean`)
-  every place that reads Energy by what it provides reads it through `Card.unitsOn` (what a card
-  provides attached to a given holder): attack costs (`InPlay.units`); the Retreat Cost, paid by
-  discarding cards that provide at least the cost with no card superfluous (`retreatPaid`); "for
-  each Energy attached" (`Count.energy`, `Count.energyAll` under `Filter.energy`: what the cards
-  provide; under any other filter, cards: `Filter.weight`); "discard `n` Energy" (`discardEnergy`,
-  `Qty.okE`: cards that provide `n`, none superfluous; "up to `n`" a payment of at most `n`). With
-  Basic Energy only each of these is the old card count (`InPlay.energyCount_basic`,
-  `retreatPaid_basic`, `Qty.okE_basic`). Readings, no rule found in the 2026 rulebook (which never
+  these places read Energy through `Card.unitsOn` (what a card provides attached to a given holder):
+  attack costs (`InPlay.units`); the Retreat Cost, paid by discarding cards that provide at least the
+  cost with no card superfluous (`retreatPaid`); "for each Energy attached" (`Count.energy`,
+  `Count.energyAll` under `Filter.energy`: what the cards provide; under any other filter, cards:
+  `Filter.weight`); "discard `n` Energy" (`discardEnergy`, `Qty.okE`: cards that provide `n`, none
+  superfluous; "up to `n`" a payment of at most `n`). Not every count of Energy does: `SAmt.perEnergy`
+  and `Static.need` count cards (below). With Basic Energy only each of these is the old card count
+  (`InPlay.energyCount_basic`, `retreatPaid_basic`, `Qty.okE_basic`, `Run.discardActive_does_basic`;
+  per function, `Pokemon/Units.lean`; that the move relation is unchanged on Basic-only states is not
+  proved). `Filter.weight` recognises `Filter.energy` syntactically: an equivalent filter written
+  otherwise (`or energy energy`, `and energy any`) counts and discards by card (`Units.weight_syntactic`;
+  fewer than print for a card that provides 2); it is also the form available for a printed count of
+  cards ("for each Energy card attached"). `Effect.forUpTo` with `discardEnergy … (exactly j)` as its
+  branch ("discard up to N Energy …, K more damage for each card you discarded in this way") reads `j`
+  as Energy provided, not cards: one card that provides 2 is discarded by the branches 1 and 2 alike,
+  so the effect may do 2K for one card (`Units.forUpTo_one_card`; a live case is Team Rocket's Mewtwo
+  ex sv10-81, "discard up to 2 Energy from your Benched Pokémon … 60 more damage for each card",
+  whose Team Rocket's Energy provides 2): more than print, for multi-unit cards. The alternative,
+  writing the cost with a card filter (`basicEnergy`/`specialEnergy`), counts cards but errs the
+  other way, not discarding by the Energy the printed "discard N Energy" asks. With Basic Energy only
+  the branch is the number of cards (`Run.forUpTo_discardActive_basic`). `SEff.noRetreat` ("has no
+  Retreat Cost") is applied last, after every `retreatPlus` and `retreatMinus` in force
+  (`GameState.retreatOf_of_noRetreat`): a reading, no rule found on the order of a set against an
+  addition. Readings, no rule found in the 2026 rulebook (which never
   mentions Special Energy): that "discard 1 Energy … for each [✱] listed in its Retreat Cost" (2026
   p. 12; glossary p. 45: "discard Energy from the retreating Pokémon equal to the Retreat Cost") and
   "discard `n` Energy" count what the cards provide, that a card providing more than is still needed
@@ -163,9 +179,12 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   prevention of effects of attacks (Mist, Rocky Fighting Energy), Special Condition recovery and
   immunity (Bubbly Water Energy), prevention of damage to a Benched holder (Shadowy Darkness Energy:
   `SEff.prevent` is read in the Active Spot only), and a Prize change on Knock Out once per game
-  (Legacy Energy); also cost changes ("this attack costs ✱ less"). A Special Energy card with an
-  empty payload is an under-model, marked `Card.inert` (`Card.inert_special`), so an importer must
-  refuse it or caveat it; a nonempty payload is the importer's claim that it says every rider. The
+  (Legacy Energy); also cost changes ("this attack costs ✱ less"). A Special Energy card whose
+  payload models nothing (no static effect, Ability or attack granted, no alternative provision, no
+  holder restriction; a holder filter alone is not content) or says that a rider is not modelled
+  (`EnergyText.rest`, as for Ignition Energy written with its provision only) is an under-model,
+  marked `Card.inert` (`Card.inert_special`), so an importer must refuse it or caveat it; a
+  non-inert payload is the importer's claim that it says every rider. The
   player chooses which Energy to discard when retreating (`Move.retreat`: any sub-multiset,
   `Split .any`; until survey S14 only the most recently attached Energy could be discarded, which
   forbade keeping the Energy an attack needs; `Retreat.discard_first`, `Retreat.discard_second`);
@@ -1123,8 +1142,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   exactly when A has a resolution (`Run.ifDone_exact`); with a test that holds where A has no
   resolution the effect has none (an attack with no resolution is not a legal move), and with one
   that fails where A has one both A and B are skipped; `Effect.forUpTo` ("discard up to N …, K
-  damage for each card discarded in this way": the number discarded is the branch) is exact for
-  "any amount" once the bound covers the cards that can be taken, a hypothesis of
+  damage for each card discarded in this way": the branch index is the amount discarded, which since
+  milestone MV8 counts Energy provided, so it is the number of cards only when each card taken
+  provides 1, `Run.forUpTo_discardActive_basic`; see the Energy entry of the Known gaps) covers
+  "any amount" once the bound covers the Energy that can be taken, a hypothesis of
   `Run.forUpTo_complete` discharged per card. Proved for the commonest costs of the census, so that
   those instances are exact by theorem and not by the importer's care: "discard N cards [passing a
   filter] from your hand" (`Run.discardHand_exists`, `Run.discardHand_does`, `Run.discardHand_ne`,

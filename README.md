@@ -364,20 +364,30 @@ No theorem statement changed in text; `Move.attach`, `Move.attachBench`, `ZStep.
 measurement for idea A (attachments as one kind) found 3 to 4 of the 19 riders expressible by an
 existing mechanism (S18 §A3), so the generalisation was not made.
 Milestone MV8 (survey S22) made Special Energy cards expressible in three stages. Stage 1 reads
-Energy by what it provides wherever the rules pay or count it, through one function,
-`Card.unitsOn` (what a card provides attached to a given holder): attack costs (`InPlay.units`,
+Energy by what it provides, through one function, `Card.unitsOn` (what a card provides attached to a
+given holder), in attack costs (`InPlay.units`,
 `Pays`), the Retreat Cost (`retreatPaid`: the cards discarded provide at least the cost, none
 superfluous), "for each Energy attached" (`Count.energy`, `Count.energyAll` under `Filter.energy`,
-`Filter.weight`, `InPlay.energyCount`) and "discard `n` Energy" (`Qty.okE`); with Basic Energy only
-each is the old card count (`Pokemon/Units.lean`: `InPlay.units_basic`, `InPlay.energyCount_basic`,
-`retreatPaid_basic`, `Qty.okE_basic`). Stage 2 gives a Special Energy card a payload
+`Filter.weight`, `InPlay.energyCount`) and "discard `n` Energy" (`Qty.okE`); `SAmt.perEnergy`,
+`Static.need` and card filters still count cards, and `Filter.weight` recognises `Filter.energy`
+syntactically (Known gaps). With Basic Energy only each changed function equals the old one, proved
+function by function (`Pokemon/Units.lean`: `InPlay.units_basic`, `InPlay.energyCount_basic`,
+`retreatPaid_basic`, `Qty.okE_basic`, `Run.discardActive_does_basic`, `InPlay.statics_basic`,
+`InPlay.attacks_basic`, `InPlay.abilities_basic`, `Card.attachOk_basic`,
+`GameState.retreatOf_of_noRetreat_false`); that the move relation is unchanged on Basic-only states
+is not proved. Since Energy discards count Energy, the `forUpTo` writing of "discard up to N Energy,
+K for each card discarded" may pay 2K for one card that provides 2 (`Units.forUpTo_one_card`; with
+Basic Energy only the branch is the card count, `Run.forUpTo_discardActive_basic`). Stage 2 gives a Special Energy card a payload
 (`EnergyCard.special name prov text`, `EnergyText`) whose `grant` is a `ToolGrant`, read by the Tool
 path (`Card.grantStatics`, `Card.grantAbilities`, `Card.grantAttacks`, `SView.statics`,
 `InPlay.abilities`, `InPlay.attacks`); several attached cards' payloads add up; `SEff.noRetreat` (9
 constructors) is "has no Retreat Cost" (`GameState.retreatOf`). Stage 3 adds provision that depends on
 the holder or on the other attached cards (`EnergyText.alt`, `EnergyCard.unitsAt`) and a holder
 restriction (`EnergyText.only`, `Card.attachOk`, a premise of every attachment and every move of the
-card). `Card.inert` is false exactly for a nonempty payload (`Card.inert_special`). Expressible (not
+card). A Special Energy card is `Card.inert` exactly when its payload models nothing (no granted
+static effect, Ability or attack, no `alt`, no `only`; a holder filter alone is not content) or sets
+`EnergyText.rest`, "a rider is not modelled" (`Card.inert_special`, `Card.inert_holderOnly`,
+`Provision.ignitionPart_inert`). Expressible (not
 imported), with witnesses in `Pokemon/EnergyText.lean` and `Pokemon/Provision.lean`: Growing Grass,
 Voltaic Lightning, Magnetic Metal, Spiky, Prism, Neo Upper, Luminous and Team Rocket's Energy (8 of
 19); the other 11 have riders the model does not express (on-attach and end-of-turn events, return
@@ -388,9 +398,10 @@ S22). Changed statements: the premise of `Move.retreat` (and of `Markers.Move.re
 `moveBB`, the quantity premise of `ZStep.discardActive`, `ZStep.discardBench`;
 `IfDo.discardActive_le` (bound `a.energyCount f`), `Run.discardActive_does` (`retreatPaid`),
 `InPlay.attacks_of_noTool` (hypothesis on Tools and Energy), `Special.special_inert` (empty payload),
-`InPlay.units_basic`. Counter's `NoTS` has a fifth conjunct (`Card.energyGrantFree`); `Encodes`,
-`Shape`, `Counter.universal`, `Counter.simulate`, `Counter.halts_of_haltMarked` and every other
-statement are unchanged in text.
+`NoTS.tools` (Tools and Energy, with `Card.energyGrantFree`). Counter's `NoTS` has a fifth conjunct
+(`Card.energyGrantFree`); `Encodes`, `Shape`, `Counter.universal`, `Counter.simulate`,
+`Counter.halts_of_haltMarked` are unchanged in text. `InPlay.units_basic` and the other `_basic`
+lemmas are new, not changed.
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,

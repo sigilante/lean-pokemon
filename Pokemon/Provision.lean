@@ -6,11 +6,13 @@ import Pokemon.EnergyText
 Survey S22. What a Special Energy card provides may depend on its holder (`EnergyText.alt`, read by
 `EnergyCard.unitsAt` through `Card.unitsOn`): on the holder's top card (Prism Energy: a Basic
 Pokémon; Neo Upper Energy: a Stage 2 Pokémon) or on the other cards attached to it (Luminous Energy:
-another Special Energy card). Every reader of Energy by what it provides goes through `Card.unitsOn`
-(attack costs, Retreat Cost, counts, discards; `Pokemon/Units.lean`), so these cards pay, count and
-are discarded by what they provide on their holder at that moment; a Basic Energy card provides one
-unit of its type wherever it is (`Card.unitsOn_basic`, by definition), so no theorem about Basic
-Energy changed.
+another Special Energy card). Attack costs, the Retreat Cost, "for each Energy attached" under
+`Filter.energy` and Energy discards read Energy through `Card.unitsOn` (`Pokemon/Units.lean`), so
+there these cards pay, count and are discarded by what they provide on their holder at that moment;
+the static amount `SAmt.perEnergy`, the static condition `Static.need` and every card filter other
+than `Filter.energy` count cards (Known gaps). A Basic Energy card provides one unit of its type
+wherever it is (`Card.unitsOn_basic`, by definition); what that gives for Basic Energy, function by
+function, is listed in `Pokemon/Units.lean`.
 
 A holder restriction (`EnergyText.only`: "This card can only be attached to a Team Rocket's Pokémon")
 is a premise of every attachment (`Move.attach`, `Move.attachBench`, `ZStep.attachActive`,
@@ -61,6 +63,19 @@ def rocket : Card := .energy <| .special "Team Rocket's Energy"
 
 theorem not_inert : prism.inert = false ∧ neoUpper.inert = false ∧ luminous.inert = false ∧
     rocket.inert = false := by decide
+
+/-- Ignition Energy's provision alone: "If this card is attached to an Evolution Pokémon, it provides
+[C][C][C] Energy instead." Its other rider, "discard it at the end of your turn", is not modelled,
+which the payload says (`rest`). -/
+def ignitionPart : Card := .energy <| .special "Ignition Energy" [[.colorless]]
+  { alt := some (.holder (.not .basic), [[.colorless], [.colorless], [.colorless]]), rest := true }
+
+/-- **A partial writing is inert**: Ignition Energy written with its provision and `rest` is inert;
+the same provision without `rest` would not be. -/
+theorem ignitionPart_inert : ignitionPart.inert = true ∧
+    (Card.energy (.special "Ignition Energy" [[.colorless]]
+      { alt := some (.holder (.not .basic), [[.colorless], [.colorless], [.colorless]]) })).inert =
+      false := by decide
 
 /-- A Stage 1 and a Stage 2 Pokémon, and a Team Rocket's Pokémon. -/
 def stage1Mon : PokemonCard :=

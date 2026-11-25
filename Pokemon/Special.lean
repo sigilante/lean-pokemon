@@ -3,10 +3,13 @@ import Pokemon.Vocab4
 /-!
 # Special Energy as a card kind (milestone MV5, Part A)
 
-Survey S18 §A. A Special Energy card is `Card.energy (.special name prov)` (`EnergyCard`): a name
-and what it provides while attached, nothing else. It is attached from the hand by the turn's Energy
-attachment (`Move.attach`, `Move.attachBench`) and by effects (`ZStep.attachActive`,
-`ZStep.attachBench`), pays attack costs through `Card.provides` and `Pays`, is discarded by
+Survey S18 §A. A Special Energy card is `Card.energy (.special name prov text)` (`EnergyCard`): a
+name, what it provides while attached, and (since milestone MV8) a payload `text` (`EnergyText`; at
+milestone MV5 there was no payload, and the terms of this file have the empty one, `{}`). It is
+attached from the hand by the turn's Energy attachment (`Move.attach`, `Move.attachBench`) and by
+effects (`ZStep.attachActive`, `ZStep.attachBench`), pays attack costs through `Pays` (since milestone
+MV8 on what it provides on its holder, `InPlay.units`, `Card.unitsOn`; `Card.provides` is the
+printed provision), is discarded by
 retreating and by Energy discards, and goes to the discard pile with its Pokémon. Two new filters
 tell the kinds apart (`Filter.basicEnergy`, `Filter.specialEnergy`); `Filter.energy` passes both and
 `Filter.energyOf t` only Basic Energy. The name filters read a Special Energy card's name
@@ -49,8 +52,10 @@ theorem filters_eval :
     (Filter.namePrefix "Team Rocket's").eval trE = true := by decide
 
 /-- **A Special Energy card with the empty payload is inert**: the model plays it with its
-provision and nothing of the rest of its text, and says so (since milestone MV8 a payload makes it
-non-inert: `Card.inert_special`). -/
+provision and nothing of the rest of its text, and says so. Since milestone MV8 the exact condition
+is `Card.inert_special`: inert unless the payload models something (a granted static effect, Ability
+or attack, an alternative provision, a holder restriction), and inert whenever it says a rider is not
+modelled (`EnergyText.rest`). -/
 theorem special_inert (n : String) (p : List (List EType)) :
     (Card.energy (.special n p {})).inert = true :=
   rfl

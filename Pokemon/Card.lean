@@ -46,8 +46,9 @@ def EType.paidBy (s : EType) (u : List EType) : Bool :=
 
 /-- `Pays cost units`: the symbols of an attack cost can be paid by distinct units of the
 attached Energy, a typed symbol by a unit of that type and a Colorless symbol by any unit
-(`EType.paidBy`). Each unit is listed by the types it counts as (`Card.provides`); with Basic
-Energy only, every unit is one type. This is a matching problem, not a count: `[fire, fire]` is
+(`EType.paidBy`). Each unit is listed by the types it counts as; the units of a Pokémon are what its
+attached cards provide on it (`InPlay.units`, through `Card.unitsOn` since milestone MV8;
+`Card.provides` is the printed provision). With Basic Energy only, every unit is one type. This is a matching problem, not a count: `[fire, fire]` is
 not paid by one Fire and one Water Energy, although two Energy are attached. -/
 inductive Pays : List EType → List (List EType) → Prop where
   | nil (us : List (List EType)) : Pays [] us
@@ -672,11 +673,14 @@ inductive Effect where
   it has room ("Search your deck for up to 2 Basic Pokémon and put them onto your Bench" is two of
   these, then `shuffle`); or nothing -/
   | putBench (w : Whose) (src : Src) (f : Filter)
-  /-- discard Energy cards that pass `f` from one of the `w` player's Pokémon at `sp`, as many as
+  /-- discard Energy cards that pass `f` from one of the `w` player's Pokémon at `sp`, as much as
   `q` says ("Discard 2 Energy from this Pokémon" is `discardEnergy .own .active .energy
   (.exactly 2)`; "discard an Energy from your opponent's Active Pokémon",
-  `discardEnergy .opp .active .energy (.upTo 1)`); they go to that player's discard pile. With
-  `bench` and an empty Bench, nothing -/
+  `discardEnergy .opp .active .energy (.upTo 1)`); they go to that player's discard pile. Since
+  milestone MV8 the quantity is counted by `Qty.okE`: under `Filter.energy` by the Energy the cards
+  provide (cards that provide `n`, none superfluous; one card that provides 2 meets "exactly 1" and
+  "exactly 2"), under any other filter by cards (`Filter.weight`). With `bench` and an empty Bench,
+  nothing -/
   | discardEnergy (w : Whose) (sp : Spot) (f : Filter) (q : Qty)
   /-- move one Energy card that passes `f` from one of the `w` player's Pokémon in play to another
   ("Move an Energy from 1 of your Benched Pokémon to your Active Pokémon"); or nothing -/
@@ -1504,12 +1508,24 @@ Energy attached, this card provides Colorless Energy instead" (Luminous Energy) 
 `some (.otherSpecial, [[.colorless]])`; read by `EnergyCard.unitsAt`. `only` is the holder
 restriction "This card can only be attached to a Team Rocket's Pokémon" (`.namePrefix "Team
 Rocket's"`): every attachment of the card, from the hand or by an effect, and every move of it to
-another Pokémon, needs the target's top card to pass it (`Card.attachOk`). -/
+another Pokémon, needs the target's top card to pass it (`Card.attachOk`).
+
+`rest` says that the printed card has a rider this payload does not model ("discard it at the end
+of your turn", written beside Ignition Energy's expressible provision): such a card is
+`Card.inert` whatever else the payload says, so a partial writing cannot pass for a complete one. -/
 structure EnergyText where
   grant : ToolGrant := ToolGrant.none
   alt : Option (ProvIf × List (List EType)) := none
   only : Filter := .any
+  rest : Bool := false
   deriving DecidableEq
+
+/-- **The payload models something** (milestone MV8): a static effect, an Ability or an attack in
+its grant, an alternative provision, or a holder restriction. A grant's holder filter alone models
+nothing (it restricts a grant that gives nothing), and `rest` is not content. -/
+def EnergyText.content (x : EnergyText) : Bool :=
+  !x.grant.statics.isEmpty || !x.grant.abilities.isEmpty || !x.grant.attacks.isEmpty ||
+    x.alt.isSome || x.only != .any
 
 /-- **An Energy card** (milestone MV5): Basic (`basic t`) or Special (`special name prov text`). A
 Special Energy card has its printed name, what it provides while attached, one entry per unit, each
@@ -1517,10 +1533,11 @@ entry the types that unit counts as ("provides Colorless Energy" is `[[.colorles
 type of Energy but provides only 1 Energy at a time" is one unit of every type; Team Rocket's Energy,
 "2 in any combination of Psychic Energy and Darkness Energy", is `[[.psychic, .darkness], [.psychic,
 .darkness]]`), and (milestone MV8) a payload (`EnergyText`): what it gives its holder by the Tool path
-(static effects, triggered Abilities, under a holder filter). A card whose payload is empty has no
-rider modelled and is marked by `Card.inert` (an under-model of a printed card with riders); with a
-payload it is not inert (`Card.inert_special`), and whether the payload says all the printed card
-says is the importer's claim (survey S22 lists the cards whose every rider has a payload form).
+(static effects, triggered Abilities, under a holder filter), provision that depends on the holder
+and a holder restriction. A card whose payload models nothing (`EnergyText.content` false), or says
+that a rider is not modelled (`EnergyText.rest`), is marked by `Card.inert` (an under-model of a
+printed card with riders); otherwise it is not inert (`Card.inert_special`), and whether the payload
+says all the printed card says is the importer's claim (survey S22 lists the cards whose every rider has a payload form).
 
 Why a kind inside `Card.energy` and not a flag with a default or a new `Card` constructor: in Lean
 v4.36.0 a pattern `.energy t` fills in an omitted default argument, so a defaulted flag would
@@ -1698,14 +1715,16 @@ the language of `Static`), so `Card.inert` tells "playable, effect not modelled"
 the printed card) from "playable, effect expressed" (a Stadium with an activated or, since milestone
 M6, a static effect; a Tool that gives an attack, an Ability or a static effect, and since milestone
 M8b a triggered Ability: a Tool whose triggered text is expressed is not inert). A Special Energy
-card (milestone MV5) is inert exactly when its payload is empty (milestone MV8, `EnergyText`,
-`Card.inert_special`): it then provides Energy and nothing of the rest of its text is modelled, so an
-importer must refuse it or caveat it as "provides …; text not modelled", unless the printed card has
-no other text. -/
+card (milestone MV5) is inert unless its payload models something (`EnergyText.content`: a static
+effect, Ability or attack granted, an alternative provision, a holder restriction), and is inert
+whenever the payload says a rider is not modelled (`EnergyText.rest`), milestone MV8,
+`Card.inert_special`. An inert Special Energy card provides Energy and at most part of the rest of
+its text is modelled, so an importer must refuse it or caveat it as "provides …; text not (fully)
+modelled", unless the printed card has no other text. -/
 def Card.inert : Card → Bool
   | .trainer _ .stadium e ss => e == .skip && ss.isEmpty
   | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty && gr.statics.isEmpty
-  | .energy (.special _ _ x) => x == {}
+  | .energy (.special _ _ x) => x.rest || !x.content
   | _ => false
 
 /-- **The static effects printed on a card** (milestone M6): a Pokémon card's static Abilities; a
@@ -1762,9 +1781,10 @@ def EnergyCard.unitsAt (top : PokemonCard) (att : List Card) : EnergyCard → Li
 
 /-- **The Energy a card provides while attached** (milestone MV8): the units the card `c` provides
 attached to a Pokémon whose top card is `top` and whose attached Energy cards are `att` (`c` among
-them). Every function of the model that reads Energy by what it provides reads it through this one:
-attack costs (`InPlay.units`, `Pays`), the Retreat Cost (`retreatPaid`) and the counts of Energy
-attached (`Filter.weight`, `InPlay.energyCount`). For a Basic Energy card it is one unit of its
+them). Attack costs (`InPlay.units`, `Pays`), the Retreat Cost (`retreatPaid`), the counts of Energy
+attached under `Filter.energy` (`Filter.weight`, `InPlay.energyCount`) and Energy discards
+(`Qty.okE`) read it; the static amount `SAmt.perEnergy`, the static condition `Static.need` and the
+card filters count cards instead (Known gaps). For a Basic Energy card it is one unit of its
 type (`Card.unitsOn_basic`). -/
 def Card.unitsOn (top : PokemonCard) (att : List Card) : Card → List (List EType)
   | .energy t => t.unitsAt top att
@@ -1785,7 +1805,13 @@ providing the units `us`: "Energy" (`Filter.energy`: "for each Energy attached",
 counts the units the card provides; every other filter is a card filter and counts the card once if
 it passes ("Basic Energy card", "Special Energy card", a name, and `Filter.energyOf t`, which reads
 Basic Energy only: Known gaps). With one-unit Basic Energy every case is the card count
-(`Filter.weight_basic`). -/
+(`Filter.weight_basic`).
+
+The test is syntactic: only the constructor `Filter.energy` itself counts units. A filter that passes
+the same cards but is written otherwise (`or energy energy`, `and energy any`) counts each card once
+(`Units.weight_syntactic`); this is the form available for a count of cards ("for each Energy card
+attached"), and an importer that writes it for printed "Energy" counts fewer than print for a card
+that provides 2 (Known gaps). -/
 def Filter.weight (f : Filter) (us : List (List EType)) (c : Card) : Nat :=
   match f with
   | .energy => us.length

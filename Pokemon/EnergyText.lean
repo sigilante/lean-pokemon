@@ -17,16 +17,35 @@ one new static effect: "has no Retreat Cost", a set applied last in `GameState.r
 
 Expressible (not imported) with this file's terms, each witnessed below from a `Settled` start:
 Growing Grass Energy (me3-86), Voltaic Lightning Energy (me5-84), Magnetic Metal Energy (me4-85),
-Spiky Energy (sv9-159). `Card.inert` is false exactly for a Special Energy card with a nonempty
-payload (`Card.inert_special`).
+Spiky Energy (sv9-159). A Special Energy card is `Card.inert` exactly when its payload says a rider
+is not modelled (`EnergyText.rest`) or models nothing (no static effect, Ability or attack granted,
+no alternative provision, no holder restriction: `Card.inert_special`); a grant's holder filter alone
+is not content (`Card.inert_holderOnly`). Other cards are non-inert too (a Pokémon card, a Basic
+Energy card, a Stadium or Tool with an effect), so the theorem characterises Special Energy cards only.
 -/
 
 namespace Pokemon
 
-/-- **A Special Energy card is inert exactly when its payload is empty** (milestone MV8). -/
+/-- **A Special Energy card is inert exactly when its payload says a rider is not modelled, or
+models nothing** (milestone MV8): no static effect, Ability or attack granted, no alternative
+provision and no holder restriction. -/
 theorem Card.inert_special (n : String) (p : List (List EType)) (x : EnergyText) :
-    (Card.energy (.special n p x)).inert = true ↔ x = {} := by
-  simp only [Card.inert, beq_iff_eq]
+    (Card.energy (.special n p x)).inert = true ↔
+      x.rest = true ∨ (x.grant.statics = [] ∧ x.grant.abilities = [] ∧ x.grant.attacks = [] ∧
+        x.alt = none ∧ x.only = .any) := by
+  simp only [Card.inert, EnergyText.content, Bool.or_eq_true, Bool.not_eq_true',
+    Bool.or_eq_false_iff, Bool.not_eq_false', List.isEmpty_iff, Option.isSome_eq_false_iff,
+    Option.isNone_iff_eq_none, bne_eq_false_iff_eq, and_assoc]
+
+/-- **A payload that only sets the grant's holder filter is inert**: it models nothing. -/
+theorem Card.inert_holderOnly (n : String) (p : List (List EType)) (f : Filter) :
+    (Card.energy (.special n p { grant := { ToolGrant.none with holder := f } })).inert = true :=
+  (Card.inert_special _ _ _).2 (.inr ⟨rfl, rfl, rfl, rfl, rfl⟩)
+
+/-- **A payload that says a rider is not modelled is inert**, whatever else it models. -/
+theorem Card.inert_rest (n : String) (p : List (List EType)) {x : EnergyText} (h : x.rest = true) :
+    (Card.energy (.special n p x)).inert = true :=
+  (Card.inert_special _ _ _).2 (.inl h)
 
 namespace EnergyText
 
