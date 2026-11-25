@@ -9,7 +9,9 @@ your deck for up to 3 Basic Grass Energy cards and attach them to this Pokémon.
 deck." (Yanmega ex sv10-3; the test card `yan` has it with one Grass Energy) and "Once during your
 turn, when this Pokémon moves from the Active Spot to your Bench, you may use this Ability. Attach up
 to 2 Basic Water Energy cards from your hand to this Pokémon." (Clawitzer me1-38; `claw`, one Water
-Energy). The event is raised where the Pokémon moves (`InPlay.noteMove` marks it and spends its
+Energy). Both cards are expressible but not imported (the importer refuses them; Yanmega ex also for
+an unrelated attack sentence): `yan` and `claw` are test cards, not the printed ones. The event is
+raised where the Pokémon moves (`InPlay.noteMove` marks it and spends its
 "once during your turn" flag, `InPlay.used`), and the resolution (`Owed`) fires the marked holders'
 triggers, the player to move's own (`FireMine`), before anything else.
 
@@ -33,9 +35,10 @@ Existential witnesses (one play exists; nothing is claimed about every resolutio
 Universal statements (over every move or every resolution from the state named):
 * `up_forced`: the mandatory drawing variant (`up false`) cannot be skipped: every move after the
   retreat gives the owner the card;
-* `checkup_promotion_quiet`: between turns (after Pokémon Checkup, which is in no player's turn), a
-  Knock Out of the Active Pokémon of the player about to move and the promotion of `yan` raise
-  nothing: every move leaves nothing pending;
+* `checkup_promotion_quiet`: between turns (after Pokémon Checkup, which the model reads as in no
+  player's turn; a reading, Known gaps of `Pokemon/Rules.lean`), a Knock Out of the Active Pokémon
+  of the player about to move and the promotion of `yan` raise nothing: every move leaves nothing
+  pending;
 * `opp_promotion_quiet`: the opponent's promotion of `yan` after an attack Knocks out their Active
   Pokémon raises nothing (it is not the opponent's turn): every move leaves nothing pending;
 * `gust_quiet`: the player's gust (`switch .opp`) moves the opponent's `yan` up during the player's
@@ -287,7 +290,8 @@ theorem k0_wellFormed : WellFormed k0 := by
 
 theorem k0_unsettled : ¬ Settled k0 := fun h => absurd ((GameState.settled_iff _).1 h) (by decide)
 
-/-- **A promotion between turns raises nothing**: Pokémon Checkup is in no player's turn. The batch
+/-- **A promotion between turns raises nothing**: the model reads Pokémon Checkup as in no player's
+turn (a reading, Known gaps of `Pokemon/Rules.lean`). The batch
 step promotes `yan` (an existential witness: the result is `Settled`, with `yan` Active), and every
 move from `k0` leaves nothing pending (universal). -/
 theorem checkup_promotion_quiet :

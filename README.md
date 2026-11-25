@@ -201,19 +201,25 @@ move from a state with a pending Knock Out gained the hypothesis `pend = false`
 `Pokemon/Benched.lean`, `Pokemon/Promoted.lean` and `Pokemon/Gust.lean`). Milestone MV7c added
 two events for the player's own Pokémon, "Once during your turn, when this Pokémon moves from your
 Bench to the Active Spot" and "… from the Active Spot to your Bench" (`TrigEvent.movedUp`,
-`TrigEvent.movedDown`, `TrigEvent` now 5 constructors; Yanmega ex sv10-3, Clawitzer me1-38 on the
-Bench as a superset): a retreat, a switch of the player's own Active Pokémon, and the promotion of
+`TrigEvent.movedDown`, `TrigEvent` now 5 constructors; Yanmega ex sv10-3 and Clawitzer me1-38
+expressible (not imported; Clawitzer on the Bench as a superset; the witnesses use test cards): a
+retreat, a switch of the player's own Active Pokémon, and the promotion of
 the player's Pokémon after a Knock Out of their Active Pokémon in their own turn mark the Pokémon
 that moved (`InPlay.noteMove`: the `owe` mark, now on either side, and the "once during your turn"
 flag `InPlay.used`) and set the record; the resolution (`Owed`) fires both players' owed triggers
 before anything else, the player to move's from their own side (`FireMine`). Promotion between
-turns, the opponent's promotion and a gust of the opponent's Pokémon raise nothing (witnesses and
-universal statements in `Pokemon/Moved.lean`). `MarksOk` is now "no mark unless a trigger is
+turns (Pokémon Checkup read as no player's turn, a reading), the opponent's promotion and a gust of
+the opponent's Pokémon raise nothing (witnesses and universal statements in `Pokemon/Moved.lean`;
+existential witnesses of a promotion after the opponent's `damaged` trigger, of both orders of the
+two players' blocks and of a trigger, Knock Out, promotion, trigger chain in
+`Pokemon/MovedChain.lean`). `MarksOk` is now "no mark unless a trigger is
 pending", on both sides; the termination measure puts the Prize cards left first (a batch that
 raises `movedUp` has Knocked Out the player's Active Pokémon); the bounds of `Resolve.chain_le`
 and the shape lemmas take a game with no `movedUp` trigger (`GameState.EvFree`), and
 `Reach.pend_false` a game with no trigger of a move event (`GameState.MoveFree`) and a start with
-`MarksOk`; departures (the limit is spent even when the trigger is declined; the two players'
+`MarksOk`; departures (the limit is spent even when the trigger is declined; it is the Pokémon's
+single `used` flag, exact only for a holder whose one Ability is the "once during your turn"
+trigger, as every printing in the census is; Checkup read as no player's turn; the two players'
 blocks of triggers are not interleaved) are in the Known gaps. Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
@@ -502,16 +508,25 @@ came with milestone MV3), cost changes and every triggered effect
   `Move.pending_untouched`; restated by batch-KO: the same move may now fill the Active Spot again
   by a promotion);
 * the repeated check with its triggers ends (milestone M8b, `KOMove.acc`, `Move.unsettled_acc`: no
-  infinite sequence of moves through states that are not `Settled`, by the pending-trigger record
-  (milestone MV7: no trigger sets it again), the Prize cards left and then the measure below);
+  infinite sequence of moves through states that are not `Settled`). The measure is the Prize cards
+  left first, then the pending-trigger record, then the measure below. Since milestone MV7c a Knock
+  Out batch can set the record (the promotion of the player's Pokémon during their turn proper
+  raises `movedUp`), but such a batch has Knocked Out the player's Active Pokémon and so takes a
+  Prize card or ends the game (`GameState.koVal_pos_of_promoUp`); a batch that takes no Prize card
+  keeps the record and lowers the measure below; the resolution of the triggers keeps the Prize
+  cards and clears the record (`MovedChain.tool_chain` witnesses the alternation: trigger, Knock Out
+  batch, promotion, trigger);
 * the repeated check ends (`Pokemon/Terminate.lean`): a batch that does not end the game lowers
   twice the number of Pokémon in play plus the number of empty Active Spots
   (`KOBatch.koMeasure_lt`), so every chain of batches is finite (`KOBatch.acc`), every state has a
-  `Resolve` result, `Settled` or with an outcome (`Resolve.exists`), and `Resolve` from a state with
-  no pending trigger takes at most that measure plus one batches (`Resolve.chain_le`); with one
-  pending and both Active Spots filled, the resolution of the triggers and then at most the measure
-  after them plus one batches (`Resolve.trigger_first`, `Resolve.chain_le_pend`; no bound in the
-  measure before the triggers is proved);
+  `Resolve` result, `Settled` or with an outcome (`Resolve.exists`). In a game with no `movedUp`
+  trigger among its cards (`GameState.EvFree .movedUp`, a hypothesis since milestone MV7c),
+  `Resolve` from a state with no pending trigger takes at most that measure plus one batches
+  (`Resolve.chain_le`); with one pending and both Active Spots filled, the resolution of the
+  triggers and then at most the measure after them plus one batches (`Resolve.trigger_first`,
+  `Resolve.chain_le_pend`; no bound in the measure before the triggers is proved). In a game with
+  a `movedUp` trigger a result exists and the chain ends (`Resolve.exists`, `Move.unsettled_acc`),
+  but no bound on the number of batches is proved;
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at `bound` the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and

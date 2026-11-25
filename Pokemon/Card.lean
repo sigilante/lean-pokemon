@@ -1172,15 +1172,17 @@ of today's Standard.
 * `movedUp`, `movedDown` (milestone MV7c; survey S20 §a, group (a)): "Once during your turn, when
   this Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3) and "Once
   during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this
-  Ability. …" (Clawitzer me1-38). The "once during your turn" limit is part of the event: the
-  holder's `InPlay.used` flag (shared with activated Abilities, exact for one-Ability cards) is
-  set when the event marks it, and a holder with the flag set is not marked. Raised for the player
-  to move's own Pokémon, in their turn: by a retreat (`Move.retreat`: the retreating Pokémon moves
-  down, the one switched in moves up), by a switch of their own Active Pokémon inside any effect of
-  their turn (`Run.switch .own`, including `SelfOp.switchIn`), and (`movedUp`) by the promotion of a
-  Benched Pokémon after a Knock Out of their Active Pokémon in their own turn (`KOBatch`,
-  `GameState.promoUp`; not between turns, at Checkup, which is no player's turn, and not for the
-  opponent's promotion, in a turn that is not the opponent's). The event marks the holder
+  Ability. …" (Clawitzer me1-38); both expressible (not imported; witnesses with test cards in
+  `Pokemon/Moved.lean`). The "once during your turn" limit is part of the event: the holder's
+  single `InPlay.used` flag (shared with activated Abilities; exact only for a holder whose one
+  Ability is this trigger, Known gaps) is set when the event marks it, and a holder with the flag
+  set is not marked. Raised for the player to move's own Pokémon, in their turn: by a retreat
+  (`Move.retreat`: the retreating Pokémon moves down, the one switched in moves up), by a switch of
+  their own Active Pokémon inside any effect of their turn (`Run.switch .own`, including
+  `SelfOp.switchIn`), and (`movedUp`) by the promotion of a Benched Pokémon after a Knock Out of
+  their Active Pokémon in their own turn (`KOBatch`, `GameState.promoUp`; not between turns, at
+  Checkup, read as no player's turn (a reading, Known gaps), and not for the opponent's promotion,
+  in a turn that is not the opponent's). The event marks the holder
   (`InPlay.owe`: `some .active` moved up, `some .bench` moved down, `InPlay.noteMove`) and sets the
   record (`GameState.pend`); the resolution (`Owed`) fires the marked holders' triggers with "this
   Pokémon" at its new place (`TrigEvent.place`), before anything else, as for `oppBenched`.

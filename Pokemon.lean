@@ -45,6 +45,7 @@ import Pokemon.Gust
 import Pokemon.Checkup
 import Pokemon.SelfKO
 import Pokemon.Moved
+import Pokemon.MovedChain
 import Pokemon.NoTriggers
 import Pokemon.InPlayTests
 import Pokemon.Spread
