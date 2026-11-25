@@ -1158,14 +1158,14 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       subst hg
       exact ⟨_, .playBasic hh hs hhp (by rw [length_of_map he₁]; exact hb) hbt hs' hat, by
         simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂, List.map_append]⟩
-  | @attach l₁ l₂ t a hh hf ha hbt hst hat =>
+  | @attach l₁ l₂ t a hh hf ha hbt hst hat hok =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have key := hq.clamp_map (c' := .hp) (hq.damage_eq_of_lt (hst.1.lt_bound hH (w := .own) (sp := .active) ha))
         (fun x => { x with energy := Card.energy t :: x.energy }) (fun _ => rfl) rfl rfl
-      exact ⟨_, .attach hh hf rfl hbt hs' hat, by
+      exact ⟨_, .attach hh hf rfl hbt hs' hat (by rw [hq.top]; exact hok), by
         simp only [GameState.xclamp, GameState.xclampAt, Option.map_some, ha₂, key, he₁, he₂]⟩
   | @evolve l₁ l₂ p a hh ha he hfr hf hbt hst hat =>
       have hs' := hs₂ hst
@@ -1176,12 +1176,12 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       refine ⟨_, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt hs' hat, ?_⟩
       rw [e]
       simp only [GameState.xclamp, GameState.xclampAt, ha₂, he₁, he₂]
-  | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb hbt hst hat =>
+  | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb hbt hst hat hok =>
       have hs' := hs₂ hst
       subst hg
       obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
       have hr := InPlay.agree_of_clamp h2
-      exact ⟨_, .attachBench hh hf rfl hbt hs' hat, by
+      exact ⟨_, .attachBench hh hf rfl hbt hs' hat (by rw [hr.top]; exact hok), by
         simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₂, List.map_append, List.map_cons, h1, h3,
           hr.energy, InPlay.clamp_of_agree (hr.upd.1 (Card.energy t :: q.energy))]⟩
   | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr hf hbt hst hat =>

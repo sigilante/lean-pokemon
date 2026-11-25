@@ -267,10 +267,12 @@ inductive Deal (tf : Filter) : List Card → Option InPlay → List InPlay → O
     List InPlay → Prop where
   | nil (a : Option InPlay) (b : List InPlay) : Deal tf [] a b a b
   | active {e : EnergyCard} {xs : List Card} {p : InPlay} {b : List InPlay} {a' : Option InPlay}
-      {b' : List InPlay} (ht : tf.eval (.pokemon p.top) = true) :
+      {b' : List InPlay} (ht : tf.eval (.pokemon p.top) = true)
+      (hok : (Card.energy e).attachOk p.top = true) :
       Deal tf xs (some (p.addEnergy (.energy e))) b a' b' → Deal tf (.energy e :: xs) (some p) b a' b'
   | bench {e : EnergyCard} {xs : List Card} {a : Option InPlay} {q : InPlay} {b₁ b₂ : List InPlay}
-      {a' : Option InPlay} {b' : List InPlay} (ht : tf.eval (.pokemon q.top) = true) :
+      {a' : Option InPlay} {b' : List InPlay} (ht : tf.eval (.pokemon q.top) = true)
+      (hok : (Card.energy e).attachOk q.top = true) :
       Deal tf xs a (b₁ ++ q.addEnergy (.energy e) :: b₂) a' b' →
         Deal tf (.energy e :: xs) a (b₁ ++ q :: b₂) a' b'
 
@@ -294,12 +296,14 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       ZStep (.drawTo w n) s (s.drawK (n - s.hand.length))
   | attachActive {w : Whose} {src : Src} {f tf : Filter} {s : PlayerState} {r : List Card}
       {t : EnergyCard} {a : InPlay} (hs : Split f (src.get s) [.energy t] r)
-      (ha : s.active = some a) (ht : tf.eval (.pokemon a.top) = true) :
+      (ha : s.active = some a) (ht : tf.eval (.pokemon a.top) = true)
+      (hok : (Card.energy t).attachOk a.top = true) :
       ZStep (.attach w src f .active tf) s
         { src.set r s with active := some (a.addEnergy (.energy t)) }
   | attachBench {w : Whose} {src : Src} {f tf : Filter} {s : PlayerState} {r : List Card}
       {t : EnergyCard} {q : InPlay} {b₁ b₂ : List InPlay} (hs : Split f (src.get s) [.energy t] r)
-      (hb : s.bench = b₁ ++ q :: b₂) (ht : tf.eval (.pokemon q.top) = true) :
+      (hb : s.bench = b₁ ++ q :: b₂) (ht : tf.eval (.pokemon q.top) = true)
+      (hok : (Card.energy t).attachOk q.top = true) :
       ZStep (.attach w src f .bench tf) s
         { src.set r s with bench := b₁ ++ q.addEnergy (.energy t) :: b₂ }
   | attachNone (w : Whose) (src : Src) (f : Filter) (sp : Spot) (tf : Filter) (s : PlayerState) :
@@ -325,20 +329,21 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
   /-- from the Active Pokémon to a Benched one -/
   | moveAB {w : Whose} {f : Filter} {s : PlayerState} {a q : InPlay} {b₁ b₂ : List InPlay}
       {e₁ e₂ : List Card} {x : Card} (ha : s.active = some a) (he : a.energy = e₁ ++ x :: e₂)
-      (hx : f.eval x = true) (hb : s.bench = b₁ ++ q :: b₂) :
+      (hx : f.eval x = true) (hb : s.bench = b₁ ++ q :: b₂) (hok : x.attachOk q.top = true) :
       ZStep (.moveEnergy w f) s
         { s with active := some { a with energy := e₁ ++ e₂ }, bench := b₁ ++ q.addEnergy x :: b₂ }
   /-- from a Benched Pokémon to the Active one -/
   | moveBA {w : Whose} {f : Filter} {s : PlayerState} {a q : InPlay} {b₁ b₂ : List InPlay}
       {e₁ e₂ : List Card} {x : Card} (ha : s.active = some a) (hb : s.bench = b₁ ++ q :: b₂)
-      (he : q.energy = e₁ ++ x :: e₂) (hx : f.eval x = true) :
+      (he : q.energy = e₁ ++ x :: e₂) (hx : f.eval x = true) (hok : x.attachOk a.top = true) :
       ZStep (.moveEnergy w f) s
         { s with active := some (a.addEnergy x), bench := b₁ ++ { q with energy := e₁ ++ e₂ } :: b₂ }
   /-- from a Benched Pokémon to a Benched one (taken off first, so the target may be any
   Pokémon of the Bench after that) -/
   | moveBB {w : Whose} {f : Filter} {s : PlayerState} {q q' : InPlay} {b₁ b₂ c₁ c₂ : List InPlay}
       {e₁ e₂ : List Card} {x : Card} (hb : s.bench = b₁ ++ q :: b₂) (he : q.energy = e₁ ++ x :: e₂)
-      (hx : f.eval x = true) (hc : b₁ ++ { q with energy := e₁ ++ e₂ } :: b₂ = c₁ ++ q' :: c₂) :
+      (hx : f.eval x = true) (hc : b₁ ++ { q with energy := e₁ ++ e₂ } :: b₂ = c₁ ++ q' :: c₂)
+      (hok : x.attachOk q'.top = true) :
       ZStep (.moveEnergy w f) s { s with bench := c₁ ++ q'.addEnergy x :: c₂ }
   | moveNone (w : Whose) (f : Filter) (s : PlayerState) : ZStep (.moveEnergy w f) s s
   /-- discard the Tools of the Active Pokémon (milestone M5) -/

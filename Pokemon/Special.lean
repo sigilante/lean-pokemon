@@ -72,7 +72,7 @@ pay a Psychic and a Darkness symbol. -/
 theorem attach_special : ∃ g a, Move sStart g ∧ g.cur.active = some a ∧ a.energy = [trE] ∧
     Pays [.psychic, .darkness] a.units :=
   ⟨_, _, .attach (t := .special "Team Rocket's Energy" [[.psychic, .darkness], [.psychic, .darkness]] {})
-      (l₁ := []) (l₂ := []) rfl rfl rfl rfl sStart_settled rfl, rfl, rfl,
+      (l₁ := []) (l₂ := []) rfl rfl rfl rfl sStart_settled rfl rfl, rfl, rfl,
     payable_iff.1 (by decide)⟩
 
 /-- "Discard a Special Energy from your opponent's Active Pokémon" (Victini sv5-30, Cobalion

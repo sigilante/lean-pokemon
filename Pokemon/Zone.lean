@@ -169,10 +169,10 @@ theorem Deal.count {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : 
       List.count x (optCardList a) + List.count x (benchCardList b) + List.count x t := by
   induction h with
   | nil => simp only [List.count_nil, Nat.add_zero]
-  | active _ _ ih =>
+  | active _ _ _ ih =>
       simp only [optCardList, InPlay.count_cardList, InPlay.addEnergy, List.count_cons] at ih ⊢
       omega
-  | bench _ _ ih =>
+  | bench _ _ _ ih =>
       simp only [count_benchCardList_append, benchCardList, List.count_append,
         InPlay.count_cardList, InPlay.addEnergy, List.count_cons] at ih ⊢
       omega

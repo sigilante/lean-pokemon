@@ -1367,11 +1367,11 @@ theorem Deal.abW {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : Li
     abWo a' + abWs b' = abWo a + abWs b ∧ optN a' + b'.length = optN a + b.length := by
   induction h with
   | nil => exact ⟨rfl, rfl⟩
-  | @active e xs p b a' b' ht _ ih =>
+  | @active e xs p b a' b' ht _ _ ih =>
       have e' : (p.addEnergy (.energy e)).abW = p.abW := rfl
       simp only [abWo, optN, e'] at ih ⊢
       exact ih
-  | @bench e xs a q b₁ b₂ a' b' ht _ ih =>
+  | @bench e xs a q b₁ b₂ a' b' ht _ _ ih =>
       rw [abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := q.addEnergy (.energy e)) rfl] at ih
       simp only [List.length_append, List.length_cons] at ih ⊢
       exact ih

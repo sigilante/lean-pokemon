@@ -99,7 +99,7 @@ theorem growingGrass_hp :
 pays a Grass symbol. -/
 theorem attach_growingGrass : ∃ g a, Move (st grassMon [] [growingGrass]) g ∧ g.cur.active = some a ∧
     g.hpOf .own .active a = 12 ∧ Pays [.grass] a.units :=
-  ⟨_, _, .attach (l₁ := []) (l₂ := []) rfl rfl rfl rfl ((GameState.settled_iff _).2 (by decide)) rfl,
+  ⟨_, _, .attach (l₁ := []) (l₂ := []) rfl rfl rfl rfl ((GameState.settled_iff _).2 (by decide)) rfl rfl,
     rfl, by decide, by decide⟩
 
 /-- **The HP bonus stops when the card leaves**: "discard an Energy from your Active Pokémon" takes

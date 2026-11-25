@@ -1482,15 +1482,33 @@ structure ToolGrant where
 /-- The empty grant: a Tool whose effect the model does not express, or that has none. -/
 def ToolGrant.none : ToolGrant := ⟨.any, [], [], []⟩
 
+/-- The condition under which a Special Energy card provides its alternative Energy (milestone MV8):
+its holder's top card passes the filter, or the holder has another Special Energy card attached. -/
+inductive ProvIf where
+  | holder (f : Filter)
+  | otherSpecial
+  deriving DecidableEq
+
 /-- **What a Special Energy card gives besides its Energy** (milestone MV8, survey S22): the payload
 of `EnergyCard.special`. `grant` is what it gives the Pokémon it is attached to, by the Tool path
 (`ToolGrant`: a holder filter, "the Grass Pokémon this card is attached to"; static effects in force
 while it is attached, `ToolGrant.statics`, read by `SView.statics`; triggered Abilities the holder has,
 `InPlay.abilities`). Several Energy cards can be attached to one Pokémon, and each card's grant is in
 force (they add up, as printed: no Special Energy card of the pool limits its own stacking). The empty
-payload (`{}`) is a card none of whose riders is modelled: `Card.inert`. -/
+payload (`{}`) is a card none of whose riders is modelled: `Card.inert`.
+
+`alt` (stage 3) is provision that depends on the holder: "If this card is attached to a Basic Pokémon,
+this card provides every type of Energy but provides only 1 Energy at a time" (Prism Energy) is
+`some (.holder .basic, [every type])`; "If the Pokémon this card is attached to has any other Special
+Energy attached, this card provides Colorless Energy instead" (Luminous Energy) is
+`some (.otherSpecial, [[.colorless]])`; read by `EnergyCard.unitsAt`. `only` is the holder
+restriction "This card can only be attached to a Team Rocket's Pokémon" (`.namePrefix "Team
+Rocket's"`): every attachment of the card, from the hand or by an effect, and every move of it to
+another Pokémon, needs the target's top card to pass it (`Card.attachOk`). -/
 structure EnergyText where
   grant : ToolGrant := ToolGrant.none
+  alt : Option (ProvIf × List (List EType)) := none
+  only : Filter := .any
   deriving DecidableEq
 
 /-- **An Energy card** (milestone MV5): Basic (`basic t`) or Special (`special name prov text`). A
@@ -1720,12 +1738,27 @@ def Card.isTool : Card → Bool
 that unit counts as (`EnergyCard.units`). A Basic Energy card provides one unit of its type; a
 Special Energy card (milestone MV5) what its `prov` says, whatever Pokémon holds it (several units,
 as Team Rocket's Energy's two, or one unit of several types, as "provides every type of Energy but
-only 1 Energy at a time"; `Pays` matches units of several types). Provision that depends on the
-holder (Prism, Neo Upper, Ignition) or on other attached cards (Luminous) is not expressible.
+only 1 Energy at a time"; `Pays` matches units of several types). This is the printed provision;
+what a card provides attached to a given holder, which since milestone MV8 may depend on the holder or
+on the other attached cards, is `Card.unitsOn`.
 Other cards provide nothing. -/
 def Card.provides : Card → List (List EType)
   | .energy t => t.units
   | _ => []
+
+/-- **What an Energy card provides attached to a Pokémon whose top card is `top` and whose attached
+Energy cards are `att`** (milestone MV8): a Basic Energy card one unit of its type; a Special Energy
+card its alternative provision (`EnergyText.alt`) when its condition holds (the holder passes the
+filter; or another Special Energy card is attached, that is at least two among `att`, the card
+itself included), and its printed provision otherwise. -/
+def EnergyCard.unitsAt (top : PokemonCard) (att : List Card) : EnergyCard → List (List EType)
+  | .basic t => [[t.type]]
+  | .special _ p x =>
+      match x.alt with
+      | none => p
+      | some (.holder f, u) => if f.eval (.pokemon top) then u else p
+      | some (.otherSpecial, u) =>
+          if Nat.ble 2 (att.countP Filter.specialEnergy.eval) then u else p
 
 /-- **The Energy a card provides while attached** (milestone MV8): the units the card `c` provides
 attached to a Pokémon whose top card is `top` and whose attached Energy cards are `att` (`c` among
@@ -1733,8 +1766,19 @@ them). Every function of the model that reads Energy by what it provides reads i
 attack costs (`InPlay.units`, `Pays`), the Retreat Cost (`retreatPaid`) and the counts of Energy
 attached (`Filter.weight`, `InPlay.energyCount`). For a Basic Energy card it is one unit of its
 type (`Card.unitsOn_basic`). -/
-def Card.unitsOn (_top : PokemonCard) (_att : List Card) (c : Card) : List (List EType) :=
-  c.provides
+def Card.unitsOn (top : PokemonCard) (att : List Card) : Card → List (List EType)
+  | .energy t => t.unitsAt top att
+  | _ => []
+
+/-- A Basic Energy card provides one unit of its type, wherever it is attached. -/
+theorem Card.unitsOn_basic (top : PokemonCard) (att : List Card) (t : BasicEnergy) :
+    Card.unitsOn top att (.energy (.basic t)) = [[t.type]] := rfl
+
+/-- May the card be attached to a Pokémon whose top card is `top` (milestone MV8)? Every card but a
+Special Energy card with a holder restriction (`EnergyText.only`) may. -/
+def Card.attachOk (top : PokemonCard) : Card → Bool
+  | .energy (.special _ _ x) => x.only.eval (.pokemon top)
+  | _ => true
 
 /-- **How many Energy an attached card counts for under the filter `f`** (milestone MV8), the card
 providing the units `us`: "Energy" (`Filter.energy`: "for each Energy attached", "discard 2 Energy")

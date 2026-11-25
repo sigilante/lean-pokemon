@@ -105,7 +105,7 @@ theorem retreat_fires_up :
       g₂.cur.active.map InPlay.energy = some [.energy .grass] ∧ Settled g₂ := by
   refine ⟨_, _, .retreat (b₁ := []) (b₂ := []) rfl rfl rfl .nil rfl rfl rfl y0_settled rfl rfl, rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_mine (u := [buzz]) (d := []) rfl (.refl _) (.refl _)
-      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
           (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩),
     rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩
 
@@ -129,7 +129,7 @@ theorem retreat_fires_down :
       g₂.cur.bench.map InPlay.energy = [[.energy .water]] ∧ g₂.cur.hand = [] ∧ Settled g₂ := by
   refine ⟨_, _, .retreat (b₁ := []) (b₂ := []) rfl rfl rfl .nil rfl rfl rfl w0_settled rfl rfl, rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_mine (u := []) (d := [reload]) rfl (.refl _) (.refl _)
-      ⟨_, _, .nil _, .run rfl (.zone rfl (.attachBench (b₁ := []) (b₂ := []) (.take rfl .nil) rfl rfl))
+      ⟨_, _, .nil _, .run rfl (.zone rfl (.attachBench (b₁ := []) (b₂ := []) (.take rfl .nil) rfl rfl rfl))
           (.nil _), rfl⟩),
     rfl, rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩
 
@@ -204,7 +204,7 @@ theorem uturn_fires :
       ((GameState.settled_iff _).2 (by decide))
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl, rfl, rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_mine (u := [buzz]) (d := []) rfl (.refl _) (.refl _)
-      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
           (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩),
     rfl, rfl⟩
 
@@ -238,7 +238,7 @@ theorem promotion_fires :
         (.step rfl (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide)) (by decide)
             (.pick (b₁ := []) (b₂ := [])) .keep)
           (.trigger rfl ⟨rfl, rfl⟩ rfl (.of_mine (u := [buzz]) (d := []) rfl (.refl _) (.refl _)
-              ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+              ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
                 (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩)
             (.done (.inl ((GameState.settled_iff _).2 (by decide))))))))
     rfl rfl, by decide, rfl, rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩
@@ -260,7 +260,7 @@ theorem once_per_turn :
       g₄.cur.active.map InPlay.used = some true ∧ g₄.pend = false ∧ Settled g₄ := by
   refine ⟨_, _, _, _, .retreat (b₁ := []) (b₂ := []) rfl rfl rfl .nil rfl rfl rfl y0_settled rfl rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_mine (u := [buzz]) (d := []) rfl (.refl _) (.refl _)
-      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
           (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩),
     .item (l₁ := []) rfl rfl ((GameState.settled_iff _).2 (by decide))
       (.prim rfl rfl (.switch (b₁ := []) (b₂ := []) .own rfl rfl)

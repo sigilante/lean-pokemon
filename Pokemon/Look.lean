@@ -349,7 +349,7 @@ theorem maker_witness :
   have hr : Run maker.script (start d₁) _ :=
     .zone rfl (.look (t := [.energy .fire, .energy .water]) (r := [.pokemon big])
       (.keep (.take rfl (.take rfl .nil))) (by unfold Qty.ok; decide) (.bottom _ (List.Perm.refl _))
-      (.attach (.active rfl (.bench (b₁ := []) rfl (.nil _ _)))))
+      (.attach (.active rfl rfl (.bench (b₁ := []) rfl rfl (.nil _ _)))))
   exact ⟨start_wellFormed _, start_settled₁, _,
     .attack (hlk := rfl) (atk := maker) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       start_settled₁ hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl)

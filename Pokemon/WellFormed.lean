@@ -68,8 +68,8 @@ theorem Deal.benchOk {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' 
     (h : Deal tf t a b a' b') (hb : BenchOk b) : BenchOk b' := by
   induction h with
   | nil => exact hb
-  | active _ _ ih => exact ih hb
-  | @bench e xs a q b₁ b₂ a' b' ht _ ih =>
+  | active _ _ _ ih => exact ih hb
+  | @bench e xs a q b₁ b₂ a' b' ht _ _ ih =>
       exact ih (benched_update rfl hb ((hb q (List.mem_append_right _ (.head _))).of_eq
         rfl rfl rfl rfl))
 

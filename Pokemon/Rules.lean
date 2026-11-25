@@ -144,13 +144,28 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   modelled (the 4-copy rule, which counts Special Energy, rulebook 2026 PDF p. 21; ACE SPEC). In a
   game that contains a Special Energy card, `Filter.energy` passes it and the name filters
   (`named`, `namePrefix`, `nameHas`) read its name, so a term that writes `Filter.energy` for
-  printed "Basic Energy card" over-reads there. Absent: every rider of the printed Special Energy
-  cards (survey S18 §A: static, triggered, on-attach, return-to-hand and discard text; restrictions
-  on the holder), provision that depends on the holder (Prism, Neo Upper, Ignition Energy) or on
-  other attached cards (Luminous Energy), and cost changes ("this attack costs ✱ less"). Every
-  Special Energy card is therefore an under-model, marked `Card.inert`: neither a superset nor a
-  subset of the printed card in general (Team Rocket's Energy without its holder restriction allows
-  more; Spiky Energy without its trigger does less), so an importer must refuse it or caveat it. The
+  printed "Basic Energy card" over-reads there. Since milestone MV8 (survey S22) a Special Energy
+  card carries a payload (`EnergyText`): static effects and triggered Abilities given to its holder
+  by the Tool path (`EnergyText.grant`; `Pokemon/EnergyText.lean`), provision that depends on the
+  holder or on the other attached cards (`EnergyText.alt`, `EnergyCard.unitsAt`), and a holder
+  restriction (`EnergyText.only`, `Card.attachOk`; `Pokemon/Provision.lean`). Expressible (not
+  imported): Growing Grass, Voltaic Lightning, Magnetic Metal, Spiky, Prism, Neo Upper, Luminous and
+  Team Rocket's Energy. Departures of these: Team Rocket's Energy cannot be moved by an effect onto a
+  Pokémon that is not a Team Rocket's Pokémon, where print lets it move and then discards it ("If this
+  card is attached to anything other than a Team Rocket's Pokémon, discard this card"; a subset of
+  print), and its discard rule is not applied at evolution (vacuous for the card data: every card
+  that evolves from a "Team Rocket's" Pokémon is one, survey S22); the holder filters read the printed
+  type (`Filter.ptype`: a Coloring counter is ignored, as for every static effect); Spiky Energy's
+  trigger, like a Tool's, fires only if the card is still attached at the end of the attack. Absent
+  (the card stays inert, with an empty payload): on-attach effects (Enriching, Jet, Telepathic Psychic
+  Energy), "discard it at the end of your turn" (Ignition Energy, whose provision alone is
+  expressible), return after a discard by the holder's attack (Boomerang, Nitro Fire Energy),
+  prevention of effects of attacks (Mist, Rocky Fighting Energy), Special Condition recovery and
+  immunity (Bubbly Water Energy), prevention of damage to a Benched holder (Shadowy Darkness Energy:
+  `SEff.prevent` is read in the Active Spot only), and a Prize change on Knock Out once per game
+  (Legacy Energy); also cost changes ("this attack costs ✱ less"). A Special Energy card with an
+  empty payload is an under-model, marked `Card.inert` (`Card.inert_special`), so an importer must
+  refuse it or caveat it; a nonempty payload is the importer's claim that it says every rider. The
   player chooses which Energy to discard when retreating (`Move.retreat`: any sub-multiset,
   `Split .any`; until survey S14 only the most recently attached Energy could be discarded, which
   forbade keeping the Energy an attack needs; `Retreat.discard_first`, `Retreat.discard_second`);
@@ -2049,11 +2064,13 @@ inductive Move : GameState → GameState → Prop where
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, bench := g.cur.bench ++ [InPlay.ofBasic p] } }
   /-- attach one Energy card (Basic or, since milestone MV5, Special: `EnergyCard`) from hand to
-  the Active Pokémon, once per turn -/
+  the Active Pokémon, once per turn; since milestone MV8 not a card whose holder restriction the
+  Pokémon fails ("This card can only be attached to a Team Rocket's Pokémon", `Card.attachOk`) -/
   | attach {g : GameState} {l₁ l₂ : List Card} {t : EnergyCard} {a : InPlay}
       (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
       (hf : g.cur.energyAttached = false) (ha : g.cur.active = some a)
-      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+      (hok : (Card.energy t).attachOk a.top = true) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, energyAttached := true,
         active := some { a with energy := Card.energy t :: a.energy } } }
@@ -2081,7 +2098,8 @@ inductive Move : GameState → GameState → Prop where
       {b₁ b₂ : List InPlay}
       (hh : g.cur.hand = l₁ ++ Card.energy t :: l₂)
       (hf : g.cur.energyAttached = false) (hb : g.cur.bench = b₁ ++ q :: b₂)
-      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false) :
+      (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+      (hok : (Card.energy t).attachOk q.top = true) :
       Move g { g with cur := { g.cur with
         hand := l₁ ++ l₂, energyAttached := true,
         bench := b₁ ++ { q with energy := Card.energy t :: q.energy } :: b₂ } }

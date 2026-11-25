@@ -66,13 +66,13 @@ theorem Deal.sim {c cb : Cap} {tf : Filter} {t : List Card} {a₁ a₁' : Option
       b₂'.map (InPlay.clampWith K cb) = b₁'.map (InPlay.clampWith K cb) := by
   induction h with
   | nil a b => intro a₂ b₂ ha hb; exact ⟨a₂, b₂, .nil _ _, ha, hb⟩
-  | @active e xs p b a' b' ht _ ih =>
+  | @active e xs p b a' b' ht hok _ ih =>
       intro a₂ b₂ ha hb
       obtain ⟨p₂, rfl, hag⟩ := agree_of_map ha
       obtain ⟨a₃, b₃, hd, h1, h2⟩ := ih (a₂ := some (p₂.addEnergy (.energy e))) (b₂ := b₂)
         (by simp only [Option.map_some, InPlay.clamp_of_agree (hag.addEnergy _)]) hb
-      exact ⟨a₃, b₃, .active (by rw [hag.top]; exact ht) hd, h1, h2⟩
-  | @bench e xs a q c₁ c₂ a' b' ht _ ih =>
+      exact ⟨a₃, b₃, .active (by rw [hag.top]; exact ht) (by rw [hag.top]; exact hok) hd, h1, h2⟩
+  | @bench e xs a q c₁ c₂ a' b' ht hok _ ih =>
       intro a₂ b₂ ha hb
       obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split hb
       have hq := InPlay.agree_of_clamp h2
@@ -80,7 +80,7 @@ theorem Deal.sim {c cb : Cap} {tf : Filter} {t : List Card} {a₁ a₁' : Option
       obtain ⟨a₃, b₃, hd, k1, k2⟩ := ih (a₂ := a₂) (b₂ := d₁ ++ q₂.addEnergy (.energy e) :: d₂) ha
         (by simp only [List.map_append, List.map_cons, h1, h3,
           InPlay.clamp_of_agree (hq.addEnergy _)])
-      exact ⟨a₃, b₃, .bench (by rw [hq.top]; exact ht) hd, k1, k2⟩
+      exact ⟨a₃, b₃, .bench (by rw [hq.top]; exact ht) (by rw [hq.top]; exact hok) hd, k1, k2⟩
 
 /-- Placing the cards taken from a window (milestone MV6) keeps agreeing states agreeing. -/
 theorem Place.sim {c cb : Cap} {i : Into} {t : List Card} {x₁ y₁ x₂ : PlayerState}
@@ -109,19 +109,21 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
   | drawTo w n s =>
       refine ⟨_, .drawTo w n s₂, ⟨?_, ?_, ha.discard, ha.active, ha.bench⟩⟩ <;>
         simp only [PlayerState.drawK, ha.deck, ha.hand]
-  | @attachActive w src f tf s r t a hs hac ht =>
+  | @attachActive w src f tf s r t a hs hac ht hok =>
       have hm := ha.active
       rw [hac] at hm
       obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
       have hs' := Src.set_agree ha src r
-      refine ⟨_, .attachActive (by rw [Src.get_congr ha]; exact hs) ha₂ (by rw [hag.top]; exact ht),
+      refine ⟨_, .attachActive (by rw [Src.get_congr ha]; exact hs) ha₂ (by rw [hag.top]; exact ht)
+        (by rw [hag.top]; exact hok),
         ⟨hs'.deck, hs'.hand, hs'.discard, ?_, hs'.bench⟩⟩
       simp only [Option.map_some, InPlay.clamp_of_agree (hag.addEnergy _)]
-  | @attachBench w src f tf s r t q b₁ b₂ hs hb ht =>
+  | @attachBench w src f tf s r t q b₁ b₂ hs hb ht hok =>
       have hs' := Src.set_agree ha src r
       obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
       have hq := InPlay.agree_of_clamp h2
-      refine ⟨_, .attachBench (by rw [Src.get_congr ha]; exact hs) hb₂ (by rw [hq.top]; exact ht),
+      refine ⟨_, .attachBench (by rw [Src.get_congr ha]; exact hs) hb₂ (by rw [hq.top]; exact ht)
+        (by rw [hq.top]; exact hok),
         ⟨hs'.deck, hs'.hand, hs'.discard, hs'.active, ?_⟩⟩
       simp only [List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hq.addEnergy _)]
   | attachNone w src f sp tf s => exact ⟨s₂, .attachNone w src f sp tf s₂, ha⟩
@@ -149,27 +151,27 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
       have hm := ha.bench
       rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
       exact ⟨s₂, .discardNone hm, ha⟩
-  | @moveAB w f s a q b₁ b₂ e₁ e₂ x hac he hx hb =>
+  | @moveAB w f s a q b₁ b₂ e₁ e₂ x hac he hx hb hok =>
       have hm := ha.active
       rw [hac] at hm
       obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
       obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
       have hq := InPlay.agree_of_clamp h2
-      refine ⟨_, .moveAB ha₂ (by rw [hag.energy]; exact he) hx hb₂,
+      refine ⟨_, .moveAB ha₂ (by rw [hag.energy]; exact he) hx hb₂ (by rw [hq.top]; exact hok),
         ⟨ha.deck, ha.hand, ha.discard, ?_, ?_⟩⟩
       · simp only [Option.map_some, InPlay.clamp_of_agree (hag.setEnergy _)]
       · simp only [List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hq.addEnergy _)]
-  | @moveBA w f s a q b₁ b₂ e₁ e₂ x hac hb he hx =>
+  | @moveBA w f s a q b₁ b₂ e₁ e₂ x hac hb he hx hok =>
       have hm := ha.active
       rw [hac] at hm
       obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
       obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
       have hq := InPlay.agree_of_clamp h2
-      refine ⟨_, .moveBA ha₂ hb₂ (by rw [hq.energy]; exact he) hx,
+      refine ⟨_, .moveBA ha₂ hb₂ (by rw [hq.energy]; exact he) hx (by rw [hag.top]; exact hok),
         ⟨ha.deck, ha.hand, ha.discard, ?_, ?_⟩⟩
       · simp only [Option.map_some, InPlay.clamp_of_agree (hag.addEnergy _)]
       · simp only [List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hq.setEnergy _)]
-  | @moveBB w f s q q' b₁ b₂ c₁ c₂ e₁ e₂ x hb he hx hc =>
+  | @moveBB w f s q q' b₁ b₂ c₁ c₂ e₁ e₂ x hb he hx hc hok =>
       obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
       have hq := InPlay.agree_of_clamp h2
       have hm : (d₁ ++ { q₂ with energy := e₁ ++ e₂ } :: d₂).map (InPlay.clampWith K cb) =
@@ -178,7 +180,7 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
         simp only [List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hq.setEnergy _)]
       obtain ⟨k₁, q₃, k₂, hk, g1, g2, g3⟩ := map_eq_split hm
       have hq' := InPlay.agree_of_clamp g2
-      refine ⟨_, .moveBB hb₂ (by rw [hq.energy]; exact he) hx hk,
+      refine ⟨_, .moveBB hb₂ (by rw [hq.energy]; exact he) hx hk (by rw [hq'.top]; exact hok),
         ⟨ha.deck, ha.hand, ha.discard, ha.active, ?_⟩⟩
       simp only [List.map_append, List.map_cons, g1, g3, InPlay.clamp_of_agree (hq'.addEnergy _)]
   | moveNone w f s => exact ⟨s₂, .moveNone w f s₂, ha⟩

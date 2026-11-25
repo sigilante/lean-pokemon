@@ -45,7 +45,19 @@ def InPlay.BasicOnly (p : InPlay) : Prop := ∀ c ∈ p.energy, ∃ t : BasicEne
 
 /-- **With Basic Energy only, the units are the cards' printed units** (the definition before
 milestone MV8). -/
-theorem InPlay.units_basic (p : InPlay) : p.units = p.energy.flatMap Card.provides := rfl
+theorem InPlay.units_basic {p : InPlay} (h : p.BasicOnly) :
+    p.units = p.energy.flatMap Card.provides := by
+  unfold InPlay.units
+  have : ∀ l : List Card, (∀ c ∈ l, ∃ t : BasicEnergy, c = .energy (.basic t)) →
+      l.flatMap (Card.unitsOn p.top p.energy) = l.flatMap Card.provides := by
+    intro l hl
+    induction l with
+    | nil => rfl
+    | cons c l ih =>
+        obtain ⟨t, rfl⟩ := hl c (.head _)
+        rw [List.flatMap_cons, List.flatMap_cons, ih fun x hx => hl x (.tail _ hx)]
+        rfl
+  exact this _ h
 
 /-- With Basic Energy only, every card counts one Energy. -/
 theorem InPlay.unitCount_basic {p : InPlay} (h : p.BasicOnly) {c : Card} (hc : c ∈ p.energy) :

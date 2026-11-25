@@ -249,7 +249,7 @@ def _root_.Pokemon.Whose.mover : Whose → InPlay → InPlay
 /-- Record that the Pokémon has used an Ability this turn (milestone M8a). -/
 def markUsed (p : InPlay) : InPlay := { p with used := true }
 
-/-- The units of Energy attached to this Pokémon (`Card.provides`), which pay attack costs
+/-- The units of Energy attached to this Pokémon (`Card.unitsOn`: what each card provides on it), which pay attack costs
 (`Pays`). -/
 def units (p : InPlay) : List (List EType) := p.energy.flatMap (Card.unitsOn p.top p.energy)
 

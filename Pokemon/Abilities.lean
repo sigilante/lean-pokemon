@@ -394,7 +394,7 @@ theorem vmove1 (u : Bool) : Move (vgs u true) (vgs true false) :=
   .ability (ab := solarTransfer) (.active rfl) (.head _) rfl rfl (fun h => nomatch h) trivial rfl
     (vgs_settled _ _) rfl
     (.prim rfl rfl
-      (.zone (w := .own) rfl (.moveAB (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl))
+      (.zone (w := .own) rfl (.moveAB (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl rfl))
       (.done (.inl (vgs_settled true false))))
     rfl rfl
 
@@ -403,7 +403,7 @@ theorem vmove2 : Move (vgs true false) (vgs true true) :=
   .ability (ab := solarTransfer) (.active rfl) (.head _) rfl rfl (fun h => nomatch h) trivial rfl
     (vgs_settled _ _) rfl
     (.prim rfl rfl
-      (.zone (w := .own) rfl (.moveBA (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl))
+      (.zone (w := .own) rfl (.moveBA (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl rfl))
       (.done (.inl (vgs_settled true true))))
     rfl rfl
 
