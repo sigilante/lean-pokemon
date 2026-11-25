@@ -69,14 +69,14 @@ theorem both_orders :
     rfl, rfl, rfl,
     ⟨_, .trigger ⟨rfl, rfl⟩ rfl (.mineFirst (u := [buzz]) (d := []) (l := [strip]) (.refl _)
         (.refl _) (.refl _)
-        ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+        ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
             (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩
-        (.run rfl (.zone rfl (.discardActive rfl (.take rfl .nil) (by simp [Qty.ok]))) (.nil _))),
+        (.run rfl (.zone rfl (.discardActive rfl (.take rfl .nil) fun _ h => nomatch h)) (.nil _))),
       rfl, rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩,
     ⟨_, .trigger ⟨rfl, rfl⟩ rfl (.oppFirst (u := [buzz]) (d := []) (l := [strip]) (.refl _)
         (.refl _) (.refl _)
-        (.run rfl (.zone rfl (.discardActive rfl .nil (by simp [Qty.ok]))) (.nil _))
-        ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+        (.run rfl (.zone rfl (.discardActive rfl .nil fun _ h => nomatch h)) (.nil _))
+        ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
             (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩),
       rfl, rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩⟩
 
@@ -126,7 +126,7 @@ theorem damaged_ko_promotion_fires :
       (by decide) (.pick (b₁ := []) (b₂ := [])) .keep) (by decide),
     by decide, rfl, rfl, rfl, rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_mine (u := [buzz]) (d := []) rfl (.refl _) (.refl _)
-      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
           (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩),
     rfl, rfl, (GameState.settled_iff _).2 (by decide)⟩
 
@@ -180,7 +180,7 @@ theorem tool_chain :
     Move.knockOuts_of_nil (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide))
       (by decide) (.pick (b₁ := []) (b₂ := [])) .keep) (by decide),
     .trigger ⟨rfl, rfl⟩ rfl (.of_mine (u := [buzz]) (d := []) rfl (.refl _) (.refl _)
-      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl))
+      ⟨_, _, .run rfl (.seq (.zone rfl (.attachActive (.take rfl .nil) rfl rfl rfl))
           (.shuffle (List.Perm.refl _))) (.nil _), .nil _, rfl⟩),
     rfl, rfl, rfl, by decide, rfl, fun h => absurd ((GameState.calm_iff _).1 h) (by decide),
     rfl, rfl, rfl, by decide, rfl, (GameState.settled_iff _).2 (by decide)⟩

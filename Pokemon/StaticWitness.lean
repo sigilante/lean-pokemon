@@ -273,7 +273,7 @@ theorem energy_raises_hp :
       eg1.hpOf .own .active (at_ bulky 5 [mt, mt] []) = 7 :=
   ⟨.item (l₁ := []) (l₂ := [mt]) rfl rfl (settled_of_dbB rfl rfl (by decide))
       (.seq (.prim rfl rfl (.zone rfl (.attachActive (t := .metal)
-          (.take rfl .nil) rfl rfl)) (.done (.inl (settled_of_dbB rfl rfl (by decide)))))
+          (.take rfl .nil) rfl rfl rfl)) (.done (.inl (settled_of_dbB rfl rfl (by decide)))))
         (.prim rfl rfl (.selfDamage 2 rfl) (.done (.inl (settled_of_dbB rfl rfl (by decide))))))
       rfl rfl rfl rfl,
     settled_of_dbB rfl rfl (by decide), by decide, by decide⟩

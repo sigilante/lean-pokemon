@@ -371,14 +371,10 @@ theorem InPlay.trigs_nil_of_evFree {ev : TrigEvent} {p : InPlay}
   unfold InPlay.trigs
   refine filter_nil_of fun ab hab => ?_
   have hev : (ab.use.event != some ev) = true := by
-    rcases List.mem_append.1 hab with h1 | h1
-    · have := h (.pokemon p.top) (.head _)
-      simp only [Card.evFree, Card.abilities, List.all_eq_true] at this
-      exact this ab h1
-    · obtain ⟨c, hc, hab'⟩ := List.mem_flatMap.1 h1
-      have := h c (.tail _ (List.mem_append_right _ hc))
-      simp only [Card.evFree, List.all_eq_true] at this
-      exact this ab (Card.grantAbilities_sub hab')
+    obtain ⟨c, hc, hab'⟩ := InPlay.ability_mem hab
+    have := h c hc
+    simp only [Card.evFree, List.all_eq_true] at this
+    exact this ab hab'
   simp only [bne] at hev
   simp only [Ability.trigOn]
   revert hev

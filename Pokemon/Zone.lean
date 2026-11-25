@@ -57,6 +57,31 @@ theorem Split.mem {f : Filter} {l t r : List Card} (h : Split f l t r) :
       | tail _ hy => exact .tail _ (ih y hy)
   | keep _ ih => exact fun y hy => .tail _ (ih y hy)
 
+/-- Every card kept is in the source. -/
+theorem Split.rest_mem {f : Filter} {l t r : List Card} (h : Split f l t r) :
+    ∀ x ∈ r, x ∈ l := by
+  induction h with
+  | nil => intro x hx; nomatch hx
+  | take _ _ ih => exact fun y hy => .tail _ (ih y hy)
+  | keep _ ih =>
+      intro y hy
+      cases hy with
+      | head => exact .head _
+      | tail _ hy => exact .tail _ (ih y hy)
+
+/-- A Pokémon that keeps part of its Energy is made of its own cards (milestone MV8: its attached
+Energy now gives Abilities too). -/
+theorem InPlay.cardList_sub_energy {a : InPlay} {rest : List Card} (hr : ∀ x ∈ rest, x ∈ a.energy)
+    (p : InPlay) (ht : p.top = a.top) (hu : p.under = a.under) (he : p.energy = rest)
+    (hto : p.tools = a.tools) : ∀ c ∈ p.cardList, c ∈ a.cardList := by
+  intro c hc
+  simp only [InPlay.cardList, List.mem_cons, List.mem_append, ht, hu, he, hto] at hc ⊢
+  rcases hc with h | (h | h) | h
+  · exact .inl h
+  · exact .inr (.inl (.inl h))
+  · exact .inr (.inl (.inr (hr c h)))
+  · exact .inr (.inr h)
+
 /-! ## Sources and destinations -/
 
 @[simp] theorem Src.set_active (src : Src) (r : List Card) (s : PlayerState) :
@@ -144,10 +169,10 @@ theorem Deal.count {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : 
       List.count x (optCardList a) + List.count x (benchCardList b) + List.count x t := by
   induction h with
   | nil => simp only [List.count_nil, Nat.add_zero]
-  | active _ _ ih =>
+  | active _ _ _ ih =>
       simp only [optCardList, InPlay.count_cardList, InPlay.addEnergy, List.count_cons] at ih ⊢
       omega
-  | bench _ _ ih =>
+  | bench _ _ _ ih =>
       simp only [count_benchCardList_append, benchCardList, List.count_append,
         InPlay.count_cardList, InPlay.addEnergy, List.count_cons] at ih ⊢
       omega

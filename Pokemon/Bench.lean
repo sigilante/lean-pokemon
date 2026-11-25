@@ -135,7 +135,7 @@ theorem attachBench_reachable :
     ∃ g₀, WellFormed g₀ ∧ Settled g₀ ∧ ∃ g q, Move g₀ g ∧ Reach g₀ g ∧ g.cur.bench = [q] ∧
       q.energy = [.energy .grass] ∧ g.cur.energyAttached = true := by
   have hm : Move benchStart _ :=
-    .attachBench (l₁ := []) (b₁ := []) rfl rfl rfl rfl benchStart_settled rfl
+    .attachBench (l₁ := []) (b₁ := []) rfl rfl rfl rfl benchStart_settled rfl rfl
   exact ⟨benchStart, benchStart_wellFormed, benchStart_settled, _, _, hm, .step (.refl _) rfl hm,
     rfl, rfl, rfl⟩
 
@@ -542,8 +542,8 @@ theorem Deal.active_pokemonCards {tf : Filter} {t : List Card} {a a' : Option In
     a'.map InPlay.pokemonCards = a.map InPlay.pokemonCards := by
   induction h with
   | nil => rfl
-  | active _ _ ih => exact ih
-  | bench _ _ ih => exact ih
+  | active _ _ _ ih => exact ih
+  | bench _ _ _ ih => exact ih
 
 theorem Place.active_pokemonCards {i : Into} {t : List Card} {s s' : PlayerState}
     (h : Place i t s s') : s'.active.map InPlay.pokemonCards = s.active.map InPlay.pokemonCards := by

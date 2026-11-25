@@ -32,6 +32,12 @@ theorem GameState.NoAbilities.safe {g : GameState} (h : g.NoAbilities) : g.Abili
   | tool n gr =>
       have e : gr.abilities = [] := h _ hx
       simp [Card.abilitySafe, e]
+  | energy t =>
+      cases t with
+      | basic => rfl
+      | special m pr x =>
+          have e : x.grant.abilities = [] := h _ hx
+          simp [Card.abilitySafe, e]
   | _ => rfl
 
 /-- Without Abilities, the Ability weight of a list of cards is 0. -/

@@ -383,8 +383,8 @@ def vpl (u onV : Bool) : PlayerState :=
 
 def vgs (u onV : Bool) : GameState := ⟨vpl u onV, bpl, true, false, false, false, none, none, false, false, false⟩
 
-theorem vgs_settled (u onV : Bool) : Settled (vgs u onV) :=
-  Trainer.settled_of rfl rfl (show 0 < 36 by decide) (show 0 < 10 by decide)
+theorem vgs_settled (u onV : Bool) : Settled (vgs u onV) := by
+  cases u <;> cases onV <;> exact Trainer.settled_of rfl rfl (show 0 < 36 by decide) (show 0 < 10 by decide)
     (fun p hp => by
       simp only [vgs, vpl, List.mem_singleton] at hp; subst hp; exact (show 0 < 6 by decide))
     (fun p hp => by cases hp)
@@ -394,7 +394,7 @@ theorem vmove1 (u : Bool) : Move (vgs u true) (vgs true false) :=
   .ability (ab := solarTransfer) (.active rfl) (.head _) rfl rfl (fun h => nomatch h) trivial rfl
     (vgs_settled _ _) rfl
     (.prim rfl rfl
-      (.zone (w := .own) rfl (.moveAB (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl))
+      (.zone (w := .own) rfl (.moveAB (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl rfl))
       (.done (.inl (vgs_settled true false))))
     rfl rfl
 
@@ -403,7 +403,7 @@ theorem vmove2 : Move (vgs true false) (vgs true true) :=
   .ability (ab := solarTransfer) (.active rfl) (.head _) rfl rfl (fun h => nomatch h) trivial rfl
     (vgs_settled _ _) rfl
     (.prim rfl rfl
-      (.zone (w := .own) rfl (.moveBA (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl))
+      (.zone (w := .own) rfl (.moveBA (e₁ := []) (e₂ := []) (b₁ := []) (b₂ := []) rfl rfl rfl rfl rfl))
       (.done (.inl (vgs_settled true true))))
     rfl rfl
 

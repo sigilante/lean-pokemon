@@ -71,7 +71,7 @@ theorem _root_.Pokemon.Move.evolve_marks {g : GameState} {l₁ l₂ : List Card}
 theorem _root_.Pokemon.Move.retreat_marks {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay}
     {paid rest : List Card} (ha : g.cur.active = some a) (hb : g.cur.bench = b₁ ++ q :: b₂)
     (hr : g.cur.retreated = false) (he : Split .any a.energy paid rest)
-    (hp : paid.length = g.retreatOf a) (hs : a.rot.canAct = true) (hbt : g.between = false)
+    (hp : retreatPaid (g.retreatOf a) (paid.map a.unitCount) = true) (hs : a.rot.canAct = true) (hbt : g.between = false)
     (hst : Settled g) (hl : g.cur.mods.live.noRetreat = false) (hat : g.attacked = false) :
     ∃ g' a', Move g g' ∧ a' ∈ g'.cur.bench ∧ a'.top = a.top ∧ a'.marks = a.marks :=
   ⟨_, _, .retreat ha hb hr he hp hs hbt hst hl hat, List.mem_append_right _ (.head _),

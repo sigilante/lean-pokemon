@@ -25,14 +25,18 @@ primitive and no record of what happened: the consequence reads the branch the r
   primitives that can resolve doing nothing).
 * "Discard up to N … and this attack does K damage for each card you discarded in this way" is
   `Effect.forUpTo f N`, the choice of `f i` for some `i ≤ N` (`Run.forUpTo_iff`), with
-  `f i = seq (discardEnergy … (exactly i)) (damage (const (K * i)))`: the number of cards discarded
-  is the branch index, so the amount reads it without a log. For a printed "any amount" (2026
-  rulebook p. 21: "you can choose 0") the bound N is the most cards the cost can take: a cost of
-  `exactly i` Energy from the Active Pokémon has no resolution beyond the Energy attached
-  (`discardActive_le`), so `forUpTo f N` is exact as soon as N is at least that
+  `f i = seq (discardEnergy … (exactly i)) (damage (const (K * i)))`: the amount reads the branch
+  index without a log. Since milestone MV8 `discardEnergy … (exactly i)` takes cards that provide
+  `i` Energy (`Qty.okE`), so the index counts Energy, not cards: it is the number of cards discarded
+  when every card taken provides 1, as Basic Energy does (`Run.forUpTo_discardActive_basic`), and
+  one card that provides 2 is taken by the branches 1 and 2 alike, so the effect may pay 2K for one
+  card (`Units.forUpTo_one_card`; Known gaps). For a printed "any amount" (2026 rulebook p. 21: "you
+  can choose 0") the bound N must cover every index with a resolution: a cost of `exactly i` Energy
+  from the Active Pokémon has no resolution beyond the Energy attached, counted by what it provides
+  (`discardActive_le`), so `forUpTo f N` covers every resolution as soon as N is at least that
   (`forUpTo_complete`, whose hypothesis is discharged per card; `Run.forUpTo_discardActive` does it
-  for a discard of Energy from the Active Pokémon); a legal deck has exactly 60 cards (2026
-  rulebook p. 22), but the model does not require legal decks.
+  for a discard of Energy from the Active Pokémon); a legal deck has exactly 60 cards (2026 rulebook
+  p. 22), but the model does not require legal decks.
 
 These are derived forms: every function on effects (`hitFree`, `oneHit`, `switchSafe`, `trigOk`,
 `tame`, `tmax`, the clauses of `StoreSafe`, `LoopFree`, `RecycleSafe`'s writers and recyclers) reads
@@ -226,21 +230,23 @@ theorem Effect.forUpTo_all {P : Effect → Bool} (hP : ∀ a b, P (.choice a b) 
         h (n + 1) (Nat.le_refl _), Bool.and_self]
 
 /-- An `exactly i` discard of Energy from the `w` player's Active Pokémon has a resolution only if
-at least `i` Energy cards are attached: so "discard any amount" is covered by `forUpTo` up to the
-Energy attached. -/
+the attached Energy passing the filter counts at least `i` (`InPlay.energyCount`; since milestone MV8
+by what the cards provide, under `Filter.energy`): so "discard any amount" is covered by `forUpTo` up
+to the Energy attached. -/
 theorem discardActive_le {w : Whose} {f : Filter} {i : Nat} {g g' : GameState}
     (h : Run (.discardEnergy w .active f (.exactly i)) g g') :
-    ∃ a, (g.side w).active = some a ∧ i ≤ a.energy.length := by
+    ∃ a, (g.side w).active = some a ∧ i ≤ a.energyCount f := by
   cases h with
   | zone hw hz =>
       simp only [Effect.zSide, Option.some.injEq] at hw
       subst hw
       cases hz with
-      | discardActive ha hs hq =>
+      | @discardActive _ _ _ _ a _ _ ha hs hq =>
           refine ⟨_, ha, ?_⟩
-          simp only [Qty.ok] at hq
-          rw [← hq]
-          exact Split.taken_le hs
+          have h1 := retreatPaid_le hq
+          have h2 := hs.sum_map (Filter.weightOn f a.top a.energy)
+          unfold InPlay.energyCount
+          omega
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he
 
@@ -275,7 +281,9 @@ is the printed text depends on A.
   with the count test on the same cards.
 * `forUpTo f N` for "any amount" needs `Run.forUpTo_complete`'s hypothesis per card;
   `Run.forUpTo_discardActive` discharges it for "discard any amount of Energy from this Pokémon"
-  once `N` is at least the Energy that passes the filter. -/
+  once `N` is at least the Energy that passes the filter. "K for each card discarded" reads the
+  branch as the number of cards only when every card provides 1 (`Run.forUpTo_discardActive_basic`,
+  under `InPlay.BasicOnly`). -/
 
 /-- Cards passing the filter can be taken in any number up to how many there are, and no more. -/
 theorem Split.taken_count {f : Filter} {l t r : List Card} (h : Split f l t r) :
@@ -409,12 +417,13 @@ theorem Run.ifDone_discardHand {w : Whose} {f : Filter} {n : Nat} {b : Effect} {
 /-! ### "Discard N Energy from this Pokémon" -/
 
 /-- **Feasibility**: "discard `n` Energy [passing `f`] from your Active Pokémon" has a resolution
-exactly when that many are attached. -/
+exactly when that many are attached (since milestone MV8 counted by what the cards provide under
+`Filter.energy`, `Count.energy`; a payment with no card superfluous exists, `Split.exists_paid`). -/
 theorem Run.discardActive_exists {w : Whose} {f : Filter} {n : Nat} {g : GameState} {a : InPlay}
     (ha : (g.side w).active = some a) :
     (∃ g₁, Run (.discardEnergy w .active f (.exactly n)) g g₁) ↔
       n ≤ (Count.energy w f).val g := by
-  have hv : (Count.energy w f).val g = a.energy.countP f.eval := by
+  have hv : (Count.energy w f).val g = a.energyCount f := by
     simp only [Count.val, ha, Option.map_some, Option.getD_some]
   rw [hv]
   constructor
@@ -426,20 +435,24 @@ theorem Run.discardActive_exists {w : Whose} {f : Filter} {n : Nat} {g : GameSta
         cases hz with
         | discardActive ha' hs hq =>
             obtain rfl : a = _ := Option.some.inj (ha.symm.trans ha')
-            simp only [Qty.ok] at hq
-            rw [← hq]
-            exact Split.taken_count hs
+            have h1 := retreatPaid_le hq
+            have h2 := hs.sum_map (Filter.weightOn f a.top a.energy)
+            unfold InPlay.energyCount
+            omega
     | touchActive he => simp [Effect.touch] at he
     | touchBench he => simp [Effect.touch] at he
   · intro h
-    obtain ⟨t, r, hs, ht⟩ := Split.exists_exactly f a.energy h
+    obtain ⟨t, r, hs, ht⟩ :=
+      Split.exists_paid (fun _ hx => Filter.weightOn_of_eval hx) (l := a.energy) h
     exact ⟨_, .zone rfl (.discardActive ha hs ht)⟩
 
 /-- **The action is performed**: every resolution takes `n` Energy passing `f` off the Active
-Pokémon and puts them on the discard pile. -/
+Pokémon and puts them on the discard pile (since milestone MV8 `n` Energy by what the cards provide,
+`retreatPaid`; with one-unit Energy, `n` cards: `retreatPaid_ones`). -/
 theorem Run.discardActive_does {w : Whose} {f : Filter} {n : Nat} {g g' : GameState}
     (h : Run (.discardEnergy w .active f (.exactly n)) g g') :
-    ∃ a t r, (g.side w).active = some a ∧ Split f a.energy t r ∧ t.length = n ∧
+    ∃ a t r, (g.side w).active = some a ∧ Split f a.energy t r ∧
+      retreatPaid n (t.map (f.weightOn a.top a.energy)) = true ∧
       (g'.side w).active = some { a with energy := r } ∧
       (g'.side w).discard = t ++ (g.side w).discard := by
   cases h with
@@ -460,9 +473,12 @@ theorem Run.discardActive_ne {w : Whose} {f : Filter} {n : Nat} {g g' : GameStat
   obtain ⟨a, t, r, -, -, ht, -, hd⟩ := Run.discardActive_does h
   rw [e] at hd
   have hl := congrArg List.length hd
-  rw [List.length_append, ht] at hl
-  clear hd e h
-  omega
+  rw [List.length_append] at hl
+  cases t with
+  | nil => exact absurd ((retreatPaid_nil n).1 ht) (Nat.ne_of_gt hn)
+  | cons x t =>
+      simp only [List.length_cons] at hl
+      omega
 
 /-- **"Discard N Energy from this Pokémon. If you do, B" is exact**, with the count test on the
 attacker's Energy. -/
@@ -474,9 +490,12 @@ theorem Run.ifDone_discardActive {f : Filter} {n : Nat} {b : Effect} {g g' : Gam
         ((¬∃ g₁, Run (.discardEnergy .own .active f (.exactly n)) g g₁) ∧ g' = g) :=
   Run.ifDone_exact hp (Nat.ble_eq.to_iff.trans (Run.discardActive_exists (w := .own) hp).symm)
 
-/-- **"Discard any amount of Energy from this Pokémon, and K damage for each" is covered** by
-`forUpTo` once the bound `N` is at least the Energy passing the filter: every resolution of a branch
-`f i` is a resolution of `forUpTo f N`. -/
+/-- **"Discard any amount of Energy from this Pokémon" is covered** by `forUpTo` once the bound `N`
+is at least the Energy passing the filter (counted by what the cards provide, `Count.energy`): every
+resolution of a branch `f i` is a resolution of `forUpTo f N`. The branch `i` is the Energy
+discarded, not the cards: "K damage for each card discarded" is read correctly only when each card
+taken provides 1 (`Run.forUpTo_discardActive_basic`, under `InPlay.BasicOnly`); one card providing 2
+can take the branch 2 (`Units.forUpTo_one_card`). -/
 theorem Run.forUpTo_discardActive {w : Whose} {fl : Filter} {k : Nat → Effect} {g g' : GameState}
     {a : InPlay} {N i : Nat} (ha : (g.side w).active = some a)
     (hN : (Count.energy w fl).val g ≤ N)

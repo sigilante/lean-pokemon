@@ -825,6 +825,13 @@ theorem Card.attack_tame {c : Card} (h : c.tame = true) {atk : Attack} (hm : atk
       simp only [Card.tame, Bool.and_eq_true] at h
       have := attacksTmax_mem (as := gr.attacks) hm
       exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax]; omega⟩
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x =>
+          simp only [Card.tame, Bool.and_eq_true] at h
+          have := attacksTmax_mem (as := x.grant.attacks) hm
+          exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax]; omega⟩
   | _ => nomatch hm
 
 /-- The effect an attack resolves is tame, with test constants below `k`. -/
@@ -868,6 +875,10 @@ theorem Card.ability_tmax {c : Card} {ab : Ability} (hm : ab ∈ c.abilities) :
   cases c with
   | pokemon p => have := abilitiesTmax_mem (as := p.abilities) hm; simp only [Card.tmax]; omega
   | tool n gr => have := abilitiesTmax_mem (as := gr.abilities) hm; simp only [Card.tmax]; omega
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x => have := abilitiesTmax_mem (as := x.grant.abilities) hm; simp only [Card.tmax]; omega
   | _ => nomatch hm
 
 theorem Card.ability_tame {c : Card} (h : c.tame = true) {ab : Ability} (hm : ab ∈ c.abilities) :
@@ -875,6 +886,10 @@ theorem Card.ability_tame {c : Card} (h : c.tame = true) {ab : Ability} (hm : ab
   cases c with
   | pokemon p => simp only [Card.tame, Bool.and_eq_true] at h; exact abilitiesTame_mem h.2 hm
   | tool n gr => simp only [Card.tame, Bool.and_eq_true] at h; exact abilitiesTame_mem h.2 hm
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x => simp only [Card.tame, Bool.and_eq_true] at h; exact abilitiesTame_mem h.2 hm
   | _ => nomatch hm
 
 /-- The effect of an Ability of a card in the game is tame, and its test constants, its
@@ -1202,14 +1217,14 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       exact ⟨_, .playBasic hh hs hhp (by rw [length_of_map he₁]; exact hb) hbt hs' hat, by
         simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂,
           List.map_append]⟩
-  | @attach l₁ l₂ t a hh hf ha hbt hst hat =>
+  | @attach l₁ l₂ t a hh hf ha hbt hst hat hok =>
       have hs' := hs₂ hst
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have key := hq.clamp_map (c' := .hp) (hq.damage_eq_of_lt (hst.1.lt_bound hH (w := .own) (sp := .active) ha))
         (fun x => { x with energy := Card.energy t :: x.energy }) (fun _ => rfl) rfl rfl
-      exact ⟨_, .attach hh hf rfl hbt hs' hat, by
+      exact ⟨_, .attach hh hf rfl hbt hs' hat (by rw [hq.top]; exact hok), by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂, key, he₁, he₂]⟩
   | @evolve l₁ l₂ p a hh ha he hfr hf hbt hst hat =>
       have hs' := hs₂ hst
@@ -1220,12 +1235,12 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       refine ⟨_, .evolve hh rfl (by rw [hq.top]; exact he) (hq.fresh.trans hfr) hf hbt hs' hat, ?_⟩
       rw [e]
       simp only [GameState.clamp, GameState.clampAt, ha₂, hm₁, hm₂, he₁, he₂]
-  | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb hbt hst hat =>
+  | @attachBench l₁ l₂ t q b₁ b₂ hh hf hb hbt hst hat hok =>
       have hs' := hs₂ hst
       subst hg
       obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
       have hr := InPlay.agree_of_clamp h2
-      exact ⟨_, .attachBench hh hf rfl hbt hs' hat, by
+      exact ⟨_, .attachBench hh hf rfl hbt hs' hat (by rw [hr.top]; exact hok), by
         simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, List.map_append, List.map_cons, h1, h3,
           hr.energy, InPlay.clamp_of_agree (hr.upd.1 (Card.energy t :: q.energy))]⟩
   | @evolveBench l₁ l₂ p q b₁ b₂ hh hb he hfr hf hbt hst hat =>
@@ -1247,7 +1262,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
       have e := hq.eq_upd (hq.damage_eq_of_lt (hst.1.lt_bound hH (w := .own) (sp := .active) ha))
       obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (hb ▸ he₁)
-      refine ⟨_, .retreat rfl rfl hr (hq.energy ▸ he) (by rw [hsf.retreatOf hq.sv]; exact hp)
+      refine ⟨_, .retreat rfl rfl hr (hq.energy ▸ he) (by rw [hsf.retreatOf hq.sv]; unfold InPlay.unitCount; rw [hq.top, hq.energy]; exact hp)
         (by rw [hq.rot]; exact hs) hbt hs' (by rw [hfl.2.2.1]; exact hl) hat, ?_⟩
       rw [e]
       refine GameState.noteBenched_clampAt ?_
@@ -1344,7 +1359,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
+      refine ⟨_, .attack rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.top, hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) (by exact hn) (by exact hf) (by exact hbt) hs' hr'
         (by rw [hfl.2.1]; exact hl) (by exact hgx) hw hd' ht₂ (by rw [hq.lk]; exact hlk), ?_⟩
       have := congrArg (GameState.afterAttack atk.lockSet atk.gx) hc'''
@@ -1355,7 +1370,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       subst hg
       rw [ha] at hc₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
-      exact ⟨_, .attackConfused rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.energy]; exact hc')
+      exact ⟨_, .attackConfused rfl (by rw [hq.grants.1]; exact hm) (by unfold InPlay.units; rw [hq.top, hq.energy]; exact hc')
         (by rw [hq.rot]; exact hs) hn hf hbt hs' (by rw [hfl.2.1]; exact hl) hgx hw (by rw [hq.lk]; exact hlk), by
         simp only [GameState.clamp, GameState.clampAt, Option.map_some, ha₂, hm₁, hm₂,
           InPlay.clamp_of_agree (hq.upd.2.1 3), he₁, he₂]⟩

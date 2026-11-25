@@ -1062,19 +1062,24 @@ theorem Run.flags {e : Effect} {g g' : GameState} (h : Run e g g') :
 neither, and play permutes the cards, so this holds in every state reached from them; it dismisses
 the Stadium and Tool moves and keeps the Clock's and the Tape's attacks and Abilities their own. -/
 def NoTS (g : GameState) : Prop :=
-  ∀ c ∈ g.allCards, c.isStadium = false ∧ c.isTool = false ∧ c.statics = [] ∧ c.trigFree = true
+  ∀ c ∈ g.allCards, c.isStadium = false ∧ c.isTool = false ∧ c.statics = [] ∧ c.trigFree = true ∧
+    c.energyGrantFree = true
 
 /-- The construction's cards have no static effect (milestone M6): every derived quantity is the
 printed one. -/
 theorem NoTS.noStatics {g : GameState} (h : NoTS g) : g.NoStatics := fun c hc => (h c hc).2.2.1
 
 /-- The construction's cards have no triggered Ability (milestone M8b). -/
-theorem NoTS.trigFree {g : GameState} (h : NoTS g) : g.TrigFree := fun c hc => (h c hc).2.2.2
+theorem NoTS.trigFree {g : GameState} (h : NoTS g) : g.TrigFree := fun c hc => (h c hc).2.2.2.1
 
 theorem NoTS.tools {g : GameState} (h : NoTS g) {p : InPlay} (hp : g.cur.active = some p) :
-    ∀ c ∈ p.tools, c.isTool = false := fun c hc =>
-  (h c (GameState.mem_allCards_of_cur_active hp
-    (.tail _ (List.mem_append_right _ hc)))).2.1
+    ∀ c ∈ p.tools ++ p.energy, c.isTool = false ∧ c.energyGrantFree = true := fun c hc => by
+  have hc' : c ∈ p.cardList := by
+    rcases List.mem_append.1 hc with hc | hc
+    · exact .tail _ (List.mem_append_right _ hc)
+    · exact .tail _ (List.mem_append_left _ (List.mem_append_right _ hc))
+  have := h c (GameState.mem_allCards_of_cur_active hp hc')
+  exact ⟨this.2.1, this.2.2.2.2⟩
 
 theorem Shape.damageBounded {kc ko : Pk} {g : GameState} (hs : Shape kc ko g)
     (hns : g.NoStatics) (hc : kc.dmg < kc.top.hp) (ho : ko.dmg < ko.top.hp) :
@@ -1244,7 +1249,7 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
   obtain ⟨p, hp, h1, h2, -, -, -, -, h7⟩ := hs.cur.active
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs hns
   have hfl := Run.flags hr
-  refine ⟨_, .attack hp (List.mem_append_left _ (h1 ▸ hatk)) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
+  refine ⟨_, .attack hp (List.mem_append_left _ (List.mem_append_left _ (h1 ▸ hatk))) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
     hbt (hs.settled hns hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw
     (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
     (by rw [h7]; rfl),
@@ -1345,7 +1350,7 @@ theorem start_noTS (M : Machine) (a b : Nat) : NoTS (start M a b) := by
   simp only [start, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
     InPlay.cardList, onPlay, stadiumCardList, List.append_nil, List.nil_append, List.cons_append,
     List.mem_cons, List.not_mem_nil, or_false] at hc
-  rcases hc with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  rcases hc with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl, rfl⟩
 
 theorem start_encodes (M : Machine) (a b : Nat) : Encodes M (Machine.init a b) (start M a b) := by
   refine ⟨⟨0, a, b, 0, 0, 0, 0, false⟩, rfl, ⟨M.span_pos, .inl rfl, Nat.zero_le _,

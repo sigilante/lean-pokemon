@@ -156,8 +156,8 @@ theorem Deal.noOwe {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : 
     (h : Deal tf t a b a' b') (ha : OptNoOwe a) (hb : ListNoOwe b) : OptNoOwe a' ∧ ListNoOwe b' := by
   induction h with
   | nil => exact ⟨ha, hb⟩
-  | active _ _ ih => exact ih (ha.some_eq rfl rfl) hb
-  | bench _ _ ih => exact ih ha (hb.upd' rfl rfl)
+  | active _ _ _ ih => exact ih (ha.some_eq rfl rfl) hb
+  | bench _ _ _ ih => exact ih ha (hb.upd' rfl rfl)
 
 theorem Put.noMarks {d : Dst} {t : List Card} {s s' : PlayerState} (h : Put d t s s')
     (hs : s.NoMarks) : s'.NoMarks := by

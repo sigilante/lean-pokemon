@@ -339,7 +339,7 @@ theorem InPlay.clampWith_noteLock (c : Cap) (l : AtkLock) (x : InPlay) :
 /-- Agreeing Pokémon have the same attacks and Abilities, their Tools' included (milestone M5). -/
 theorem InPlay.Agree.grants {c : Cap} {q p : InPlay} (h : Agree K c q p) :
     q.attacks = p.attacks ∧ q.abilities = p.abilities := by
-  simp only [InPlay.attacks, InPlay.abilities, h.top, h.tools, and_self]
+  simp only [InPlay.attacks, InPlay.abilities, h.top, h.tools, h.energy, and_self]
 
 /-- Agreement survives attaching a Tool (milestone M5). -/
 theorem InPlay.Agree.setTools {c : Cap} {q p : InPlay} (h : Agree K c q p) (t : List Card) :
@@ -454,13 +454,19 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   have t7 : ∀ (cb : Cap) (o : Option InPlay),
       (o.map (InPlay.clampWith k cb)).map InPlay.condCount = o.map InPlay.condCount :=
     fun cb o => by cases o <;> rfl
+  have t8 : ∀ (f : Filter) (cb : Cap) (o : Option InPlay),
+      (o.map (InPlay.clampWith k cb)).map (InPlay.energyCount f) = o.map (InPlay.energyCount f) :=
+    fun f cb o => by cases o <;> rfl
+  have t9 : ∀ (f : Filter) (cb : Cap) (b : List InPlay),
+      (b.map (InPlay.clampWith k cb)).map (InPlay.energyCount f) = b.map (InPlay.energyCount f) :=
+    fun f cb b => by rw [List.map_map]; rfl
   cases c with
   | pile w z f => cases w <;> cases z <;> rfl
   | prizes w => cases w <;> rfl
   | bench w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t1]
-  | energy w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t3]
+  | energy w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t8]
   | energyAll w f =>
-      cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
+      cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t8, t9]
   | inPlay w f => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t1, t4]
   | koLast w atk => cases w <;> rfl
   | tools w => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t5, t6]
