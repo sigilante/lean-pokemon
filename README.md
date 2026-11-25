@@ -202,7 +202,8 @@ move from a state with a pending Knock Out gained the hypothesis `pend = false`
 two events for the player's own Pokémon, "Once during your turn, when this Pokémon moves from your
 Bench to the Active Spot" and "… from the Active Spot to your Bench" (`TrigEvent.movedUp`,
 `TrigEvent.movedDown`, `TrigEvent` now 5 constructors; Yanmega ex sv10-3 and Clawitzer me1-38
-expressible (not imported; Clawitzer on the Bench as a superset; the witnesses use test cards): a
+expressible (the witnesses use test cards; since importer 0.15.0 Clawitzer is imported, on the Bench a superset, and
+Yanmega ex is refused for an attack sentence): a
 retreat, a switch of the player's own Active Pokémon, and the promotion of
 the player's Pokémon after a Knock Out of their Active Pokémon in their own turn mark the Pokémon
 that moved (`InPlay.noteMove`: the `owe` mark, now on either side, and the "once during your turn"
@@ -387,8 +388,8 @@ restriction (`EnergyText.only`, `Card.attachOk`, a premise of every attachment a
 card). A Special Energy card is `Card.inert` exactly when its payload models nothing (no granted
 static effect, Ability or attack, no `alt`, no `only`; a holder filter alone is not content) or sets
 `EnergyText.rest`, "a rider is not modelled" (`Card.inert_special`, `Card.inert_holderOnly`,
-`Provision.ignitionPart_inert`). Expressible (not
-imported), with witnesses in `Pokemon/EnergyText.lean` and `Pokemon/Provision.lean`: Growing Grass,
+`Provision.ignitionPart_inert`). Expressible (imported since
+importer 0.15.0), with witnesses in `Pokemon/EnergyText.lean` and `Pokemon/Provision.lean`: Growing Grass,
 Voltaic Lightning, Magnetic Metal, Spiky, Prism, Neo Upper, Luminous and Team Rocket's Energy (8 of
 19); the other 11 have riders the model does not express (on-attach and end-of-turn events, return
 after discard, effect prevention, Special Condition immunity, Bench damage prevention, Prize changes;
@@ -873,10 +874,15 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,479 are imported (1,099 exactly, 380 with
-caveats) as 1,472 distinct terms, and 682 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.14.0, which since 0.14.0 translates the MV7 and MV7b
-vocabulary: `TrigEvent.oppBenched` triggers, static Checkup changes `SEff.condMore`, and "is Knocked
+damage reduction). Of the pool's 2,161 cards, 1,492 are imported (1,052 exactly, 440 with
+caveats) as 1,484 distinct terms, and 669 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.15.0, which since 0.15.0 translates the MV7c and MV8
+vocabulary: eight Special Energy cards as `EnergyCard.special` with an `EnergyText` payload (the other
+eleven, whose riders the model lacks, stay refused), `SEff.noRetreat`, and `TrigEvent.movedDown`
+(Clawitzer); and marks the readers of attached Energy that Special Energy cards make live
+(`Filter.energyOf` reads Basic Energy only; "discard N Energy", "for each Energy attached" and `forUpTo`
+count Energy provided, a reading, caveated only where the Pokémon read can hold a card that provides 2),
+which moved 52 cards from exact to caveated; since 0.14.0 the MV7 and MV7b vocabulary: `TrigEvent.oppBenched` triggers, static Checkup changes `SEff.condMore`, and "is Knocked
 Out" written as damage counters above every derived HP; since 0.13.0 it writes the precondition that a
 Trainer or an activated Ability can do something where public information decides it,
 `tools/importer/noop.py`, and since 0.12.0 the MV6 vocabulary: fixed windows

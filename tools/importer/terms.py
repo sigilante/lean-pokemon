@@ -316,8 +316,10 @@ def ability_scripts(ab):
             abeff_compile(None, ab['effect'])]
 
 
-TRIG_EVENTS = {'damaged': ACTIVE, 'koByAttack': None, 'oppBenched': None}   # `TrigEvent.place`
-TRIG_LATE = {'damaged': True, 'koByAttack': True, 'oppBenched': False}       # `TrigEvent.late`
+TRIG_EVENTS = {'damaged': ACTIVE, 'koByAttack': None, 'oppBenched': None,   # `TrigEvent.place`
+               'movedUp': ACTIVE, 'movedDown': BENCH}                       # milestone MV7c
+TRIG_LATE = {'damaged': True, 'koByAttack': True, 'oppBenched': False,       # `TrigEvent.late`
+             'movedUp': False, 'movedDown': False}
 
 
 def trig_ok(e):
@@ -352,6 +354,17 @@ def ability_safe(ab):
 
 # ---------------------------------------------------------------- filters, evaluated in Python
 
+def card_name(card):
+    """`Card.name?`."""
+    if card[0] == 'pokemon':
+        return card[1]['name']
+    if card[0] in ('trainer', 'tool'):
+        return card[1]
+    if card[0] == 'energy' and card[1][0] == 'special':
+        return card[1][1]
+    return None
+
+
 def filter_eval(f, card):
     """`Filter.eval` on a Python card term ('pokemon', fields) / ('energy', t) / ('trainer', n, k, e) /
     ('tool', n, grant)."""
@@ -359,6 +372,10 @@ def filter_eval(f, card):
     kind = card[0]
     if h == 'any':
         return True
+    if h in ('namePrefix', 'nameHas'):
+        # `Filter.nameEval` (milestone MV4)
+        n = card_name(card)
+        return n is not None and (n.startswith(f[1]) if h == 'namePrefix' else f[1] in n)
     if h == 'and':
         return filter_eval(f[1], card) and filter_eval(f[2], card)
     if h == 'or':
@@ -404,8 +421,18 @@ def filter_eval(f, card):
             return card[1] == f[1]
         return h in ('trainer', 'tool')
     if kind == 'energy':
-        # an imported Energy card is a Basic Energy card ('energy', (t,)); no Special Energy card is imported
-        # (milestone MV5: `Filter.basicEnergy` passes it, `specialEnergy` and the name filters do not)
+        # a Basic Energy card ('energy', (t,)) or, since importer 0.15.0 (milestone MV8), a Special Energy card
+        # ('energy', ('special', name, prov, text)): `Filter.eval` on `.energy`
+        if card[1][0] == 'special':
+            if h in ('energy', 'specialEnergy'):
+                return True
+            if h == 'named':
+                return card[1][1] == f[1]
+            if h == 'namePrefix':
+                return card[1][1].startswith(f[1])
+            if h == 'nameHas':
+                return f[1] in card[1][1]
+            return False
         if h in ('energy', 'basicEnergy'):
             return True
         if h == 'energyOf':

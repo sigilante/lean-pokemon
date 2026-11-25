@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -80,7 +80,7 @@ def svp_90 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Armarouge ex (svp-105). Records: svp-105. -/
+/-- Armarouge ex (svp-105). Records: svp-105. Caveats: energyOfBasic, energyOfCount. -/
 def svp_105 : Card := .pokemon
   { name := "Armarouge ex", stage := .stage1, evolvesFrom := some "Charcadet",
     hp := 26, type := .fire, retreat := 2, weakness := some .water,
@@ -248,7 +248,7 @@ def svp_129 : Card := .pokemon
         effect := .seq (.inflict .poisoned) (.linger .opp .next (.lock .retreat)),
         gx := false }] }
 
-/-- Kingdra ex (svp-131). Records: svp-131, sv6pt5-12, sv6pt5-80. -/
+/-- Kingdra ex (svp-131). Records: svp-131, sv6pt5-12, sv6pt5-80. Caveats: energyOfCount. -/
 def svp_131 : Card := .pokemon
   { name := "Kingdra ex", stage := .stage2, evolvesFrom := some "Seadra",
     hp := 31, type := .water, retreat := 1, weakness := some .lightning,
@@ -566,7 +566,7 @@ def sv5_14 : Card := .pokemon
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.damage (.const 3)))),
         gx := false }] }
 
-/-- Deerling (sv5-16). Records: sv5-16, sv5-165. -/
+/-- Deerling (sv5-16). Records: sv5-16, sv5-165. Caveats: energyOfBasic, energyOfCount. -/
 def sv5_16 : Card := .pokemon
   { name := "Deerling", stage := .basic, evolvesFrom := none,
     hp := 7, type := .grass, retreat := 1, weakness := some .fire,
@@ -1298,7 +1298,7 @@ def sv5_94 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Coalossal (sv5-95). Records: sv5-95. -/
+/-- Coalossal (sv5-95). Records: sv5-95. Caveats: energyOfCount. -/
 def sv5_95 : Card := .pokemon
   { name := "Coalossal", stage := .stage2, evolvesFrom := some "Carkol",
     hp := 18, type := .fighting, retreat := 4, weakness := some .grass,
@@ -1312,7 +1312,7 @@ def sv5_95 : Card := .pokemon
         effect := .move .opp (.top 2) .discard .any .all,
         gx := false }] }
 
-/-- Sandy Shocks (sv5-98). Records: sv5-98. -/
+/-- Sandy Shocks (sv5-98). Records: sv5-98. Caveats: energyUnitsCount. -/
 def sv5_98 : Card := .pokemon
   { name := "Sandy Shocks", stage := .basic, evolvesFrom := none,
     hp := 12, type := .fighting, retreat := 2, weakness := some .grass,
@@ -1460,7 +1460,7 @@ def sv5_113 : Card := .pokemon
         effect := .selfDamage 1,
         gx := false }] }
 
-/-- Metagross (sv5-115). Records: sv5-115, sv5-178. -/
+/-- Metagross (sv5-115). Records: sv5-115, sv5-178. Caveats: discardUnits. -/
 def sv5_115 : Card := .pokemon
   { name := "Metagross", stage := .stage2, evolvesFrom := some "Metang",
     hp := 18, type := .metal, retreat := 3, weakness := some .fire,
@@ -1697,6 +1697,9 @@ def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
 def sv5_157 : Card := .trainer "Prime Catcher" .item
     (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
 
+/-- Neo Upper Energy (sv5-162). Records: sv5-162. Caveats: aceSpec, unitsReading. -/
+def sv5_162 : Card := .energy (.special "Neo Upper Energy" [[.colorless]] { alt := some (.holder (.stage .stage2), [[.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless], [.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless]]) })
+
 /-- Tangela (sv6-1). Records: sv6-1. -/
 def sv6_1 : Card := .pokemon
   { name := "Tangela", stage := .basic, evolvesFrom := none,
@@ -1747,7 +1750,7 @@ def sv6_6 : Card := .pokemon
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.choice (.damage (.const 3)) (.damage (.const 4))))),
         gx := false }] }
 
-/-- Sunflora (sv6-7). Records: sv6-7, sv6-169. -/
+/-- Sunflora (sv6-7). Records: sv6-7, sv6-169. Caveats: energyOfCount. -/
 def sv6_7 : Card := .pokemon
   { name := "Sunflora", stage := .stage1, evolvesFrom := some "Sunkern",
     hp := 10, type := .grass, retreat := 1, weakness := some .fire,
@@ -1773,17 +1776,6 @@ def sv6_8 : Card := .pokemon
         gx := false },
       { name := "Seismic Toss", cost := [.grass, .colorless, .colorless, .colorless], damage := 13,
         effect := .skip,
-        gx := false }] }
-
-/-- Phantump (sv6-12). Records: sv6-12. -/
-def sv6_12 : Card := .pokemon
-  { name := "Phantump", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Leech Seed", cost := [.grass, .colorless], damage := 2,
-        effect := .heal 2,
         gx := false }] }
 
 /-- The cards of this part. -/
@@ -1931,19 +1923,19 @@ def cards : List Card := [
   sv5_154,
   sv5_156,
   sv5_157,
+  sv5_162,
   sv6_1,
   sv6_2,
   sv6_4,
   sv6_6,
   sv6_7,
-  sv6_8,
-  sv6_12]
+  sv6_8]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
 
 /-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a
-Tool that gives nothing). -/
+Tool that gives nothing, a Special Energy card whose payload models nothing or sets `rest`). -/
 theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel
 
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
@@ -1980,6 +1972,12 @@ theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label 
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
 theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = ["Magcargo"] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedUp` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedUp : (cards.filter (Card.hasTrig .movedUp)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedDown` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedDown : (cards.filter (Card.hasTrig .movedDown)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel

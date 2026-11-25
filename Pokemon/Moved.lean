@@ -9,8 +9,8 @@ your deck for up to 3 Basic Grass Energy cards and attach them to this Pokémon.
 deck." (Yanmega ex sv10-3; the test card `yan` has it with one Grass Energy) and "Once during your
 turn, when this Pokémon moves from the Active Spot to your Bench, you may use this Ability. Attach up
 to 2 Basic Water Energy cards from your hand to this Pokémon." (Clawitzer me1-38; `claw`, one Water
-Energy). Both cards are expressible but not imported (the importer refuses them; Yanmega ex also for
-an unrelated attack sentence): `yan` and `claw` are test cards, not the printed ones. The event is
+Energy). Both cards are expressible; since importer 0.15.0 Clawitzer is imported (with caveats) and Yanmega ex is
+refused for an unrelated attack sentence: `yan` and `claw` are test cards, not the printed ones. The event is
 raised where the Pokémon moves (`InPlay.noteMove` marks it and spends its
 "once during your turn" flag, `InPlay.used`), and the resolution (`Owed`) fires the marked holders'
 triggers, the player to move's own (`FireMine`), before anything else.

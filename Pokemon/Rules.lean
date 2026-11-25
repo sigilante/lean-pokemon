@@ -124,8 +124,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   these places read Energy through `Card.unitsOn` (what a card provides attached to a given holder):
   attack costs (`InPlay.units`); the Retreat Cost, paid by discarding cards that provide at least the
   cost with no card superfluous (`retreatPaid`); "for each Energy attached" (`Count.energy`,
-  `Count.energyAll` under `Filter.energy`: what the cards provide; under any other filter, cards:
-  `Filter.weight`); "discard `n` Energy" (`discardEnergy`, `Qty.okE`: cards that provide `n`, none
+  `Count.energyAll` under `Filter.energy`: what the cards provide, a reading (below); under any other
+  filter, cards: `Filter.weight`); "discard `n` Energy" (`discardEnergy`, `Qty.okE`: cards that provide `n`, none
   superfluous; "up to `n`" a payment of at most `n`). Not every count of Energy does: `SAmt.perEnergy`
   and `Static.need` count cards (below). With Basic Energy only each of these is the old card count
   (`InPlay.energyCount_basic`, `retreatPaid_basic`, `Qty.okE_basic`, `Run.discardActive_does_basic`;
@@ -138,7 +138,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   as Energy provided, not cards: one card that provides 2 is discarded by the branches 1 and 2 alike,
   so the effect may do 2K for one card (`Units.forUpTo_one_card`; a live case is Team Rocket's Mewtwo
   ex sv10-81, "discard up to 2 Energy from your Benched Pokémon … 60 more damage for each card",
-  whose Team Rocket's Energy provides 2): more than print, for multi-unit cards. The alternative,
+  whose Team Rocket's Energy provides 2): more than print, for multi-unit cards; and fewer: with a card
+  that provides 2 and a Basic Energy card attached, no branch `j ≤ N` (for N = 2) discards both, since
+  the payment would have a superfluous card (`retreatPaid 2 [2, 1] = false`, `Units.forUpTo_no_pair`),
+  where print's "discard up to 2 Energy cards" may discard both. The alternative,
   writing the cost with a card filter (`basicEnergy`/`specialEnergy`), counts cards but errs the
   other way, not discarding by the Energy the printed "discard N Energy" asks. With Basic Energy only
   the branch is the number of cards (`Run.forUpTo_discardActive_basic`). `SEff.noRetreat` ("has no
@@ -146,14 +149,16 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`GameState.retreatOf_of_noRetreat`): a reading, no rule found on the order of a set against an
   addition. Readings, no rule found in the 2026 rulebook (which never
   mentions Special Energy): that "discard 1 Energy … for each [✱] listed in its Retreat Cost" (2026
-  p. 12; glossary p. 45: "discard Energy from the retreating Pokémon equal to the Retreat Cost") and
-  "discard `n` Energy" count what the cards provide, that a card providing more than is still needed
+  p. 12; glossary p. 45: "discard Energy from the retreating Pokémon equal to the Retreat Cost"),
+  "discard `n` Energy", "for each Energy attached" and "`n` or more Energy attached" (`Count.energy`,
+  `Count.energyAll` under `Filter.energy`) count what the cards provide, that a card providing more than is still needed
   may be discarded (a 2-unit card for a cost of 1) and that no card may be discarded that the payment
   does not need; a card that provides nothing is never discarded by a payment (it is by "discard all
   Energy"). What stays by card: `Filter.energyOf t` reads Basic Energy only (it also writes "Basic
   [◉] Energy card" in a hand, deck or discard pile), so "a [◉] Energy attached" and "for each [◉]
   Energy attached" do not see a Special Energy card that provides `t` (Luminous, Prism, Neo Upper,
-  Legacy, Team Rocket's Energy): fewer than print in counts, tests and discards; `Count.energyTypes`
+  Legacy, Team Rocket's Energy, and the typed Growing Grass, Voltaic Lightning and Magnetic Metal
+  Energy): fewer than print in counts, tests and discards; `Count.energyTypes`
   counts types of Basic Energy cards, as printed; the static amount "for each [◉] Energy attached"
   (`SAmt.perEnergy`) and the static Energy condition (`Static.need`) count cards passing the filter
   (fewer than print for a card that provides 2, under `Filter.energy`). Deck construction is not
@@ -164,8 +169,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   card carries a payload (`EnergyText`): static effects and triggered Abilities given to its holder
   by the Tool path (`EnergyText.grant`; `Pokemon/EnergyText.lean`), provision that depends on the
   holder or on the other attached cards (`EnergyText.alt`, `EnergyCard.unitsAt`), and a holder
-  restriction (`EnergyText.only`, `Card.attachOk`; `Pokemon/Provision.lean`). Expressible (not
-  imported): Growing Grass, Voltaic Lightning, Magnetic Metal, Spiky, Prism, Neo Upper, Luminous and
+  restriction (`EnergyText.only`, `Card.attachOk`; `Pokemon/Provision.lean`). Expressible (imported since
+  importer 0.15.0, with caveats where these departures bear): Growing Grass, Voltaic Lightning, Magnetic Metal, Spiky, Prism, Neo Upper, Luminous and
   Team Rocket's Energy. Departures of these: Team Rocket's Energy cannot be moved by an effect onto a
   Pokémon that is not a Team Rocket's Pokémon, where print lets it move and then discards it ("If this
   card is attached to anything other than a Team Rocket's Pokémon, discard this card"; a subset of
@@ -773,8 +778,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   for); one flag serves all of a Pokémon's Abilities, exact for cards with one; "You can't
   use more than 1 X Ability each turn" is not modelled: several Pokémon with that Ability can each
   use it in a turn (more uses than print; the importer's caveat `onePerName`). Departures: "this
-  Pokémon" (`SelfOp`) is exact in the Active Spot, but on the Bench it acts on one Benched Pokémon
-  chosen when the effect resolves (a superset), and the model does not follow it if it is Knocked
+  Pokémon" (`SelfOp`) is exact in the Active Spot, but on the Bench each step acts on a Benched
+  Pokémon chosen when that step resolves, so two steps may act on two different Benched Pokémon (a
+  superset), and the model does not follow it if it is Knocked
   Out in mid-effect (later steps act on the Pokémon in its place, not a superset) or after a
   switch-in from the Bench (a choice of both places); an on-play Ability does not track "this
   Pokémon" at all, and its `spot` is not read; it is offered only when the play leaves no Knock
@@ -954,13 +960,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   changes the one after;
 * triggers of the player's own moves between the Bench and the Active Spot (milestone MV7c, survey
   S20 §a group (a); `TrigEvent.movedUp`, `TrigEvent.movedDown`): "Once during your turn, when this
-  Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3, expressible (not
-  imported), with one attach step per Energy) and "Once during your turn, when this Pokémon moves
+  Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3, expressible, with
+  one attach step per Energy) and "Once during your turn, when this Pokémon moves
   from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic Water Energy
-  cards from your hand to this Pokémon." (Clawitzer me1-38, expressible (not imported); "this
-  Pokémon" on the Bench is one Benched Pokémon chosen when the trigger resolves, `SelfOp.atS`: a
-  superset). Neither card is imported: the importer still refuses both for the trigger class, and
-  Yanmega ex also for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your
+  cards from your hand to this Pokémon." (Clawitzer me1-38, expressible; "this
+  Pokémon" on the Bench is a Benched Pokémon chosen at each step when the trigger resolves,
+  `SelfOp.atS`, so the two Energy may go to two different Benched Pokémon: a superset). Since importer 0.15.0 Clawitzer is imported, with caveats (survey S11); Yanmega ex is
+  still refused, for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your
   Benched Pokémon"). The witnesses are test cards in `Pokemon/Moved.lean` (`Moved.yanC`, with one
   Grass Energy, and `Moved.clawC`, with one Water Energy), not the printed cards. The triggers
   belong to the player to move and resolve from that player's side (`FireMine`: `Fire` on the

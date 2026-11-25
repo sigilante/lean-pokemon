@@ -14,7 +14,7 @@ and any card otherwise (`Effect.recFilters`). Whether a recycler can return a wr
 
 Usage: python3 -I tools/importer/count_writers.py [PokemonCards/Standard]
 (first written for the paper as a scratch script, 2026-11-22; importer 0.11.0 took it in; 0.12.0 added the MV6 kinds;
-0.14.0 the triggered Abilities by event.)
+0.14.0 the triggered Abilities by event; 0.15.0 Special Energy cards.)
 """
 import collections
 import os
@@ -43,8 +43,16 @@ def load(d):
                 info['tera'] = re.search(r'tera := (\w+)', p).group(1) == 'true'
                 info['abilities'] = not re.search(r'abilities := \[\]', p)
             elif ctor == 'energy':
-                info['name'] = None  # a Basic Energy card: no name the name filters read
-                info['etype'] = re.match(r'def \S+ : Card := \.energy \.(\w+)', p).group(1)
+                ms = re.match(r'def \S+ : Card := \.energy \(\.special "([^"]*)"', p)
+                if ms:
+                    # importer 0.15.0 (milestone MV8): a Special Energy card, read by its name
+                    info['name'] = ms.group(1)
+                    info['etype'] = None
+                    info['special'] = True
+                else:
+                    info['name'] = None  # a Basic Energy card: no name the name filters read
+                    info['etype'] = re.match(r'def \S+ : Card := \.energy \.(\w+)', p).group(1)
+                    info['special'] = False
             else:
                 info['name'] = re.search(r'\.\w+ "([^"]*)"', p).group(1)
                 if ctor == 'trainer':
@@ -153,12 +161,14 @@ def ev(f, c):
         return c['ctor'] == 'trainer' and c['kind'] == f[1][0]
     if h == 'tool':
         return c['ctor'] == 'tool'
-    if h in ('energy', 'basicEnergy'):
-        return c['ctor'] == 'energy'  # every imported Energy card is a Basic Energy card
+    if h == 'energy':
+        return c['ctor'] == 'energy'
+    if h == 'basicEnergy':
+        return c['ctor'] == 'energy' and not c['special']
     if h == 'energyOf':
-        return c['ctor'] == 'energy' and c['etype'] == f[1][0]
+        return c['ctor'] == 'energy' and not c['special'] and c['etype'] == f[1][0]
     if h == 'specialEnergy':
-        return False
+        return c['ctor'] == 'energy' and c['special']
     raise ValueError('filter not mirrored: %r' % (f,))
 
 

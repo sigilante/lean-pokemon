@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 6 of 10 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.14.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,67 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part06
 open Pokemon
+
+/-- Marnie's Purrloin (sv10-130). Records: sv10-130. -/
+def sv10_130 : Card := .pokemon
+  { name := "Marnie's Purrloin", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pointy Nails", cost := [.darkness], damage := 0,
+        effect := .ite (.top .opp .ex) (.damage (.const 6)) (.damage (.const 2)),
+        gx := false }] }
+
+/-- Marnie's Liepard (sv10-131). Records: sv10-131. -/
+def sv10_131 : Card := .pokemon
+  { name := "Marnie's Liepard", stage := .stage1, evolvesFrom := some "Marnie's Purrloin",
+    hp := 10, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pointy Claws", cost := [.darkness, .darkness], damage := 0,
+        effect := .ite (.top .opp .ex) (.damage (.const 14)) (.damage (.const 7)),
+        gx := false }] }
+
+/-- Marnie's Scraggy (sv10-132). Records: sv10-132. -/
+def sv10_132 : Card := .pokemon
+  { name := "Marnie's Scraggy", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Crunch", cost := [.darkness, .darkness, .colorless], damage := 5,
+        effect := .ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip,
+        gx := false }] }
+
+/-- Marnie's Scrafty (sv10-133). Records: sv10-133. Caveats: recoil. -/
+def sv10_133 : Card := .pokemon
+  { name := "Marnie's Scrafty", stage := .stage1, evolvesFrom := some "Marnie's Scraggy",
+    hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Rear Kick", cost := [.darkness], damage := 4,
+        effect := .skip,
+        gx := false },
+      { name := "Wild Tackle", cost := [.darkness, .darkness, .colorless], damage := 16,
+        effect := .selfDamage 3,
+        gx := false }] }
+
+/-- Marnie's Impidimp (sv10-134). Records: sv10-134. -/
+def sv10_134 : Card := .pokemon
+  { name := "Marnie's Impidimp", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Filch", cost := [.colorless], damage := 0,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false },
+      { name := "Corkscrew Punch", cost := [.darkness], damage := 1,
+        effect := .skip,
+        gx := false }] }
 
 /-- Marnie's Morgrem (sv10-135). Records: sv10-135. -/
 def sv10_135 : Card := .pokemon
@@ -22,7 +83,7 @@ def sv10_135 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Marnie's Morpeko (sv10-137). Records: sv10-137. -/
+/-- Marnie's Morpeko (sv10-137). Records: sv10-137. Caveats: energyOfCount. -/
 def sv10_137 : Card := .pokemon
   { name := "Marnie's Morpeko", stage := .basic, evolvesFrom := none,
     hp := 7, type := .darkness, retreat := 0, weakness := some .grass,
@@ -329,6 +390,9 @@ def sv10_179 : Card := .trainer "Team Rocket's Venture Bomb" .item
 def sv10_181 : Card := .trainer "TM Machine" .item
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand (.and .tool (.nameHas "Technical Machine")) (.upTo 3)) .shuffle))
 
+/-- Team Rocket's Energy (sv10-182). Records: sv10-182, me2pt5-217. Caveats: rocketMove, unitsReading. -/
+def sv10_182 : Card := .energy (.special "Team Rocket's Energy" [[.psychic, .darkness], [.psychic, .darkness]] { only := .and .pokemon (.namePrefix "Team Rocket's ") })
+
 /-- Sewaddle (rsv10pt5-1). Records: rsv10pt5-1, rsv10pt5-87. -/
 def rsv10pt5_1 : Card := .pokemon
   { name := "Sewaddle", stage := .basic, evolvesFrom := none,
@@ -585,7 +649,7 @@ def rsv10pt5_22 : Card := .pokemon
         effect := .damage (.count (.energy .own .energy) 3),
         gx := false }] }
 
-/-- Samurott (rsv10pt5-23). Records: rsv10pt5-23, rsv10pt5-107. -/
+/-- Samurott (rsv10pt5-23). Records: rsv10pt5-23, rsv10pt5-107. Caveats: energyUnitsCount. -/
 def rsv10pt5_23 : Card := .pokemon
   { name := "Samurott", stage := .stage2, evolvesFrom := some "Dewott",
     hp := 16, type := .water, retreat := 2, weakness := some .lightning,
@@ -599,7 +663,7 @@ def rsv10pt5_23 : Card := .pokemon
         effect := .damage (.add (.const 3) (.count (.energy .own .energy) 5)),
         gx := false }] }
 
-/-- Ducklett (rsv10pt5-25). Records: rsv10pt5-25, rsv10pt5-109. -/
+/-- Ducklett (rsv10pt5-25). Records: rsv10pt5-25, rsv10pt5-109. Caveats: energyOfBasic, energyOfCount. -/
 def rsv10pt5_25 : Card := .pokemon
   { name := "Ducklett", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
@@ -722,7 +786,7 @@ def rsv10pt5_33 : Card := .pokemon
         effect := .choice (.damage (.const 3)) .skip,
         gx := false }] }
 
-/-- Galvantula (rsv10pt5-34). Records: rsv10pt5-34, rsv10pt5-117. Caveats: anyAmount60. -/
+/-- Galvantula (rsv10pt5-34). Records: rsv10pt5-34, rsv10pt5-117. Caveats: anyAmount60, energyOfBasic, energyOfCount. -/
 def rsv10pt5_34 : Card := .pokemon
   { name := "Galvantula", stage := .stage1, evolvesFrom := some "Joltik",
     hp := 9, type := .lightning, retreat := 1, weakness := some .fighting,
@@ -733,7 +797,7 @@ def rsv10pt5_34 : Card := .pokemon
         effect := .choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 0)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 0))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 1)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 5)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 2)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 10)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 3)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 15)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 4)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 20)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 5)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 25)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 6)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 30)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 7)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 35)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 8)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 40)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 9)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 45)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 10)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 50)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 11)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 55)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 12)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 60)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 13)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 65)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 14)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 70)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 15)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 75)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 16)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 80)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 17)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 85)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 18)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 90)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 19)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 95)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 20)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 100)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 21)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 105)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 22)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 110)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 23)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 115)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 24)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 120)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 25)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 125)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 26)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 130)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 27)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 135)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 28)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 140)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 29)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 145)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 30)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 150)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 31)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 155)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 32)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 160)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 33)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 165)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 34)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 170)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 35)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 175)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 36)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 180)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 37)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 185)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 38)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 190)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 39)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 195)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 40)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 200)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 41)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 205)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 42)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 210)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 43)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 215)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 44)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 220)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 45)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 225)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 46)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 230)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 47)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 235)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 48)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 240)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 49)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 245)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 50)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 250)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 51)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 255)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 52)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 260)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 53)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 265)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 54)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 270)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 55)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 275)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 56)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 280)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 57)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 285)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 58)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 290)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 59)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 295)))) (.seq (.seq (.discardEnergy .own .active (.energyOf .lightning) (.exactly 60)) (.ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.damage (.const 300))),
         gx := false }] }
 
-/-- Stunfisk (rsv10pt5-35). Records: rsv10pt5-35, rsv10pt5-118. -/
+/-- Stunfisk (rsv10pt5-35). Records: rsv10pt5-35, rsv10pt5-118. Caveats: energyOfCount. -/
 def rsv10pt5_35 : Card := .pokemon
   { name := "Stunfisk", stage := .basic, evolvesFrom := none,
     hp := 11, type := .lightning, retreat := 2, weakness := some .fighting,
@@ -1573,7 +1637,7 @@ def zsv10pt5_40 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Beheeyem (zsv10pt5-41). Records: zsv10pt5-41, zsv10pt5-121. -/
+/-- Beheeyem (zsv10pt5-41). Records: zsv10pt5-41, zsv10pt5-121. Caveats: energyUnitsCount. -/
 def zsv10pt5_41 : Card := .pokemon
   { name := "Beheeyem", stage := .stage1, evolvesFrom := some "Elgyem",
     hp := 9, type := .psychic, retreat := 1, weakness := some .darkness,
@@ -1654,7 +1718,7 @@ def zsv10pt5_48 : Card := .pokemon
         effect := .move .opp (.top 1) .discard .any .all,
         gx := false }] }
 
-/-- Conkeldurr (zsv10pt5-49). Records: zsv10pt5-49, zsv10pt5-127. -/
+/-- Conkeldurr (zsv10pt5-49). Records: zsv10pt5-49, zsv10pt5-127. Caveats: energyOfCount. -/
 def zsv10pt5_49 : Card := .pokemon
   { name := "Conkeldurr", stage := .stage2, evolvesFrom := some "Gurdurr",
     hp := 14, type := .fighting, retreat := 3, weakness := some .psychic,
@@ -1718,80 +1782,13 @@ def zsv10pt5_54 : Card := .pokemon
         effect := .inflict .poisoned,
         gx := false }] }
 
-/-- Whirlipede (zsv10pt5-55). Records: zsv10pt5-55, zsv10pt5-133. -/
-def zsv10pt5_55 : Card := .pokemon
-  { name := "Whirlipede", stage := .stage1, evolvesFrom := some "Venipede",
-    hp := 10, type := .darkness, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Venoshock", cost := [.colorless], damage := 0,
-        effect := .ite (.cond .opp .poisoned) (.damage (.const 9)) (.damage (.const 3)),
-        gx := false }] }
-
-/-- Scolipede (zsv10pt5-56). Records: zsv10pt5-56, zsv10pt5-134. Caveats: trigAttacker, trigDamaged. -/
-def zsv10pt5_56 : Card := .pokemon
-  { name := "Scolipede", stage := .stage2, evolvesFrom := some "Whirlipede",
-    hp := 16, type := .darkness, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Poison Point", use := .triggered .damaged false,
-        spot := some .active, cond := none,
-        effect := .fx (.inflict .poisoned) }],
-    attacks := [
-      { name := "Venoshock", cost := [.darkness, .colorless], damage := 0,
-        effect := .ite (.cond .opp .poisoned) (.damage (.const 18)) (.damage (.const 9)),
-        gx := false }] }
-
-/-- Sandile (zsv10pt5-57). Records: zsv10pt5-57, zsv10pt5-135. -/
-def zsv10pt5_57 : Card := .pokemon
-  { name := "Sandile", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tighten Up", cost := [.darkness], damage := 1,
-        effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Krokorok (zsv10pt5-58). Records: zsv10pt5-58, zsv10pt5-136. -/
-def zsv10pt5_58 : Card := .pokemon
-  { name := "Krokorok", stage := .stage1, evolvesFrom := some "Sandile",
-    hp := 10, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tighten Up", cost := [.darkness, .colorless], damage := 4,
-        effect := .ite (.countGe (.pile .opp .hand .any) 2) (.move .opp .hand .discard .any (.exactly 2)) (.move .opp .hand .discard .any .all),
-        gx := false }] }
-
-/-- Krookodile (zsv10pt5-59). Records: zsv10pt5-59, zsv10pt5-137. -/
-def zsv10pt5_59 : Card := .pokemon
-  { name := "Krookodile", stage := .stage2, evolvesFrom := some "Krokorok",
-    hp := 17, type := .darkness, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tighten Up", cost := [.darkness, .colorless], damage := 6,
-        effect := .ite (.countGe (.pile .opp .hand .any) 2) (.move .opp .hand .discard .any (.exactly 2)) (.move .opp .hand .discard .any .all),
-        gx := false },
-      { name := "Cursed Slug", cost := [.darkness, .darkness, .colorless], damage := 0,
-        effect := .ite (.countGe (.pile .opp .hand .any) 4) (.damage (.const 12)) (.damage (.const 24)),
-        gx := false }] }
-
-/-- Escavalier (zsv10pt5-60). Records: zsv10pt5-60, zsv10pt5-138. Caveats: recoil. -/
-def zsv10pt5_60 : Card := .pokemon
-  { name := "Escavalier", stage := .stage1, evolvesFrom := some "Karrablast",
-    hp := 13, type := .metal, retreat := 3, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Wild Lances", cost := [.metal], damage := 9,
-        effect := .selfDamage 3,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_130,
+  sv10_131,
+  sv10_132,
+  sv10_133,
+  sv10_134,
   sv10_135,
   sv10_137,
   sv10_138,
@@ -1826,6 +1823,7 @@ def cards : List Card := [
   sv10_178,
   sv10_179,
   sv10_181,
+  sv10_182,
   rsv10pt5_1,
   rsv10pt5_2,
   rsv10pt5_4,
@@ -1935,19 +1933,13 @@ def cards : List Card := [
   zsv10pt5_50,
   zsv10pt5_51,
   zsv10pt5_53,
-  zsv10pt5_54,
-  zsv10pt5_55,
-  zsv10pt5_56,
-  zsv10pt5_57,
-  zsv10pt5_58,
-  zsv10pt5_59,
-  zsv10pt5_60]
+  zsv10pt5_54]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
 
 /-- No card of this part is played with no effect (`Card.inert`: a Stadium whose effect is `skip`, a
-Tool that gives nothing). -/
+Tool that gives nothing, a Special Energy card whose payload models nothing or sets `rest`). -/
 theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kernel
 
 /-- No two cards of this part are the same term (`nodupFp`, see `PokemonCards.Props`). -/
@@ -1977,13 +1969,19 @@ counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
-theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Scolipede"] := by decide +kernel
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
 theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
 theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedUp` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedUp : (cards.filter (Card.hasTrig .movedUp)).map Card.label = [] := by decide +kernel
+
+/-- The cards of this part with or giving a triggered Ability on `TrigEvent.movedDown` (milestone MV7c) (milestone M8b), by name. -/
+theorem cards_trigMovedDown : (cards.filter (Card.hasTrig .movedDown)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part whose triggered Abilities write a lingering modifier (milestone M8b), by name. -/
 theorem cards_trigLingers : (cards.filter Card.trigLingers).map Card.label = [] := by decide +kernel

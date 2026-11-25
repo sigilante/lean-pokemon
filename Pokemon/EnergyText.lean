@@ -15,7 +15,7 @@ theorem changed; the HP bound `hpBound` sums the HP gains of every card of the g
 included (`Card.statics`), so `GameState.hpOf_le_hpBound` holds as before. `SEff.noRetreat` is the
 one new static effect: "has no Retreat Cost", a set applied last in `GameState.retreatOf`.
 
-Expressible (not imported) with this file's terms, each witnessed below from a `Settled` start:
+Expressible with this file's terms (imported since importer 0.15.0, with the caveats survey S11 lists), each witnessed below from a `Settled` start:
 Growing Grass Energy (me3-86), Voltaic Lightning Energy (me5-84), Magnetic Metal Energy (me4-85),
 Spiky Energy (sv9-159). A Special Energy card is `Card.inert` exactly when its payload says a rider
 is not modelled (`EnergyText.rest`) or models nothing (no static effect, Ability or attack granted,

@@ -24,7 +24,7 @@ every one of the 38 cards that evolve from a "Team Rocket's" Pokémon is itself 
 for the card pool no evolution reaches the rule. A move of the card onto another Pokémon, which print
 allows and then discards the card, is absent (a subset of print; Known gaps).
 
-Expressible (not imported) with this file's terms, witnessed below: Prism Energy (zsv10pt5-86,
+Expressible with this file's terms (imported since importer 0.15.0, with the caveats survey S11 lists), witnessed below: Prism Energy (zsv10pt5-86,
 me2pt5-216), Neo Upper Energy (sv5-162; ACE SPEC is deck construction, not modelled), Luminous Energy
 (sv6-226), Team Rocket's Energy (sv10-182, me2pt5-217).
 -/

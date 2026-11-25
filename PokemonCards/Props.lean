@@ -180,11 +180,12 @@ theorem Static.isReduce_iff (s : Static) : s.isReduce = true ↔ 0 < s.reduceUni
 `sReduceBound`. -/
 def Card.reduceGain (c : Card) : Nat := c.gain Static.reduceUnit
 
-/-- A static Retreat Cost change. -/
+/-- A static Retreat Cost change (more, less, or since milestone MV8 none: `SEff.noRetreat`). -/
 def Static.isRetreat (s : Static) : Bool :=
   match s.eff with
   | .retreatPlus _ => true
   | .retreatMinus _ => true
+  | .noRetreat => true
   | _ => false
 
 /-- The card has a static effect of the kind `k` (`Card.statics`, the model's). -/
@@ -195,12 +196,14 @@ def Card.printedHp : Card → Nat
   | .pokemon p => p.hp
   | _ => 0
 
-/-- The printed name (Basic Energy cards are labelled by kind only). -/
+/-- The printed name (Basic Energy cards are labelled by kind only; a Special Energy card, imported since
+importer 0.15.0, by its name). -/
 def Card.label : Card → String
   | .pokemon p => p.name
   | .trainer n _ _ _ => n
   | .tool n _ => n
-  | .energy _ => "Basic Energy"
+  | .energy (.special n _ _) => n
+  | .energy (.basic _) => "Basic Energy"
 
 end Pokemon
 
