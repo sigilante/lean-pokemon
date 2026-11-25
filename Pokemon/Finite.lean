@@ -285,21 +285,24 @@ def SideDamageLe (M : Nat) (s : PlayerState) : Prop :=
   (∀ p, s.active = some p → p.damage ≤ M ∧ p.poisonUp ≤ M) ∧
     (∀ p ∈ s.bench, p.damage ≤ M ∧ p.poisonUp ≤ M) ∧ StoreLe (2 * M) s.mods
 
-def players (C : List Card) : List PlayerState :=
+def players (C R : List Card) : List PlayerState :=
   (cardLists C).flatMap fun deck => (cardLists C).flatMap fun hand =>
   (cardLists C).flatMap fun discard => (cardLists C).flatMap fun prizes =>
   (cardLists C).flatMap fun lost => (opts (inPlays C)).flatMap fun active =>
   (listsUpTo (inPlays C) C.length).flatMap fun bench =>
   bools.flatMap fun energyAttached => bools.flatMap fun supporterPlayed =>
   bools.flatMap fun retreated => bools.flatMap fun gxUsed => bools.flatMap fun vstarUsed =>
-  (stores (2 * bound C)).flatMap fun mods => bools.flatMap fun hadTurn => kohists.map fun ko =>
+  (stores (2 * bound C)).flatMap fun mods => bools.flatMap fun hadTurn => kohists.flatMap fun ko =>
+  (opts R).map fun supCard =>
   ⟨deck, hand, discard, prizes, lost, active, bench, energyAttached, supporterPlayed,
-    retreated, gxUsed, vstarUsed, mods, hadTurn, ko⟩
+    retreated, gxUsed, vstarUsed, mods, hadTurn, ko, supCard⟩
 
-theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
-    (hd : SideDamageLe (bound C) s) : s ∈ players C := by
+/-- (Milestone MV9: the Supporter record `supCard` is enumerated from `R`.) -/
+theorem mem_players {C R : List Card} {s : PlayerState} (hw : Within C s.allCards)
+    (hd : SideDamageLe (bound C) s) (hr : ∀ c, s.supCard = some c → c ∈ R) :
+    s ∈ players C R := by
   obtain ⟨deck, hand, discard, prizes, lost, active, bench, energyAttached,
-    supporterPlayed, retreated, gxUsed, vstarUsed, mods, hadTurn, ko⟩ := s
+    supporterPlayed, retreated, gxUsed, vstarUsed, mods, hadTurn, ko, supCard⟩ := s
   simp only [PlayerState.allCards] at hw
   have hbench : Within C (benchCardList bench) := hw.right
   have hactive : Within C (optCardList active) := hw.left.right
@@ -311,7 +314,8 @@ theorem mem_players {C : List Card} {s : PlayerState} (hw : Within C s.allCards)
     lost, mem_cardLists hw.left.left.right,
     active, ?_, bench, ?_, energyAttached, mem_bools _,
     supporterPlayed, mem_bools _, retreated, mem_bools _, gxUsed, mem_bools _,
-    vstarUsed, mem_bools _, mods, mem_stores hd.2.2, hadTurn, mem_bools _, ko, mem_kohists _, rfl⟩
+    vstarUsed, mem_bools _, mods, mem_stores hd.2.2, hadTurn, mem_bools _, ko, mem_kohists _,
+    supCard, mem_opts hr, rfl⟩
   · refine mem_opts fun p hp => ?_
     subst hp
     exact mem_inPlays hactive (hd.1 p rfl).1 (hd.1 p rfl).2
@@ -325,8 +329,8 @@ card of `C` with its owner) and, since milestone M5, the two Stadium flags are e
 milestone MV7 the pending-trigger record (since milestone MV7b also the owed-trigger mark of each
 Pokémon, `InPlay.owe`, enumerated by `inPlays`); Tools are among each Pokémon's cards
 (`inPlays`). -/
-def states (C : List Card) : List GameState :=
-  (players C).flatMap fun cur => (players C).flatMap fun opp =>
+def states (C R : List Card) : List GameState :=
+  (players C R).flatMap fun cur => (players C R).flatMap fun opp =>
   bools.flatMap fun curIsFirst => bools.flatMap fun firstTurn =>
   bools.flatMap fun attacked => bools.flatMap fun between => winners.flatMap fun winner =>
   (opts (bools.flatMap fun b => C.map fun c => (b, c))).flatMap fun stadium =>
@@ -334,14 +338,16 @@ def states (C : List Card) : List GameState :=
   ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium, stadiumPlayed, stadiumUsed,
     pend⟩
 
-theorem mem_states {C : List Card} {g : GameState} (hp : g.allCards.Perm C)
-    (hd : SideDamageLe (bound C) g.cur ∧ SideDamageLe (bound C) g.opp) : g ∈ states C := by
+theorem mem_states {C R : List Card} {g : GameState} (hp : g.allCards.Perm C)
+    (hd : SideDamageLe (bound C) g.cur ∧ SideDamageLe (bound C) g.opp)
+    (hr : ∀ c, (g.cur.supCard = some c ∨ g.opp.supCard = some c) → c ∈ R) : g ∈ states C R := by
   have hw : Within C (g.cur.allCards ++ g.opp.allCards ++ stadiumCardList g.stadium) :=
     Within.of_perm hp
   obtain ⟨cur, opp, curIsFirst, firstTurn, attacked, between, winner, stadium, stadiumPlayed,
     stadiumUsed, pend⟩ := g
   simp only [states, List.mem_flatMap, List.mem_map]
-  refine ⟨cur, mem_players hw.left.left hd.1, opp, mem_players hw.left.right hd.2,
+  refine ⟨cur, mem_players hw.left.left hd.1 (fun c h => hr c (.inl h)), opp,
+    mem_players hw.left.right hd.2 (fun c h => hr c (.inr h)),
     curIsFirst, mem_bools _, firstTurn, mem_bools _, attacked, mem_bools _,
     between, mem_bools _, winner, mem_winners _, stadium, ?_, stadiumPlayed, mem_bools _,
     stadiumUsed, mem_bools _, pend, mem_bools _, rfl⟩
@@ -384,6 +390,13 @@ theorem Reach.clamp_bounded {g₀ g : GameState} (_h : Reach g₀ g) :
   · obtain ⟨q, _, rfl⟩ := List.mem_map.1 hp
     exact hA q
 
+/-- The clamp of a reachable state is in the list `states` of the start's cards, its Supporter
+records enumerated from the start's cards and records (milestone MV9, `Reach.supCard_mem`). -/
+theorem Reach.clamp_mem_states {g₀ g : GameState} (h : Reach g₀ g) :
+    g.clamp (bound g₀.allCards) ∈ states g₀.allCards (g₀.allCards ++ g₀.recCards) := by
+  refine mem_states ?_ h.clamp_bounded fun c hc => h.supCard_mem hc
+  rw [GameState.allCards_clamp]; exact h.perm
+
 /-- **The clamps of reachable states lie in a finite list.** From any start state (well-formed
 or not),
 there is a finite list of states containing the clamp (`GameState.clamp`) of every reachable
@@ -397,8 +410,7 @@ damage reduction (`Lingering.reduce_breaks_clamp`), and for every `k ≥ 2` a de
 separate states with the same clamp. -/
 theorem Reach.clamp_mem {g₀ : GameState} :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.clamp (bound g₀.allCards) ∈ L := by
-  refine ⟨states g₀.allCards, fun g h => mem_states ?_ h.clamp_bounded⟩
-  rw [GameState.allCards_clamp]; exact h.perm
+  refine ⟨states g₀.allCards (g₀.allCards ++ g₀.recCards), fun g h => h.clamp_mem_states⟩
 
 /-- A start state with tame cards (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`)) and no damage reduction
 stored is `Fit` at `bound`, so `Reach.finite` applies to it. Static damage reductions are allowed

@@ -477,6 +477,13 @@ structure PlayerState where
   hadTurn : Bool
   /-- the Knock Out history of this player (milestone MV2, `KOHist`) -/
   ko : KOHist
+  /-- the Supporter card this player played from the hand during their current or (for the player
+  not to move) last turn (milestone MV9): written by `Move.supporter` when the card is played, at
+  the time the card is played, and cleared with `supporterPlayed` when the player's next turn starts
+  (`Move.endTurn`). Read by `Count.played`. A card of the game: along play it is `none`, the record
+  the start state had, or a card of the start state (`Reach.supCard_mem`), which keeps the
+  enumerations of `Reach.clamp_mem` and `StoreSafe.xfinite` finite -/
+  supCard : Option Card := none
 
 namespace PlayerState
 
@@ -708,6 +715,13 @@ def InPlay.condCount (p : InPlay) : Nat :=
 def energyTypeCount (l : List Card) : Nat :=
   BasicEnergy.all.countP fun t => decide (Card.energy (.basic t) ∈ l)
 
+/-- 1 if the Supporter card the player played this turn (`PlayerState.supCard`) passes `f`, else 0
+(milestone MV9, `Count.played`). -/
+def PlayerState.playedCount (f : Filter) (s : PlayerState) : Nat :=
+  match s.supCard with
+  | some c => if f.eval c then 1 else 0
+  | none => 0
+
 /-- The value of a count in a state. -/
 def Count.val : Count → GameState → Nat
   | .pile w z f, g => (z.get (g.side w)).countP f.eval
@@ -730,6 +744,7 @@ def Count.val : Count → GameState → Nat
       energyTypeCount ((((g.side w).active.map InPlay.energy).getD []) ++
         ((g.side w).bench.map InPlay.energy).flatten)
   | .supporter w, g => if (g.side w).supporterPlayed then 1 else 0
+  | .played w f, g => (g.side w).playedCount f
   | .retreat w, g => (((g.side w).active.map InPlay.top).map PokemonCard.retreat).getD 0
 
 /-- The value of a test in a state, on the Active Pokémon `p` it reads (a count test reads the

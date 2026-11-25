@@ -2185,7 +2185,7 @@ inductive Move : GameState → GameState → Prop where
       (hh : g.cur.hand = l₁ ++ Card.trainer n .supporter e :: l₂)
       (hs : g.cur.supporterPlayed = false) (hbt : g.between = false) (hst : Settled g)
       (hr : TRun e { g with cur := { g.cur with
-        hand := l₁ ++ l₂, supporterPlayed := true,
+        hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
       (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
       (hbh : e.benchHitFree = true) :
@@ -2364,7 +2364,7 @@ inductive Move : GameState → GameState → Prop where
             active := some ((a.checkup false fa sa ca).addDamage
               (g.checkupMoreBy .opp oa a (a.checkup false fa sa ca))), bench := bo,
             energyAttached := false, supporterPlayed := false, retreated := false,
-            mods := g.opp.mods.shift, ko := g.opp.ko.shift },
+            mods := g.opp.mods.shift, ko := g.opp.ko.shift, supCard := none },
           opp := { g.cur.unfresh with
             active := some ((b.unfresh.checkup true fb sb cb).addDamage
               (g.checkupMoreBy .own ob b.unfresh (b.unfresh.checkup true fb sb cb))),
@@ -2400,7 +2400,7 @@ theorem Move.endTurn_of_zero {g : GameState} {a b : InPlay} {bo bc : List InPlay
       { cur := { g.opp with
           active := some (a.checkup false fa sa ca), bench := bo,
           energyAttached := false, supporterPlayed := false, retreated := false,
-          mods := g.opp.mods.shift, ko := g.opp.ko.shift },
+          mods := g.opp.mods.shift, ko := g.opp.ko.shift, supCard := none },
         opp := { g.cur.unfresh with
           active := some (b.unfresh.checkup true fb sb cb), bench := bc,
           mods := g.cur.mods.shift, hadTurn := true, ko := g.cur.ko.shift },

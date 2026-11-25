@@ -467,6 +467,13 @@ inductive Count where
   is cleared when its player's turn starts, so for the player whose turn it is it means "this
   turn", and for the other player it means "during their last turn" -/
   | supporter (w : Whose)
+  /-- 1 if the Supporter card the `w` player played from the hand this turn passes `f`
+  (`PlayerState.supCard`), else 0 (milestone MV9: "If you played Emma from your hand during this
+  turn", Espurr me4-36, is `countGe (played .own (named "Emma")) 1`; "a Future Supporter card",
+  Iron Valiant sv5-80; "a Supporter card that has \"Team Rocket\" in its name", Team Rocket's
+  Kangaskhan ex me2pt5-162). Like `supporter`, for the player not to move it reads their last turn.
+  The record is a card of the game, so a count of it is kept by both clamps -/
+  | played (w : Whose) (f : Filter)
   /-- the printed Retreat Cost of the `w` player's Active Pokémon, 0 with no Active Pokémon
   (milestone MV6: "This attack does 30 more damage for each Colorless in your opponent's Active
   Pokémon's Retreat Cost", Ariados sv6-5). The printed card's, not the derived Retreat Cost

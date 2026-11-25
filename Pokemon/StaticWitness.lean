@@ -142,7 +142,7 @@ def mt : Card := .energy .metal
 
 /-- A player: deck of one Energy, the hand, Prize cards, the Active Pokémon and the Bench. -/
 def pl (hand prizes : List Card) (a : InPlay) (bench : List InPlay) : PlayerState :=
-  ⟨[mt], hand, [], prizes, [], some a, bench, false, false, false, false, false, Store.empty, true, KOHist.empty⟩
+  ⟨[mt], hand, [], prizes, [], some a, bench, false, false, false, false, false, Store.empty, true, KOHist.empty, none⟩
 
 def gs (a b : PlayerState) (st : Option (Bool × Card)) : GameState :=
   ⟨a, b, true, false, false, false, none, st, false, false, false⟩
@@ -171,7 +171,7 @@ def tg0 : GameState :=
 /-- After the Item: 5 damage counters on the 30-HP holder of `cape`. -/
 def tg1 : GameState :=
   gs (⟨[mt], [strip], [hurt], [mt, mt], [], some (at_ small 5 [] [cape]), [at_ big 0 [] []], false,
-      false, false, false, false, Store.empty, true, KOHist.empty⟩)
+      false, false, false, false, Store.empty, true, KOHist.empty, none⟩)
     (pl [] [mt, mt] (at_ big 0 [] []) []) none
 
 theorem tg0_wellFormed : WellFormed tg0 :=
@@ -196,9 +196,9 @@ theorem survives_above_printed :
 the Benched Pokémon was promoted. -/
 def tg2 : GameState :=
   gs (⟨[mt], [], [.pokemon small, cape, strip, hurt], [mt, mt], [], some (at_ big 0 [] []), [],
-      false, false, false, false, false, Store.empty, true, ⟨true, false, false, false⟩⟩)
+      false, false, false, false, false, Store.empty, true, ⟨true, false, false, false⟩, none⟩)
     (⟨[mt], [mt], [], [mt], [], some (at_ big 0 [] []), [], false, false, false, false, false,
-      Store.empty, true, KOHist.empty⟩) none
+      Store.empty, true, KOHist.empty, none⟩) none
 
 /-- **Discarding the Tool Knocks the Pokémon Out** (milestone M6): from `tg1` the player plays
 `strip` ("discard the Tools of your Active Pokémon"); the holder's HP drops from 8 to 3 counters,
@@ -220,9 +220,9 @@ def sg0 : GameState :=
 
 def sg1 : GameState :=
   ⟨⟨[mt], [], [], [mt, mt], [], some (at_ big 0 [] []), [at_ small 4 [] []], false, false, false,
-      false, false, Store.empty, true, KOHist.empty⟩,
+      false, false, Store.empty, true, KOHist.empty, none⟩,
     ⟨[mt], [], [lively], [mt, mt], [], some (at_ big 0 [] []), [], false, false, false, false,
-      false, Store.empty, true, KOHist.empty⟩,
+      false, Store.empty, true, KOHist.empty, none⟩,
     true, false, false, false, none, some (true, plainStadium), true, false, false⟩
 
 theorem sg0_wellFormed : WellFormed sg0 :=
@@ -260,7 +260,7 @@ theorem eg0_settled : Settled eg0 := settled_of_dbB rfl rfl (by decide)
 /-- After the Item with the attachment: 5 counters, HP 3 + 2 × 2 = 7. -/
 def eg1 : GameState :=
   gs (⟨[mt], [], [charge], [mt, mt], [], some (at_ bulky 5 [mt, mt] []), [], false, false, false,
-      false, false, Store.empty, true, KOHist.empty⟩)
+      false, false, Store.empty, true, KOHist.empty, none⟩)
     (pl [] [mt, mt] (at_ big 0 [] []) []) none
 
 /-- **Attaching raises HP in mid-effect** (milestone M6): the Active Pokémon has printed HP 3 and
@@ -301,9 +301,9 @@ def cg0 : GameState :=
 
 def cg1 : GameState :=
   ⟨⟨[mt], [], [], [mt, mt, mt], [], some (at_ big 0 [] []), [at_ dancer 5 [] [], at_ small 5 [] []],
-      false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
+      false, false, false, false, false, Store.empty, true, KOHist.empty, none⟩,
     ⟨[mt], [], [lively], [mt, mt, mt], [], some (at_ big 0 [] []), [], false, false, false, false,
-      false, Store.empty, true, KOHist.empty⟩,
+      false, Store.empty, true, KOHist.empty, none⟩,
     true, false, false, false, none, some (true, plainStadium), true, false, false⟩
 
 theorem cg0_wellFormed : WellFormed cg0 :=

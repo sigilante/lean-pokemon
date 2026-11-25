@@ -1285,12 +1285,12 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.trainer hh
       have hp : ({ g₁ with cur := { g₁.cur with
-          hand := l₁ ++ l₂, supporterPlayed := true,
+          hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
           discard := Card.trainer n .supporter e :: g₁.cur.discard } } :
           GameState).allCards.Perm g₁.allCards := by perm_count [hh]
       obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 ht hb hF.2.2.2.1 (hcap.of_perm hp)
         (g₂ := { g₂ with cur := { g₂.cur with
-          hand := l₁ ++ l₂, supporterPlayed := true,
+          hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
           discard := Card.trainer n .supporter e :: g₂.cur.discard } })
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂])
         (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))

@@ -88,7 +88,7 @@ def GameState.passTurn (fa sa ca fb sb cb : Bool) (a b : InPlay) (bo bc : List I
       active := some ((a.checkup false fa sa ca).addDamage
         (g.checkupMoreBy .opp oa a (a.checkup false fa sa ca))), bench := bo,
       energyAttached := false, supporterPlayed := false, retreated := false,
-      mods := g.opp.mods.shift, ko := g.opp.ko.shift },
+      mods := g.opp.mods.shift, ko := g.opp.ko.shift, supCard := none },
     opp := { g.cur.unfresh with
       active := some ((b.unfresh.checkup true fb sb cb).addDamage
         (g.checkupMoreBy .own ob b.unfresh (b.unfresh.checkup true fb sb cb))),

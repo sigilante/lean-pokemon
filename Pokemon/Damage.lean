@@ -475,6 +475,7 @@ theorem Count.val_clampAt (c : Count) (co cp cbo cbp : Cap) (k : Nat) (g : GameS
   | energyTypes w =>
       cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t2, t3]
   | supporter w => cases w <;> rfl
+  | played w f => cases w <;> rfl
   | retreat w => cases w <;> simp only [Count.val, GameState.side, GameState.clampAt, t4]
 
 /-- States with equal `clampAt` have equal counts. -/
@@ -1590,7 +1591,7 @@ theorem tmax_le_cardsTmax {x : Card} : ∀ {cs : List Card}, x ∈ cs → x.tmax
 def cxCard : PokemonCard := ⟨"", .basic, none, 1, .grass, [], 0, none, none, .none, false, []⟩
 
 def cxSide (a : InPlay) : PlayerState :=
-  ⟨[], [], [], [], [], some a, [], false, false, false, false, false, Store.empty, true, KOHist.empty⟩
+  ⟨[], [], [], [], [], some a, [], false, false, false, false, false, Store.empty, true, KOHist.empty, none⟩
 
 /-- Both Active Pokémon have 10 HP and no damage; the opponent's is Poisoned. -/
 def cxState : GameState :=

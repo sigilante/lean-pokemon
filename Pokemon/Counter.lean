@@ -1112,7 +1112,8 @@ theorem Fits.toCur {k : Pk} {s : PlayerState} {a : InPlay} (h : Fits k s)
     (ha : s.active = some a) (hc : k.marks.char = false) (o f sp c : Bool) {n : Nat} (hn : n = 0) :
     Fits k { s with
       active := some ((a.checkup o f sp c).addDamage n), bench := [], energyAttached := false,
-      supporterPlayed := false, retreated := false, mods := s.mods.shift, ko := s.ko.shift } := by
+      supporterPlayed := false, retreated := false, mods := s.mods.shift, ko := s.ko.shift,
+      supCard := none } := by
   subst hn
   obtain ⟨p, hp, h1, h2, h3, h4, h5, h6, h7⟩ := h.active
   rw [ha] at hp; cases hp
@@ -1314,9 +1315,9 @@ hand and one Prize card. Neither has a Bench. The inputs are rest-of-game damage
 first turn, both players have had a turn (`hadTurn`), and the Stadium slot is empty. -/
 def start (M : Machine) (a b : Nat) : GameState where
   cur := ⟨[], [.energy .grass], [], [.energy .grass], [], some (onPlay (clock M)), [],
-    false, false, false, false, false, storeOf 0 b, true, KOHist.empty⟩
+    false, false, false, false, false, storeOf 0 b, true, KOHist.empty, none⟩
   opp := ⟨[.energy .grass], [], [], [.energy .grass], [], some (onPlay (tape M)), [],
-    false, false, false, false, false, storeOf 0 a, true, KOHist.empty⟩
+    false, false, false, false, false, storeOf 0 a, true, KOHist.empty, none⟩
   curIsFirst := true
   firstTurn := false
   attacked := false

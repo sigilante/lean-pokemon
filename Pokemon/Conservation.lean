@@ -694,4 +694,141 @@ theorem HitTrig.exists_nil {atk : Attack} {g g' : GameState} (hr : Run atk.scrip
   | false => exact .quiet h
   | true => exact .fire h (hf ▸ List.Perm.refl [])
 
+
+/-! ## The Supporter record is a card of the game (milestone MV9)
+
+`PlayerState.supCard`, the Supporter card a player played from the hand this turn, is written only
+by `Move.supporter`, with the card it plays from the hand; every other move keeps both players'
+records, except `Move.endTurn`, which clears the record of the player whose turn starts and keeps
+the other's. So along play a record is a card of the start state or a record the start state had
+(`Reach.supCard_mem`), which is what the finite enumerations need (`Enum.states`). -/
+
+/-- Both players' Supporter records are unchanged. -/
+def GameState.SameRec (g g' : GameState) : Prop :=
+  g'.cur.supCard = g.cur.supCard ∧ g'.opp.supCard = g.opp.supCard
+
+theorem GameState.SameRec.refl (g : GameState) : g.SameRec g := ⟨rfl, rfl⟩
+
+theorem GameState.SameRec.trans {g₁ g₂ g₃ : GameState} (h₁ : g₁.SameRec g₂)
+    (h₂ : g₂.SameRec g₃) : g₁.SameRec g₃ :=
+  ⟨h₂.1.trans h₁.1, h₂.2.trans h₁.2⟩
+
+theorem GameState.ZoneOnly.sameRec {g g' : GameState} (h : GameState.ZoneOnly g g') :
+    g.SameRec g' :=
+  ⟨h.cur_supCard, h.opp_supCard⟩
+
+theorem Run.sameRec {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameRec g' := by
+  induction h with
+  | iteT _ _ _ ih => exact ih
+  | iteF _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact ih₁.trans ih₂
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact .refl _
+  | iterCons _ _ ih₁ ih₂ => exact ih₁.trans ih₂
+  | @touchActive e w f g p he h => cases w <;> exact .refl _
+  | @touchBench e w f g q b₁ b₂ he h => cases w <;> exact .refl _
+  | unmark w m g => cases w <;> exact .refl _
+  | benchCounters w n h => cases w <;> exact .refl _
+  | spreadCounters w n g => cases w <;> exact .refl _
+  | benchSome w _ _ _ _ _ => cases w <;> exact .refl _
+  | switch w ha hb => cases w <;> exact .refl _
+  | benchDamage w n h => cases w <;> exact .refl _
+  | spreadDamage w n g => cases w <;> exact .refl _
+  | linger w s m g => cases w <;> exact .refl _
+  | @zone e w g s' hw hz => cases w <;> exact .refl _
+  | _ => exact .refl _
+
+theorem KOBatch.sameRec {g g' : GameState} (h : KOBatch g g') : g.SameRec g' := by
+  cases h <;> exact .refl _
+
+theorem Owed.sameRec {g g' : GameState} (h : Owed g g') : g.SameRec g' :=
+  (GameState.SameRec.refl g : g.SameRec g.unpend).trans h.zoneOnly.sameRec
+
+theorem Resolve.sameRec {g g' : GameState} (h : Resolve g g') : g.SameRec g' := by
+  induction h with
+  | done => exact .refl _
+  | step _ hm _ ih => exact hm.sameRec.trans ih
+  | trigger _ _ _ ho _ ih => exact ho.sameRec.trans ih
+
+theorem TRun.sameRec {e : Effect} {g g' : GameState} (h : TRun e g g') : g.SameRec g' := by
+  induction h with
+  | prim _ _ hr hk => exact hr.sameRec.trans hk.sameRec
+  | stop => exact .refl _
+  | iteT _ _ _ _ ih => exact ih
+  | iteF _ _ _ _ ih => exact ih
+  | seq _ _ ih₁ ih₂ => exact ih₁.trans ih₂
+  | choiceL _ ih => exact ih
+  | choiceR _ ih => exact ih
+  | iterNil => exact .refl _
+  | iterCons _ _ ih₁ ih₂ => exact ih₁.trans ih₂
+
+theorem UseAt.sameRec {g g₁ : GameState} {x : InPlay} {sp : Spot} (h : UseAt g x sp g₁) :
+    g.SameRec g₁ := by
+  cases h <;> exact .refl _
+
+theorem PlayFromHand.sameRec {g g₁ : GameState} {x : InPlay} {w : PlayWay}
+    (h : PlayFromHand g x w g₁) : g.SameRec g₁ := by
+  cases h <;> exact .refl _
+
+/-- The cards the two Supporter records hold. -/
+def GameState.recCards (g : GameState) : List Card := g.cur.supCard.toList ++ g.opp.supCard.toList
+
+theorem GameState.mem_recCards {g : GameState} {c : Card}
+    (h : g.cur.supCard = some c ∨ g.opp.supCard = some c) : c ∈ g.recCards := by
+  rcases h with h | h <;> simp [GameState.recCards, h]
+
+theorem GameState.of_mem_recCards {g : GameState} {c : Card} (h : c ∈ g.recCards) :
+    g.cur.supCard = some c ∨ g.opp.supCard = some c := by
+  simp only [GameState.recCards, List.mem_append, Option.mem_toList] at h
+  rcases h with h | h
+  · exact .inl h
+  · exact .inr h
+
+theorem GameState.SameRec.mem {g g' : GameState} (h : g.SameRec g') {c : Card}
+    (hc : g'.cur.supCard = some c ∨ g'.opp.supCard = some c) : c ∈ g.recCards ∨ c ∈ g.allCards :=
+  .inl (GameState.mem_recCards (by rw [h.1, h.2] at hc; exact hc))
+
+/-- **A move writes a Supporter record only with a card of the game**: every record after a move
+is a record before it or a card of the state before it. -/
+theorem Move.supCard_mem {g g' : GameState} (h : Move g g') {c : Card}
+    (hc : g'.cur.supCard = some c ∨ g'.opp.supCard = some c) : c ∈ g.recCards ∨ c ∈ g.allCards := by
+  cases h with
+  | item hh hbt hst hr =>
+      exact ((show g.SameRec _ from ⟨rfl, rfl⟩).trans hr.sameRec).mem hc
+  | supporter hh hs hbt hst hr =>
+      have h2 := hr.sameRec
+      rw [h2.1, h2.2] at hc
+      rcases hc with hc | hc
+      · simp only [Option.some.injEq] at hc
+        subst hc
+        refine .inr ?_
+        simp [GameState.allCards, PlayerState.allCards, hh]
+      · exact .inl (GameState.mem_recCards (.inr hc))
+  | stadiumUse _ _ _ _ _ hr =>
+      exact ((show g.SameRec _ from ⟨rfl, rfl⟩).trans hr.sameRec).mem hc
+  | ability hu _ _ _ _ _ _ _ _ hr => exact (hu.sameRec.trans hr.sameRec).mem hc
+  | onPlay hp _ _ _ _ _ hr => exact (hp.sameRec.trans hr.sameRec).mem hc
+  | attack ha hm hc' hs hn hf hbt hst hr _ _ _ _ ht =>
+      exact ((hr.sameRec.trans ht.zoneOnly.sameRec).trans
+        (show GameState.SameRec _ _ from ⟨rfl, rfl⟩)).mem hc
+  | knockOuts h _ ht => exact (h.sameRec.trans ht.zoneOnly.sameRec).mem hc
+  | trigger _ _ ho => exact ho.sameRec.mem hc
+  | endTurn =>
+      rcases hc with hc | hc
+      · exact absurd hc (by simp)
+      · exact .inl (GameState.mem_recCards (.inl hc))
+  | _ => exact .inl (GameState.mem_recCards hc)
+
+/-- **The Supporter records along play** (milestone MV9): every record of a reachable state is a
+card of the start state or a record the start state had. -/
+theorem Reach.supCard_mem {g₀ g : GameState} (h : Reach g₀ g) {c : Card}
+    (hc : g.cur.supCard = some c ∨ g.opp.supCard = some c) : c ∈ g₀.allCards ++ g₀.recCards := by
+  induction h generalizing c with
+  | refl => exact List.mem_append_right _ (GameState.mem_recCards hc)
+  | step hr _ hm ih =>
+      rcases hm.supCard_mem hc with h1 | h1
+      · exact ih (GameState.of_mem_recCards h1)
+      · exact List.mem_append_left _ (hr.perm.mem_iff.1 h1)
+
 end Pokemon
