@@ -102,8 +102,9 @@ CAVEATS = {
                "noopPlay) can be used to no effect there, marking its Pokémon as used; the importer reads the ruling of "
                "noopPlay for Abilities too, and states the precondition where public information decides it (noop.py; "
                "Known gaps, item on plays to no effect)",
-    'selfBench': "'this Pokémon' on the Bench is one Benched Pokémon chosen when the effect resolves, and for an "
-                 "on-play Ability the Active Pokémon or a Benched one (Known gaps, Abilities, M8a: `SelfOp`)",
+    'selfBench': "'this Pokémon' on the Bench is a Benched Pokémon chosen when each step resolves (each `SelfOp` step "
+                 "chooses its own, so two attach steps may go to two different Benched Pokémon), and for an on-play "
+                 "Ability the Active Pokémon or a Benched one (Known gaps, Abilities, M8a: `SelfOp`)",
     'moveAnyPair': "a move of Energy printed between particular Pokémon ('to this Pokémon', 'from 1 of your Benched "
                    "Pokémon to your Active Pokémon') is a move between any two of the player's Pokémon (moveEnergy)",
     'onePerName': "'You can't use more than 1 X Ability each turn' is not modelled: the use flag is per Pokémon, so "
@@ -186,8 +187,9 @@ CAVEATS = {
                   "`counters`, `benchCounters`, `benchSome`), which the batch Knock Out step takes as a Knock Out with its "
                   "Prize cards and promotion (Known gaps, self-Knock-Out Abilities; `SelfKO.self_ko`): exact while every "
                   "derived HP in the game is below 9999 counters (over the imported pool a Pokémon's derived HP is at most "
-                  "76 + 6E counters, E the Energy cards attached to it (4 for a Pokémon's own '+N HP for each Energy' and 2 for "
-                  "Growing Grass Energy), so below in every game of two 60-card decks; the "
+                  "76 + 4E counters, E the Energy cards attached to it: per Energy card a Pokémon's own '+N HP for each "
+                  "Energy' (at most 4) or Growing Grass Energy's +2 to a Grass Pokémon, never both on one imported card), "
+                  "so below in every game of two 60-card decks; the "
                   "importer checks this bound, survey S11) and nothing prevents damage counters being placed on it (no "
                   "such effect is modelled); above that the Pokémon survives where print Knocks it Out. A Knock Out written so inside an attack is one by the "
                   "check after the attack, which the readers of 'Knocked Out by damage from an attack' count (their own "
@@ -218,19 +220,35 @@ CAVEATS = {
     'staticCardCount': "a static 'for each Energy attached' or 'N or more Energy attached' (`SAmt.perEnergy`, `Static.need` "
                        "under `Filter.energy`) counts Energy cards, not the Energy they provide: a card that provides 2 "
                        "(Team Rocket's Energy; Neo Upper Energy on a Stage 2 Pokémon) counts 1 (Known gaps, Energy item: "
-                       "'SAmt.perEnergy and Static.need count cards')",
+                       "'SAmt.perEnergy and Static.need count cards'). Written only where the Pokémon read can hold a "
+                       "card that provides 2 (see MULTI_UNIT). On no imported card in 0.15.0: kept because the rule that "
+                       "writes it is live (a future static of this form would otherwise be written exact)",
     'discardUnits': "'discard N Energy' (N at least 2) is `discardEnergy … (Filter.energy)`, read by the Energy the cards "
                     "provide (`Qty.okE`): one card that provides 2 pays 2, a card providing more than still needed may be "
                     "discarded, no card the payment does not need may be (Known gaps, Energy item: readings, no rule found "
-                    "in the 2026 rulebook, which never mentions Special Energy); print may count cards",
+                    "in the 2026 rulebook, which never mentions Special Energy); print may count cards. Written only where "
+                    "the Pokémon discarded from can hold a card that provides 2 (a Stage 2 Pokémon with Neo Upper Energy, a "
+                    "Team Rocket's Pokémon with Team Rocket's Energy; `EnergyCard.unitsAt` reads the holder's top card); "
+                    "elsewhere every card weighs 1 and the readings agree (`Qty.okE_ones`)",
+    'energyUnitsCount': "'for each Energy attached' or 'N or more Energy attached' (N at least 2) is `Count.energy` / "
+                        "`Count.energyAll` under `Filter.energy`, which counts the Energy the cards provide "
+                        "(`Filter.weight`): a card that provides 2 counts 2, where print may count cards (Known gaps, "
+                        "Energy item: a reading, no rule found in the 2026 rulebook). Written only where the Pokémon read "
+                        "can hold a card that provides 2 (a Stage 2 or Team Rocket's Pokémon, read on its top card); a "
+                        "different amount or branch, so outcomes differ either way",
     'forUpToUnits': "'discard up to N Energy …, K damage for each card you discarded in this way' is `forUpTo` over "
                     "`discardEnergy … (Filter.energy) (exactly j)`, whose branch j counts Energy provided, not cards: one "
                     "card that provides 2 is discarded by the branches 1 and 2 alike, so the attack may do 2K for one card "
-                    "(Known gaps, Energy item; `Units.forUpTo_one_card`, live case Team Rocket's Mewtwo ex sv10-81)",
+                    "(more), and with that card and a Basic Energy card attached no branch j ≤ N discards both (the payment "
+                    "would have a superfluous card, `retreatPaid 2 [2, 1] = false`), so print's 'discard both' is absent "
+                    "(fewer) (Known gaps, Energy item; `Units.forUpTo_one_card`, `Units.forUpTo_no_pair`). Written only "
+                    "where the Pokémon read can hold a card that provides 2 (a Stage 2 or Team Rocket's Pokémon: see "
+                    "MULTI_UNIT)",
     'forAllUnits': "'discard all Energy from this Pokémon; K damage for each card you discarded in this way' is `forUpTo` "
                    "over `discardEnergy … (Filter.energy) (exactly j)` with every Energy discarded, whose branch j is the "
                    "Energy provided, not the cards: a card that provides 2 adds 2K where print adds K (Known gaps, "
-                   "Energy item; `Units.forUpTo_one_card`)",
+                   "Energy item; `Units.forUpTo_one_card`). On no imported card in 0.15.0 (the two imported 'discard "
+                   "all … for each card' attacks name a type, `energyOf`): kept because the rule that writes it is live",
     'unitsReading': "a Special Energy card that provides 2 Energy pays the Retreat Cost and 'discard N Energy' by what it "
                     "provides: it may be discarded when only 1 is still needed, and no card the payment does not need may be "
                     "(Known gaps, Energy item: readings, no rule found in the 2026 rulebook, which never mentions Special "
@@ -258,7 +276,9 @@ CAVEATS = {
                  "player's own moves: fewer outcomes)",
     'movedCheckup': "a promotion after Pokémon Checkup is read as in no player's turn, so it never fires a 'during your "
                     "turn' `movedUp` trigger; under the reading of Checkup as part of the ending player's turn it would "
-                    "(Known gaps, triggers of the player's own moves: reading, fewer outcomes)",
+                    "(Known gaps, triggers of the player's own moves: reading, fewer outcomes). On no imported card in "
+                    "0.15.0 (the one `movedUp` card, Yanmega ex, is refused for an attack): kept because `translate_moved` "
+                    "writes it on every `movedUp` trigger it imports",
 }
 
 
@@ -273,7 +293,9 @@ CAVEAT_DIRECTION = {
     'staticCardCount': 'both',     # a smaller static amount or an unmet need, as energyOfCount
     'discardUnits': 'both',        # by units: one 2-unit card pays 2 (print by cards would ask for 2 cards), and a
                                    # payment by cards may differ the other way
-    'forUpToUnits': 'allows more',  # the branch 2 for one 2-unit card is extra; the printed branch is there too
+    'forUpToUnits': 'both',        # the branch 2 for one 2-unit card is extra; "discard both" of a 2-unit and a
+                                   # 1-unit card under "up to 2" has no branch (retreatPaid 2 [2, 1] = false)
+    'energyUnitsCount': 'both',    # a different amount or branch, if print counts cards
     'forAllUnits': 'both',         # the one resolution is the unit count, not the card count
     'unitsReading': 'both',        # a reading of payment by units, either way against a reading by cards
     'specialCountCards': 'both',   # a different amount, if print counts Energy provided
@@ -3834,60 +3856,92 @@ def translate_card(c):
 # ------------------------------------------------------------------ Energy readers since milestone MV8 (importer 0.15.0)
 #
 # Since importer 0.15.0 Special Energy cards are imported, so the readers of attached Energy that read Basic Energy
-# cards only, or count cards where print counts Energy, are no longer vacuous in a game of imported cards (until 0.14.0
-# they were: no imported card was a Special Energy card). Every imported Special Energy card provides some type (Growing
-# Grass G, Voltaic Lightning L, Magnetic Metal M, Spiky C, Team Rocket's P/D, Prism, Neo Upper and Luminous every type),
-# and two provide 2 Energy (Team Rocket's; Neo Upper on a Stage 2). The term walk below finds, wherever the term reads
-# Energy attached to a Pokémon (Pokemon/Rules.lean, Known gaps, Energy item):
+# cards only, or count Energy where print may count cards, are no longer vacuous in a game of imported cards (until
+# 0.14.0 they were: no imported card was a Special Energy card). Every imported Special Energy card provides some type
+# (Growing Grass G, Voltaic Lightning L, Magnetic Metal M, Spiky C, Team Rocket's P/D, Prism, Neo Upper and Luminous
+# every type). The term walk below finds, wherever the term reads Energy attached to a Pokémon (Pokemon/Rules.lean,
+# Known gaps, Energy item):
 # * `Filter.energyOf t` chosen by `discardEnergy` (but not `all`), `moveEnergy`, `SelfOp.energyTo`: caveat energyOfBasic
 #   (forbids some), unless every mention of that type's Energy in the card's text says "Basic" (or is a card in a zone, "…
 #   Energy card", which the glossary makes a Basic Energy card);
 # * `Filter.energyOf t` in a count or test (`Count.energy`, `Count.energyAll`), in a static count (`SAmt.perEnergy`,
 #   `Static.need`), or in "discard all [T] Energy" (`discardEnergy … all`): caveat energyOfCount (both), with the same
 #   exception;
-# * `SAmt.perEnergy` / `Static.need` (at least 2) under `Filter.energy`: caveat staticCardCount (both);
+# and, under `Filter.energy`, the places where the model counts Energy provided (units) or cards where print may count
+# the other (readings, no rule found: the 2026 rulebook never mentions Special Energy; fix round of importer 0.15.0):
+# * "for each Energy attached" (`Amt.count` of `Count.energy` / `Count.energyAll`) and a test of at least N ≥ 2 Energy
+#   (`countGe`): units; caveat energyUnitsCount (both). A test of at least 1 agrees with a count of cards, since every
+#   imported Energy card provides at least 1;
+# * `discardEnergy … (Filter.energy)` of a fixed number N ≥ 2 (`exactly`, `upTo`, `most`): units; caveat discardUnits
+#   (both). For N = 1 the two readings agree;
 # * an unfolded `forUpTo` over `discardEnergy … (Filter.energy) (exactly j)` (its branch 0 is `exactly 0`): caveat
-#   forUpToUnits (allows more), or forAllUnits (both) when every Energy must be discarded ("discard all");
-# * `discardEnergy … (Filter.energy)` of a fixed number N ≥ 2 (`exactly`, `upTo`, `most`): caveat discardUnits (both).
-#   For N = 1 the unit reading and the card reading agree (every imported Energy card provides at least 1).
-# "for each Energy attached" under `Filter.energy` (`Count.energy`) counts Energy provided, as print reads it (S22 §2,
-# settled): no caveat.
+#   forUpToUnits (both), or forAllUnits (both) when every Energy must be discarded ("discard all");
+# * `SAmt.perEnergy` / `Static.need` (at least 2) under `Filter.energy`: cards where print may mean Energy; caveat
+#   staticCardCount (both).
+# The holder rule (`MULTI_UNIT`): the unit and card readings differ only on a Pokémon that holds a card providing 2 or
+# more units. In the imported pool these are exactly Team Rocket's Energy (2 units, attachable only to a Pokémon whose
+# top card is named "Team Rocket's …", `EnergyText.only`) and Neo Upper Energy (2 units when the holder's top card is a
+# Stage 2 Pokémon, `ProvIf.holder (stage stage2)`): `EnergyCard.unitsAt` reads the holder's top card at the moment of the
+# read, so for a self-read ("this Pokémon" in an attack, or a static on itself) the holder is the card being read. On
+# any other holder every card weighs 1 and the two readings agree (`Qty.okE_ones`, `retreatPaid_ones`). So the four
+# unit caveats are written only when the Pokémon read can be a Stage 2 Pokémon or a Team Rocket's Pokémon: for a
+# self-read, when the card itself is one; for any other read (the opponent's Pokémon, "your Active Pokémon" from a
+# Trainer or an Ability, a Tool's or Special Energy card's holder, moves between Pokémon), always. The rule rests on the
+# pool: `importer.check_multi_unit` fails loudly if another imported Special Energy card can provide 2 units, if either
+# condition above changes, or if an imported Pokémon evolves from a Team Rocket's Pokémon without being one (a Team
+# Rocket's Energy left on a non-Team-Rocket's holder; the model does not discard it at evolution).
+MULTI_UNIT = {"Team Rocket's Energy": ('only', ('and', ('pokemon',), ('namePrefix', "Team Rocket's "))),
+              'Neo Upper Energy': ('alt', ('holder', ('stage', ('stage2',))))}
 
 TYPE_WORD = {v: k for k, v in T.TYPES.items()}
 
 
-def _energy_reads(x, out):
-    """Collect (kind, filter, qty) for every read of attached Energy in a term (tuples, lists, dicts)."""
+def _is_energy_count(c):
+    return isinstance(c, tuple) and len(c) == 3 and c[0] in ('energy', 'energyAll') and c[1] in (OWN, OPP)
+
+
+def _energy_reads(x, out, ctx='any'):
+    """Collect (kind, filter, qty, who) for every read of attached Energy in a term (tuples, lists, dicts). `who` is
+    'self' when the Pokémon read is the card itself (`ctx = 'self'`: an attack's own Active Pokémon, a static on
+    `Sel.self`), else 'any'."""
     if isinstance(x, dict):
         if 'need' in x and 'eff' in x:
+            who = 'self' if ctx == 'self' and x['sel'] == ('self',) else 'any'
             if x['need'] is not None:
-                out.append(('static', x['need'][1][1], ('exactly', x['need'][1][2])))
+                out.append(('static', x['need'][1][1], ('exactly', x['need'][1][2]), who))
             e = x['eff']
             if e[0] == 'hpPlus' and e[1][0] == 'perEnergy':
-                out.append(('static', e[1][1], None))
+                out.append(('static', e[1][1], None, who))
         for v in x.values():
-            _energy_reads(v, out)
+            _energy_reads(v, out, ctx)
         return
     if isinstance(x, list):
         for v in x:
-            _energy_reads(v, out)
+            _energy_reads(v, out, ctx)
         return
     if not isinstance(x, tuple) or not x:
         return
     h = x[0]
+    def who_c(c):
+        return 'self' if ctx == 'self' and c[0] == 'energy' and c[1] == OWN else 'any'
     if h == 'discardEnergy' and len(x) == 5:
-        out.append(('select', x[3], x[4]))
+        out.append(('select', x[3], x[4], 'self' if ctx == 'self' and x[1] == OWN and x[2] == ('active',) else 'any'))
     elif h == 'moveEnergy' and len(x) == 3:
-        out.append(('select', x[2], None))
+        out.append(('select', x[2], None, 'any'))
     elif h == 'energyTo' and len(x) == 2:
-        out.append(('select', x[1], None))
-    elif h in ('energy', 'energyAll') and len(x) == 3 and x[1] in (OWN, OPP):
-        out.append(('count', x[2], None))
-    elif h == 'count' and len(x) == 3 and isinstance(x[1], tuple) and x[1][0] in ('energy', 'energyAll') and len(x[1]) == 3:
+        out.append(('select', x[1], None, 'any'))
+    elif h == 'countGe' and len(x) == 3 and _is_energy_count(x[1]):
+        out.append(('test', x[1][2], x[2], who_c(x[1])))
+        return
+    elif h == 'count' and len(x) == 3 and _is_energy_count(x[1]):
         # an amount "K for each … Energy attached" (`Amt.count`)
-        out.append(('amount', x[1][2], None))
+        out.append(('amount', x[1][2], None, who_c(x[1])))
+        return
+    elif _is_energy_count(x):
+        out.append(('count', x[2], None, who_c(x)))
+        return
     for v in x[1:]:
-        _energy_reads(v, out)
+        _energy_reads(v, out, ctx)
 
 
 def _filter_types(f):
@@ -3901,54 +3955,71 @@ def _filter_types(f):
     return out
 
 
-def _attack_effects(term):
-    if term[0] == 'pokemon':
-        return [a['effect'] for a in term[1]['attacks']]
-    if term[0] == 'tool':
-        return [a['effect'] for a in term[2]['attacks']]
-    return []
-
-
 def card_text(c):
     parts = [a.get('text') or '' for a in (c.get('attacks') or []) + (c.get('abilities') or [])]
     parts += c.get('rules') or []
     return ' '.join(norm(p) for p in parts)
 
 
+def self_multi(term):
+    """Can the card itself, as the holder's top card, hold a card that provides 2 units (`MULTI_UNIT`)?"""
+    if term[0] != 'pokemon':
+        return True
+    p = term[1]
+    return p['stage'] == ('stage2',) or p['name'].startswith("Team Rocket's ")
+
+
+def _roots(term):
+    """(effect or part, ctx) pairs: a Pokémon card's attacks and its own statics read the card itself; everything else
+    (Abilities' scripts and conditions, Trainers, a Tool's or Special Energy card's grant) reads some Pokémon."""
+    if term[0] == 'pokemon':
+        p = term[1]
+        out = [(a['effect'], 'self') for a in p['attacks']]
+        for ab in p['abilities']:
+            if ab['use'][0] == 'static':
+                out.append((list(ab['use'][1]), 'self'))
+                rest = dict(ab)
+                rest['use'] = ('static', [])
+                out.append((rest, 'any'))
+            else:
+                out.append((ab, 'any'))
+        return out
+    return [(term, 'any')]
+
+
 def energy_caveats(term, c):
     cv = set()
-    reads = []
-    _energy_reads(term, reads)
     text = card_text(c)
-    for kind, f, q in reads:
-        for t in _filter_types(f):
-            w = TYPE_WORD[t]
-            if re.search(r'(?<!Basic )\b' + w + r' Energy\b(?! cards?\b)', text):
-                # "discard all [T] Energy" leaves the Special Energy card attached: one different outcome, not fewer
-                cv.add('energyOfBasic' if kind == 'select' and q != ('all',) else 'energyOfCount')
-        if f == ENERGY_F and kind == 'static' and (q is None or q[1] >= 2):
-            cv.add('staticCardCount')
-        if kind == 'amount' and (f == SPECIAL_F or (f[0] == 'named' and KNOWN_NAMES.get(f[1]) == {'Special Energy'})) \
-                and re.search(r'for each Special Energy (?!card)', text):
-            cv.add('specialCountCards')
-    fu_roots = []
-    for e in _attack_effects(term):
-        rs = []
-        _energy_reads(e, rs)
-        if any(k == 'select' and f == ENERGY_F and q == ('exactly', 0) for k, f, q in rs):
-            fu_roots.append(e)
-            cv.add('forAllUnits' if _has_all_guard(e) else 'forUpToUnits')
-    rest = []
-    if term[0] == 'pokemon':
-        for e in _attack_effects(term):
-            if e not in fu_roots:
-                _energy_reads(e, rest)
-        _energy_reads(term[1]['abilities'], rest)
-    else:
-        _energy_reads(term, rest)
-    for k, f, q in rest:
-        if k == 'select' and f == ENERGY_F and q is not None and q[0] in ('exactly', 'upTo', 'most') and q[1] >= 2:
-            cv.add('discardUnits')
+    multi = self_multi(term)
+    unit = lambda who: who == 'any' or multi  # noqa: E731
+    for root, ctx in _roots(term):
+        reads = []
+        _energy_reads(root, reads, ctx)
+        fu = ctx == 'self' and any(k == 'select' and f == ENERGY_F and q == ('exactly', 0) for k, f, q, _ in reads)
+        if fu and unit('self'):
+            cv.add('forAllUnits' if _has_all_guard(root) else 'forUpToUnits')
+        # the guard `countGe (energy w energy) n` written with "discard n Energy" (`min_take`) is that discard's own
+        # reading (discardUnits), not a separate count
+        guards = {(q[1], who) for k, f, q, who in reads if k == 'select' and f == ENERGY_F and q and q[0] == 'exactly'}
+        for kind, f, q, who in reads:
+            if kind == 'test' and (q, who) in guards:
+                kind = 'guard'
+            for t in _filter_types(f):
+                w = TYPE_WORD[t]
+                if re.search(r'(?<!Basic )\b' + w + r' Energy\b(?! cards?\b)', text):
+                    # "discard all [T] Energy" leaves the Special Energy card attached: one different outcome, not fewer
+                    cv.add('energyOfBasic' if kind == 'select' and q != ('all',) else 'energyOfCount')
+            if kind == 'amount' and (f == SPECIAL_F or (f[0] == 'named' and KNOWN_NAMES.get(f[1]) == {'Special Energy'})) \
+                    and re.search(r'for each Special Energy (?!card)', text):
+                cv.add('specialCountCards')
+            if f != ENERGY_F or not unit(who):
+                continue
+            if kind == 'static' and (q is None or q[1] >= 2):
+                cv.add('staticCardCount')
+            if kind == 'amount' or (kind == 'test' and q >= 2):
+                cv.add('energyUnitsCount')
+            if kind == 'select' and not fu and q is not None and q[0] in ('exactly', 'upTo', 'most') and q[1] >= 2:
+                cv.add('discardUnits')
     return cv
 
 

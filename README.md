@@ -874,14 +874,15 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,492 are imported (1,064 exactly, 428 with
+damage reduction). Of the pool's 2,161 cards, 1,492 are imported (1,052 exactly, 440 with
 caveats) as 1,484 distinct terms, and 669 are refused, each with a reason
 (`tools/importer/out/coverage.md`; importer 0.15.0, which since 0.15.0 translates the MV7c and MV8
 vocabulary: eight Special Energy cards as `EnergyCard.special` with an `EnergyText` payload (the other
 eleven, whose riders the model lacks, stay refused), `SEff.noRetreat`, and `TrigEvent.movedDown`
 (Clawitzer); and marks the readers of attached Energy that Special Energy cards make live
-(`Filter.energyOf` reads Basic Energy only; "discard N Energy" and `forUpTo` count Energy provided),
-which moved 40 cards from exact to caveated; since 0.14.0 the MV7 and MV7b vocabulary: `TrigEvent.oppBenched` triggers, static Checkup changes `SEff.condMore`, and "is Knocked
+(`Filter.energyOf` reads Basic Energy only; "discard N Energy", "for each Energy attached" and `forUpTo`
+count Energy provided, a reading, caveated only where the Pokémon read can hold a card that provides 2),
+which moved 52 cards from exact to caveated; since 0.14.0 the MV7 and MV7b vocabulary: `TrigEvent.oppBenched` triggers, static Checkup changes `SEff.condMore`, and "is Knocked
 Out" written as damage counters above every derived HP; since 0.13.0 it writes the precondition that a
 Trainer or an activated Ability can do something where public information decides it,
 `tools/importer/noop.py`, and since 0.12.0 the MV6 vocabulary: fixed windows

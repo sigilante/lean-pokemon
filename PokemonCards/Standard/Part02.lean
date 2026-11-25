@@ -122,7 +122,7 @@ def sv6_28 : Card := .pokemon
         effect := .inflict .burned,
         gx := false }] }
 
-/-- Torkoal (sv6-30). Records: sv6-30, sv6-172. Caveats: discardUnits, perPokemon. -/
+/-- Torkoal (sv6-30). Records: sv6-30, sv6-172. Caveats: perPokemon. -/
 def sv6_30 : Card := .pokemon
   { name := "Torkoal", stage := .basic, evolvesFrom := none,
     hp := 13, type := .fire, retreat := 3, weakness := some .water,
@@ -348,7 +348,7 @@ def sv6_52 : Card := .pokemon
         effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
         gx := false }] }
 
-/-- Phione (sv6-55). Records: sv6-55, sv6-175. -/
+/-- Phione (sv6-55). Records: sv6-55, sv6-175. Caveats: energyUnitsCount. -/
 def sv6_55 : Card := .pokemon
   { name := "Phione", stage := .basic, evolvesFrom := none,
     hp := 7, type := .water, retreat := 1, weakness := some .lightning,
@@ -590,7 +590,7 @@ def sv6_78 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Kadabra (sv6-81). Records: sv6-81. -/
+/-- Kadabra (sv6-81). Records: sv6-81. Caveats: energyUnitsCount. -/
 def sv6_81 : Card := .pokemon
   { name := "Kadabra", stage := .stage1, evolvesFrom := some "Abra",
     hp := 8, type := .psychic, retreat := 1, weakness := some .darkness,

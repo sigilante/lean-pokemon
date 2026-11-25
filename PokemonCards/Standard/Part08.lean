@@ -105,7 +105,7 @@ def me2_57 : Card := .pokemon
         effect := .choice (.damage (.const 3)) (.damage (.const 1)),
         gx := false }] }
 
-/-- Honchkrow (me2-58). Records: me2-58. Caveats: benchMods, discardUnits. -/
+/-- Honchkrow (me2-58). Records: me2-58. Caveats: benchMods. -/
 def me2_58 : Card := .pokemon
   { name := "Honchkrow", stage := .stage1, evolvesFrom := some "Murkrow",
     hp := 13, type := .darkness, retreat := 1, weakness := some .lightning,
@@ -328,7 +328,7 @@ def me2_78 : Card := .pokemon
         effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .shuffle .any (.exactly 1)) .skip,
         gx := false }] }
 
-/-- Ambipom (me2-79). Records: me2-79, me2-107. Caveats: benchMods, discardUnits. -/
+/-- Ambipom (me2-79). Records: me2-79, me2-107. Caveats: benchMods. -/
 def me2_79 : Card := .pokemon
   { name := "Ambipom", stage := .stage1, evolvesFrom := some "Aipom",
     hp := 11, type := .colorless, retreat := 1, weakness := some .fighting,
@@ -607,7 +607,7 @@ def me2pt5_27 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Camerupt (me2pt5-28). Records: me2pt5-28. Caveats: discardUnits. -/
+/-- Camerupt (me2pt5-28). Records: me2pt5-28. -/
 def me2pt5_28 : Card := .pokemon
   { name := "Camerupt", stage := .stage1, evolvesFrom := some "Numel",
     hp := 14, type := .fire, retreat := 3, weakness := some .water,
@@ -712,7 +712,7 @@ def me2pt5_47 : Card := .pokemon
         effect := .inflict .asleep,
         gx := false }] }
 
-/-- Regice ex (me2pt5-48). Records: me2pt5-48. Caveats: discardUnits. -/
+/-- Regice ex (me2pt5-48). Records: me2pt5-48. -/
 def me2pt5_48 : Card := .pokemon
   { name := "Regice ex", stage := .basic, evolvesFrom := none,
     hp := 23, type := .water, retreat := 3, weakness := some .metal,
@@ -1380,7 +1380,7 @@ def me2pt5_165 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Delcatty (me2pt5-166). Records: me2pt5-166. -/
+/-- Delcatty (me2pt5-166). Records: me2pt5-166. Caveats: energyUnitsCount. -/
 def me2pt5_166 : Card := .pokemon
   { name := "Delcatty", stage := .stage1, evolvesFrom := some "Skitty",
     hp := 10, type := .colorless, retreat := 1, weakness := some .fighting,
@@ -1450,7 +1450,7 @@ def me2pt5_170 : Card := .pokemon
         effect := .seq (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)) (.benchDamage .opp 5),
         gx := false }] }
 
-/-- Mega Audino ex (me2pt5-172). Records: me2pt5-172, me2pt5-253. -/
+/-- Mega Audino ex (me2pt5-172). Records: me2pt5-172, me2pt5-253. Caveats: energyUnitsCount. -/
 def me2pt5_172 : Card := .pokemon
   { name := "Mega Audino ex", stage := .basic, evolvesFrom := none,
     hp := 27, type := .colorless, retreat := 1, weakness := some .fighting,

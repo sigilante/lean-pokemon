@@ -180,7 +180,7 @@ def sv8_128 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Duraludon (sv8-129). Records: sv8-129. Caveats: discardUnits. -/
+/-- Duraludon (sv8-129). Records: sv8-129. -/
 def sv8_129 : Card := .pokemon
   { name := "Duraludon", stage := .basic, evolvesFrom := none,
     hp := 13, type := .metal, retreat := 2, weakness := some .fire,
@@ -776,7 +776,7 @@ def sv8pt5_63 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Tyranitar ex (sv8pt5-64). Records: sv8pt5-64. -/
+/-- Tyranitar ex (sv8pt5-64). Records: sv8pt5-64. Caveats: energyUnitsCount. -/
 def sv8pt5_64 : Card := .pokemon
   { name := "Tyranitar ex", stage := .stage2, evolvesFrom := some "Pupitar",
     hp := 34, type := .darkness, retreat := 3, weakness := some .grass,

@@ -22,7 +22,8 @@ given holder); not every count of Energy does (see "What stays by card" below):
 * "discard `n` Energy": `discardEnergy` takes cards that provide `n` with none superfluous
   (`Qty.okE`; `ZStep.discardActive`, `ZStep.discardBench`). So the `forUpTo` writing of "discard up
   to N Energy, K more damage for each card discarded" reads its branch as Energy, not cards: one card
-  that provides 2 can pay for 2K (`forUpTo_one_card`, Known gaps); with Basic Energy only the branch is
+  that provides 2 can pay for 2K (`forUpTo_one_card`, Known gaps), and with N = 2 a 2-unit card and a
+  1-unit card are never discarded together (`forUpTo_no_pair`); with Basic Energy only the branch is
   the number of cards (`Run.forUpTo_discardActive_basic`).
 
 What stays by card, and why: `Filter.energyOf t` reads Basic Energy only, because the same filter
@@ -265,6 +266,16 @@ theorem forUpTo_one_card : ∃ g₁ g₂, Run erase rStart g₁ ∧ Run erase rS
     Run.forUpTo_iff.2 ⟨2, by decide, .seq (.zone rfl (.discardActive rfl (.take rfl .nil)
       (show retreatPaid 2 _ = true by decide))) (.damage (.const _ _) rfl)⟩,
     rfl, rfl, by decide, by decide⟩
+
+/-- **Witness: no branch up to 2 takes a 2-unit card together with a 1-unit card** (Known gaps; fix
+round of importer 0.15.0). A branch `j` of the `forUpTo` writing discards cards whose units pay `j`
+with none superfluous (`Qty.okE` at `exactly j`, `retreatPaid`); for Team Rocket's Energy (2) and a
+Basic Energy card (1) together, the payments 1 and 2 both have a superfluous card, so with `N = 2`
+print's "discard both cards" (2K) is not a branch: fewer outcomes than print, beside the extra one of
+`forUpTo_one_card`. A statement about the payment test, which every branch's discard requires, not
+about `Run` as a whole. -/
+theorem forUpTo_no_pair : retreatPaid 1 [2, 1] = false ∧ retreatPaid 2 [2, 1] = false ∧
+    retreatPaid 3 [2, 1] = true := by decide
 
 /-- **`Filter.weight` reads `Filter.energy` syntactically**: "for each Energy attached" counts 2 for
 Team Rocket's Energy, but the equivalent filters `or energy energy` and `and energy any` count the

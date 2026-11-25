@@ -283,7 +283,7 @@ def me55_64 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .all }] }
 
-/-- Mew (me55-65). Records: me55-65, me55-B, me55-G, me55-R. -/
+/-- Mew (me55-65). Records: me55-65, me55-B, me55-G, me55-R. Caveats: energyUnitsCount. -/
 def me55_65 : Card := .pokemon
   { name := "Mew", stage := .basic, evolvesFrom := none,
     hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
@@ -1179,7 +1179,7 @@ def me6_34 : Card := .pokemon
         effect := .choice (.inflict .paralyzed) .skip,
         gx := false }] }
 
-/-- Pincurchin (me6-36). Records: me6-36, me6-109. -/
+/-- Pincurchin (me6-36). Records: me6-36, me6-109. Caveats: energyUnitsCount. -/
 def me6_36 : Card := .pokemon
   { name := "Pincurchin", stage := .basic, evolvesFrom := none,
     hp := 8, type := .lightning, retreat := 1, weakness := some .fighting,

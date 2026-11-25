@@ -497,7 +497,7 @@ def me1_21 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Mega Camerupt ex (me1-22). Records: me1-22, me1-156. Caveats: discardUnits. -/
+/-- Mega Camerupt ex (me1-22). Records: me1-22, me1-156. -/
 def me1_22 : Card := .pokemon
   { name := "Mega Camerupt ex", stage := .stage1, evolvesFrom := some "Numel",
     hp := 34, type := .fire, retreat := 4, weakness := some .water,
@@ -794,7 +794,7 @@ def me1_55 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Jynx (me1-57). Records: me1-57. -/
+/-- Jynx (me1-57). Records: me1-57. Caveats: energyUnitsCount. -/
 def me1_57 : Card := .pokemon
   { name := "Jynx", stage := .basic, evolvesFrom := none,
     hp := 11, type := .psychic, retreat := 1, weakness := some .darkness,
@@ -1203,7 +1203,7 @@ def me1_97 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Tinkaton (me1-98). Records: me1-98. -/
+/-- Tinkaton (me1-98). Records: me1-98. Caveats: energyUnitsCount. -/
 def me1_98 : Card := .pokemon
   { name := "Tinkaton", stage := .stage2, evolvesFrom := some "Tinkatuff",
     hp := 16, type := .metal, retreat := 2, weakness := some .fire,
@@ -1714,7 +1714,7 @@ def me2_39 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Mega Diancie ex (me2-41). Records: me2-41. Caveats: forUpToUnits, staticBench. -/
+/-- Mega Diancie ex (me2-41). Records: me2-41. Caveats: staticBench. -/
 def me2_41 : Card := .pokemon
   { name := "Mega Diancie ex", stage := .basic, evolvesFrom := none,
     hp := 27, type := .psychic, retreat := 1, weakness := some .metal,

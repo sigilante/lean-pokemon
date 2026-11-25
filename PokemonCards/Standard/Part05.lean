@@ -982,7 +982,7 @@ def sv10_22 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Rabsca ex (sv10-25). Records: sv10-25. -/
+/-- Rabsca ex (sv10-25). Records: sv10-25. Caveats: energyUnitsCount. -/
 def sv10_25 : Card := .pokemon
   { name := "Rabsca ex", stage := .stage1, evolvesFrom := some "Rellor",
     hp := 25, type := .grass, retreat := 1, weakness := some .fire,

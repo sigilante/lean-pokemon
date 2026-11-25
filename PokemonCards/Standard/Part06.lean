@@ -649,7 +649,7 @@ def rsv10pt5_22 : Card := .pokemon
         effect := .damage (.count (.energy .own .energy) 3),
         gx := false }] }
 
-/-- Samurott (rsv10pt5-23). Records: rsv10pt5-23, rsv10pt5-107. -/
+/-- Samurott (rsv10pt5-23). Records: rsv10pt5-23, rsv10pt5-107. Caveats: energyUnitsCount. -/
 def rsv10pt5_23 : Card := .pokemon
   { name := "Samurott", stage := .stage2, evolvesFrom := some "Dewott",
     hp := 16, type := .water, retreat := 2, weakness := some .lightning,
@@ -1361,7 +1361,7 @@ def zsv10pt5_13 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Darmanitan (zsv10pt5-14). Records: zsv10pt5-14, zsv10pt5-98. Caveats: discardUnits. -/
+/-- Darmanitan (zsv10pt5-14). Records: zsv10pt5-14, zsv10pt5-98. -/
 def zsv10pt5_14 : Card := .pokemon
   { name := "Darmanitan", stage := .stage1, evolvesFrom := some "Darumaka",
     hp := 14, type := .fire, retreat := 2, weakness := some .water,
@@ -1637,7 +1637,7 @@ def zsv10pt5_40 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Beheeyem (zsv10pt5-41). Records: zsv10pt5-41, zsv10pt5-121. -/
+/-- Beheeyem (zsv10pt5-41). Records: zsv10pt5-41, zsv10pt5-121. Caveats: energyUnitsCount. -/
 def zsv10pt5_41 : Card := .pokemon
   { name := "Beheeyem", stage := .stage1, evolvesFrom := some "Elgyem",
     hp := 9, type := .psychic, retreat := 1, weakness := some .darkness,

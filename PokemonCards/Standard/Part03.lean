@@ -917,7 +917,7 @@ def sv8_2 : Card := .pokemon
         effect := .heal 1,
         gx := false }] }
 
-/-- Exeggutor (sv8-3). Records: sv8-3. -/
+/-- Exeggutor (sv8-3). Records: sv8-3. Caveats: energyUnitsCount. -/
 def sv8_3 : Card := .pokemon
   { name := "Exeggutor", stage := .stage1, evolvesFrom := some "Exeggcute",
     hp := 13, type := .grass, retreat := 2, weakness := some .fire,
@@ -1476,7 +1476,7 @@ def sv8_60 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .this }] }
 
-/-- Rotom (sv8-61). Records: sv8-61. -/
+/-- Rotom (sv8-61). Records: sv8-61. Caveats: energyUnitsCount. -/
 def sv8_61 : Card := .pokemon
   { name := "Rotom", stage := .basic, evolvesFrom := none,
     hp := 8, type := .lightning, retreat := 1, weakness := some .fighting,
@@ -1785,7 +1785,7 @@ def sv8_102 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Donphan (sv8-103). Records: sv8-103. Caveats: discardUnits, ignFxStadium, perPokemon. -/
+/-- Donphan (sv8-103). Records: sv8-103. Caveats: ignFxStadium, perPokemon. -/
 def sv8_103 : Card := .pokemon
   { name := "Donphan", stage := .stage1, evolvesFrom := some "Phanpy",
     hp := 15, type := .fighting, retreat := 4, weakness := some .grass,

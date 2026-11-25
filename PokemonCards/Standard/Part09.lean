@@ -36,7 +36,7 @@ def me3_33 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Meowstic (me3-34). Records: me3-34. -/
+/-- Meowstic (me3-34). Records: me3-34. Caveats: energyUnitsCount. -/
 def me3_34 : Card := .pokemon
   { name := "Meowstic", stage := .stage1, evolvesFrom := some "Espurr",
     hp := 10, type := .psychic, retreat := 1, weakness := some .darkness,
@@ -89,7 +89,7 @@ def me3_37 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Probopass (me3-38). Records: me3-38, me3-96. Caveats: discardUnits. -/
+/-- Probopass (me3-38). Records: me3-38, me3-96. -/
 def me3_38 : Card := .pokemon
   { name := "Probopass", stage := .stage1, evolvesFrom := some "Nosepass",
     hp := 14, type := .fighting, retreat := 3, weakness := some .grass,
@@ -451,7 +451,7 @@ def me4_12 : Card := .pokemon
         effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
         gx := false }] }
 
-/-- Delphox (me4-13). Records: me4-13. -/
+/-- Delphox (me4-13). Records: me4-13. Caveats: energyUnitsCount. -/
 def me4_13 : Card := .pokemon
   { name := "Delphox", stage := .stage2, evolvesFrom := some "Braixen",
     hp := 16, type := .fire, retreat := 2, weakness := some .water,
@@ -593,7 +593,7 @@ def me4_28 : Card := .pokemon
         effect := .linger .opp .next (.lock .item),
         gx := false }] }
 
-/-- Deoxys (me4-31). Records: me4-31. -/
+/-- Deoxys (me4-31). Records: me4-31. Caveats: energyUnitsCount. -/
 def me4_31 : Card := .pokemon
   { name := "Deoxys", stage := .basic, evolvesFrom := none,
     hp := 11, type := .psychic, retreat := 1, weakness := some .darkness,
@@ -690,7 +690,7 @@ def me4_44 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Donphan (me4-45). Records: me4-45. Caveats: discardUnits, perPokemon. -/
+/-- Donphan (me4-45). Records: me4-45. Caveats: perPokemon. -/
 def me4_45 : Card := .pokemon
   { name := "Donphan", stage := .stage1, evolvesFrom := some "Phanpy",
     hp := 15, type := .fighting, retreat := 3, weakness := some .grass,

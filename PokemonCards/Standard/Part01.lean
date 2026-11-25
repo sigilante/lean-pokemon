@@ -1312,7 +1312,7 @@ def sv5_95 : Card := .pokemon
         effect := .move .opp (.top 2) .discard .any .all,
         gx := false }] }
 
-/-- Sandy Shocks (sv5-98). Records: sv5-98. -/
+/-- Sandy Shocks (sv5-98). Records: sv5-98. Caveats: energyUnitsCount. -/
 def sv5_98 : Card := .pokemon
   { name := "Sandy Shocks", stage := .basic, evolvesFrom := none,
     hp := 12, type := .fighting, retreat := 2, weakness := some .grass,

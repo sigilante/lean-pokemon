@@ -226,6 +226,7 @@ def run(data, out, survey=None):
     # the largest static damage reduction units of one card (`Card.reduceGain`; the constant of `sReduce_le`)
     red_max = max(reduce_gain(r['term']) for _, r in imported)
     ko_bound_check(imported)
+    check_multi_unit(imported)
     for k, chunk in enumerate(parts, 1):
         pn = 'Part%02d' % k
         part_names.append(pn)
@@ -594,12 +595,17 @@ def trigger_section(results):
 def ko_bound_check(imported):
     """The bound the caveat koCounters states (importer 0.14.0): "Knocked Out" is written as `TR.KO_COUNTERS` damage
     counters, which Knocks Out a Pokémon whose derived HP is below it. Over the imported pool every static HP effect is a
-    Pokémon's or a Tool's on itself (`sel = self`) or a Stadium's; a Pokémon has at most one Tool and the game one Stadium,
-    so a Pokémon's derived HP (`GameState.hpOf`) is at most the largest printed HP, plus the largest HP units of one
-    Pokémon card's own static effects (a constant plus `k` for each of its E Energy cards), plus the largest of a Tool's
-    and of a Stadium's, plus (since importer 0.15.0) the HP bonus of a Special Energy card for each Energy card: 76 + 6E counters
-    for today's pool, as the caveat says. Fails if the pool changes that."""
-    pk, tool, stad, kmax, egain = 0, 0, 0, 0, 0
+    Pokémon's, a Tool's or (since importer 0.15.0) a Special Energy card's on its holder (`sel = self`), or a Stadium's;
+    a Pokémon has at most one Tool and the game one Stadium, so a Pokémon's derived HP (`GameState.hpOf`) is at most
+    A + B·E counters, E the Energy cards attached to it: A is the largest printed HP plus the largest constant of one
+    Pokémon card's own static effects plus the largest of a Tool's and of a Stadium's (76 for today's pool), and B is,
+    over the Pokémon cards p that can be the holder's top card, the most one attached Energy card can add: p's own "+k
+    for each Energy" plus the HP bonus of a Special Energy card whose holder filter passes p (Growing Grass Energy: +2 to
+    a Grass Pokémon). B is taken per card, not as the sum of the two maxima: no imported Grass Pokémon has a "+k for each
+    Energy" static, so B = 4 (the sum of the maxima, 6, is a looser bound that also holds). Fails if the pool changes
+    either number."""
+    pk, tool, stad = 0, 0, 0
+    egrants = []   # (holder filter, HP constant) of the Special Energy cards' HP bonuses
     for _, r in imported:
         t = r['term']
         for x in card_statics(t):
@@ -617,17 +623,51 @@ def ko_bound_check(imported):
                 assert k == 0
                 tool = max(tool, c)
             elif t[0] == 'energy':
-                # importer 0.15.0: a Special Energy card's HP bonus to its holder (Growing Grass Energy); several can be
-                # attached, so it counts per Energy card, beside a Pokémon's own "+k for each Energy"
-                assert k == 0
-                egain = max(egain, c)
+                # several can be attached, so it counts per Energy card, for the holders its grant names
+                assert k == 0 and x['filt'] == ('any',)
+                egrants.append((t[1][3]['grant']['holder'], c))
             else:
                 pk = max(pk, c)
-                kmax = max(kmax, k)
+    bmax = 0
+    for _, r in imported:
+        t = r['term']
+        if t[0] != 'pokemon':
+            continue
+        k = max([x['eff'][1][2] for x in card_statics(t) if x['eff'][0] == 'hpPlus' and x['eff'][1][0] == 'perEnergy'] or [0])
+        eg = max([c for f, c in egrants if T.filter_eval(f, t)] or [0])
+        bmax = max(bmax, k + eg)
     a = max(printed_hp(r['term']) for _, r in imported)
-    assert (a + pk + tool + stad, kmax + egain) == (76, 6), (a, pk, tool, stad, kmax, egain)
+    assert (a + pk + tool + stad, bmax) == (76, 4), (a, pk, tool, stad, bmax)
     # two 60-card decks: at most 60 Energy cards on one Pokémon (its owner's)
-    assert 76 + 6 * 60 < TR.KO_COUNTERS
+    assert 76 + 4 * 60 < TR.KO_COUNTERS
+
+
+def check_multi_unit(imported):
+    """The pool facts the holder rule of `translate.energy_caveats` rests on (`TR.MULTI_UNIT`; importer 0.15.0): the only
+    imported Special Energy cards that can provide 2 or more units are Team Rocket's Energy (2 units, attachable only to
+    a Pokémon whose top card is named "Team Rocket's …") and Neo Upper Energy (2 units exactly when the holder's top card
+    is a Stage 2 Pokémon; `EnergyCard.unitsAt` reads the top card at the read); and no imported Pokémon evolves from a
+    Team Rocket's Pokémon without being one (the model does not discard Team Rocket's Energy at evolution, so it could
+    otherwise stay, with 2 units, on another holder). Fails loudly otherwise."""
+    for _, r in imported:
+        t = r['term']
+        if t[0] == 'energy' and t[1][0] == 'special':
+            _, name, prov, text = t[1]
+            alt = text.get('alt')
+            alt_units = alt[1][2] if alt else []
+            if len(prov) < 2 and len(alt_units) < 2:
+                continue
+            assert name in TR.MULTI_UNIT, ('a new multi-unit Special Energy card', name)
+            kind, cond = TR.MULTI_UNIT[name]
+            if kind == 'only':
+                assert len(prov) == 2 and text.get('only') == cond and len(alt_units) < 2, (name, prov, text)
+            else:
+                assert len(prov) == 1 and alt[1][1] == cond and len(alt_units) == 2 and 'only' not in text, (name, text)
+        if t[0] == 'pokemon':
+            p = t[1]
+            ev = p['evolvesFrom']
+            if ev and ev[1].startswith("Team Rocket's "):
+                assert p['name'].startswith("Team Rocket's "), ('evolves from a Team Rocket\'s Pokémon', p['name'])
 
 
 def static_source(c):
