@@ -188,7 +188,9 @@ effects included). -/
 def Card.loopFree : Card → Bool
   | .pokemon p => (p.attacks.all fun a => a.effect.loopFree) &&
       p.abilities.all fun a => a.scripts.all fun e => e.loopFree
-  | .energy _ => true
+  | .energy (.basic _) => true
+  | .energy (.special _ _ x) => (x.grant.attacks.all fun a => a.effect.loopFree) &&
+      x.grant.abilities.all fun a => a.scripts.all fun e => e.loopFree
   | .trainer _ _ e _ => e.loopFree
   | .tool _ gr => (gr.attacks.all fun a => a.effect.loopFree) &&
       gr.abilities.all fun a => a.scripts.all fun e => e.loopFree
@@ -212,6 +214,12 @@ theorem Card.loopFree_attack {c : Card} (h : c.loopFree = true)
   | tool n gr =>
       simp only [Card.loopFree, Bool.and_eq_true] at h
       exact List.all_eq_true.1 h.1 atk hm
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x =>
+          simp only [Card.loopFree, Bool.and_eq_true] at h
+          exact List.all_eq_true.1 h.1 atk hm
   | _ => nomatch hm
 
 theorem Card.loopFree_ability {c : Card} (h : c.loopFree = true)
@@ -224,6 +232,12 @@ theorem Card.loopFree_ability {c : Card} (h : c.loopFree = true)
   | tool n gr =>
       simp only [Card.loopFree, Bool.and_eq_true] at h
       exact List.all_eq_true.1 (List.all_eq_true.1 h.2 ab hm) e he
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x =>
+          simp only [Card.loopFree, Bool.and_eq_true] at h
+          exact List.all_eq_true.1 (List.all_eq_true.1 h.2 ab hm) e he
   | _ => nomatch hm
 
 theorem GameState.LoopFree.of_perm {g g' : GameState} (h : g.LoopFree)
@@ -855,6 +869,7 @@ def Card.freeRec : Card → List Filter
   | .trainer _ k e _ => if k = .stadium then [] else e.recFilters
   | .pokemon p => unlimitedRec p.abilities
   | .tool _ gr => unlimitedRec gr.abilities
+  | .energy (.special _ _ x) => unlimitedRec x.grant.abilities
   | _ => []
 
 /-- The recycling filters of all of a card's effects, attacks and (milestone M8a) Abilities
@@ -863,6 +878,7 @@ def Card.allRec : Card → List Filter
   | .pokemon p => attacksRec p.attacks ++ abilitiesRec p.abilities
   | .trainer _ _ e _ => e.recFilters
   | .tool _ gr => attacksRec gr.attacks ++ abilitiesRec gr.abilities
+  | .energy (.special _ _ x) => attacksRec x.grant.attacks ++ abilitiesRec x.grant.abilities
   | _ => []
 
 /-- The amount a card writes when it is played, if it is an Item card: a Supporter is played at
@@ -945,7 +961,10 @@ theorem GameState.NoRecycle.recycleSafe {g : GameState} (h : g.NoRecycle) : g.Re
           · exact hf
       | pokemon p => exact List.mem_append_right _ (unlimitedRec_sub hf)
       | tool n gr => exact List.mem_append_right _ (unlimitedRec_sub hf)
-      | energy _ => nomatch hf
+      | energy t =>
+          cases t with
+          | basic => nomatch hf
+          | special m pr x => exact List.mem_append_right _ (unlimitedRec_sub hf)
     rw [h x hx] at e; nomatch e
   · rw [h x hx] at hf; nomatch hf
 
@@ -1025,6 +1044,8 @@ def Card.abilitySafe : Card → Bool
       (ab.use != .unlimited || e.amt == 0) && e.amtAt .always == 0
   | .tool _ gr => gr.abilities.all fun ab => ab.scripts.all fun e =>
       (ab.use != .unlimited || e.amt == 0) && e.amtAt .always == 0
+  | .energy (.special _ _ x) => x.grant.abilities.all fun ab => ab.scripts.all fun e =>
+      (ab.use != .unlimited || e.amt == 0) && e.amtAt .always == 0
   | _ => true
 
 @[inherit_doc Card.abilitySafe]
@@ -1041,6 +1062,10 @@ theorem GameState.AbilitySafe.get {g : GameState} (h : g.AbilitySafe) {c : Card}
     cases c with
     | pokemon p => exact List.all_eq_true.1 (List.all_eq_true.1 this ab hm) e he
     | tool n gr => exact List.all_eq_true.1 (List.all_eq_true.1 this ab hm) e he
+    | energy t =>
+        cases t with
+        | basic => nomatch hm
+        | special m pr x => exact List.all_eq_true.1 (List.all_eq_true.1 this ab hm) e he
     | _ => nomatch hm
   rw [Bool.and_eq_true] at this
   obtain ⟨h1, h2⟩ := this
@@ -1134,6 +1159,10 @@ theorem Card.allRec_of_attack {c : Card} {atk : Attack} (hm : atk ∈ c.attacks)
   cases c with
   | pokemon p => exact List.mem_append_left _ (attacksRec_mem hm hf)
   | tool n gr => exact List.mem_append_left _ (attacksRec_mem hm hf)
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x => exact List.mem_append_left _ (attacksRec_mem hm hf)
   | _ => nomatch hm
 
 /-- A recycling filter of an Ability of a card is one of the card's. -/
@@ -1142,6 +1171,10 @@ theorem Card.allRec_of_ability {c : Card} {ab : Ability} (hm : ab ∈ c.abilitie
   cases c with
   | pokemon p => exact List.mem_append_right _ (abilitiesRec_mem hm he hf)
   | tool n gr => exact List.mem_append_right _ (abilitiesRec_mem hm he hf)
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x => exact List.mem_append_right _ (abilitiesRec_mem hm he hf)
   | _ => nomatch hm
 
 /-- A recycling filter of an "as often as you like" Ability of a card is a free one. -/
@@ -1151,6 +1184,10 @@ theorem Card.freeRec_of_unlimited {c : Card} {ab : Ability} (hm : ab ∈ c.abili
   cases c with
   | pokemon p => exact unlimitedRec_mem hm hu he hf
   | tool n gr => exact unlimitedRec_mem hm hu he hf
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x => exact unlimitedRec_mem hm hu he hf
   | _ => nomatch hm
 
 theorem attacksRec_nil {c : Card} (h : c.allRec = []) {atk : Attack}

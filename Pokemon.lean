@@ -61,4 +61,5 @@ import Pokemon.Look
 import Pokemon.Defender
 import Pokemon.Coins
 import Pokemon.Units
+import Pokemon.EnergyText
 import Pokemon.Audit

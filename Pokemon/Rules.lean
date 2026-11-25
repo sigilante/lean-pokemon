@@ -284,7 +284,7 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   ("The effect of Vibrant Dance doesn't stack", "You can't apply more than 1 … at a time": the
   model adds every effect in force), HP bonuses counted per Prize card taken, per Benched Pokémon
   or per named Pokémon in play (Brambleghast, Pangoro, Nidoking), effects that read "remaining HP"
-  (Rescue Board), and Special Energy HP bonuses (no rider of a Special Energy card is modelled). Before milestone M6 HP was the
+  (Rescue Board). Since milestone MV8 a Special Energy card's HP bonus is a static effect of its payload (Growing Grass Energy). Before milestone M6 HP was the
   printed value, and the clamps capped damage there; they now cap at a bound on every derived HP
   (`hpBound`, `Enum.bound`). A Pokémon whose derived HP is 0 (its `hpMinus` effects reach its
   printed HP plus its `hpPlus` effects) is a pending Knock Out at once, with no damage on it;

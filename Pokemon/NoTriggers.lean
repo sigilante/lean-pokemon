@@ -105,14 +105,10 @@ theorem InPlay.benchedTrigs_nil_of {p : InPlay} (h : ∀ c ∈ p.cardList, c.ben
   unfold InPlay.trigs
   refine filter_nil_of fun ab hab => ?_
   have hev : (ab.use.event != some .oppBenched) = true := by
-    rcases List.mem_append.1 hab with h1 | h1
-    · have := h (.pokemon p.top) (.head _)
-      simp only [Card.benchedFree, Card.abilities, List.all_eq_true] at this
-      exact this ab h1
-    · obtain ⟨c, hc, hab'⟩ := List.mem_flatMap.1 h1
-      have := h c (.tail _ (List.mem_append_right _ hc))
-      simp only [Card.benchedFree, List.all_eq_true] at this
-      exact this ab (Card.grantAbilities_sub hab')
+    obtain ⟨c, hc, hab'⟩ := InPlay.ability_mem hab
+    have := h c hc
+    simp only [Card.benchedFree, List.all_eq_true] at this
+    exact this ab hab'
   simp only [bne] at hev
   simp only [Ability.trigOn]
   revert hev
@@ -266,13 +262,18 @@ theorem Move.pend_false {g g' : GameState} (hm : Move g g') (hf : g.MoveFree) (h
       g'.pend = false :=
     fun hr hX hXp => hr.pend_false (hf'.of_perm hr.perm.symm) hX hXp
   cases hm with
-  | @retreat a q b₁ b₂ paid rest ha hb =>
+  | @retreat a q b₁ b₂ paid rest ha hb _ he =>
       have hc := (hmk hp).1
       have hq : q ∈ g.cur.bench := by rw [hb]; exact List.mem_append_right _ (.head _)
       have eu : q.moveUp.noteMove .movedUp .active = q.moveUp :=
         InPlay.noteMove_of_free hf.2.1 fun c hc' => GameState.mem_allCards_of_cur_bench hq hc'
-      have ta : a.trigs .movedDown .bench = [] := InPlay.trigs_nil_of_evFree
-        (fun c hc' => hf.2.2 c (GameState.mem_allCards_of_cur_active ha hc')) _
+      have ta := InPlay.trigs_nil_of_evFree (p := ({ a with
+          energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0,
+          lk := {} } : InPlay)) (ev := .movedDown)
+        (fun c hc' => hf.2.2 c (GameState.mem_allCards_of_cur_active ha
+          (InPlay.cardList_sub_energy he.rest_mem ({ a with
+            energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0,
+            lk := {} } : InPlay) rfl rfl rfl rfl c hc'))) .bench
       have ed := InPlay.noteMove_of_nil (p := ({ a with
           energy := rest, rot := .none, poisoned := false, burned := false, poisonUp := 0,
           lk := {} } : InPlay)) ta

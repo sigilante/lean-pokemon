@@ -35,50 +35,6 @@ def BasicEnergy.type : BasicEnergy → EType
   | .metal => .metal
   | .fairy => .fairy
 
-/-- **An Energy card** (milestone MV5): Basic (`basic t`) or Special (`special name prov`). A Special
-Energy card has its printed name and what it provides while attached, one entry per unit, each entry
-the types that unit counts as ("provides Colorless Energy" is `[[.colorless]]`; "provides every type
-of Energy but provides only 1 Energy at a time" is one unit of every type; Team Rocket's Energy, "2 in
-any combination of Psychic Energy and Darkness Energy", is `[[.psychic, .darkness], [.psychic,
-.darkness]]`). Nothing else of its text is modelled: no rider (static, triggered, on-attach, return
-or discard text), no provision that depends on the holder or on other attached cards, no restriction
-on what it may be attached to. Every Special Energy card of today's Standard has such text (survey
-S18 §A), so each is an under-model of the printed card, marked by `Card.inert`.
-
-Why a kind inside `Card.energy` and not a flag with a default or a new `Card` constructor: in Lean
-v4.36.0 a pattern `.energy t` fills in an omitted default argument, so a defaulted flag would
-silently narrow every existing match on `.energy _` to Basic Energy (S18 §A2); and a new `Card`
-constructor would break the exhaustive matches of `PokemonCards/Props.lean`. With `EnergyCard`,
-`.energy _` still matches every Energy card, and the generated `.energy .fire` still elaborates
-(`EnergyCard.fire` is `basic .fire`).
-
-Deck construction is not modelled: the rule that a deck may hold only 4 copies of a card with the
-same name "except for Basic Energy cards" (rulebook 2026, PDF p. 21), which covers Special Energy,
-and the ACE SPEC limit (Neo Upper, Legacy, Enriching Energy), are not checked anywhere. -/
-inductive EnergyCard where
-  | basic (t : BasicEnergy)
-  | special (name : String) (prov : List (List EType))
-  deriving DecidableEq
-
-namespace EnergyCard
-/-- The Basic Energy cards by type, so that `.energy .fire` denotes the Basic Fire Energy card. -/
-@[match_pattern] abbrev grass : EnergyCard := .basic .grass
-@[match_pattern] abbrev fire : EnergyCard := .basic .fire
-@[match_pattern] abbrev water : EnergyCard := .basic .water
-@[match_pattern] abbrev lightning : EnergyCard := .basic .lightning
-@[match_pattern] abbrev psychic : EnergyCard := .basic .psychic
-@[match_pattern] abbrev fighting : EnergyCard := .basic .fighting
-@[match_pattern] abbrev darkness : EnergyCard := .basic .darkness
-@[match_pattern] abbrev metal : EnergyCard := .basic .metal
-@[match_pattern] abbrev fairy : EnergyCard := .basic .fairy
-end EnergyCard
-
-/-- The Energy one card provides while attached, one entry per unit, each entry the types that unit
-counts as: one unit of its type for a Basic Energy card, `prov` for a Special Energy card. -/
-def EnergyCard.units : EnergyCard → List (List EType)
-  | .basic t => [[t.type]]
-  | .special _ p => p
-
 /-! ## Energy and attack costs -/
 
 /-- Can a unit of Energy that counts as any of the types `u` pay the cost symbol `s`? A
@@ -1105,7 +1061,10 @@ inductive SAmt where
   `c = burned`, `n = 3`; Pecharunt svp-129, "As long as this Pokémon is in the Active Spot, put 5
   more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup": `src = some
   .active`, `c = poisoned`, `n = 5`). Read by `Move.endTurn` (`GameState.checkupMoreBy`), never
-  stored. -/
+  stored.
+* `noRetreat` (milestone MV8): "The Metal Pokémon this card is attached to has no Retreat Cost"
+  (Magnetic Metal Energy me4-85): the affected Pokémon's Retreat Cost is 0, whatever else is in force
+  (`GameState.retreatOf`: a set, applied after the additions and subtractions). -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -1115,6 +1074,7 @@ inductive SEff where
   | retreatMinus (n : Nat)
   | prevent (fr : Filter)
   | condMore (c : Condition) (n : Nat)
+  | noRetreat
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative
@@ -1497,7 +1457,8 @@ theorem PokemonCard.resistTo_le (d : PokemonCard) (t : EType) : d.resistTo t ≤
   · split <;> omega
   · exact Nat.le_refl _
 
-/-- What a Pokémon Tool gives the Pokémon it is attached to (milestone M5): attacks the Pokémon
+/-- What a Pokémon Tool (or, since milestone MV8, a Special Energy card, `EnergyText.grant`) gives
+the Pokémon it is attached to (milestone M5): attacks the Pokémon
 can use ("The Pokémon this card is attached to can use the attack on this card. (You still need
 the necessary Energy to use this attack.)", Technical Machine: Fluorite sv8-188, Mega Rayquaza Cap
 me6-100) and activated Abilities, both only while the Pokémon's top card passes `holder` ("The Mega
@@ -1520,6 +1481,62 @@ structure ToolGrant where
 
 /-- The empty grant: a Tool whose effect the model does not express, or that has none. -/
 def ToolGrant.none : ToolGrant := ⟨.any, [], [], []⟩
+
+/-- **What a Special Energy card gives besides its Energy** (milestone MV8, survey S22): the payload
+of `EnergyCard.special`. `grant` is what it gives the Pokémon it is attached to, by the Tool path
+(`ToolGrant`: a holder filter, "the Grass Pokémon this card is attached to"; static effects in force
+while it is attached, `ToolGrant.statics`, read by `SView.statics`; triggered Abilities the holder has,
+`InPlay.abilities`). Several Energy cards can be attached to one Pokémon, and each card's grant is in
+force (they add up, as printed: no Special Energy card of the pool limits its own stacking). The empty
+payload (`{}`) is a card none of whose riders is modelled: `Card.inert`. -/
+structure EnergyText where
+  grant : ToolGrant := ToolGrant.none
+  deriving DecidableEq
+
+/-- **An Energy card** (milestone MV5): Basic (`basic t`) or Special (`special name prov text`). A
+Special Energy card has its printed name, what it provides while attached, one entry per unit, each
+entry the types that unit counts as ("provides Colorless Energy" is `[[.colorless]]`; "provides every
+type of Energy but provides only 1 Energy at a time" is one unit of every type; Team Rocket's Energy,
+"2 in any combination of Psychic Energy and Darkness Energy", is `[[.psychic, .darkness], [.psychic,
+.darkness]]`), and (milestone MV8) a payload (`EnergyText`): what it gives its holder by the Tool path
+(static effects, triggered Abilities, under a holder filter). A card whose payload is empty has no
+rider modelled and is marked by `Card.inert` (an under-model of a printed card with riders); with a
+payload it is not inert (`Card.inert_special`), and whether the payload says all the printed card
+says is the importer's claim (survey S22 lists the cards whose every rider has a payload form).
+
+Why a kind inside `Card.energy` and not a flag with a default or a new `Card` constructor: in Lean
+v4.36.0 a pattern `.energy t` fills in an omitted default argument, so a defaulted flag would
+silently narrow every existing match on `.energy _` to Basic Energy (S18 §A2); and a new `Card`
+constructor would break the exhaustive matches of `PokemonCards/Props.lean`. With `EnergyCard`,
+`.energy _` still matches every Energy card, and the generated `.energy .fire` still elaborates
+(`EnergyCard.fire` is `basic .fire`).
+
+Deck construction is not modelled: the rule that a deck may hold only 4 copies of a card with the
+same name "except for Basic Energy cards" (rulebook 2026, PDF p. 21), which covers Special Energy,
+and the ACE SPEC limit (Neo Upper, Legacy, Enriching Energy), are not checked anywhere. -/
+inductive EnergyCard where
+  | basic (t : BasicEnergy)
+  | special (name : String) (prov : List (List EType)) (text : EnergyText)
+  deriving DecidableEq
+
+namespace EnergyCard
+/-- The Basic Energy cards by type, so that `.energy .fire` denotes the Basic Fire Energy card. -/
+@[match_pattern] abbrev grass : EnergyCard := .basic .grass
+@[match_pattern] abbrev fire : EnergyCard := .basic .fire
+@[match_pattern] abbrev water : EnergyCard := .basic .water
+@[match_pattern] abbrev lightning : EnergyCard := .basic .lightning
+@[match_pattern] abbrev psychic : EnergyCard := .basic .psychic
+@[match_pattern] abbrev fighting : EnergyCard := .basic .fighting
+@[match_pattern] abbrev darkness : EnergyCard := .basic .darkness
+@[match_pattern] abbrev metal : EnergyCard := .basic .metal
+@[match_pattern] abbrev fairy : EnergyCard := .basic .fairy
+end EnergyCard
+
+/-- The Energy one card provides while attached, one entry per unit, each entry the types that unit
+counts as: one unit of its type for a Basic Energy card, `prov` for a Special Energy card. -/
+def EnergyCard.units : EnergyCard → List (List EType)
+  | .basic t => [[t.type]]
+  | .special _ p _ => p
 
 inductive Card where
   | pokemon (p : PokemonCard)
@@ -1544,6 +1561,7 @@ milestone M5; `ToolGrant`). -/
 def Card.attacks : Card → List Attack
   | .pokemon p => p.attacks
   | .tool _ gr => gr.attacks
+  | .energy (.special _ _ x) => x.grant.attacks
   | _ => []
 
 /-- The Abilities a card has (a Pokémon card) or gives the Pokémon it is attached to (a Tool,
@@ -1551,6 +1569,7 @@ milestone M5; `ToolGrant`). -/
 def Card.abilities : Card → List Ability
   | .pokemon p => p.abilities
   | .tool _ gr => gr.abilities
+  | .energy (.special _ _ x) => x.grant.abilities
   | _ => []
 
 /-- The printed name of a Pokémon, Trainer, Tool or (milestone MV5) Special Energy card; none for
@@ -1560,7 +1579,7 @@ def Card.name? : Card → Option String
   | .trainer m _ _ _ => some m
   | .tool m _ => some m
   | .energy (.basic _) => none
-  | .energy (.special m _) => some m
+  | .energy (.special m _ _) => some m
 
 /-- The name filters (milestone MV4): does the card's printed name contain `x` (`sub`) or begin
 with it? A Basic Energy card has no name the filters read. -/
@@ -1579,7 +1598,7 @@ def Filter.eval : Filter → Card → Bool
   | .named n, .pokemon p => decide (p.name = n)
   | .named n, .trainer m _ _ _ => decide (m = n)
   | .named n, .tool m _ => decide (m = n)
-  | .named n, .energy (.special m _) => decide (m = n)
+  | .named n, .energy (.special m _ _) => decide (m = n)
   | .hpLe n, .pokemon p => decide (p.hp ≤ n)
   | .noRuleBox, .pokemon p => decide (p.ruleBox = .none)
   | .trainer, .trainer _ _ _ _ => true
@@ -1589,7 +1608,7 @@ def Filter.eval : Filter → Card → Bool
   | .energy, .energy _ => true
   | .energyOf t, .energy (.basic e) => decide (e.type = t)
   | .basicEnergy, .energy (.basic _) => true
-  | .specialEnergy, .energy (.special _ _) => true
+  | .specialEnergy, .energy (.special _ _ _) => true
   | .ex, .pokemon p => decide (p.ruleBox ≠ .none)
   | .tera, .pokemon p => p.tera
   | .hasAttack n, .pokemon p => p.attacks.any fun a => decide (a.name = n)
@@ -1605,12 +1624,14 @@ def Filter.eval : Filter → Card → Bool
 Tool's granted attacks, if `p` passes the grant's holder filter; nothing for other cards. -/
 def Card.grantAttacks (p : PokemonCard) : Card → List Attack
   | .tool _ gr => if gr.holder.eval (.pokemon p) then gr.attacks else []
+  | .energy (.special _ _ x) => if x.grant.holder.eval (.pokemon p) then x.grant.attacks else []
   | _ => []
 
 /-- The Abilities a card attached to a Pokémon whose top card is `p` gives it (milestone M5), as
 `Card.grantAttacks`. -/
 def Card.grantAbilities (p : PokemonCard) : Card → List Ability
   | .tool _ gr => if gr.holder.eval (.pokemon p) then gr.abilities else []
+  | .energy (.special _ _ x) => if x.grant.holder.eval (.pokemon p) then x.grant.abilities else []
   | _ => []
 
 theorem Card.grantAttacks_sub {p : PokemonCard} {c : Card} {atk : Attack}
@@ -1621,6 +1642,14 @@ theorem Card.grantAttacks_sub {p : PokemonCard} {c : Card} {atk : Attack}
       split at h
       · exact h
       · nomatch h
+  | energy t =>
+      cases t with
+      | basic => nomatch h
+      | special m pr x =>
+          simp only [Card.grantAttacks] at h
+          split at h
+          · exact h
+          · nomatch h
   | _ => nomatch h
 
 theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
@@ -1631,6 +1660,14 @@ theorem Card.grantAbilities_sub {p : PokemonCard} {c : Card} {ab : Ability}
       split at h
       · exact h
       · nomatch h
+  | energy t =>
+      cases t with
+      | basic => nomatch h
+      | special m pr x =>
+          simp only [Card.grantAbilities] at h
+          split at h
+          · exact h
+          · nomatch h
   | _ => nomatch h
 
 /-- **A Stadium or Tool that the model plays with no effect** (milestone M5): a Stadium whose
@@ -1642,14 +1679,15 @@ MV7, and static text outside
 the language of `Static`), so `Card.inert` tells "playable, effect not modelled" (an under-model of
 the printed card) from "playable, effect expressed" (a Stadium with an activated or, since milestone
 M6, a static effect; a Tool that gives an attack, an Ability or a static effect, and since milestone
-M8b a triggered Ability: a Tool whose triggered text is expressed is not inert). Since milestone
-MV5 every Special Energy card is inert: it provides Energy and nothing of the rest of its text is
-modelled (`EnergyCard`), so an importer must refuse it or caveat it as "provides …; text not
-modelled". -/
+M8b a triggered Ability: a Tool whose triggered text is expressed is not inert). A Special Energy
+card (milestone MV5) is inert exactly when its payload is empty (milestone MV8, `EnergyText`,
+`Card.inert_special`): it then provides Energy and nothing of the rest of its text is modelled, so an
+importer must refuse it or caveat it as "provides …; text not modelled", unless the printed card has
+no other text. -/
 def Card.inert : Card → Bool
   | .trainer _ .stadium e ss => e == .skip && ss.isEmpty
   | .tool _ gr => gr.attacks.isEmpty && gr.abilities.isEmpty && gr.statics.isEmpty
-  | .energy (.special _ _) => true
+  | .energy (.special _ _ x) => x == {}
   | _ => false
 
 /-- **The static effects printed on a card** (milestone M6): a Pokémon card's static Abilities; a
@@ -1658,6 +1696,7 @@ Tool's static text and static Abilities; a Stadium's static text. Items and Supp
 def Card.statics : Card → List Static
   | .pokemon p => p.abilities.flatMap Ability.statics
   | .tool _ gr => gr.statics ++ gr.abilities.flatMap Ability.statics
+  | .energy (.special _ _ x) => x.grant.statics ++ x.grant.abilities.flatMap Ability.statics
   | .trainer _ .stadium _ ss => ss
   | _ => []
 
@@ -1665,6 +1704,12 @@ def Card.statics : Card → List Static
 def Card.isStadium : Card → Bool
   | .trainer _ .stadium _ _ => true
   | _ => false
+
+/-- The card gives no attack and no Ability as a Special Energy card (milestone MV8): true of every
+card but a Special Energy card whose payload grants one. -/
+def Card.energyGrantFree : Card → Bool
+  | .energy (.special _ _ x) => x.grant.attacks.isEmpty && x.grant.abilities.isEmpty
+  | _ => true
 
 /-- Is the card a Pokémon Tool? (milestone M5) -/
 def Card.isTool : Card → Bool
@@ -1830,7 +1875,8 @@ def abilitiesTame : List Ability → Bool
 
 def Card.tmax : Card → Nat
   | .pokemon p => max (attacksTmax p.attacks) (abilitiesTmax p.abilities)
-  | .energy _ => 0
+  | .energy (.basic _) => 0
+  | .energy (.special _ _ x) => max (attacksTmax x.grant.attacks) (abilitiesTmax x.grant.abilities)
   | .trainer _ _ e _ => e.tmax
   | .tool _ gr => max (attacksTmax gr.attacks) (abilitiesTmax gr.abilities)
 
@@ -1851,7 +1897,8 @@ theorem Attack.script_tmax (atk : Attack) : atk.script.tmax = atk.effect.tmax :=
 
 def Card.tame : Card → Bool
   | .pokemon p => attacksTame p.attacks && abilitiesTame p.abilities
-  | .energy _ => true
+  | .energy (.basic _) => true
+  | .energy (.special _ _ x) => attacksTame x.grant.attacks && abilitiesTame x.grant.abilities
   | .trainer _ _ e _ => e.tame
   | .tool _ gr => attacksTame gr.attacks && abilitiesTame gr.abilities
 

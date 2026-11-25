@@ -50,12 +50,17 @@ text and its static Abilities, if `p` passes the grant's holder filter. -/
 def Card.grantStatics (p : PokemonCard) : Card → List Static
   | .tool _ gr =>
       if gr.holder.eval (.pokemon p) then gr.statics ++ gr.abilities.flatMap Ability.statics else []
+  | .energy (.special _ _ x) =>
+      if x.grant.holder.eval (.pokemon p) then
+        x.grant.statics ++ x.grant.abilities.flatMap Ability.statics
+      else []
   | _ => []
 
 /-- The static effects whose source is the Pokémon in play `v`: its top card's static Abilities and
 what its Tools give it. -/
 def SView.statics (v : SView) : List Static :=
-  v.top.abilities.flatMap Ability.statics ++ v.tools.flatMap (Card.grantStatics v.top)
+  v.top.abilities.flatMap Ability.statics ++ v.tools.flatMap (Card.grantStatics v.top) ++
+    v.energy.flatMap (Card.grantStatics v.top)
 
 /-- The static effects of the Stadium in play. -/
 def stadiumStatics : Option (Bool × Card) → List Static
@@ -184,6 +189,12 @@ def Static.retreatMinus (s : Static) : Nat :=
   | .retreatMinus n => n
   | _ => 0
 
+/-- "Has no Retreat Cost" (milestone MV8, `SEff.noRetreat`). -/
+def Static.isNoRetreat (s : Static) : Bool :=
+  match s.eff with
+  | .noRetreat => true
+  | _ => false
+
 /-- The extra Checkup damage counters of a static effect on the Pokémon `p` (milestone MV7b): `n`
 if the effect is `condMore c n` and `p` has the Special Condition `c`. -/
 def Static.condMoreFor (p : InPlay) (s : Static) : Nat :=
@@ -262,10 +273,12 @@ def GameState.sPrevent (g : GameState) : Bool :=
   | _, _ => false
 
 /-- **The Retreat Cost** (milestone M6) of the player's Active Pokémon `a`: printed, plus every
-`retreatPlus` in force, less every `retreatMinus` in force (stopping at 0). It reads no HP, so the
+`retreatPlus` in force, less every `retreatMinus` in force (stopping at 0); 0 if a `noRetreat`
+effect is in force (milestone MV8: "has no Retreat Cost", a set applied last). It reads no HP, so the
 circular case of survey S7 (an HP bonus keyed to the Retreat Cost with a Retreat Cost keyed to the
 remaining HP) cannot be written. -/
 def GameState.retreatOf (g : GameState) (a : InPlay) : Nat :=
+  if (g.inForce .own .active a.sv).any Static.isNoRetreat then 0 else
   a.top.retreat + sumOf Static.retreatPlus (g.inForce .own .active a.sv) -
     sumOf Static.retreatMinus (g.inForce .own .active a.sv)
 
@@ -420,6 +433,12 @@ theorem Card.grantStatics_nil {p : PokemonCard} {c : Card} (h : c.statics = []) 
   | tool n gr =>
       simp only [Card.statics] at h
       simp only [Card.grantStatics, h, ite_self]
+  | energy t =>
+      cases t with
+      | basic => rfl
+      | special m pr x =>
+          simp only [Card.statics] at h
+          simp only [Card.grantStatics, h, ite_self]
   | _ => rfl
 
 /-- A Pokémon in play whose cards have no static effect is the source of none. -/
@@ -430,7 +449,11 @@ theorem InPlay.sv_statics_nil {p : InPlay} (h : ∀ c ∈ p.cardList, c.statics 
     rw [List.flatMap_eq_nil_iff]
     intro c hc
     exact Card.grantStatics_nil (h c (.tail _ (List.mem_append_right _ hc)))
-  simp only [InPlay.sv, SView.statics, h1, h2, List.append_nil]
+  have h3 : p.energy.flatMap (Card.grantStatics p.top) = [] := by
+    rw [List.flatMap_eq_nil_iff]
+    intro c hc
+    exact Card.grantStatics_nil (h c (.tail _ (List.mem_append_left _ (List.mem_append_right _ hc))))
+  simp only [InPlay.sv, SView.statics, h1, h2, h3, List.append_nil]
 
 theorem mem_benchCardList_of {c : Card} {p : InPlay} :
     ∀ {b : List InPlay}, p ∈ b → c ∈ p.cardList → c ∈ benchCardList b
@@ -559,7 +582,8 @@ theorem GameState.Plain.hpOf {g : GameState} (h : g.Plain) {w : Whose} {sp : Spo
 theorem GameState.Plain.retreatOf {g : GameState} (h : g.Plain) {a : InPlay}
     (ha : g.cur.active = some a) : g.retreatOf a = a.top.retreat := by
   simp only [GameState.retreatOf, h.inForce (h.sv (w := .own) (sp := .active) ha), sumOf,
-    List.map_nil, List.sum_nil, Nat.add_zero, Nat.sub_zero]
+    List.map_nil, List.sum_nil, Nat.add_zero, Nat.sub_zero, List.any_nil, Bool.false_eq_true,
+    ite_false]
 
 theorem GameState.Plain.sBonus {g : GameState} (h : g.Plain) : g.sBonus = 0 := by
   unfold GameState.sBonus
@@ -607,16 +631,26 @@ theorem Card.mem_grantStatics {p : PokemonCard} {c : Card} {s : Static}
       split at h
       · exact h
       · nomatch h
+  | energy t =>
+      cases t with
+      | basic => nomatch h
+      | special m pr x =>
+          simp only [Card.grantStatics] at h
+          split at h
+          · exact h
+          · nomatch h
   | _ => nomatch h
 
 /-- A static effect a Pokémon in play is the source of is printed on one of its cards. -/
 theorem InPlay.mem_sv_statics {p : InPlay} {s : Static} (h : s ∈ p.sv.statics) :
     ∃ c ∈ p.cardList, s ∈ c.statics := by
   simp only [InPlay.sv, SView.statics, List.mem_append] at h
-  rcases h with h | h
+  rcases h with (h | h) | h
   · exact ⟨.pokemon p.top, .head _, h⟩
   · obtain ⟨c, hc, hs⟩ := List.mem_flatMap.1 h
     exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.mem_grantStatics hs⟩
+  · obtain ⟨c, hc, hs⟩ := List.mem_flatMap.1 h
+    exact ⟨c, .tail _ (List.mem_append_left _ (List.mem_append_right _ hc)), Card.mem_grantStatics hs⟩
 
 /-- **Every static effect in force is printed on a card of the game.** -/
 theorem GameState.mem_inForce {g : GameState} {w : Whose} {sp : Spot} {p : InPlay}
@@ -765,7 +799,7 @@ theorem GameState.checkupMoreBy_of_free {g : GameState} (hf : g.CheckupFree) {w 
 theorem GameState.retreatOf_noStatics {g : GameState} (hn : g.NoStatics) {a : InPlay}
     (ha : g.cur.active = some a) : g.retreatOf a = a.top.retreat := by
   simp only [GameState.retreatOf, g.inForce_noStatics (w := .own) (sp := .active) hn ha, sumOf_nil,
-    Nat.add_zero, Nat.sub_zero]
+    Nat.add_zero, Nat.sub_zero, List.any_nil, Bool.false_eq_true, ite_false]
 
 /-- With no static effects, there is no static damage bonus. -/
 theorem GameState.sBonus_noStatics {g : GameState} (hn : g.NoStatics) : g.sBonus = 0 := by
@@ -893,6 +927,14 @@ theorem Card.grantStatics_le (u : Static → Nat) (p : PokemonCard) (c : Card) :
       split
       · exact Nat.le_refl _
       · exact Nat.zero_le _
+  | energy t =>
+      cases t with
+      | basic => exact Nat.zero_le _
+      | special m pr x =>
+          simp only [Card.grantStatics, Card.gain, Card.statics]
+          split
+          · exact Nat.le_refl _
+          · exact Nat.zero_le _
   | _ => exact Nat.zero_le _
 
 /-- The units `u` of the static effects a Pokémon in play is the source of are at most those of its
@@ -904,6 +946,9 @@ theorem InPlay.statics_le (u : Static → Nat) (p : InPlay) :
   have h2 : sumOf u (p.tools.flatMap (Card.grantStatics p.top)) ≤
       csum (Card.gain u) p.tools :=
     sumOf_flatMap_le _ _ _ (Card.grantStatics_le u p.top) p.tools
+  have h3 : sumOf u (p.energy.flatMap (Card.grantStatics p.top)) ≤
+      csum (Card.gain u) p.energy :=
+    sumOf_flatMap_le _ _ _ (Card.grantStatics_le u p.top) p.energy
   simp only [InPlay.sv, SView.statics, sumOf_append, InPlay.cardList, csum_cons, csum_append]
   omega
 

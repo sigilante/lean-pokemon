@@ -825,6 +825,13 @@ theorem Card.attack_tame {c : Card} (h : c.tame = true) {atk : Attack} (hm : atk
       simp only [Card.tame, Bool.and_eq_true] at h
       have := attacksTmax_mem (as := gr.attacks) hm
       exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax]; omega⟩
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x =>
+          simp only [Card.tame, Bool.and_eq_true] at h
+          have := attacksTmax_mem (as := x.grant.attacks) hm
+          exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax]; omega⟩
   | _ => nomatch hm
 
 /-- The effect an attack resolves is tame, with test constants below `k`. -/
@@ -868,6 +875,10 @@ theorem Card.ability_tmax {c : Card} {ab : Ability} (hm : ab ∈ c.abilities) :
   cases c with
   | pokemon p => have := abilitiesTmax_mem (as := p.abilities) hm; simp only [Card.tmax]; omega
   | tool n gr => have := abilitiesTmax_mem (as := gr.abilities) hm; simp only [Card.tmax]; omega
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x => have := abilitiesTmax_mem (as := x.grant.abilities) hm; simp only [Card.tmax]; omega
   | _ => nomatch hm
 
 theorem Card.ability_tame {c : Card} (h : c.tame = true) {ab : Ability} (hm : ab ∈ c.abilities) :
@@ -875,6 +886,10 @@ theorem Card.ability_tame {c : Card} (h : c.tame = true) {ab : Ability} (hm : ab
   cases c with
   | pokemon p => simp only [Card.tame, Bool.and_eq_true] at h; exact abilitiesTame_mem h.2 hm
   | tool n gr => simp only [Card.tame, Bool.and_eq_true] at h; exact abilitiesTame_mem h.2 hm
+  | energy t =>
+      cases t with
+      | basic => nomatch hm
+      | special m pr x => simp only [Card.tame, Bool.and_eq_true] at h; exact abilitiesTame_mem h.2 hm
   | _ => nomatch hm
 
 /-- The effect of an Ability of a card in the game is tame, and its test constants, its

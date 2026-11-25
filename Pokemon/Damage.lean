@@ -339,7 +339,7 @@ theorem InPlay.clampWith_noteLock (c : Cap) (l : AtkLock) (x : InPlay) :
 /-- Agreeing Pokémon have the same attacks and Abilities, their Tools' included (milestone M5). -/
 theorem InPlay.Agree.grants {c : Cap} {q p : InPlay} (h : Agree K c q p) :
     q.attacks = p.attacks ∧ q.abilities = p.abilities := by
-  simp only [InPlay.attacks, InPlay.abilities, h.top, h.tools, and_self]
+  simp only [InPlay.attacks, InPlay.abilities, h.top, h.tools, h.energy, and_self]
 
 /-- Agreement survives attaching a Tool (milestone M5). -/
 theorem InPlay.Agree.setTools {c : Cap} {q p : InPlay} (h : Agree K c q p) (t : List Card) :

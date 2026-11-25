@@ -60,6 +60,7 @@ def Card.freeRecM8a : Card → List Filter
   | .trainer _ _ e _ => e.recFilters
   | .pokemon p => unlimitedRec p.abilities
   | .tool _ gr => unlimitedRec gr.abilities
+  | .energy (.special _ _ x) => unlimitedRec x.grant.abilities
   | _ => []
 
 /-- `Card.wAmt` of milestone M8a. -/
@@ -80,6 +81,7 @@ def GameState.RecycleSafeM8a (g : GameState) : Prop :=
 theorem Card.freeRec_eq {x : Card} (h : x.isStadium = false) : x.freeRec = x.freeRecM8a := by
   cases x with
   | trainer n k e => cases k <;> first | rfl | cases h
+  | energy t => cases t <;> rfl
   | _ => rfl
 
 theorem Card.wAmt_eq {x : Card} (h : x.isStadium = false) : x.wAmt = x.wAmtM8a := by

@@ -942,6 +942,10 @@ theorem GameState.XFit.attack {k : Nat} {g : GameState} (hF : g.XFit k) {a : InP
     cases c with
     | pokemon p => have := attacksTmax_mem (as := p.attacks) hmc; simp only [Card.tmax]; omega
     | tool n gr => have := attacksTmax_mem (as := gr.attacks) hmc; simp only [Card.tmax]; omega
+    | energy t =>
+        cases t with
+        | basic => nomatch hmc
+        | special m pr x => have := attacksTmax_mem (as := x.grant.attacks) hmc; simp only [Card.tmax]; omega
     | _ => nomatch hmc
   rw [Attack.script_tmax]; omega
 

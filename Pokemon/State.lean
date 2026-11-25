@@ -150,56 +150,69 @@ def cardList (p : InPlay) : List Card := Card.pokemon p.top :: (p.under ++ p.ene
 
 /-- The attacks this Pokémon can use (milestone M5): its top card's, and those its Tools give it
 (`Card.grantAttacks`: "The Pokémon this card is attached to can use the attack on this card"). -/
-def attacks (p : InPlay) : List Attack := p.top.attacks ++ p.tools.flatMap (Card.grantAttacks p.top)
+def attacks (p : InPlay) : List Attack :=
+  p.top.attacks ++ p.tools.flatMap (Card.grantAttacks p.top) ++ p.energy.flatMap (Card.grantAttacks p.top)
 
 /-- The Abilities this Pokémon has (milestone M5): its top card's, and those its Tools give it
 (`Card.grantAbilities`). -/
 def abilities (p : InPlay) : List Ability :=
-  p.top.abilities ++ p.tools.flatMap (Card.grantAbilities p.top)
+  p.top.abilities ++ p.tools.flatMap (Card.grantAbilities p.top) ++
+    p.energy.flatMap (Card.grantAbilities p.top)
 
-/-- An attack this Pokémon can use is on one of its cards: the top card, or an attached Tool. -/
+/-- An attack this Pokémon can use is on one of its cards: the top card, an attached Tool, or
+(milestone MV8) an attached Special Energy card. -/
 theorem attack_mem {p : InPlay} {atk : Attack} (h : atk ∈ p.attacks) :
     ∃ c ∈ p.cardList, atk ∈ c.attacks := by
   rcases List.mem_append.1 h with h | h
-  · exact ⟨.pokemon p.top, .head _, h⟩
+  · rcases List.mem_append.1 h with h | h
+    · exact ⟨.pokemon p.top, .head _, h⟩
+    · obtain ⟨c, hc, hm⟩ := List.mem_flatMap.1 h
+      exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.grantAttacks_sub hm⟩
   · obtain ⟨c, hc, hm⟩ := List.mem_flatMap.1 h
-    exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.grantAttacks_sub hm⟩
+    exact ⟨c, .tail _ (List.mem_append_left _ (List.mem_append_right _ hc)),
+      Card.grantAttacks_sub hm⟩
 
-/-- An Ability this Pokémon has is on one of its cards: the top card, or an attached Tool. -/
+/-- An Ability this Pokémon has is on one of its cards: the top card, an attached Tool, or
+(milestone MV8) an attached Special Energy card. -/
 theorem ability_mem {p : InPlay} {ab : Ability} (h : ab ∈ p.abilities) :
     ∃ c ∈ p.cardList, ab ∈ c.abilities := by
   rcases List.mem_append.1 h with h | h
-  · exact ⟨.pokemon p.top, .head _, h⟩
+  · rcases List.mem_append.1 h with h | h
+    · exact ⟨.pokemon p.top, .head _, h⟩
+    · obtain ⟨c, hc, hm⟩ := List.mem_flatMap.1 h
+      exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.grantAbilities_sub hm⟩
   · obtain ⟨c, hc, hm⟩ := List.mem_flatMap.1 h
-    exact ⟨c, .tail _ (List.mem_append_right _ hc), Card.grantAbilities_sub hm⟩
+    exact ⟨c, .tail _ (List.mem_append_left _ (List.mem_append_right _ hc)),
+      Card.grantAbilities_sub hm⟩
 
-/-- A Pokémon with no Tool attached has its top card's attacks and Abilities. -/
-theorem attacks_of_noTool {p : InPlay} (h : ∀ c ∈ p.tools, c.isTool = false) :
+/-- **A Pokémon with no Tool and no granting Special Energy attached has its top card's attacks
+and Abilities** (since milestone MV8 also the hypothesis on the attached cards, `Card.energyGrantFree`,
+which every card but a Special Energy card with a granting payload satisfies). -/
+theorem attacks_of_noTool {p : InPlay}
+    (h : ∀ c ∈ p.tools ++ p.energy, c.isTool = false ∧ c.energyGrantFree = true) :
     p.attacks = p.top.attacks ∧ p.abilities = p.top.abilities := by
-  have e1 : ∀ l : List Card, (∀ c ∈ l, c.isTool = false) →
-      l.flatMap (Card.grantAttacks p.top) = [] := by
+  have e1 : ∀ l : List Card, (∀ c ∈ l, c.isTool = false ∧ c.energyGrantFree = true) →
+      l.flatMap (Card.grantAttacks p.top) = [] ∧ l.flatMap (Card.grantAbilities p.top) = [] := by
     intro l hl
     induction l with
-    | nil => rfl
+    | nil => exact ⟨rfl, rfl⟩
     | cons c cs ih =>
-        have hc := hl c (.head _)
-        rw [List.flatMap_cons, ih (fun x hx => hl x (.tail _ hx)), List.append_nil]
+        obtain ⟨hc, hgc⟩ := hl c (.head _)
+        obtain ⟨i1, i2⟩ := ih (fun x hx => hl x (.tail _ hx))
+        rw [List.flatMap_cons, List.flatMap_cons, i1, i2, List.append_nil, List.append_nil]
         cases c with
         | tool n gr => cases hc
-        | _ => rfl
-  have e2 : ∀ l : List Card, (∀ c ∈ l, c.isTool = false) →
-      l.flatMap (Card.grantAbilities p.top) = [] := by
-    intro l hl
-    induction l with
-    | nil => rfl
-    | cons c cs ih =>
-        have hc := hl c (.head _)
-        rw [List.flatMap_cons, ih (fun x hx => hl x (.tail _ hx)), List.append_nil]
-        cases c with
-        | tool n gr => cases hc
-        | _ => rfl
-  exact ⟨by simp only [attacks, e1 _ h, List.append_nil],
-    by simp only [abilities, e2 _ h, List.append_nil]⟩
+        | energy t =>
+            cases t with
+            | basic => exact ⟨rfl, rfl⟩
+            | special m pr x =>
+                simp only [Card.energyGrantFree, Bool.and_eq_true, List.isEmpty_iff] at hgc
+                simp only [Card.grantAttacks, Card.grantAbilities, hgc.1, hgc.2, ite_self, and_self]
+        | _ => exact ⟨rfl, rfl⟩
+  have ht := e1 p.tools fun c hc => h c (List.mem_append_left _ hc)
+  have hn := e1 p.energy fun c hc => h c (List.mem_append_right _ hc)
+  exact ⟨by simp only [attacks, ht.1, hn.1, List.append_nil],
+    by simp only [abilities, ht.2, hn.2, List.append_nil]⟩
 
 /-- A Basic Pokémon just put into play. -/
 def ofBasic (p : PokemonCard) : InPlay :=
