@@ -386,20 +386,133 @@ event (`InPlay.owe`), whatever spot each is in now. These fire when the event re
 def GameState.owedTrigs (g : GameState) : List Ability :=
   optOwed g.opp.active ++ g.opp.bench.flatMap InPlay.owed
 
-/-- The record cleared (milestone MV7b): nothing pending, and no Pokémon of the opponent marked. -/
+/-- Does the player's Pokémon owe a trigger of its own move event `ev` (`movedUp` at `.active`,
+`movedDown` at `.bench`; milestone MV7c): it has such a trigger at the new place `sp`, and has not
+used an Ability this turn ("Once during your turn", `InPlay.used`)? -/
+def InPlay.fires (ev : TrigEvent) (sp : Spot) (p : InPlay) : Bool :=
+  !p.used && !(p.trigs ev sp).isEmpty
+
+/-- **Mark a Pokémon of the player to move that has just moved** (milestone MV7c): if it owes a
+trigger of the event `ev` at its new place `sp` (`InPlay.fires`), record the place (`owe := some
+sp`) and spend the "once during your turn" limit (`used := true`); otherwise unchanged. The limit is
+spent at the event, so a declined optional trigger has used it too (Known gaps). -/
+def InPlay.noteMove (ev : TrigEvent) (sp : Spot) (p : InPlay) : InPlay :=
+  if p.fires ev sp then { p with owe := some sp, used := true } else p
+
+/-- `InPlay.noteMove` changes only the mark and the `used` flag. -/
+theorem InPlay.noteMove_eq (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    p.noteMove ev sp = { p with owe := (p.noteMove ev sp).owe, used := (p.noteMove ev sp).used } := by
+  unfold InPlay.noteMove; split <;> rfl
+
+@[simp] theorem InPlay.noteMove_top (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).top = p.top := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_under (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).under = p.under := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_energy (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).energy = p.energy := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_tools (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).tools = p.tools := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_damage (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).damage = p.damage := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_rot (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).rot = p.rot := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_poisoned (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).poisoned = p.poisoned := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_burned (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).burned = p.burned := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_poisonUp (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).poisonUp = p.poisonUp := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_fresh (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).fresh = p.fresh := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_marks (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).marks = p.marks := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_movedUp (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).movedUp = p.movedUp := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_lk (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).lk = p.lk := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_cardList (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).cardList = p.cardList := by unfold InPlay.noteMove; split <;> rfl
+@[simp] theorem InPlay.noteMove_abilities (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).abilities = p.abilities := by unfold InPlay.noteMove; split <;> rfl
+
+/-- A Pokémon that owes nothing is not marked. -/
+theorem InPlay.noteMove_of_not {ev : TrigEvent} {sp : Spot} {p : InPlay}
+    (h : p.fires ev sp = false) : p.noteMove ev sp = p := by
+  unfold InPlay.noteMove; rw [h]; rfl
+
+/-- A Pokémon with no trigger of the event at the place is not marked. -/
+theorem InPlay.noteMove_of_nil {ev : TrigEvent} {sp : Spot} {p : InPlay}
+    (h : p.trigs ev sp = []) : p.noteMove ev sp = p :=
+  InPlay.noteMove_of_not (by unfold InPlay.fires; rw [h]; simp)
+
+/-- The Pokémon switched in by a switch of the `w` player's Active Pokémon: marked as moved up when
+the switch is the player's own (milestone MV7c). -/
+def Whose.noteUp : Whose → InPlay → InPlay
+  | .own => InPlay.noteMove .movedUp .active
+  | .opp => id
+
+/-- The Pokémon switched out by a switch of the `w` player's Active Pokémon: marked as moved down
+when the switch is the player's own (milestone MV7c). -/
+def Whose.noteDown : Whose → InPlay → InPlay
+  | .own => InPlay.noteMove .movedDown .bench
+  | .opp => id
+
+/-- The `movedUp` triggers a Pokémon of the player to move owes (milestone MV7c): those at the
+Active Spot, if it is marked as moved up (`owe = some .active`). -/
+def InPlay.owedUp (p : InPlay) : List Ability :=
+  match p.owe with
+  | some .active => p.trigs .movedUp .active
+  | _ => []
+
+/-- The `movedDown` triggers a Pokémon of the player to move owes (milestone MV7c): those on the
+Bench, if it is marked as moved down (`owe = some .bench`). -/
+def InPlay.owedDown (p : InPlay) : List Ability :=
+  match p.owe with
+  | some .bench => p.trigs .movedDown .bench
+  | _ => []
+
+/-- The triggers of a list of Pokémon, and of an optional one. -/
+def optFlat (f : InPlay → List Ability) : Option InPlay → List Ability
+  | none => []
+  | some p => f p
+
+/-- **The owed `movedUp` triggers** of the player to move (milestone MV7c): those of their Pokémon
+marked as moved up, wherever they are now. -/
+def GameState.upOwed (g : GameState) : List Ability :=
+  optFlat InPlay.owedUp g.cur.active ++ g.cur.bench.flatMap InPlay.owedUp
+
+/-- **The owed `movedDown` triggers** of the player to move (milestone MV7c). -/
+def GameState.downOwed (g : GameState) : List Ability :=
+  optFlat InPlay.owedDown g.cur.active ++ g.cur.bench.flatMap InPlay.owedDown
+
+/-- The record cleared (milestone MV7b): nothing pending, and no Pokémon marked (since milestone
+MV7c on both sides: the opponent's marks of `oppBenched`, the player to move's of `movedUp` and
+`movedDown`). -/
 def GameState.unpend (g : GameState) : GameState :=
-  { g with pend := false, opp := { g.opp with active := g.opp.active.map InPlay.clearOwe,
-                                              bench := g.opp.bench.map InPlay.clearOwe } }
+  { g with pend := false,
+           cur := { g.cur with active := g.cur.active.map InPlay.clearOwe,
+                               bench := g.cur.bench.map InPlay.clearOwe },
+           opp := { g.opp with active := g.opp.active.map InPlay.clearOwe,
+                               bench := g.opp.bench.map InPlay.clearOwe } }
+
+/-- No Pokémon of the player in play carries an owed-trigger mark, decided (milestone MV7b). -/
+def PlayerState.noMarksB (s : PlayerState) : Bool :=
+  (match s.active with
+    | none => true
+    | some p => p.owe.isNone) && s.bench.all fun p => p.owe.isNone
 
 /-- **Raise the `oppBenched` event** (milestone MV7): the player to move's Active Pokémon has just
 moved to the Bench (a retreat, or a switch of their own Active Pokémon). The record
 `GameState.pend` is set when the opponent has such a trigger in play, and left as it was otherwise;
 since milestone MV7b each of the opponent's Pokémon that has such a trigger where it is now is
 marked with that spot (`InPlay.noteOwe`), so the triggers that fire are those of the holders AT THE
-EVENT, wherever later steps move them. A game without such a trigger is unchanged
+EVENT, wherever later steps move them. Since milestone MV7c the same moves mark the player's own
+Pokémon that moved and owe a `movedUp` or `movedDown` trigger (`InPlay.noteMove`, applied by the
+retreat and the switch themselves), and the record is also set when any Pokémon of the player to
+move is marked (`PlayerState.noMarksB`). A game without such a trigger is unchanged
 (`GameState.noteBenched_of_nil`; for play, `Reach.pend_false`). -/
 def GameState.noteBenched (g : GameState) : GameState :=
-  { g with pend := g.pend || !g.benchedTrigs.isEmpty,
+  { g with pend := g.pend || !g.benchedTrigs.isEmpty || !g.cur.noMarksB,
            opp := { g.opp with active := g.opp.active.map (InPlay.noteOwe .active),
                                bench := g.opp.bench.map (InPlay.noteOwe .bench) } }
 
@@ -456,6 +569,30 @@ theorem GameState.owedTrigs_of_map {f f' : InPlay → InPlay}
   cases g.opp.active with
   | none => rfl
   | some p => simp only [Option.map_some, optOwed, InPlay.owed_of (hab p).1 (hab p).2]
+
+/-- The player to move's owed triggers (milestone MV7c) depend on their Pokémon in play only through
+their Abilities and marks: a map of the Pokémon in play that keeps both (both clamps) keeps them. -/
+theorem GameState.upOwed_of_map {f f' : InPlay → InPlay}
+    (hab : ∀ p, (f p).abilities = p.abilities ∧ (f p).owe = p.owe)
+    (hab' : ∀ p, (f' p).abilities = p.abilities ∧ (f' p).owe = p.owe)
+    {g g' : GameState} (ha : g'.cur.active = g.cur.active.map f)
+    (hb : g'.cur.bench = g.cur.bench.map f') : g'.upOwed = g.upOwed ∧ g'.downOwed = g.downOwed := by
+  have eu : ∀ {f : InPlay → InPlay}, (∀ p, (f p).abilities = p.abilities ∧ (f p).owe = p.owe) →
+      ∀ p, (f p).owedUp = p.owedUp ∧ (f p).owedDown = p.owedDown := fun hf p => by
+    unfold InPlay.owedUp InPlay.owedDown InPlay.trigs
+    rw [(hf p).1, (hf p).2]; exact ⟨rfl, rfl⟩
+  have hfl : ∀ (b : List InPlay), (b.map f').flatMap InPlay.owedUp = b.flatMap InPlay.owedUp ∧
+      (b.map f').flatMap InPlay.owedDown = b.flatMap InPlay.owedDown := fun b => by
+    induction b with
+    | nil => exact ⟨rfl, rfl⟩
+    | cons p ps ih =>
+        simp only [List.map_cons, List.flatMap_cons, ih.1, ih.2, (eu hab' p).1, (eu hab' p).2,
+          and_self]
+  unfold GameState.upOwed GameState.downOwed
+  rw [ha, hb, (hfl _).1, (hfl _).2]
+  cases g.cur.active with
+  | none => exact ⟨rfl, rfl⟩
+  | some p => simp only [Option.map_some, optFlat, (eu hab p).1, (eu hab p).2, and_self]
 
 inductive Run : Effect → GameState → GameState → Prop where
   | skip (g : GameState) : Run .skip g g
@@ -545,11 +682,13 @@ inductive Run : Effect → GameState → GameState → Prop where
   effects from attacks", rulebook 2023 p. 12; since milestone MV4 its attack locks end too,
   `InPlay.unlock`); `q` has moved to the Active Spot, which is recorded when the switch is the
   player's own (milestone MV2, `Whose.mover`); a switch of the player's own Active Pokémon raises
-  the `oppBenched` event (milestone MV7, `Whose.noteBenched`) -/
+  the `oppBenched` event (milestone MV7, `Whose.noteBenched`) and (milestone MV7c) the player's own
+  `movedUp` and `movedDown` events, marking `q` and `a` (`Whose.noteUp`, `Whose.noteDown`) -/
   | switch {g : GameState} {a q : InPlay} {b₁ b₂ : List InPlay} (w : Whose)
       (ha : (g.side w).active = some a) (hb : (g.side w).bench = b₁ ++ q :: b₂) :
       Run (.switch w) g (w.noteBenched
-        (g.updSide w fun s => { s with active := some (w.mover q), bench := b₁ ++ a.cure.unlock :: b₂ }))
+        (g.updSide w fun s => { s with active := some (w.noteUp (w.mover q)),
+                                       bench := b₁ ++ w.noteDown a.cure.unlock :: b₂ }))
   | switchNone {g : GameState} (w : Whose) (hb : (g.side w).bench = []) : Run (.switch w) g g
   /-- attack damage to one of the `w` player's Benched Pokémon (milestone M3) -/
   | benchDamage {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)

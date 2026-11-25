@@ -123,7 +123,7 @@ theorem Move.damageBounded_of_startTurn {g g' : GameState} (h : Move g g')
   | knockOuts h _ ht =>
       exact absurd (hb.symm.trans (h.same.2.2.2.1.symm.trans (ht.zoneOnly.between.symm.trans hb')))
         (by decide)
-  | trigger _ _ _ ht => exact absurd (hb.symm.trans (ht.zoneOnly.between.symm.trans hb')) (by decide)
+  | trigger _ _ ho => exact absurd (hb.symm.trans (ho.zoneOnly.between.symm.trans hb')) (by decide)
   | _ =>
       first
       | exact absurd (hb.symm.trans hb') (by decide)
@@ -1126,6 +1126,16 @@ theorem GameState.owedTrigs_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g�
       (f' := InPlay.clampWith k c') (fun _ => ⟨rfl, rfl⟩) (fun _ => ⟨rfl, rfl⟩) rfl rfl
   rw [← e cp cbp g₁, h, e cp cbp g₂]
 
+/-- **The player to move's owed triggers are read through the clamp** (milestone MV7c). -/
+theorem GameState.upOwed_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
+    (h : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k) :
+    g₂.upOwed = g₁.upOwed ∧ g₂.downOwed = g₁.downOwed := by
+  have e : ∀ (c c' : Cap) (g : GameState),
+      (g.clampAt c cp c' cbp k).upOwed = g.upOwed ∧ (g.clampAt c cp c' cbp k).downOwed = g.downOwed :=
+    fun c c' g => GameState.upOwed_of_map (f := InPlay.clampWith k c)
+      (f' := InPlay.clampWith k c') (fun _ => ⟨rfl, rfl⟩) (fun _ => ⟨rfl, rfl⟩) rfl rfl
+  exact ⟨by rw [← (e co cbo g₁).1, h, (e co cbo g₂).1], by rw [← (e co cbo g₁).2, h, (e co cbo g₂).2]⟩
+
 theorem GameState.winner_of_clamp {k : Nat} {g₁ g₂ : GameState} (h : g₁.clamp k = g₂.clamp k) :
     g₂.winner = g₁.winner :=
   (congrArg GameState.winner h).symm
@@ -1392,6 +1402,34 @@ theorem InPlay.clampWith_clearOwe (K : Nat) (c : Cap) (p : InPlay) :
     p.clearOwe.clampWith K c = (p.clampWith K c).clearOwe := by
   cases c <;> rfl
 
+/-- Whether a Pokémon owes a trigger of its own move (milestone MV7c) is read through every clamp. -/
+@[simp] theorem InPlay.fires_clampWith (K : Nat) (c : Cap) (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.clampWith K c).fires ev sp = p.fires ev sp := by
+  cases c <;> rfl
+
+/-- Marking a Pokémon that moved commutes with the clamps (milestone MV7c). -/
+theorem InPlay.clampWith_noteMove (K : Nat) (c : Cap) (ev : TrigEvent) (sp : Spot) (p : InPlay) :
+    (p.noteMove ev sp).clampWith K c = (p.clampWith K c).noteMove ev sp := by
+  unfold InPlay.noteMove
+  rw [InPlay.fires_clampWith]
+  split <;> cases c <;> rfl
+
+/-- The marks of a player are read through every clamp (milestone MV7c). -/
+theorem PlayerState.noMarksB_map {s s' : PlayerState} {f f' : InPlay → InPlay}
+    (hf : ∀ p, (f p).owe = p.owe) (hf' : ∀ p, (f' p).owe = p.owe)
+    (ha : s'.active = s.active.map f) (hb : s'.bench = s.bench.map f') :
+    s'.noMarksB = s.noMarksB := by
+  unfold PlayerState.noMarksB
+  rw [ha, hb]
+  have e : (s.bench.map f').all (fun p => p.owe.isNone) = s.bench.all fun p => p.owe.isNone := by
+    induction s.bench with
+    | nil => rfl
+    | cons p ps ih => simp only [List.map_cons, List.all_cons, hf', ih]
+  rw [e]
+  cases s.active with
+  | none => rfl
+  | some p => simp only [Option.map_some, hf]
+
 /-- Raising the `oppBenched` event commutes with the clamps (milestone MV7; since MV7b with the
 marks): the marks read the Abilities, which no clamp changes. -/
 theorem GameState.clampAt_noteBenched (co cp cbo cbp : Cap) (k : Nat) (X : GameState) :
@@ -1405,7 +1443,10 @@ theorem GameState.clampAt_noteBenched (co cp cbo cbp : Cap) (k : Nat) (X : GameS
   have e2 : InPlay.clampWith k cbp ∘ InPlay.noteOwe .bench =
       InPlay.noteOwe .bench ∘ InPlay.clampWith k cbp :=
     funext fun p => InPlay.clampWith_noteOwe k cbp .bench p
-  conv => rhs; unfold GameState.noteBenched; rw [hT]
+  have hM : (X.clampAt co cp cbo cbp k).cur.noMarksB = X.cur.noMarksB :=
+    PlayerState.noMarksB_map (f := InPlay.clampWith k co) (f' := InPlay.clampWith k cbo)
+      (fun _ => rfl) (fun _ => rfl) rfl rfl
+  conv => rhs; unfold GameState.noteBenched; rw [hT, hM]
   simp only [GameState.noteBenched, GameState.clampAt, Option.map_map, List.map_map, e1, e2]
 
 /-- Clearing the record commutes with the clamps (milestone MV7b). -/
@@ -1415,7 +1456,11 @@ theorem GameState.clampAt_unpend (co cp cbo cbp : Cap) (k : Nat) (X : GameState)
     funext fun p => InPlay.clampWith_clearOwe k cp p
   have e2 : InPlay.clampWith k cbp ∘ InPlay.clearOwe = InPlay.clearOwe ∘ InPlay.clampWith k cbp :=
     funext fun p => InPlay.clampWith_clearOwe k cbp p
-  simp only [GameState.unpend, GameState.clampAt, Option.map_map, List.map_map, e1, e2]
+  have e3 : InPlay.clampWith k co ∘ InPlay.clearOwe = InPlay.clearOwe ∘ InPlay.clampWith k co :=
+    funext fun p => InPlay.clampWith_clearOwe k co p
+  have e4 : InPlay.clampWith k cbo ∘ InPlay.clearOwe = InPlay.clearOwe ∘ InPlay.clampWith k cbo :=
+    funext fun p => InPlay.clampWith_clearOwe k cbo p
+  simp only [GameState.unpend, GameState.clampAt, Option.map_map, List.map_map, e1, e2, e3, e4]
 
 /-- **Raising the `oppBenched` event commutes with the clamps** (milestone MV7): it sets the record
 and the marks from the opponent's triggers, which both states read alike. -/
@@ -1436,6 +1481,47 @@ theorem Whose.noteBenched_clampAt (w : Whose) {co cp cbo cbp : Cap} {k : Nat} {X
   cases w
   · exact GameState.noteBenched_clampAt h
   · exact h
+
+/-- **The state after a batch commutes with the clamps** (milestone MV7c): the promotion's mark and
+record read the turn phase, which Active Spots are filled, and the promoted Pokémon's Abilities and
+`used` flag, all of which every clamp keeps. -/
+theorem GameState.afterBatch_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
+    {ac ac' ao ao' : Option InPlay} {bc bc' bo bo' : List InPlay}
+    (hc : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k)
+    (hks : g₁.koStep.clampAt co cp cbo cbp k = g₂.koStep.clampAt co cp cbo cbp k)
+    (hac : ac.map (InPlay.clampWith k co) = ac'.map (InPlay.clampWith k co))
+    (hbc : bc.map (InPlay.clampWith k cbo) = bc'.map (InPlay.clampWith k cbo))
+    (hao : ao.map (InPlay.clampWith k cp) = ao'.map (InPlay.clampWith k cp))
+    (hbo : bo.map (InPlay.clampWith k cbp) = bo'.map (InPlay.clampWith k cbp)) :
+    (g₁.afterBatch ac bc ao bo).clampAt co cp cbo cbp k =
+      (g₂.afterBatch ac' bc' ao' bo').clampAt co cp cbo cbp k := by
+  have hbt : g₂.between = g₁.between := (congrArg GameState.between hc).symm
+  have hca : g₂.cur.active.isSome = g₁.cur.active.isSome := by
+    have := congrArg (fun X : GameState => X.cur.active.isSome) hc
+    simpa [GameState.clampAt, Option.isSome_map] using this.symm
+  have hka : g₂.koStep.cur.active.isNone = g₁.koStep.cur.active.isNone := by
+    have := congrArg (fun X : GameState => X.cur.active.isNone) hks
+    simpa [GameState.clampAt, Option.isNone_map] using this.symm
+  have hpu : g₂.promoUp = g₁.promoUp := by simp only [GameState.promoUp, hbt, hca, hka]
+  have hfi : ac'.map (InPlay.fires .movedUp .active) = ac.map (InPlay.fires .movedUp .active) := by
+    have := congrArg (Option.map (InPlay.fires .movedUp .active)) hac
+    simpa [Option.map_map, Function.comp_def, InPlay.fires_clampWith] using this.symm
+  have hpf : g₂.promoFires ac' = g₁.promoFires ac := by
+    simp only [GameState.promoFires, hpu, hfi]
+  have hpd : g₂.pend = g₁.pend := (congrArg GameState.pend hc).symm
+  have e : ∀ (X : GameState) (a : Option InPlay) (b : List InPlay) (c : Option InPlay)
+      (d : List InPlay) (p : Bool), ({ X.withPlay a b c d with pend := p } : GameState).clampAt
+        co cp cbo cbp k = { (X.clampAt co cp cbo cbp k).withPlay (a.map (InPlay.clampWith k co))
+          (b.map (InPlay.clampWith k cbo)) (c.map (InPlay.clampWith k cp))
+          (d.map (InPlay.clampWith k cbp)) with pend := p } :=
+    fun _ _ _ _ _ _ => rfl
+  have hm : ∀ (o : Option InPlay) (b : Bool),
+      (if b = true then o.map (InPlay.noteMove .movedUp .active) else o).map (InPlay.clampWith k co) =
+        if b = true then (o.map (InPlay.clampWith k co)).map (InPlay.noteMove .movedUp .active)
+        else o.map (InPlay.clampWith k co) := by
+    intro o b; cases b <;> cases o <;> simp [InPlay.clampWith_noteMove]
+  simp only [GameState.afterBatch]
+  rw [e, e, hm, hm, hks, hac, hbc, hao, hbo, hpu, hpd, hpf]
 
 /-- **The kernel of `clamp k` is a simulation for the batch Knock Out step**, when every derived
 HP is at most `k`. -/
@@ -1458,11 +1544,7 @@ theorem KOBatch.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (h : KOBatch g
         (b₂ := g₂.koStep.opp.bench) (by rw [hg]; exact ha₂) (by rw [hg]; exact he₂)
       refine ⟨_, .go (fun hs => hu (GameState.calm_of_clamp hc.symm hs hH₂))
         (by rw [hwk]; exact hw) hpc' hpo' (GameState.notReady_of_clampAt hc hq), ?_⟩
-      have e : ∀ X : GameState, ∀ a b c d, (X.withPlay a b c d).clamp k =
-          (X.clamp k).withPlay (a.map (InPlay.clampWith k .hp)) (b.map (InPlay.clampWith k .hp))
-            (c.map (InPlay.clampWith k .hp)) (d.map (InPlay.clampWith k .hp)) :=
-        fun _ _ _ _ _ => rfl
-      rw [e, e, hks, hac, hbc, hao, hbo]
+      exact GameState.afterBatch_clampAt hc hks hac.symm hbc.symm hao.symm hbo.symm
 
 /-! ## Bounds from the cards -/
 

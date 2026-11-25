@@ -45,6 +45,17 @@ theorem Benched.of_eq {p q : InPlay} (h : Benched q) (h1 : p.rot = q.rot)
     Benched p :=
   ⟨h1 ▸ h.1, h2 ▸ h.2.1, h3 ▸ h.2.2.1, h4 ▸ h.2.2.2⟩
 
+/-- Marking a Pokémon that moved (milestone MV7c) keeps it `Benched`. -/
+theorem Benched.noteMove {p : InPlay} (h : Benched p) (ev : TrigEvent) (sp : Spot) :
+    Benched (p.noteMove ev sp) :=
+  h.of_eq (InPlay.noteMove_rot ev sp p) (InPlay.noteMove_poisoned ev sp p)
+    (InPlay.noteMove_burned ev sp p) (InPlay.noteMove_poisonUp ev sp p)
+
+theorem Benched.noteDown {p : InPlay} (h : Benched p) (w : Whose) : Benched (w.noteDown p) := by
+  cases w
+  · exact h.noteMove _ _
+  · exact h
+
 /-- An update that keeps Special Conditions and Poison strength keeps a Bench `BenchOk`. -/
 theorem BenchOk.map {b : List InPlay} {U : InPlay → InPlay} (hb : BenchOk b)
     (hU : ∀ q, Benched q → Benched (U q)) : BenchOk (b.map U) := by
@@ -210,11 +221,11 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
       cases w <;> simp only [GameState.side] at h <;>
         exact ⟨fun hb => by
             first
-            | exact benched_update h hb ⟨rfl, rfl, rfl, rfl⟩
+            | exact benched_update h hb (Benched.noteDown ⟨rfl, rfl, rfl, rfl⟩ _)
             | exact hb,
           fun hb => by
             first
-            | exact benched_update h hb ⟨rfl, rfl, rfl, rfl⟩
+            | exact benched_update h hb (Benched.noteDown ⟨rfl, rfl, rfl, rfl⟩ _)
             | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | @benchDamage g q b₁ b₂ w n h =>
@@ -293,7 +304,8 @@ theorem WellFormed.of_frame {g g' : GameState} (hw : WellFormed g) (hf : Run.Fra
 
 /-- Clearing the record keeps the frame (milestone MV7b). -/
 theorem Run.Frame.unpend (g : GameState) : Run.Frame g g.unpend :=
-  ⟨id, fun hb => hb.map fun _ hq => hq.of_eq rfl rfl rfl rfl, rfl, rfl, rfl, rfl, rfl⟩
+  ⟨fun hb => hb.map fun _ hq => hq.of_eq rfl rfl rfl rfl,
+    fun hb => hb.map fun _ hq => hq.of_eq rfl rfl rfl rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- The frame of an effect's resolution seen from the other side (milestone M8b). -/
 theorem Run.Frame.unswap {g g₁ : GameState} (h : Run.Frame g.swap g₁) : Run.Frame g g₁.swap := by
@@ -317,6 +329,19 @@ theorem Fire.frame {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : F
   | nil => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
   | run _ hr _ ih => exact hr.frame.unswap.trans ih
   | decline _ _ ih => exact ih
+
+/-- The player to move's own triggers (milestone MV7c) keep the frame. -/
+theorem FireMine.frame {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :
+    Run.Frame g g' := by
+  obtain ⟨g₁, g₂, h₁, h₂, rfl⟩ := h
+  exact (h₁.frame.trans h₂.frame).unswap
+
+/-- **The resolution of the owed triggers keeps the frame** of the state with the record cleared
+(milestone MV7c). -/
+theorem Owed.frame {g g' : GameState} (h : Owed g g') : Run.Frame g.unpend g' := by
+  cases h with
+  | mineFirst _ _ _ hm ht => exact hm.frame.trans ht.frame
+  | oppFirst _ _ _ ht hm => exact ht.frame.trans hm.frame
 
 theorem mem_append_cons_of_mem {α : Type} {x : α} {b₁ b₂ : List α} (y : α)
     (h : x ∈ b₁ ++ b₂) : x ∈ b₁ ++ y :: b₂ := by
@@ -444,7 +469,10 @@ theorem KOBatch.bothActive {g g₁ : GameState} (h : KOBatch g g₁) (hw : g₁.
   | go _ _ hc ho =>
       have e : ∀ {a b a' b'}, Promote a b a' b' → a'.isSome = true := by
         intro a b a' b' hp; cases hp <;> rfl
-      exact ⟨e hc, e ho⟩
+      have ep : ∀ (o : Option InPlay), o.isSome = true →
+          Option.isSome (if g.promoUp then o.map (InPlay.noteMove .movedUp .active) else o) = true :=
+        fun o h => by split <;> simp_all
+      exact ⟨ep _ (e hc), e ho⟩
 
 /-- **The triggers of a batch step can always be resolved** (milestone M8b): every batch step is
 followed by some resolution of the triggers it fires, so the batch move exists whenever the step
@@ -483,9 +511,8 @@ theorem Resolve.wellFormed {g g' : GameState} (h : Resolve g g') (hw : WellForme
   induction h with
   | done => exact hw
   | step _ hm _ ih => exact ih (hm.wellFormed hw)
-  | trigger _ _ _ _ ht _ ih =>
-      exact ih (WellFormed.of_frame hw ((Run.Frame.unpend _).trans ht.frame)
-        (ht.marksOk (GameState.unpend_marksOk hw.2.2.2.1)))
+  | trigger _ _ _ ho _ ih =>
+      exact ih (WellFormed.of_frame hw ((Run.Frame.unpend _).trans ho.frame) ho.marksOk)
 
 /-- Resolving a Trainer card's effect, Knock Outs included, preserves well-formedness. -/
 theorem TRun.wellFormed {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : WellFormed g) :
@@ -507,7 +534,7 @@ theorem Resolve.settled_or_won {g g' : GameState} (h : Resolve g g') :
   induction h with
   | done h => exact h
   | step _ _ _ ih => exact ih
-  | trigger _ _ _ _ _ _ ih => exact ih
+  | trigger _ _ _ _ _ ih => exact ih
 
 /-- **Trainer effects end settled.** A Trainer card's effect, resolved from a state that is
 `Settled` or finished, ends in a state that is `Settled` or finished: no Knock Out is left
@@ -609,7 +636,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
       rcases List.mem_append.1 hp with hp | hp
       · exact hw.2.1 p (by rw [hb]; exact List.mem_append_left _ hp)
       · cases hp with
-        | head => exact ⟨rfl, rfl, rfl, rfl⟩
+        | head => exact Benched.noteMove ⟨rfl, rfl, rfl, rfl⟩ _ _
         | tail _ hp =>
             exact hw.2.1 p (by rw [hb]; exact List.mem_append_right _ (.tail _ hp))
   | item hh hbt hst hr => exact hr.wellFormed ⟨hw.1, hw.2.1, hw.2.2.1, hw.2.2.2⟩
@@ -628,7 +655,7 @@ theorem Move.wellFormed {g g' : GameState} (h : Move g g') (hw : WellFormed g) :
       exact ⟨h1.1, h1.2.1, h1.2.2.1, hm⟩
   | attackConfused ha hm' hc hs hn hf => exact ⟨hw.1, hw.2.1, hw.2.2.1, hm⟩
   | knockOuts h _ ht => exact WellFormed.of_frame (h.wellFormed hw) ht.frame hm
-  | trigger _ _ _ ht => exact WellFormed.of_frame hw ((Run.Frame.unpend _).trans ht.frame) hm
+  | trigger _ _ ho => exact WellFormed.of_frame hw ((Run.Frame.unpend _).trans ho.frame) hm
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       refine ⟨fun hn => ⟨(hw.1 hn).2, (hw.1 hn).1⟩, hco.benched hw.2.2.1, hcc.benched ?_, hm⟩
       intro p hp
@@ -744,25 +771,41 @@ theorem Promote.mem {a a' : Option InPlay} {b b' : List InPlay} (h : Promote a b
       cases hx; exact List.mem_append_right _ (.head _)
 
 /-- **What survives a batch Knock Out step**: every Pokémon in play afterwards was in play before
-it, below its HP at some place it then held (its own place, or the Bench for a promoted Pokémon).
-No Pokémon at or above its HP at its place survives the check, and in particular none is rescued by
-a promotion. -/
+it, below its HP at some place it then held (its own place, or the Bench for a promoted Pokémon),
+up to the owed-trigger mark of the player to move's promoted Pokémon (milestone MV7c: a promotion in
+the owner's own turn raises the `movedUp` event, `InPlay.noteMove`, which changes only the mark and
+the `used` flag). No Pokémon at or above its HP at its place survives the check, and in particular
+none is rescued by a promotion. (Milestone MV7c changed the statement: the survivor `x` is the
+Pokémon `x₀` of the state before, or `x₀` marked.) -/
 theorem KOBatch.survivor {g g' : GameState} (h : KOBatch g g') {w : Whose} {sp : Spot} {x : InPlay}
-    (hx : g'.In w sp x) : ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x := by
+    (hx : g'.In w sp x) : ∃ sp₀ x₀, g.In w sp₀ x₀ ∧ x₀.damage < g.hpOf w sp₀ x₀ ∧
+      (x = x₀ ∨ x = x₀.noteMove .movedUp .active) := by
   cases h with
-  | won => exact ⟨sp, g.koStep_survivor hx⟩
+  | won => exact ⟨sp, x, (g.koStep_survivor hx).1, (g.koStep_survivor hx).2, .inl rfl⟩
   | @go ac ao bc bo _ _ hc ho =>
-      have to : ∀ sp₀, g.koStep.In w sp₀ x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x :=
-        fun sp₀ h => ⟨sp₀, g.koStep_survivor h⟩
+      have to : ∀ sp₀ x₀, g.koStep.In w sp₀ x₀ → (x = x₀ ∨ x = x₀.noteMove .movedUp .active) →
+          ∃ sp₀ x₀, g.In w sp₀ x₀ ∧ x₀.damage < g.hpOf w sp₀ x₀ ∧
+            (x = x₀ ∨ x = x₀.noteMove .movedUp .active) :=
+        fun sp₀ x₀ h e => ⟨sp₀, x₀, (g.koStep_survivor h).1, (g.koStep_survivor h).2, e⟩
       cases w <;> cases sp
-      · rcases hc.mem.1 x hx with e | e
-        · exact to .active e
-        · exact to .bench e
-      · exact to .bench (hc.mem.2 x hx)
+      · have hx' : (if g.promoUp then ac.map (InPlay.noteMove .movedUp .active) else ac) = some x := hx
+        split at hx'
+        · cases hac : ac with
+          | none => rw [hac] at hx'; cases hx'
+          | some x₀ =>
+              rw [hac] at hx' hc
+              cases hx'
+              rcases hc.mem.1 x₀ rfl with e | e
+              · exact to .active x₀ e (.inr rfl)
+              · exact to .bench x₀ e (.inr rfl)
+        · rcases hc.mem.1 x hx' with e | e
+          · exact to .active x e (.inl rfl)
+          · exact to .bench x e (.inl rfl)
+      · exact to .bench x (hc.mem.2 x hx) (.inl rfl)
       · rcases ho.mem.1 x hx with e | e
-        · exact to .active e
-        · exact to .bench e
-      · exact to .bench (ho.mem.2 x hx)
+        · exact to .active x e (.inl rfl)
+        · exact to .bench x e (.inl rfl)
+      · exact to .bench x (ho.mem.2 x hx) (.inl rfl)
 
 /-- The Prize cards and discard piles after a batch Knock Out step are those of the check. -/
 theorem KOBatch.piles {g g' : GameState} (h : KOBatch g g') :
@@ -836,7 +879,10 @@ attack, and then `g' = g₁`); the conclusions about Prize cards, discard piles 
 about the batch step `g₁`, as before. The hypotheses `WellFormed g` and `g.winner = none` are
 no longer used (the old moves needed the taker to have a Prize card left); the statement keeps
 them. Milestone MV7 added the hypothesis `g.pend = false`: a pending trigger resolves before the
-Knock Out check (`Move.trigger`), so from a state with one pending the batch step is not a move. -/
+Knock Out check (`Move.trigger`), so from a state with one pending the batch step is not a move.
+Milestone MV7c changed the survivors' conjunct: a survivor is a Pokémon of the state before, or (the
+player to move's Pokémon promoted in their own turn) that Pokémon with its `movedUp` mark
+(`KOBatch.survivor`). -/
 theorem Move.knockOut_of_pending {g : GameState} (_hw : WellFormed g) (_hn : g.winner = none)
     (hk : ¬ DamageBounded g) (hpd : g.pend = false) :
     ∃ g₁ g', Move g g' ∧ KOBatch g g₁ ∧
@@ -845,7 +891,8 @@ theorem Move.knockOut_of_pending {g : GameState} (_hw : WellFormed g) (_hn : g.w
       g₁.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
       g₁.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
       g₁.cur.discard = (g.koOf .own).discard ∧ g₁.opp.discard = (g.koOf .opp).discard ∧
-      (∀ w sp x, g₁.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) := by
+      (∀ w sp x, g₁.In w sp x → ∃ sp₀ x₀, g.In w sp₀ x₀ ∧ x₀.damage < g.hpOf w sp₀ x₀ ∧
+        (x = x₀ ∨ x = x₀.noteMove .movedUp .active)) := by
   obtain ⟨g₁, hb⟩ := KOBatch.exists_of (fun hs => hk hs.1) (.inl hpd)
   obtain ⟨p1, p2, d1, d2, -⟩ := hb.piles
   obtain ⟨g', l, hl, ht⟩ := hb.trigs_exist
@@ -876,7 +923,8 @@ theorem Reach.knockOut_of_pending {g₀ g : GameState} (h₀ : WellFormed g₀) 
       g₁.cur.prizes = g.cur.prizes.drop (g.koVal .opp) ∧
       g₁.opp.prizes = g.opp.prizes.drop (g.koVal .own) ∧
       g₁.cur.discard = (g.koOf .own).discard ∧ g₁.opp.discard = (g.koOf .opp).discard ∧
-      (∀ w sp x, g₁.In w sp x → ∃ sp₀, g.In w sp₀ x ∧ x.damage < g.hpOf w sp₀ x) :=
+      (∀ w sp x, g₁.In w sp x → ∃ sp₀ x₀, g.In w sp₀ x₀ ∧ x₀.damage < g.hpOf w sp₀ x₀ ∧
+        (x = x₀ ∨ x = x₀.noteMove .movedUp .active)) :=
   Move.knockOut_of_pending (h.wellFormed h₀) hn hk hpd
 
 /-- Whether a Knock Out is pending is decided by looking at the Pokémon in play (no choice
@@ -912,7 +960,7 @@ between turns the draw (or a loss by decking out). No hypothesis is needed (mile
 theorem Move.exists_move (g : GameState) : ∃ g', Move g g' := by
   by_cases hr : g.pend = true ∧ g.BothActive
   · obtain ⟨g', ht⟩ := hr.2.trigs_exist
-    exact ⟨g', .trigger hr.2 hr.1 (.refl _) ht⟩
+    exact ⟨g', .trigger hr.2 hr.1 ht⟩
   have hq : g.pend = false ∨ ¬ g.BothActive := by
     cases hpd : g.pend with
     | false => exact .inl rfl

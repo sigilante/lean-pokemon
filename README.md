@@ -165,7 +165,7 @@ the attacker, then the opponent's Active Pokémon); milestone MV7b records the h
 the event marks each of the opponent's Pokémon that has such a trigger where it is
 (`InPlay.owe : Option Spot`, the spot; enumerated by `Finite.inPlays`, kept by both clamps), the
 mark travels with the Pokémon, and the resolution fires the marked ones (`GameState.owedTrigs`) and
-clears the marks (`GameState.unpend`); marks exist only on the opponent's Pokémon while a trigger
+clears the marks (`GameState.unpend`); marks exist only while a trigger
 is pending (`GameState.MarksOk`, part of `WellFormed` since the review of stage 2; preserved by
 every move, `Move.marksOk`; the review's stale-mark start is not well formed,
 `Gust.stale_mark_excluded`); the review's two cases are now theorems that the wrong
@@ -187,7 +187,8 @@ statement about every resolution). Recording the event at its source needs no
 Pokémon identity: Benching an identical copy of the old Active Pokémon raises nothing
 (`Benched.copy_quiet`, `Benched.copy_quiet_all`). Such a trigger may fire before the attack, as often
 as the player switches, so its effect must recycle nothing (`Ability.trigOn`); with that the store
-bound needs no new clause. For a game with no such trigger among its cards (`GameState.BenchedFree`)
+bound needs no new clause. For a game with no such trigger among its cards (`GameState.BenchedFree`;
+since milestone MV7c `GameState.MoveFree`, below, with `MarksOk` at the start)
 and nothing pending at the start, nothing is ever pending (`Reach.pend_false`), no move resolves a
 trigger (`Reach.not_trigMove`), `Settled` is the old `Settled` (`Reach.settled_iff_calm`), and the
 retreat and the switch give the states they gave before (`GameState.noteBenched_of_nil`;
@@ -197,7 +198,29 @@ moves from an unsettled state gained the alternative `TrigMove` (`Move.batch_of_
 move from a state with a pending Knock Out gained the hypothesis `pend = false`
 (`Move.pending_knockedOut`, `Move.knockOut_of_pending`, `Reach.knockOut_of_pending`,
 `Move.eq_koStep_of_won`; `KOBatch.exists_of` the hypothesis that no trigger is ready; Known gaps of `Pokemon/Rules.lean`; witnesses in
-`Pokemon/Benched.lean`, `Pokemon/Promoted.lean` and `Pokemon/Gust.lean`). Milestone M5 added Stadiums
+`Pokemon/Benched.lean`, `Pokemon/Promoted.lean` and `Pokemon/Gust.lean`). Milestone MV7c added
+two events for the player's own Pokémon, "Once during your turn, when this Pokémon moves from your
+Bench to the Active Spot" and "… from the Active Spot to your Bench" (`TrigEvent.movedUp`,
+`TrigEvent.movedDown`, `TrigEvent` now 5 constructors; Yanmega ex sv10-3 and Clawitzer me1-38
+expressible (not imported; Clawitzer on the Bench as a superset; the witnesses use test cards): a
+retreat, a switch of the player's own Active Pokémon, and the promotion of
+the player's Pokémon after a Knock Out of their Active Pokémon in their own turn mark the Pokémon
+that moved (`InPlay.noteMove`: the `owe` mark, now on either side, and the "once during your turn"
+flag `InPlay.used`) and set the record; the resolution (`Owed`) fires both players' owed triggers
+before anything else, the player to move's from their own side (`FireMine`). Promotion between
+turns (Pokémon Checkup read as no player's turn, a reading), the opponent's promotion and a gust of
+the opponent's Pokémon raise nothing (witnesses and universal statements in `Pokemon/Moved.lean`;
+existential witnesses of a promotion after the opponent's `damaged` trigger, of both orders of the
+two players' blocks and of a trigger, Knock Out, promotion, trigger chain in
+`Pokemon/MovedChain.lean`). `MarksOk` is now "no mark unless a trigger is
+pending", on both sides; the termination measure puts the Prize cards left first (a batch that
+raises `movedUp` has Knocked Out the player's Active Pokémon); the bounds of `Resolve.chain_le`
+and the shape lemmas take a game with no `movedUp` trigger (`GameState.EvFree`), and
+`Reach.pend_false` a game with no trigger of a move event (`GameState.MoveFree`) and a start with
+`MarksOk`; departures (the limit is spent even when the trigger is declined; it is the Pokémon's
+single `used` flag, exact only for a holder whose one Ability is the "once during your turn"
+trigger, as every printing in the census is; Checkup read as no player's turn; the two players'
+blocks of triggers are not interleaved) are in the Known gaps. Milestone M5 added Stadiums
 and Pokémon Tools: `Move.stadium` plays a Stadium from the hand into the slot both players share
 (one per turn, `GameState.stadiumPlayed`; not while a Stadium of the same name is in play; the
 Stadium it replaces goes to its owner's discard pile, whoever plays the new one), and
@@ -467,9 +490,9 @@ came with milestone MV3), cost changes and every triggered effect
   behaviour, since the printed card places all its counters at once); an Item takes the last Prize card in mid-effect and the
   rest of it is not resolved (`Trainer.winMidEffect_reachable`);
 * from a well-formed start (`WellFormed`: both players have Prizes while there is no winner;
-  Benched Pokémon have no Special Condition; since milestone MV7b's review no Pokémon of the player
-  to move carries an owed-trigger mark and the opponent's carry none unless a trigger is pending,
-  `GameState.MarksOk`, which play keeps, `Move.marksOk`; since M3 a Benched Pokémon may be at or above its HP,
+  Benched Pokémon have no Special Condition; since milestone MV7b's review no Pokémon carries an
+  owed-trigger mark unless a trigger is pending (until milestone MV7c: none on the player to move's
+  Pokémon at all), `GameState.MarksOk`, which play keeps, `Move.marksOk`; since M3 a Benched Pokémon may be at or above its HP,
   which is a pending Knock Out, and `Settled` excludes it before every move but the batch Knock
   Out step), no reachable state without a winner is stuck (`Reach.progress`; since milestone
   batch-KO no state at all is, `Move.exists_move`), and if a Knock Out is pending the batch Knock
@@ -485,16 +508,25 @@ came with milestone MV3), cost changes and every triggered effect
   `Move.pending_untouched`; restated by batch-KO: the same move may now fill the Active Spot again
   by a promotion);
 * the repeated check with its triggers ends (milestone M8b, `KOMove.acc`, `Move.unsettled_acc`: no
-  infinite sequence of moves through states that are not `Settled`, by the pending-trigger record
-  (milestone MV7: no trigger sets it again), the Prize cards left and then the measure below);
+  infinite sequence of moves through states that are not `Settled`). The measure is the Prize cards
+  left first, then the pending-trigger record, then the measure below. Since milestone MV7c a Knock
+  Out batch can set the record (the promotion of the player's Pokémon during their turn proper
+  raises `movedUp`), but such a batch has Knocked Out the player's Active Pokémon and so takes a
+  Prize card or ends the game (`GameState.koVal_pos_of_promoUp`); a batch that takes no Prize card
+  keeps the record and lowers the measure below; the resolution of the triggers keeps the Prize
+  cards and clears the record (`MovedChain.tool_chain` witnesses the alternation: trigger, Knock Out
+  batch, promotion, trigger);
 * the repeated check ends (`Pokemon/Terminate.lean`): a batch that does not end the game lowers
   twice the number of Pokémon in play plus the number of empty Active Spots
   (`KOBatch.koMeasure_lt`), so every chain of batches is finite (`KOBatch.acc`), every state has a
-  `Resolve` result, `Settled` or with an outcome (`Resolve.exists`), and `Resolve` from a state with
-  no pending trigger takes at most that measure plus one batches (`Resolve.chain_le`); with one
-  pending and both Active Spots filled, the resolution of the triggers and then at most the measure
-  after them plus one batches (`Resolve.trigger_first`, `Resolve.chain_le_pend`; no bound in the
-  measure before the triggers is proved);
+  `Resolve` result, `Settled` or with an outcome (`Resolve.exists`). In a game with no `movedUp`
+  trigger among its cards (`GameState.EvFree .movedUp`, a hypothesis since milestone MV7c),
+  `Resolve` from a state with no pending trigger takes at most that measure plus one batches
+  (`Resolve.chain_le`); with one pending and both Active Spots filled, the resolution of the
+  triggers and then at most the measure after them plus one batches (`Resolve.trigger_first`,
+  `Resolve.chain_le_pend`; no bound in the measure before the triggers is proved). In a game with
+  a `movedUp` trigger a result exists and the chain ends (`Resolve.exists`, `Move.unsettled_acc`),
+  but no bound on the number of batches is proved;
 * **finiteness, for tame decks** (`Reach.finite`): let the clamp cap at `bound` the
   damage and the Poison strength on every Pokémon in play (both Active Pokémon and, since M3,
   every Benched Pokémon, whose damage effects can now raise past HP), and cap every damage bonus and

@@ -91,7 +91,7 @@ theorem Resolve.noReduce {g g' : GameState} (h : Resolve g g') (hn : g.NoReduce)
   induction h with
   | done => exact hn
   | step _ hm _ ih => exact ih (hm.noReduce hn)
-  | trigger _ _ _ _ ht _ ih => exact ih (ht.zoneOnly.noReduce hn)
+  | trigger _ _ _ ho _ ih => exact ih (ho.zoneOnly.noReduce hn)
 
 theorem TRun.noReduce {e : Effect} {g g' : GameState} (h : TRun e g g') :
     e.tame = true → g.NoReduce → g'.NoReduce := by
@@ -576,7 +576,9 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
           exact ⟨_, .switch (b₁ := d₁) .own rfl rfl, Whose.noteBenched_clampAt .own (by
             simp only [GameState.clampAt, GameState.updSide, ha₂, hm₁, hm₂, he₂, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, InPlay.clampWith_moveUp, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock])⟩
+              List.map_append, List.map_cons, Whose.mover, Whose.noteUp, Whose.noteDown,
+              InPlay.clampWith_noteMove, InPlay.clampWith_moveUp, h1, h2, h3,
+              InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock])⟩
       | opp =>
           simp only [GameState.side] at ha h
           rw [ha] at ha₂
@@ -584,8 +586,8 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
           exact ⟨_, .switch (b₁ := d₁) .opp rfl rfl, by
             simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, hm₁, hm₂, he₁, Option.map_some,
-              List.map_append, List.map_cons, Whose.mover, id, h1, h2, h3, InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock,
-              Whose.noteBenched]⟩
+              List.map_append, List.map_cons, Whose.mover, Whose.noteUp, Whose.noteDown, id, h1, h2, h3,
+              InPlay.clamp_of_agree hqa.upd.2.2.2.2.1.unlock, Whose.noteBenched]⟩
   | switchNone w h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
@@ -1134,7 +1136,7 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
       exact hr.noReduce (abilitiesTame_mem h1.2 hm _ (ab.script_mem _)) (by cases hp <;> exact hn)
   | endTurn => exact ⟨hn.2.shift, hn.1.shift⟩
   | knockOuts h _ ht' => exact ht'.zoneOnly.noReduce (h.noReduce hn)
-  | trigger _ _ _ ht' => exact ht'.zoneOnly.noReduce hn
+  | trigger _ _ ho => exact ho.zoneOnly.noReduce hn
   | _ => exact hn
 
 /-- Play preserves `Fit k`: the cards are permuted, and no stored damage reduction comes into
@@ -1189,13 +1191,11 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
   obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, hg, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
   have hfl := Store.flags_of_cap hm₁
   cases h with
-  | @trigger _ l hcl hp hl ht =>
+  | @trigger _ hcl hp ho =>
       have hcl₂ := GameState.bothActive_of_clampAt hc hcl
       have hp₂ : g₂.pend = true := (GameState.pend_of_clampAt hc).trans hp
-      have hT := GameState.owedTrigs_of_clampAt hc
-      have hc₀ : g₁.unpend.clamp k = g₂.unpend.clamp k := GameState.unpend_clampAt hc
-      obtain ⟨g₂', ht₂, hc'⟩ := ht.clamp_sim hc₀
-      exact ⟨g₂', .trigger hcl₂ hp₂ (by rw [hT]; exact hl) ht₂, hc'⟩
+      obtain ⟨g₂', ho₂, hc'⟩ := ho.clamp_sim hc
+      exact ⟨g₂', .trigger hcl₂ hp₂ ho₂, hc'⟩
   | playBasic hh hs hhp hb hbt hst hat =>
       have hs' := hs₂ hst
       subst hg
@@ -1252,7 +1252,7 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
       rw [e]
       refine GameState.noteBenched_clampAt ?_
       simp only [GameState.clampAt, ha₂, hm₁, hm₂, he₂, Option.map_some,
-        List.map_append, List.map_cons, InPlay.clampWith_moveUp, h1, h2, h3]
+        List.map_append, List.map_cons, InPlay.clampWith_noteMove, InPlay.clampWith_moveUp, h1, h2, h3]
   | @item g' l₁ l₂ n e hh hbt hst hr hl hat hnd hbh =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.trainer hh

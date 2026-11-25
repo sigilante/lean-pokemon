@@ -394,20 +394,160 @@ theorem GameState.owedTrigs_recFilters {g : GameState} {ab : Ability} (h : ab �
 /-- Clearing the record keeps both Active Spots filled. -/
 theorem GameState.BothActive.unpend {g : GameState} (h : g.BothActive) : g.unpend.BothActive := by
   refine ⟨?_, ?_⟩
-  · exact h.1
+  · show (g.cur.active.map InPlay.clearOwe).isSome = true
+    rw [Option.isSome_map]; exact h.1
   · show (g.opp.active.map InPlay.clearOwe).isSome = true
     rw [Option.isSome_map]; exact h.2
 
-/-- **Pending triggers can always be resolved** (milestone MV7): from a state with both Active
-Spots filled, the owed `oppBenched` triggers have a resolution (every one resolving) on the
-state with the record cleared. -/
-theorem GameState.BothActive.trigs_exist {g : GameState} (h : g.BothActive) :
-    ∃ g', Fire .oppBenched g.owedTrigs g.unpend g' :=
-  Fire.exists (fun _ hab => GameState.owedTrigs_trigOk hab) (g := g.unpend) h.unpend
+/-! ## The player to move's own triggers (milestone MV7c) -/
+
+/-- The frame, both states exchanged. -/
+theorem GameState.ZoneOnly.swap {g g' : GameState} (h : GameState.ZoneOnly g g') :
+    GameState.ZoneOnly g.swap g'.swap := by
+  refine ⟨?_, h.rest, h.opp, h.cur⟩
+  show (!g'.curIsFirst) = !g.curIsFirst
+  rw [h.first]
+
+/-- **The player to move's own triggers change only the zones.** -/
+theorem FireMine.zoneOnly {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :
+    GameState.ZoneOnly g g' := by
+  obtain ⟨g₁, g₂, h₁, h₂, rfl⟩ := h
+  exact (h₁.zoneOnly.trans h₂.zoneOnly).unswap
+
+/-- **The resolution of the owed triggers changes only the zones** of the state with the record and
+the marks cleared (milestone MV7c). -/
+theorem Owed.zoneOnly {g g' : GameState} (h : Owed g g') : GameState.ZoneOnly g.unpend g' := by
+  cases h with
+  | mineFirst _ _ _ hm ht => exact hm.zoneOnly.trans ht.zoneOnly
+  | oppFirst _ _ _ ht hm => exact ht.zoneOnly.trans hm.zoneOnly
+
+/-- The owed `movedUp` and `movedDown` triggers are triggers of their event, at their place. -/
+theorem GameState.mem_upOwed {g : GameState} {ab : Ability} (h : ab ∈ g.upOwed) :
+    ∃ p : InPlay, ab ∈ p.trigs .movedUp .active := by
+  have hp : ∀ p : InPlay, ab ∈ p.owedUp → ab ∈ p.trigs .movedUp .active := fun p hp => by
+    unfold InPlay.owedUp at hp
+    split at hp
+    · exact hp
+    · nomatch hp
+  rcases List.mem_append.1 h with h | h
+  · cases ha : g.cur.active with
+    | none => rw [ha] at h; nomatch h
+    | some p => rw [ha] at h; exact ⟨p, hp p h⟩
+  · obtain ⟨p, _, h'⟩ := List.mem_flatMap.1 h
+    exact ⟨p, hp p h'⟩
+
+theorem GameState.mem_downOwed {g : GameState} {ab : Ability} (h : ab ∈ g.downOwed) :
+    ∃ p : InPlay, ab ∈ p.trigs .movedDown .bench := by
+  have hp : ∀ p : InPlay, ab ∈ p.owedDown → ab ∈ p.trigs .movedDown .bench := fun p hp => by
+    unfold InPlay.owedDown at hp
+    split at hp
+    · exact hp
+    · nomatch hp
+  rcases List.mem_append.1 h with h | h
+  · cases ha : g.cur.active with
+    | none => rw [ha] at h; nomatch h
+    | some p => rw [ha] at h; exact ⟨p, hp p h⟩
+  · obtain ⟨p, _, h'⟩ := List.mem_flatMap.1 h
+    exact ⟨p, hp p h'⟩
+
+theorem GameState.upOwed_trigOk {g : GameState} {ab : Ability} (h : ab ∈ g.upOwed) :
+    (ab.script TrigEvent.movedUp.place).trigOk = true := by
+  obtain ⟨_, h⟩ := GameState.mem_upOwed h
+  exact InPlay.trigOk_of_mem_trigs h
+
+theorem GameState.downOwed_trigOk {g : GameState} {ab : Ability} (h : ab ∈ g.downOwed) :
+    (ab.script TrigEvent.movedDown.place).trigOk = true := by
+  obtain ⟨_, h⟩ := GameState.mem_downOwed h
+  exact InPlay.trigOk_of_mem_trigs h
+
+/-- **The player to move's own triggers recycle nothing** (milestone MV7c): they fire before the
+turn's attack (`TrigEvent.late = false`), as `oppBenched` ones. -/
+theorem GameState.upOwed_recFilters {g : GameState} {ab : Ability} (h : ab ∈ g.upOwed) :
+    (ab.script TrigEvent.movedUp.place).recFilters = [] := by
+  obtain ⟨_, h⟩ := GameState.mem_upOwed h
+  exact InPlay.recFilters_of_mem_trigs h rfl
+
+theorem GameState.downOwed_recFilters {g : GameState} {ab : Ability} (h : ab ∈ g.downOwed) :
+    (ab.script TrigEvent.movedDown.place).recFilters = [] := by
+  obtain ⟨_, h⟩ := GameState.mem_downOwed h
+  exact InPlay.recFilters_of_mem_trigs h rfl
+
+/-- `Fire.exists`, keeping both Active Spots filled. -/
+theorem Fire.exists_both {ev : TrigEvent} : ∀ {l : List Ability},
+    (∀ ab ∈ l, (ab.script ev.place).trigOk = true) → ∀ {g : GameState}, g.BothActive →
+      ∃ g', Fire ev l g g' ∧ g'.BothActive
+  | [], _, g, hb => ⟨g, .nil g, hb⟩
+  | ab :: l, hl, g, hb => by
+      obtain ⟨g₁, hr, hb₁⟩ := Run.exists_of_trigOk (hl ab (.head _)) hb.swap
+      obtain ⟨g₂, ht, hb₂⟩ := Fire.exists_both (fun x hx => hl x (.tail _ hx)) (g := g₁.swap) hb₁.swap
+      exact ⟨g₂, .run (hl ab (.head _)) hr ht, hb₂⟩
+
+/-- **Pending triggers can always be resolved** (milestone MV7; since milestone MV7c the owed
+triggers of both players): from a state with both Active Spots filled, the owed triggers have a
+resolution (every one resolving, the player to move's first). -/
+theorem GameState.BothActive.trigs_exist {g : GameState} (h : g.BothActive) : ∃ g', Owed g g' := by
+  obtain ⟨g₁, h₁, hb₁⟩ := Fire.exists_both (ev := .movedUp) (l := g.upOwed)
+    (fun _ hab => GameState.upOwed_trigOk hab) (g := g.unpend.swap) h.unpend.swap
+  obtain ⟨g₂, h₂, hb₂⟩ := Fire.exists_both (ev := .movedDown) (l := g.downOwed)
+    (fun _ hab => GameState.downOwed_trigOk hab) hb₁
+  obtain ⟨g₃, h₃⟩ := Fire.exists (ev := .oppBenched) (l := g.owedTrigs)
+    (fun _ hab => GameState.owedTrigs_trigOk hab) (g := g₂.swap) hb₂.swap
+  exact ⟨g₃, .mineFirst (.refl _) (.refl _) (.refl _) ⟨g₁, g₂, h₁, h₂, rfl⟩ h₃⟩
+
+/-- No own trigger, no change. -/
+theorem FireMine.nil (g : GameState) : FireMine [] [] g g :=
+  ⟨g.swap, g.swap, .nil _, .nil _, (GameState.swap_swap g).symm⟩
+
+theorem FireMine.nil_eq {g g' : GameState} (h : FireMine [] [] g g') : g' = g := by
+  obtain ⟨g₁, g₂, h₁, h₂, rfl⟩ := h
+  rw [h₂.nil_eq, h₁.nil_eq, GameState.swap_swap]
+
+/-- **The owed triggers when the player to move owes none** (milestone MV7c): the opponent's
+`oppBenched` triggers alone, as before milestone MV7c. -/
+theorem Owed.of_opp {g g' : GameState} {l : List Ability} (hu : g.upOwed = [])
+    (hd : g.downOwed = []) (hl : l.Perm g.owedTrigs) (ht : Fire .oppBenched l g.unpend g') :
+    Owed g g' :=
+  .mineFirst (u := []) (d := []) (by rw [hu]) (by rw [hd]) hl (FireMine.nil _) ht
+
+/-- Every resolution of the owed triggers when the player to move owes none is a resolution of the
+opponent's alone. -/
+theorem Owed.opp_inv {g g' : GameState} (h : Owed g g') (hu : g.upOwed = [])
+    (hd : g.downOwed = []) : ∃ l, l.Perm g.owedTrigs ∧ Fire .oppBenched l g.unpend g' := by
+  cases h with
+  | mineFirst hu' hd' hl hm ht =>
+      rw [hu] at hu'; rw [hd] at hd'
+      rw [List.Perm.eq_nil hu', List.Perm.eq_nil hd'] at hm
+      rw [hm.nil_eq] at ht
+      exact ⟨_, hl, ht⟩
+  | oppFirst hu' hd' hl ht hm =>
+      rw [hu] at hu'; rw [hd] at hd'
+      rw [List.Perm.eq_nil hu', List.Perm.eq_nil hd'] at hm
+      rw [hm.nil_eq]
+      exact ⟨_, hl, ht⟩
+
+/-- **The owed triggers when the opponent owes none** (milestone MV7c): the player to move's own. -/
+theorem Owed.of_mine {g g' : GameState} {u d : List Ability} (ho : g.owedTrigs = [])
+    (hu : u.Perm g.upOwed) (hd : d.Perm g.downOwed) (hm : FireMine u d g.unpend g') : Owed g g' :=
+  .mineFirst hu hd (l := []) (by rw [ho]) hm (.nil _)
+
+/-- Every resolution of the owed triggers when the opponent owes none is one of the player to
+move's own. -/
+theorem Owed.mine_inv {g g' : GameState} (h : Owed g g') (ho : g.owedTrigs = []) :
+    ∃ u d, u.Perm g.upOwed ∧ d.Perm g.downOwed ∧ FireMine u d g.unpend g' := by
+  cases h with
+  | mineFirst hu hd hl hm ht =>
+      rw [ho] at hl
+      rw [List.Perm.eq_nil hl] at ht
+      rw [ht.nil_eq]
+      exact ⟨_, _, hu, hd, hm⟩
+  | oppFirst hu hd hl ht hm =>
+      rw [ho] at hl
+      rw [List.Perm.eq_nil hl] at ht
+      rw [ht.nil_eq] at hm
+      exact ⟨_, _, hu, hd, hm⟩
 
 /-- `GameState.BothActive.trigs_exist` from a `Calm` state. -/
-theorem Calm.trigs_exist {g : GameState} (h : Calm g) :
-    ∃ g', Fire .oppBenched g.owedTrigs g.unpend g' :=
+theorem Calm.trigs_exist {g : GameState} (h : Calm g) : ∃ g', Owed g g' :=
   h.bothActive.trigs_exist
 
 end Pokemon

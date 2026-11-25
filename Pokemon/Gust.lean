@@ -179,10 +179,11 @@ theorem gust_drops_holder : ∀ g₁ g₂, Move a0 g₁ → g₁.attacked = true
   subst ha'
   obtain rfl := hd.nil_of rfl
   cases ht
-  rcases h2.batch_of_not_settled (fun h => absurd h.2.2.2 (by decide)) with ⟨_, _, hb, -⟩ | ⟨-, -, l, hl, ht⟩
+  rcases h2.batch_of_not_settled (fun h => absurd h.2.2.2 (by decide)) with ⟨_, _, hb, -⟩ | ⟨-, -, ho⟩
   · rcases hb.not_ready with h | h
     · exact absurd h (by decide)
     · exact absurd ⟨rfl, rfl⟩ h
+  obtain ⟨l, hl, ht⟩ := ho.opp_inv rfl rfl
   rw [List.perm_singleton.1 (show l.Perm [prose] from hl)] at ht
   cases ht with
   | decline ho => cases ho
@@ -207,7 +208,7 @@ theorem gust_drops_runs :
       (.seq (.switch (b₁ := []) (b₂ := []) .own rfl rfl) (.switch (b₁ := []) (b₂ := []) .opp rfl rfl))
   exact ⟨_, _, .attack (atk := jet) rfl (.head _) (.nil _) rfl rfl rfl rfl a0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl, rfl,
-    .trigger (l := [prose]) ⟨rfl, rfl⟩ rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _)),
+    .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [prose]) rfl rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _))),
     (GameState.settled_iff _).2 (by decide), rfl, rfl⟩
 
 /-- **(B) A Benched holder gusted in does not fire.** From `b0`, no play that attacks and then
@@ -261,10 +262,11 @@ theorem gust_adds_holder : ∀ g₁ g₂, Move b0 g₁ → g₁.attacked = true 
   · obtain rfl := hd.nil_of rfl
     cases ht
     rcases h2.batch_of_not_settled (fun h => absurd h.2.2.2 (by decide)) with
-      ⟨_, _, hb, -⟩ | ⟨-, -, l, hl, ht⟩
+      ⟨_, _, hb, -⟩ | ⟨-, -, ho⟩
     · rcases hb.not_ready with h | h
       · exact absurd h (by decide)
       · exact absurd ⟨rfl, rfl⟩ h
+    obtain ⟨l, hl, ht⟩ := ho.opp_inv rfl rfl
     rw [List.perm_singleton.1 (show l.Perm [surge false] from hl)] at ht
     cases ht with
     | decline ho => cases ho
@@ -302,8 +304,7 @@ theorem gust_adds_runs :
         (.switch (b₁ := [(InPlay.ofBasic (watcherC false)).noteOwe .bench]) (b₂ := []) .opp rfl rfl))
   exact ⟨_, _, .attack (atk := jet) rfl (.head _) (.nil _) rfl rfl rfl rfl b0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl,
-    .trigger (l := [surge false]) ⟨rfl, rfl⟩ rfl (.refl _)
-      (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _)),
+    .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [surge false]) rfl rfl (.refl _) (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _))),
     rfl, rfl, rfl⟩
 
 /-- **The reviewer's probe fails**: its two statements, for the plays that begin with the attack,
@@ -337,7 +338,7 @@ theorem stale_mark_excluded :
       Settled c0 ∧ c0.pend = false ∧ c0.noteBenched.owedTrigs.length = 2 ∧
       ¬ WellFormed c0 ∧ ∀ g₀, g₀.MarksOk → ¬ Reach g₀ c0 := by
   have hn : ¬ c0.MarksOk := fun h => by
-    have e := (h.2 rfl).2 { InPlay.ofBasic (mistyC 30) with owe := some .active }
+    have e := (h rfl).2.2 { InPlay.ofBasic (mistyC 30) with owe := some .active }
       (by simp [c0, stJ, side])
     cases e
   refine ⟨⟨fun _ => ⟨by simp [c0, stJ, side], by simp [c0, stJ, side]⟩, ?_, ?_⟩,

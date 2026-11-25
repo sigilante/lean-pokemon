@@ -66,6 +66,15 @@ theorem benchCardList_clearOwe (b : List InPlay) :
     benchCardList (b.map InPlay.clearOwe) = benchCardList b :=
   benchCardList_map (f := InPlay.clearOwe) (fun _ => rfl) b
 
+/-- Marking a promoted Pokémon (milestone MV7c) moves no card. -/
+theorem optCardList_promo (b : Bool) (o : Option InPlay) :
+    optCardList (if b then o.map (InPlay.noteMove .movedUp .active) else o) = optCardList o := by
+  cases b
+  · rfl
+  · cases o
+    · rfl
+    · simp only [ite_true, Option.map_some, optCardList, InPlay.noteMove_cardList]
+
 /-- Raising the `oppBenched` event moves no card. -/
 theorem GameState.allCards_noteBenched (g : GameState) : g.noteBenched.allCards = g.allCards := by
   simp only [GameState.allCards, PlayerState.allCards, GameState.noteBenched, optCardList_noteOwe,
@@ -165,7 +174,8 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
       InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
       InPlay.inflict_energy, InPlay.inflict_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
       GameState.noteBenched, Whose.noteBenched, optCardList_noteOwe, benchCardList_noteOwe,
-      InPlay.unlock,
+      InPlay.unlock, InPlay.noteMove_top, InPlay.noteMove_under, InPlay.noteMove_energy,
+      InPlay.noteMove_tools, Whose.noteUp, Whose.noteDown,
       $hs,*] <;>
     omega))
 
@@ -351,8 +361,8 @@ theorem KOBatch.perm {g g' : GameState} (h : KOBatch g g') : g'.allCards.Perm g.
       refine (ListPerm.perm_of_count fun x => ?_).trans hk
       have := hc.count_eq x
       have := ho.count_eq x
-      simp only [GameState.allCards, GameState.withPlay, PlayerState.allCards,
-        List.count_append] at *
+      simp only [GameState.allCards, GameState.afterBatch, GameState.withPlay, PlayerState.allCards,
+        List.count_append, optCardList_promo] at *
       omega
 
 /-- Exchanging the players permutes the cards in the game. -/
@@ -369,12 +379,25 @@ theorem Fire.perm {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fi
       exact ih.trans ((g₁.swap_perm).trans (hr.perm.trans g.swap_perm))
   | decline _ _ ih => exact ih
 
+/-- **The player to move's own triggers permute the cards** (milestone MV7c). -/
+theorem FireMine.perm {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :
+    g'.allCards.Perm g.allCards := by
+  obtain ⟨g₁, g₂, h₁, h₂, rfl⟩ := h
+  exact g₂.swap_perm.trans (h₂.perm.trans (h₁.perm.trans g.swap_perm))
+
+/-- **The resolution of the owed triggers permutes the cards** of the state it starts from with the
+record cleared (milestone MV7c). -/
+theorem Owed.perm {g g' : GameState} (h : Owed g g') : g'.allCards.Perm g.unpend.allCards := by
+  cases h with
+  | mineFirst _ _ _ hm ht => exact ht.perm.trans hm.perm
+  | oppFirst _ _ _ ht hm => exact hm.perm.trans ht.perm
+
 /-- Taking the Knock Outs permutes the cards in the game. -/
 theorem Resolve.perm {g g' : GameState} (h : Resolve g g') : g'.allCards.Perm g.allCards := by
   induction h with
   | done => exact .refl _
   | step _ hm _ ih => exact ih.trans hm.perm
-  | trigger _ _ _ _ ht _ ih => exact ih.trans (ht.perm.trans (.of_eq (GameState.allCards_unpend _)))
+  | trigger _ _ _ ho _ ih => exact ih.trans (ho.perm.trans (.of_eq (GameState.allCards_unpend _)))
 
 /-- Resolving a Trainer card's effect, Knock Outs included, permutes the cards in the game:
 a Knock Out in mid-effect moves the Knocked Out Pokémon's cards to its owner's discard pile and
@@ -439,7 +462,7 @@ theorem Move.perm {g g' : GameState} (h : Move g g') : g'.allCards.Perm g.allCar
       rw [GameState.allCards_afterAttack]; exact ht.perm.trans hr.perm
   | attackConfused ha hm hc hs hn hf => perm_count [ha]
   | knockOuts h _ ht => exact ht.perm.trans h.perm
-  | trigger _ _ _ ht => exact ht.perm.trans (.of_eq (GameState.allCards_unpend _))
+  | trigger _ _ ho => exact ho.perm.trans (.of_eq (GameState.allCards_unpend _))
   | endTurn fa sa ca fb sb cb ha hb hk hbt hco hcc =>
       simp only [GameState.allCards, PlayerState.allCards, PlayerState.unfresh, hco.cardList,
         hcc.cardList, benchCardList_unfresh]
