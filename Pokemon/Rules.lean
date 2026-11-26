@@ -2428,6 +2428,25 @@ inductive Move : GameState → GameState → Prop where
       (hpd : g.pend = false := by first | rfl | assumption) :
       Move g { g with winner := some (.win !g.curIsFirst) }
 
+/-- **An attack against a protected Defending Pokémon** (milestone MV10): with the protection from
+effects of attacks in effect (`GameState.shield g = true`) the attack resolves with its effects on the
+Defending Pokémon removed (`Attack.against true`, `Effect.shielded`). -/
+theorem Move.attackShielded {g g' : GameState} {a : InPlay} {atk : Attack}
+    (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
+    (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
+    (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
+    (hst : Settled g)
+    (hr : Run (atk.against true).script g g')
+    (hl : g.cur.mods.live.noAttack = false)
+    (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true)
+    {l : List Ability} {g'' : GameState} (hd : HitTrig (atk.against true) g g' l)
+    (ht : Fire .damaged l g' g'')
+    (hlk : a.lk.on.allows atk = true) (hsh : g.shield = true := by first | rfl | decide) :
+    Move g (g''.afterAttack atk.lockSet atk.gx) := by
+  have hr' : Run (atk.against g.shield).script g g' := by rw [hsh]; exact hr
+  have hd' : HitTrig (atk.against g.shield) g g' l := by rw [hsh]; exact hd
+  exact .attack ha hm hc hs hn hf hbt hst hr' hl hgx hw hd' ht hlk
+
 /-- **An attack against an unprotected Defending Pokémon** (milestone MV10): with no protection
 from effects of attacks (`GameState.shield g = false`) the attack resolves as printed, so
 `Move.attack` takes the premises it had before milestone MV10. -/
