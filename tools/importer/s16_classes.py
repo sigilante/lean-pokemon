@@ -61,6 +61,8 @@ c('M', 'data defect or out-of-range stage/Resistance (record)', r'^evolution car
 # counters by attacks and Abilities (Battle Cage), "recovers from all Special Conditions" (Festival Grounds), thresholds
 # (Drednaw), an attacker filter on attached Energy (Bastiodon), the static `Ign.fx` (Walking Wake ex), Dizzying Valley,
 # Neutralization Zone
+# importer 0.21.0 (milestone MV14, survey S28): the static threshold "if that damage is N or more" (Drednaw) is
+# imported (`SEff.preventGe`) and left this row
 c('M', 'static effects: prevention or immunity (effects, Special Conditions, healing, thresholds, Bench)', r'static, prevent')
 c('M', 'static effects: Ability/Tool/Item/Stadium/attack locks', r'static, lock')
 c('M', 'static effects: cost changes and Energy provision', r'static, cost')
@@ -206,6 +208,8 @@ c('M', 'own Special Conditions (effects that affect the attacker)', UH, r'^This 
 # attacks done to this Pokémon" is imported (`Mod.shield`); what is left here is the filtered or chosen form ("done to
 # that Pokémon by your opponent's Pokémon ex", Acerola's Mischief), which needs a per-Pokémon, filtered flag
 c('M', 'prevention of effects of attacks (lingering and static)', UH, r'prevent all damage from and effects of|effects of attacks')
+# importer 0.21.0 (milestone MV14, survey S28): the lingering threshold "if that damage is N or less" (Metapod,
+# Roggenrola) is imported (`Mod.preventLe`) and left this row; the label keeps "thresholds" for the TSV history
 c('M', 'filtered lingering modifiers (prevention, reduction, bonus by attacker or holder kind; thresholds)', UH,
   r'prevent all damage (done to this Pokémon by attacks (from|if)|done to each of your)|takes \d+ less damage from attacks from|attacks used by your (Fighting|Pokémon that don\'t|Pokémon do \d+ more damage to your opponent\'s Active Pokémon ex)|all of your Metal Pokémon take|Active Pokémon ex and Active Pokémon V')
 c('M', 'defender modifiers outside steps 2 and 5 (less before W/R, more after W/R, Weakness changes, named-attack bonus, base-damage set, cost changes)', UH,
