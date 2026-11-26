@@ -103,7 +103,7 @@ theorem work_two_heads :
       g.opp.active = some { InPlay.ofBasic big with damage := 16 } := by
   have hr := work_run 2 (Nat.le_refl _)
   exact ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := workRush) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled hr
+    Move.attackOpen (hlk := rfl) (atk := workRush) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled hr
       rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _), rfl⟩
 
 /-- **The values of Work Rush** with two Energy attached: 0, 80 or 160 damage, and nothing else. -/
@@ -127,7 +127,7 @@ theorem stringBind_witness :
       g.opp.active = some { InPlay.ofBasic big with damage := 4 } := by
   have hr : Run stringBind.script start _ := .damage (.add (.const 1 _) (.count _ 3 _)) rfl
   exact ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := stringBind) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := stringBind) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
       start_settled hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
 
@@ -142,7 +142,7 @@ theorem bugOut_witness :
       (.zone rfl (.look (t := [.pokemon bugger]) (r := [.energy .fire]) (.take (by decide) (.keep .nil))
         (by unfold Qty.ok; decide) (.discard _ _) (.put (.shuffle _ (List.Perm.refl _)))))
   exact ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := bugOut) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := bugOut) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       start_settled hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl, rfl, rfl⟩
 

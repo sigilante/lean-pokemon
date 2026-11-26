@@ -122,7 +122,7 @@ theorem gadget_two_tools :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { sick with damage := 6 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := gadget) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
+    Move.attackOpen (hlk := rfl) (atk := gadget) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.count _ 3 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.count _ 3 _) rfl) rfl) (.nil _), rfl⟩
 
@@ -132,7 +132,7 @@ theorem rootDrain_three :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { sick with damage := 30 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := rootDrain) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
+    Move.attackOpen (hlk := rfl) (atk := rootDrain) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.count _ 10 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.count _ 10 _) rfl) rfl) (.nil _), rfl⟩
 
@@ -141,7 +141,7 @@ theorem poisonChain_five :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { sick with damage := 30 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := poisonChain) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := poisonChain) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       start_settled (.damage (.count _ 6 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.count _ 6 _) rfl) rfl) (.nil _), rfl⟩
 

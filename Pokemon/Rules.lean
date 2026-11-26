@@ -2331,16 +2331,20 @@ inductive Move : GameState → GameState → Prop where
   opponent's `damaged` triggers (`HitTrig`, `Fire`), resolved before the Knock Out check. Since
   milestone MV7 an attack that switches the attacker to the Bench raises the `oppBenched` event
   (`Run.switch .own`), resolved by the next move, `Move.trigger`, before the attack's Knock Out
-  check (`Pokemon/Promoted.lean`). -/
+  check (`Pokemon/Promoted.lean`). Since milestone MV10 the attack resolves against a protected
+  Defending Pokémon (`GameState.shield`: "prevent all effects of attacks done to this Pokémon", stored
+  or static) with its effects on that Pokémon removed (`Attack.against`, `Effect.shielded`), read in
+  the state before the attack. -/
   | attack {g g' : GameState} {a : InPlay} {atk : Attack}
       (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
       (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
       (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
       (hst : Settled g)
-      (hr : Run atk.script g g')
+      (hr : Run (atk.against g.shield).script g g')
       (hl : g.cur.mods.live.noAttack = false)
       (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true)
-      {l : List Ability} {g'' : GameState} (hd : HitTrig atk g g' l) (ht : Fire .damaged l g' g'')
+      {l : List Ability} {g'' : GameState} (hd : HitTrig (atk.against g.shield) g g' l)
+      (ht : Fire .damaged l g' g'')
       (hlk : a.lk.on.allows atk = true) :
       Move g (g''.afterAttack atk.lockSet atk.gx)
   /-- a Confused Pokémon tries to attack and the coin flip is tails: the attack does not
@@ -2423,6 +2427,25 @@ inductive Move : GameState → GameState → Prop where
       (hk : DamageBounded g) (hd : g.cur.deck = [])
       (hpd : g.pend = false := by first | rfl | assumption) :
       Move g { g with winner := some (.win !g.curIsFirst) }
+
+/-- **An attack against an unprotected Defending Pokémon** (milestone MV10): with no protection
+from effects of attacks (`GameState.shield g = false`) the attack resolves as printed, so
+`Move.attack` takes the premises it had before milestone MV10. -/
+theorem Move.attackOpen {g g' : GameState} {a : InPlay} {atk : Attack}
+    (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
+    (hc : Pays atk.cost a.units) (hs : a.rot.canAct = true)
+    (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
+    (hst : Settled g)
+    (hr : Run atk.script g g')
+    (hl : g.cur.mods.live.noAttack = false)
+    (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true)
+    {l : List Ability} {g'' : GameState} (hd : HitTrig atk g g' l) (ht : Fire .damaged l g' g'')
+    (hlk : a.lk.on.allows atk = true) (hsh : g.shield = false := by first | rfl | decide) :
+    Move g (g''.afterAttack atk.lockSet atk.gx) := by
+  have e : atk.against g.shield = atk := by rw [hsh]; rfl
+  have hr' : Run (atk.against g.shield).script g g' := by rw [e]; exact hr
+  have hd' : HitTrig (atk.against g.shield) g g' l := by rw [e]; exact hd
+  exact .attack ha hm hc hs hn hf hbt hst hr' hl hgx hw hd' ht hlk
 
 /-- `Move.endTurn` when no static Checkup effect applies to either Active Pokémon (milestone
 MV7b): the state of the milestones before, with the effects first (`oa = ob = []`). -/

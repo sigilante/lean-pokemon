@@ -74,7 +74,8 @@ theorem b0_settled : Settled b0 := (GameState.settled_iff _).2 (by decide)
 
 /-- Every move from a start `stJ o` that makes the turn's attack is `jet`. -/
 theorem attack_inv {o : PlayerState} {g₁ : GameState} (hm : Move (stJ o) g₁)
-    (ha : g₁.attacked = true) :
+    (ha : g₁.attacked = true)
+    (hsh : (stJ o).shield = false) :
     ∃ g' l g'', Run jet.script (stJ o) g' ∧ HitTrig jet (stJ o) g' l ∧ Fire .damaged l g' g'' ∧
       g₁ = g''.afterAttack jet.lockSet jet.gx := by
   cases hm with
@@ -106,6 +107,7 @@ theorem attack_inv {o : PlayerState} {g₁ : GameState} (hm : Move (stJ o) g₁)
       simp only [stJ, side, Option.some.injEq] at ha'; subst ha'
       have e : atk = jet := by simpa [InPlay.attacks, InPlay.ofBasic, jetterC] using hm'
       subst e
+      rw [hsh, Attack.against_false] at hr hd
       exact ⟨g', l, g'', hr, hd, ht, rfl⟩
   | attackConfused ha' _ _ hs =>
       simp only [stJ, side, Option.some.injEq] at ha'; subst ha'
@@ -138,7 +140,7 @@ milestone MV7b the trigger was read after the gust and nothing fired (the review
 theorem gust_drops_holder : ∀ g₁ g₂, Move a0 g₁ → g₁.attacked = true → Move g₁ g₂ →
     g₂.cur.active.map InPlay.rot = some .confused ∧ g₂.opp.bench.map InPlay.top = [mistyC 30] := by
   intro g₁ g₂ h1 ha h2
-  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha
+  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha (by decide)
   change Run (.seq (.damage (.const 10)) (.seq (.switch .own) (.switch .opp))) a0 g' at hr
   cases hr with
   | touchActive he => simp [Effect.touch] at he
@@ -206,7 +208,7 @@ theorem gust_drops_runs :
   have hr : Run jet.script a0 _ :=
     .seq (.damage (.const 10 _) rfl)
       (.seq (.switch (b₁ := []) (b₂ := []) .own rfl rfl) (.switch (b₁ := []) (b₂ := []) .opp rfl rfl))
-  exact ⟨_, _, .attack (atk := jet) rfl (.head _) (.nil _) rfl rfl rfl rfl a0_settled
+  exact ⟨_, _, Move.attackOpen (atk := jet) rfl (.head _) (.nil _) rfl rfl rfl rfl a0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl, rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [prose]) rfl rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _))),
     (GameState.settled_iff _).2 (by decide), rfl, rfl⟩
@@ -218,7 +220,7 @@ play that gusts `misty` in Confused it (the review's `gust_adds_holder`). -/
 theorem gust_adds_holder : ∀ g₁ g₂, Move b0 g₁ → g₁.attacked = true → Move g₁ g₂ →
     g₂.cur.active.map InPlay.rot ≠ some .confused := by
   intro g₁ g₂ h1 ha h2
-  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha
+  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha (by decide)
   change Run (.seq (.damage (.const 10)) (.seq (.switch .own) (.switch .opp))) b0 g' at hr
   cases hr with
   | touchActive he => simp [Effect.touch] at he
@@ -302,7 +304,7 @@ theorem gust_adds_runs :
     .seq (.damage (.const 10 _) rfl)
       (.seq (.switch (b₁ := []) (b₂ := []) .own rfl rfl)
         (.switch (b₁ := [(InPlay.ofBasic (watcherC false)).noteOwe .bench]) (b₂ := []) .opp rfl rfl))
-  exact ⟨_, _, .attack (atk := jet) rfl (.head _) (.nil _) rfl rfl rfl rfl b0_settled
+  exact ⟨_, _, Move.attackOpen (atk := jet) rfl (.head _) (.nil _) rfl rfl rfl rfl b0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [surge false]) rfl rfl (.refl _) (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _))),
     rfl, rfl, rfl⟩

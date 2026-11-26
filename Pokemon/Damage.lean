@@ -523,7 +523,8 @@ theorem Test.eval_agree (t : Test) {k : Nat} {g₁ g₂ : GameState} {q p : InPl
 theorem Mods.cap_iff {k : Nat} {a b : Mods} :
     a.cap k = b.cap k ↔ min a.bonus k = min b.bonus k ∧ min a.reduce k = min b.reduce k ∧
       a.prevent = b.prevent ∧ a.noAttack = b.noAttack ∧ a.noRetreat = b.noRetreat ∧
-      a.noItem = b.noItem ∧ min a.minus k = min b.minus k ∧ min a.more k = min b.more k := by
+      a.noItem = b.noItem ∧ min a.minus k = min b.minus k ∧ min a.more k = min b.more k ∧
+      a.shield = b.shield := by
   cases a; cases b
   simp only [Mods.cap, Mods.mk.injEq]
 
@@ -536,23 +537,24 @@ theorem Store.cap_iff {k : Nat} {a b : Store} :
 theorem Mods.cap_merge {k : Nat} {a₁ a₂ b₁ b₂ : Mods} (ha : a₁.cap k = a₂.cap k)
     (hb : b₁.cap k = b₂.cap k) : (a₁.merge b₁).cap k = (a₂.merge b₂).cap k := by
   rw [Mods.cap_iff] at ha hb ⊢
-  obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8⟩ := ha
-  obtain ⟨b1, b2, b3, b4, b5, b6, b7, b8⟩ := hb
-  simp only [Mods.merge, a3, a4, a5, a6, b3, b4, b5, b6, true_and]
+  obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9⟩ := ha
+  obtain ⟨b1, b2, b3, b4, b5, b6, b7, b8, b9⟩ := hb
+  simp only [Mods.merge, a3, a4, a5, a6, a9, b3, b4, b5, b6, b9, true_and, and_true]
   exact ⟨by clear a2 b2 a7 b7 a8 b8; omega, by clear a1 b1 a7 b7 a8 b8; omega,
     by clear a1 b1 a2 b2 a8 b8; omega, by clear a1 b1 a2 b2 a7 b7; omega⟩
 
 theorem Mods.cap_addMod {k : Nat} {a b : Mods} (h : a.cap k = b.cap k) (m : Mod) :
     (a.addMod m).cap k = (b.addMod m).cap k := by
   rw [Mods.cap_iff] at h ⊢
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8⟩ := h
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := h
   cases m with
-  | bonus n => simp only [Mods.addMod]; exact ⟨by clear h2 h7 h8; omega, h2, h3, h4, h5, h6, h7, h8⟩
-  | reduce n => simp only [Mods.addMod]; exact ⟨h1, by clear h1 h7 h8; omega, h3, h4, h5, h6, h7, h8⟩
-  | prevent => exact ⟨h1, h2, rfl, h4, h5, h6, h7, h8⟩
+  | bonus n => simp only [Mods.addMod]; exact ⟨by clear h2 h7 h8; omega, h2, h3, h4, h5, h6, h7, h8, h9⟩
+  | reduce n => simp only [Mods.addMod]; exact ⟨h1, by clear h1 h7 h8; omega, h3, h4, h5, h6, h7, h8, h9⟩
+  | prevent => exact ⟨h1, h2, rfl, h4, h5, h6, h7, h8, h9⟩
   | lock l => cases l <;> simp only [Mods.addMod] <;> simp only [*, and_self]
-  | weaken n => simp only [Mods.addMod]; exact ⟨h1, h2, h3, h4, h5, h6, by clear h1 h2 h8; omega, h8⟩
-  | expose n => simp only [Mods.addMod]; exact ⟨h1, h2, h3, h4, h5, h6, h7, by clear h1 h2 h7; omega⟩
+  | weaken n => simp only [Mods.addMod]; exact ⟨h1, h2, h3, h4, h5, h6, by clear h1 h2 h8; omega, h8, h9⟩
+  | expose n => simp only [Mods.addMod]; exact ⟨h1, h2, h3, h4, h5, h6, h7, by clear h1 h2 h7; omega, h9⟩
+  | shield => exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, rfl⟩
 
 /-- The modifiers in effect agree at the cap when the stores do. -/
 theorem Store.live_cap {k : Nat} {a b : Store} (h : a.cap k = b.cap k) :
@@ -615,6 +617,7 @@ theorem Mods.NoReduce.addMod {a : Mods} (h : a.NoReduce) (m : Mod) (hm : m.plain
   | bonus n => exact ⟨h1, h2, h3⟩
   | prevent => exact ⟨h1, h2, h3⟩
   | lock l => cases l <;> exact ⟨h1, h2, h3⟩
+  | shield => exact ⟨h1, h2, h3⟩
 
 theorem Store.NoReduce.add {t : Store} (h : t.NoReduce) (s : Slot) (m : Mod)
     (hm : m.plain = true) : (t.add s m).NoReduce := by
@@ -631,7 +634,7 @@ theorem Store.NoReduce.shift {t : Store} (h : t.NoReduce) : t.shift.NoReduce :=
 theorem Mods.NoReduce.of_cap {k : Nat} (hk : 0 < k) {a b : Mods} (h : a.cap k = b.cap k)
     (hb : b.NoReduce) : a.NoReduce := by
   rw [Mods.cap_iff] at h
-  obtain ⟨-, h2, -, -, -, -, h7, h8⟩ := h
+  obtain ⟨-, h2, -, -, -, -, h7, h8, -⟩ := h
   obtain ⟨b1, b2, b3⟩ := hb
   -- One amount at a time: `omega` given all the facts at once splits on every `min`.
   have key : ∀ {x y : Nat}, min x k = min y k → y = 0 → x = 0 := fun hm hy => by omega
@@ -1002,6 +1005,16 @@ theorem GameState.sameField_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g�
   simp only [GameState.clampAt, PlayerState.field, fieldOf_map (hsv _) (hsv _)] at e1 e2
   exact ⟨by simp only [PlayerState.field]; exact e1.symm, by simp only [PlayerState.field]; exact e2.symm,
     (congrArg GameState.stadium h).symm, (congrArg GameState.curIsFirst h).symm⟩
+
+/-- **The clamps keep the protection from effects of attacks** (milestone MV10): it is a flag of the
+stores, which the cap keeps, or a static effect, which `SameField` keeps. -/
+theorem GameState.shield_of_clampAt {co cp cbo cbp : Cap} {k : Nat} {g₁ g₂ : GameState}
+    (h : g₁.clampAt co cp cbo cbp k = g₂.clampAt co cp cbo cbp k) : g₂.shield = g₁.shield := by
+  have hs := (GameState.sameField_of_clampAt h).sShield
+  have hm : g₁.opp.mods.cap (2 * k) = g₂.opp.mods.cap (2 * k) := congrArg (fun g => g.opp.mods) h
+  have hl := (Mods.cap_iff.1 (Store.live_cap hm)).2.2.2.2.2.2.2.2
+  unfold GameState.shield
+  rw [hs, hl]
 
 /-- With no pending Knock Out and every HP at most `k`, every damage is below `k`. -/
 theorem DamageBounded.lt_bound {g : GameState} {k : Nat} (hk : DamageBounded g)

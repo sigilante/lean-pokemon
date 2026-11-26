@@ -1140,7 +1140,7 @@ theorem Move.noReduce {g g' : GameState} (h : Move g g')
   | @attack g' a atk ha hm hc hs hn' hf hbt hst hr _ _ _ _ _ _ ht' =>
       obtain ⟨c, hc, hmc⟩ := InPlay.attack_mem hm
       have h2 := (Card.attack_tame (ht _ (GameState.mem_allCards_of_cur_active ha hc)) hmc).1
-      exact ht'.zoneOnly.noReduce (hr.noReduce (by rw [Attack.script_tame]; exact h2) hn)
+      exact ht'.zoneOnly.noReduce (hr.noReduce (Attack.against_tame (by rw [Attack.script_tame]; exact h2)) hn)
   | @ability g₁ g' x sp ab hu hm _ _ _ _ _ _ _ hr =>
       obtain ⟨c, hc, hmc⟩ := InPlay.ability_mem hm
       exact hr.noReduce (Card.ability_tame (ht _ (hu.card_mem hc)) hmc _ (ab.script_mem _))
@@ -1351,8 +1351,10 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
   | @attack g' a atk ha hm hc' hs hn hf hbt hst hr hl hgx hw l g'' hd ht' hlk =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.attack ha hm
-      obtain ⟨g₂', hd', hc''⟩ := hd.clamp_sim hF.1 ht hb hF.2.2.2.1 hcap
+      obtain ⟨g₂', hd', hc''⟩ := hd.clamp_sim hF.1 (Attack.against_tame ht)
+        (Nat.lt_of_le_of_lt (Attack.against_tmax _ _) hb) hF.2.2.2.1 hcap
         (GameState.rclamp_of_clamp hc hst.1 hH)
+      rw [← GameState.shield_of_clampAt hc] at hd'
       have hr' := hd'.run
       obtain ⟨g₂'', ht₂, hc'''⟩ := ht'.clamp_sim (co := .exact) (cp := .upto k) (cbo := .exact)
         (cbp := .upto k) hc''

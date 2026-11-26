@@ -101,7 +101,7 @@ theorem prevented :
     WellFormed (start .ex) ∧ Settled (start .ex) ∧ ∃ g, Move (start .ex) g ∧
       g.opp.active = some (InPlay.ofBasic warden) ∧ g.cur.active = some (InPlay.ofBasic (brute .ex)) :=
   ⟨start_wellFormed _, start_settled, _,
-    .attack (hlk := rfl) (atk := hit) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled hit_run rfl
+    Move.attackOpen (hlk := rfl) (atk := hit) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled hit_run rfl
       (fun h => absurd h (by decide)) rfl
       (.quiet (sw := false) (.hit rfl hit_run rfl (fun _ => rfl))) (.nil _), rfl, rfl⟩
 
@@ -126,7 +126,7 @@ theorem pierce_fires :
     ∃ g, Move (start .ex) g ∧ g.opp.active = some { InPlay.ofBasic warden with damage := 6 } ∧
       g.cur.active = some { InPlay.ofBasic (brute .ex) with damage := 2 } := by
   have hr : Run pierce.script (start .ex) _ := Run.damage (ig := { fx := true }) (.const 6 _) rfl
-  exact ⟨_, .attack (hlk := rfl) (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled hr
+  exact ⟨_, Move.attackOpen (hlk := rfl) (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled hr
     rfl (fun h => absurd h (by decide)) rfl
     (.fire (sw := false) (.hit rfl hr rfl (fun _ => rfl)) (List.Perm.refl _))
     (.run (ab := barb) (l := []) rfl (.counters 2 rfl) (.nil _)), rfl, rfl⟩

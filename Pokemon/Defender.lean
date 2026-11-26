@@ -131,7 +131,7 @@ theorem growl_witness :
       g.opp.mods.next.minus = 3 := by
   have hr : Run growl.script (start plainIn) _ := .linger .opp .next (.weaken 3) _
   exact ⟨start_wellFormed _ (.of_b rfl), settled_plain, _,
-    .attack (hlk := rfl) (atk := growl) rfl (.head _) (.nil _) rfl rfl rfl rfl settled_plain hr rfl
+    Move.attackOpen (hlk := rfl) (atk := growl) rfl (.head _) (.nil _) rfl rfl rfl rfl settled_plain hr rfl
       (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _), rfl⟩
 
 /-- **Witness: the increase is written** for the attacker's next turn by a legal attack. -/
@@ -140,7 +140,7 @@ theorem screech_witness :
       g.opp.mods.after.more = 5 := by
   have hr : Run screech.script (start plainIn) _ := .linger .opp .after (.expose 5) _
   exact ⟨start_wellFormed _ (.of_b rfl), settled_plain, _,
-    .attack (hlk := rfl) (atk := screech) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := screech) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
       settled_plain hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
 
@@ -152,7 +152,7 @@ theorem mash_plain :
   have hr : Run mash.script (start plainIn) _ :=
     .iteF (p := plainIn) rfl (by decide) (.damage (.const 6 _) rfl)
   exact ⟨start_wellFormed _ (.of_b rfl), settled_plain, _,
-    .attack (hlk := rfl) (atk := mash) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := mash) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       settled_plain hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl, rfl⟩
 
@@ -163,7 +163,7 @@ theorem mash_boosted :
   have hr : Run mash.script (start notedIn) _ :=
     .iteT (p := notedIn) rfl (by decide) (.damage (.const 12 _) rfl)
   exact ⟨start_wellFormed _ (.of_b rfl), settled_noted, _,
-    .attack (hlk := rfl) (atk := mash) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := mash) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       settled_noted hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
 
@@ -198,7 +198,7 @@ theorem cancelled_exposed :
       g.opp.active = some { InPlay.ofBasic big with damage := 5 } := by
   have hr : Run jab.script penalised _ := .damage (.const 3 _) rfl
   exact ⟨penalised_wellFormed, settled_penalised, _,
-    .attack (hlk := rfl) (atk := jab) rfl (.head _) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := jab) rfl (.head _) (.nil _) rfl rfl rfl rfl
       settled_penalised hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
 
@@ -209,7 +209,7 @@ theorem zero_exposed :
       g.opp.active = some (InPlay.ofBasic big) := by
   have hr : Run nudge.script penalised _ := .damage (.const 0 _) rfl
   exact ⟨penalised_wellFormed, settled_penalised, _,
-    .attack (hlk := rfl) (atk := nudge) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := nudge) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
       settled_penalised hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     rfl⟩
 

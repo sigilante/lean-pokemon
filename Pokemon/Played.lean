@@ -120,10 +120,10 @@ theorem buddy_after_emma :
     .iteT (p := InPlay.ofBasic espurr) rfl (by decide) (.damage (.const 7 _) rfl)
   have hr' : Run buddy.script start _ :=
     .iteF (p := InPlay.ofBasic espurr) rfl (by decide) (.damage (.const 1 _) rfl)
-  exact ⟨⟨_, .attack (hlk := rfl) (atk := buddy) rfl (.head _) (.nil _) rfl rfl rfl rfl
+  exact ⟨⟨_, Move.attackOpen (hlk := rfl) (atk := buddy) rfl (.head _) (.nil _) rfl rfl rfl rfl
       played_settled hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
       rfl⟩,
-    ⟨_, .attack (hlk := rfl) (atk := buddy) rfl (.head _) (.nil _) rfl rfl rfl rfl
+    ⟨_, Move.attackOpen (hlk := rfl) (atk := buddy) rfl (.head _) (.nil _) rfl rfl rfl rfl
       start_settled hr' rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr' rfl) (.nil _),
       rfl⟩⟩
 
@@ -169,7 +169,7 @@ theorem usedLast_next_turn :
       Move g₅ g₆ ∧ (g₆.opp.active.map InPlay.damage) = some 13 := by
   have hr : Run ranks.script r0 _ := .damage (.const 1 _) rfl
   refine ⟨_, _, _, _, _, _,
-    .attack (hlk := rfl) (atk := ranks) rfl (.head _) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := ranks) rfl (.head _) (.nil _) rfl rfl rfl rfl
       r0_settled hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     .endTurn_of_zero false false false false false false rfl rfl
       ((GameState.settled_iff _).2 (by decide)).1 rfl .nil .nil (by decide) (by decide),
@@ -177,7 +177,7 @@ theorem usedLast_next_turn :
     .endTurn_of_zero false false false false false false rfl rfl
       ((GameState.settled_iff _).2 (by decide)).1 rfl .nil .nil (by decide) (by decide),
     .startTurn rfl rfl rfl ((GameState.settled_iff _).2 (by decide)).1 rfl,
-    .attack (hlk := rfl) (atk := allOut) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := allOut) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
       ((GameState.settled_iff _).2 (by decide))
       (.iteT rfl (by decide) (.damage (.const 12 _) rfl)) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.iteT rfl (by decide) (.damage (.const 12 _) rfl)) rfl) (.nil _), rfl⟩

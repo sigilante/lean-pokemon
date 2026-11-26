@@ -316,7 +316,7 @@ theorem present_witness :
       ⟨Nat.le_refl _, fun h => absurd h (Nat.lt_irrefl _)⟩ (.bottom _ (List.Perm.refl _))
       (.put (.hand _ _)))
   exact ⟨start_wellFormed _, start_settled₁, _,
-    .attack (hlk := rfl) (atk := present) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled₁ hr
+    Move.attackOpen (hlk := rfl) (atk := present) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled₁ hr
       rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _), rfl, rfl⟩
 
 /-- The deck of the second witness: a Pokémon card, then a Grass Energy. -/
@@ -335,7 +335,7 @@ theorem gate_witness :
       (.bench (ps := [big]) (fun p hp => by
         simp only [List.mem_singleton] at hp; subst hp; exact ⟨rfl, by decide⟩) (by decide)))
   exact ⟨start_wellFormed _, start_settled₂, _,
-    .attack (hlk := rfl) (atk := gate) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := gate) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl
       start_settled₂ hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl)
       (.nil _), rfl, rfl⟩
 
@@ -351,7 +351,7 @@ theorem maker_witness :
       (.keep (.take rfl (.take rfl .nil))) (by unfold Qty.ok; decide) (.bottom _ (List.Perm.refl _))
       (.attach (.active rfl rfl (.bench (b₁ := []) rfl rfl (.nil _ _)))))
   exact ⟨start_wellFormed _, start_settled₁, _,
-    .attack (hlk := rfl) (atk := maker) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := maker) rfl (.tail _ (.tail _ (.head _))) (.nil _) rfl rfl rfl rfl
       start_settled₁ hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl)
       (.nil _), rfl, rfl, rfl⟩
 

@@ -108,7 +108,7 @@ def g1 : GameState :=
     GameState).afterAttack .this false
 
 theorem g0_g1 : Move g0 g1 :=
-  .attack (atk := wave) rfl (.head _) (.nil _) rfl rfl rfl rfl g0_settled
+  Move.attackOpen (atk := wave) rfl (.head _) (.nil _) rfl rfl rfl rfl g0_settled
     (.seq (.damage (.const 2 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl
     (HitTrig.exists_nil (.seq (.damage (.const 2 _) rfl) (.skip _)) rfl) (.nil _) rfl
 
@@ -208,7 +208,7 @@ defender, which has 2 from the first Giant Wave. -/
 def g4 : GameState := (g3).afterAttack .none false
 
 theorem g3_g4 : Move g3 g4 :=
-  .attack (atk := splash) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl g3_settled
+  Move.attackOpen (atk := splash) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl g3_settled
     (.skip _) rfl (fun h => nomatch h) rfl (HitTrig.exists_nil (.skip _) rfl) (.nil _) rfl
 
 /-- After the turns pass: the second player's turn, then the first player's. -/
@@ -230,7 +230,7 @@ theorem g5_lock : g5.cur.active.map InPlay.lk = some {} ∧ g5.curIsFirst = true
 theorem g5_wave : ∃ g', Move g5 g' ∧
     g'.opp.active.map InPlay.damage = some 4 := by
   have s : Settled g5 := (GameState.settled_iff _).2 (by decide)
-  exact ⟨_, .attack (atk := wave) rfl (.head _) (.nil _) rfl rfl rfl rfl s
+  exact ⟨_, Move.attackOpen (atk := wave) rfl (.head _) (.nil _) rfl rfl rfl rfl s
     (.seq (.damage (.const 2 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl
     (HitTrig.exists_nil (.seq (.damage (.const 2 _) rfl) (.skip _)) rfl) (.nil _) rfl, rfl⟩
 

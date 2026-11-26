@@ -192,12 +192,13 @@ every printed Resistance plus every static damage reduction in force (`sReduceBo
 0 for cards with no static effect), and than every test constant in the cards of `C`. -/
 def bound (C : List Card) : Nat := hpBound C + maxResist C + sReduceBound C + cardsTmax C + 1
 
-/-- Every value of one turn's modifiers with amounts at most `M`. -/
+/-- Every value of one turn's modifiers with amounts at most `M` (since milestone MV10 with both
+values of the flag `Mods.shield`). -/
 def modss (M : Nat) : List Mods :=
   (List.range (M + 1)).flatMap fun b => (List.range (M + 1)).flatMap fun r =>
   bools.flatMap fun p => bools.flatMap fun a => bools.flatMap fun t => bools.flatMap fun i =>
-  (List.range (M + 1)).flatMap fun u => (List.range (M + 1)).map fun v =>
-  ⟨b, r, p, a, t, i, u, v⟩
+  (List.range (M + 1)).flatMap fun u => (List.range (M + 1)).flatMap fun v => bools.map fun s =>
+  ⟨b, r, p, a, t, i, u, v, s⟩
 
 /-- The amounts in one turn's modifiers are at most `M` (since milestone MV6 the step-2 penalty and
 the step-5 increase too). -/
@@ -205,12 +206,13 @@ def ModsLe (M : Nat) (m : Mods) : Prop :=
   m.bonus ≤ M ∧ m.reduce ≤ M ∧ m.minus ≤ M ∧ m.more ≤ M
 
 theorem mem_modss {M : Nat} {m : Mods} (h : ModsLe M m) : m ∈ modss M := by
-  obtain ⟨b, r, p, a, t, i, u, v⟩ := m
+  obtain ⟨b, r, p, a, t, i, u, v, s⟩ := m
   obtain ⟨h1, h2, h3, h4⟩ := h
   simp only [modss, List.mem_flatMap, List.mem_map]
   exact ⟨b, List.mem_range.2 (Nat.lt_succ_of_le h1), r, List.mem_range.2 (Nat.lt_succ_of_le h2),
     p, mem_bools _, a, mem_bools _, t, mem_bools _, i, mem_bools _,
-    u, List.mem_range.2 (Nat.lt_succ_of_le h3), v, List.mem_range.2 (Nat.lt_succ_of_le h4), rfl⟩
+    u, List.mem_range.2 (Nat.lt_succ_of_le h3), v, List.mem_range.2 (Nat.lt_succ_of_le h4),
+    s, mem_bools _, rfl⟩
 
 /-- Every store with amounts at most `M`. -/
 def stores (M : Nat) : List Store :=

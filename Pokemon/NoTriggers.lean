@@ -47,10 +47,10 @@ theorem Move.attack_of_trigFree {g g' : GameState} {a : InPlay} {atk : Attack}
     (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
     (hst : Settled g) (hr : Run atk.script g g') (hl : g.cur.mods.live.noAttack = false)
     (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) (htf : g.TrigFree)
-    (hlk : a.lk.on.allows atk = true) :
+    (hlk : a.lk.on.allows atk = true) (hsh : g.shield = false := by first | rfl | decide) :
     Move g (g'.afterAttack atk.lockSet atk.gx) :=
-  .attack ha hm hc hs hn hf hbt hst hr hl hgx hw
-    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _) hlk
+  Move.attackOpen ha hm hc hs hn hf hbt hst hr hl hgx hw
+    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _) hlk hsh
 
 /-- With no triggered Ability, an attack fires no trigger: its result is the state after its
 script with the attack recorded. -/

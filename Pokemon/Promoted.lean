@@ -68,7 +68,8 @@ theorem g0_wellFormed : WellFormed g0 := by
 theorem g0_settled : Settled g0 := (GameState.settled_iff _).2 (by decide)
 
 /-- Every move from a start `st o` that makes the turn's attack is U-turn. -/
-theorem attack_inv {o : PlayerState} {g₁ : GameState} (hm : Move (st o) g₁) (ha : g₁.attacked = true) :
+theorem attack_inv {o : PlayerState} {g₁ : GameState} (hm : Move (st o) g₁) (ha : g₁.attacked = true)
+    (hsh : (st o).shield = false) :
     ∃ g' l g'', Run uturn.script (st o) g' ∧ HitTrig uturn (st o) g' l ∧ Fire .damaged l g' g'' ∧
       g₁ = g''.afterAttack uturn.lockSet uturn.gx := by
   cases hm with
@@ -100,6 +101,7 @@ theorem attack_inv {o : PlayerState} {g₁ : GameState} (hm : Move (st o) g₁) 
       simp only [st, side, Option.some.injEq] at ha'; subst ha'
       have e : atk = uturn := by simpa [InPlay.attacks, InPlay.ofBasic, turnerC] using hm'
       subst e
+      rw [hsh, Attack.against_false] at hr hd
       exact ⟨g', l, g'', hr, hd, ht, rfl⟩
   | attackConfused ha' _ _ hs =>
       simp only [st, side, Option.some.injEq] at ha'; subst ha'
@@ -115,7 +117,7 @@ theorem attack_inv {o : PlayerState} {g₁ : GameState} (hm : Move (st o) g₁) 
 theorem promoted_quiet : ∀ g₁ g₂ g₃, Move g0 g₁ → g₁.attacked = true → Move g₁ g₂ → Move g₂ g₃ →
     g₃.cur.active.map InPlay.rot ≠ some .confused := by
   intro g₁ g₂ g₃ h1 ha h2 h3
-  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha
+  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha (by decide)
   change Run (.seq (.damage (.const 10)) (.switch .own)) g0 g' at hr
   cases hr with
   | touchActive he => simp [Effect.touch] at he
@@ -191,7 +193,7 @@ theorem promoted_runs :
       g₃.cur.active.map InPlay.rot = some .none ∧ g₃.cur.active.map InPlay.burned = some true := by
   have hr : Run uturn.script g0 _ :=
     .seq (.damage (.const 10 _) rfl) (.switch (b₁ := []) (b₂ := []) .own rfl rfl)
-  refine ⟨_, _, _, .attack (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl g0_settled
+  refine ⟨_, _, _, Move.attackOpen (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl g0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl, rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [surge false]) rfl rfl (.refl _) (.run rfl (.seq (.inflict .burned rfl) (.draw rfl)) (.nil _))),
     .knockOuts (l := []) (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide)) (by decide) .keep
@@ -217,7 +219,7 @@ trigger, which comes before the Knock Out check, Confuses the new Active Pokémo
 theorem held_fires : ∀ g₁ g₂, Move (h0 10) g₁ → g₁.attacked = true → Move g₁ g₂ →
     g₂.cur.active.map InPlay.rot = some .confused := by
   intro g₁ g₂ h1 ha h2
-  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha
+  obtain ⟨g', l, g'', hr, hd, ht, rfl⟩ := attack_inv h1 ha (by decide)
   change Run (.seq (.damage (.const 10)) (.switch .own)) (h0 10) g' at hr
   cases hr with
   | touchActive he => simp [Effect.touch] at he
@@ -268,7 +270,7 @@ theorem held_fires_ko :
       g₃.opp.active.map InPlay.top = some victimC := by
   have hr : Run uturn.script (h0 10) _ :=
     .seq (.damage (.const 10 _) rfl) (.switch (b₁ := []) (b₂ := []) .own rfl rfl)
-  refine ⟨_, _, _, .attack (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl h0_settled
+  refine ⟨_, _, _, Move.attackOpen (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl h0_settled
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [prose]) rfl rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _))),
     .knockOuts (l := []) (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide)) (by decide) .keep
@@ -283,7 +285,7 @@ theorem switch_attack_fires :
       Settled g₂ := by
   have hr : Run uturn.script (h0 30) _ :=
     .seq (.damage (.const 10 _) rfl) (.switch (b₁ := []) (b₂ := []) .own rfl rfl)
-  exact ⟨_, _, .attack (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl
+  exact ⟨_, _, Move.attackOpen (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl
       ((GameState.settled_iff _).2 (by decide))
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_opp (l := [prose]) rfl rfl (.refl _) (.run rfl (.inflict .confused rfl) (.nil _))),

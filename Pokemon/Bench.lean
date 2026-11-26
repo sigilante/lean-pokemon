@@ -371,7 +371,7 @@ theorem whirl_reachable :
       .seq (.damage (.const 1 _) rfl) (.seq (.inflict .paralyzed rfl)
         (.switch (b₁ := []) .opp rfl rfl))
   have hm : Move whirlStart _ :=
-    .attack (hlk := rfl) (atk := whirl) rfl (.head _) (.nil _) rfl rfl rfl rfl whirlStart_settled hr rfl
+    Move.attackOpen (hlk := rfl) (atk := whirl) rfl (.head _) (.nil _) rfl rfl rfl rfl whirlStart_settled hr rfl
       (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _)
   exact ⟨whirlStart, whirlStart_wellFormed, whirlStart_settled, _, _, hm, .step (.refl _) rfl hm,
     rfl, rfl, rfl, rfl, ⟨rfl, rfl, rfl, rfl⟩⟩
@@ -722,7 +722,7 @@ theorem teraBench_reachable :
       g.opp.bench = [(InPlay.ofBasic low).addDamage 5, InPlay.ofBasic teraMon] ∧
       ¬ DamageBounded g := by
   have hm : Move snipeStart _ :=
-    .attack (hlk := rfl) (atk := snipe) rfl (.head _) (.nil _) rfl rfl rfl rfl snipeStart_settled
+    Move.attackOpen (hlk := rfl) (atk := snipe) rfl (.head _) (.nil _) rfl rfl rfl rfl snipeStart_settled
       (.spreadDamage .opp 5 _) rfl (fun h => nomatch h) rfl
       (HitTrig.exists_nil (.spreadDamage .opp 5 _) rfl) (.nil _)
   refine ⟨snipeStart, snipeStart_wellFormed, snipeStart_settled, _, hm, .step (.refl _) rfl hm,
@@ -760,7 +760,7 @@ theorem benchDamage_reachable :
       g.opp.bench = [(InPlay.ofBasic low).addDamage 5, InPlay.ofBasic low] ∧
       ¬ DamageBounded g := by
   have hm : Move pokeStart _ :=
-    .attack (hlk := rfl) (atk := poke) rfl (.head _) (.nil _) rfl rfl rfl rfl pokeStart_settled
+    Move.attackOpen (hlk := rfl) (atk := poke) rfl (.head _) (.nil _) rfl rfl rfl rfl pokeStart_settled
       (.benchDamage (b₁ := []) .opp 5 rfl) rfl (fun h => nomatch h) rfl
       (HitTrig.exists_nil (.benchDamage (b₁ := []) .opp 5 rfl) rfl) (.nil _)
   refine ⟨pokeStart, pokeStart_wellFormed, pokeStart_settled, _, hm, .step (.refl _) rfl hm,
@@ -811,11 +811,11 @@ def lastHit (b : List InPlay) : GameState :=
       damage := (InPlay.ofBasic bother).damage + 5 } } }
   { g₃ with attacked := true, cur := { g₃.cur with gxUsed := both.gx || g₃.cur.gxUsed } }
 
-theorem move_lastHit (b : List InPlay) (hs : Settled (lastStart b)) :
-    Move (lastStart b) (lastHit b) :=
-  .attack (hlk := rfl) (atk := both) rfl (.head _) (.nil _) rfl rfl rfl rfl hs
+theorem move_lastHit (b : List InPlay) (hs : Settled (lastStart b))
+    (hsh : (lastStart b).shield = false) : Move (lastStart b) (lastHit b) :=
+  Move.attackOpen (hlk := rfl) (atk := both) rfl (.head _) (.nil _) rfl rfl rfl rfl hs
     (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl (fun h => nomatch h) rfl
-    (HitTrig.exists_nil (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl) (.nil _)
+    (HitTrig.exists_nil (.seq (.counters 5 rfl) (.selfDamage 5 rfl)) rfl) (.nil _) hsh
 
 /-- **Both players take their last Prize card: Sudden Death, whatever the order.** From a
 well-formed, `Settled` start in which each player has one Prize card left and a Benched Pokémon
@@ -834,7 +834,7 @@ theorem suddenDeath_forced :
   have hu : ¬ Calm (lastHit [InPlay.ofBasic big]) := by decide
   refine ⟨lastStart_wellFormed _ (fun p hp => by
       simp only [List.mem_singleton] at hp; subst hp; exact ⟨rfl, rfl, rfl, rfl⟩) (.of_b rfl),
-    hs, move_lastHit _ hs, fun hk => hu ⟨hk, by decide, by decide⟩, rfl, rfl, fun g₂ hm => ?_⟩
+    hs, move_lastHit _ hs (by decide), fun hk => hu ⟨hk, by decide, by decide⟩, rfl, rfl, fun g₂ hm => ?_⟩
   have e := hm.eq_koStep_of_won hu (by decide)
   subst e
   exact ⟨by decide, rfl, rfl⟩
@@ -851,7 +851,7 @@ theorem bothWays_wins :
           g₂.opp.prizes = [] ∧ g₂.opp.active = none ∧ g₂.opp.bench = [] := by
   have hs : Settled (lastStart []) := by decide
   have hu : ¬ Calm (lastHit []) := by decide
-  refine ⟨lastStart_wellFormed _ (fun p hp => nomatch hp) (.of_b rfl), hs, move_lastHit _ hs,
+  refine ⟨lastStart_wellFormed _ (fun p hp => nomatch hp) (.of_b rfl), hs, move_lastHit _ hs (by decide),
     fun hk => hu ⟨hk, by decide, by decide⟩, fun g₂ hm => ?_⟩
   have e := hm.eq_koStep_of_won hu (by decide)
   subst e

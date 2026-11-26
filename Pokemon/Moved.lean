@@ -200,7 +200,7 @@ theorem uturn_fires :
   have hr : Run uturn.script (tp (side (InPlay.ofBasic turnerC) [InPlay.ofBasic yanC])
       (side (InPlay.ofBasic bigC) [])) _ :=
     .seq (.damage (.const 10 _) rfl) (.switch (b₁ := []) (b₂ := []) .own rfl rfl)
-  exact ⟨_, _, .attack (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl
+  exact ⟨_, _, Move.attackOpen (atk := uturn) rfl (.head _) (.nil _) rfl rfl rfl rfl
       ((GameState.settled_iff _).2 (by decide))
       hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl, rfl, rfl,
     .trigger ⟨rfl, rfl⟩ rfl (.of_mine (u := [buzz]) (d := []) rfl (.refl _) (.refl _)

@@ -374,16 +374,20 @@ structure Mods where
   /-- (milestone MV6) the step-5 increase of the damage done to the player's Pokémon
   (`Mod.expose`) -/
   more : Nat
+  /-- (milestone MV10) effects of attacks done to the player's Active Pokémon are prevented
+  (`Mod.shield`) -/
+  shield : Bool
   deriving DecidableEq
 
 namespace Mods
 
-def empty : Mods := ⟨0, 0, false, false, false, false, 0, 0⟩
+def empty : Mods := ⟨0, 0, false, false, false, false, 0, 0, false⟩
 
 /-- Two sets of modifiers in effect together: amounts add, flags combine. -/
 def merge (a b : Mods) : Mods :=
   ⟨a.bonus + b.bonus, a.reduce + b.reduce, a.prevent || b.prevent, a.noAttack || b.noAttack,
-    a.noRetreat || b.noRetreat, a.noItem || b.noItem, a.minus + b.minus, a.more + b.more⟩
+    a.noRetreat || b.noRetreat, a.noItem || b.noItem, a.minus + b.minus, a.more + b.more,
+    a.shield || b.shield⟩
 
 /-- Add one modifier. -/
 def addMod : Mod → Mods → Mods
@@ -395,6 +399,7 @@ def addMod : Mod → Mods → Mods
   | .lock .item, m => { m with noItem := true }
   | .weaken n, m => { m with minus := m.minus + n }
   | .expose n, m => { m with more := m.more + n }
+  | .shield, m => { m with shield := true }
 
 end Mods
 
