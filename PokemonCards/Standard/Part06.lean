@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 6 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,34 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part06
 open Pokemon
+
+/-- Misty's Magikarp (sv10-48). Records: sv10-48. Caveats: shieldBench. -/
+def sv10_48 : Card := .pokemon
+  { name := "Misty's Magikarp", stage := .basic, evolvesFrom := none,
+    hp := 3, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "So Submerged", use := .static [{ sel := .self, filt := .any, tgt := none, src := some .bench, need := none, eff := .prevent .any }, { sel := .self, filt := .any, tgt := none, src := some .bench, need := none, eff := .shield .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Splash", cost := [.water], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Misty's Lapras (sv10-50). Records: sv10-50, sv10-194. -/
+def sv10_50 : Card := .pokemon
+  { name := "Misty's Lapras", stage := .basic, evolvesFrom := none,
+    hp := 11, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Swim Together", cost := [.water], damage := 0,
+        effect := .seq (.move .own .deck .hand (.and .pokemon (.namePrefix "Misty's ")) (.upTo 3)) .shuffle,
+        gx := false },
+      { name := "Surf", cost := [.water, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
 
 /-- Team Rocket's Articuno (sv10-51). Records: sv10-51. Caveats: shieldActive, shieldReach. -/
 def sv10_51 : Card := .pokemon
@@ -1681,6 +1709,20 @@ def rsv10pt5_44 : Card := .pokemon
         effect := .linger .opp .next (.lock .item),
         gx := false }] }
 
+/-- Roggenrola (rsv10pt5-46). Records: rsv10pt5-46, rsv10pt5-127. Caveats: perPokemon, thresholdRead. -/
+def rsv10pt5_46 : Card := .pokemon
+  { name := "Roggenrola", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fighting, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Harden", cost := [.fighting], damage := 0,
+        effect := .linger .own .next (.preventLe 4),
+        gx := false },
+      { name := "Rolling Rocks", cost := [.fighting, .fighting], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
 /-- Boldore (rsv10pt5-47). Records: rsv10pt5-47, rsv10pt5-128. -/
 def rsv10pt5_47 : Card := .pokemon
   { name := "Boldore", stage := .stage1, evolvesFrom := some "Roggenrola",
@@ -1770,44 +1812,10 @@ def rsv10pt5_55 : Card := .pokemon
         effect := .seq (.move .own .deck .hand (.ptype .darkness) (.upTo 3)) .shuffle,
         gx := false }] }
 
-/-- Liepard (rsv10pt5-56). Records: rsv10pt5-56, rsv10pt5-137. -/
-def rsv10pt5_56 : Card := .pokemon
-  { name := "Liepard", stage := .stage1, evolvesFrom := some "Purrloin",
-    hp := 11, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Knock Off", cost := [.darkness], damage := 5,
-        effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Scraggy (rsv10pt5-57). Records: rsv10pt5-57, rsv10pt5-138. -/
-def rsv10pt5_57 : Card := .pokemon
-  { name := "Scraggy", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Headbutt", cost := [.darkness], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Invade", cost := [.darkness, .darkness], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Scrafty (rsv10pt5-58). Records: rsv10pt5-58, rsv10pt5-139. -/
-def rsv10pt5_58 : Card := .pokemon
-  { name := "Scrafty", stage := .stage1, evolvesFrom := some "Scraggy",
-    hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ruffians Attack", cost := [.darkness, .darkness], damage := 0,
-        effect := .damage (.heads (.count (.inPlay .own (.ptype .darkness)) 1) 6),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_48,
+  sv10_50,
   sv10_51,
   sv10_52,
   sv10_53,
@@ -1948,16 +1956,14 @@ def cards : List Card := [
   rsv10pt5_41,
   rsv10pt5_42,
   rsv10pt5_44,
+  rsv10pt5_46,
   rsv10pt5_47,
   rsv10pt5_49,
   rsv10pt5_50,
   rsv10pt5_52,
   rsv10pt5_53,
   rsv10pt5_54,
-  rsv10pt5_55,
-  rsv10pt5_56,
-  rsv10pt5_57,
-  rsv10pt5_58]
+  rsv10pt5_55]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2019,6 +2025,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Clamperl", "Virizion", "Sigilyph"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Clamperl", "Virizion", "Sigilyph", "Roggenrola"] := by decide +kernel
 
 end PokemonCards.Standard.Part06

@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 3 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -421,6 +421,20 @@ def sv7_43 : Card := .pokemon
     attacks := [
       { name := "Headbutt", cost := [.colorless, .colorless, .colorless], damage := 6,
         effect := .skip,
+        gx := false }] }
+
+/-- Drednaw (sv7-44). Records: sv7-44. Caveats: thresholdRead. -/
+def sv7_44 : Card := .pokemon
+  { name := "Drednaw", stage := .stage1, evolvesFrom := some "Chewtle",
+    hp := 14, type := .water, retreat := 3, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Impervious Shell", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .preventGe 20 .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Hard Crunch", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .ite (.atLeast .opp 1) (.damage (.const 16)) (.damage (.const 8)),
         gx := false }] }
 
 /-- Electabuzz (sv7-46). Records: sv7-46. -/
@@ -1817,20 +1831,6 @@ def sv8_58 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Magnezone (sv8-60). Records: sv8-60. Caveats: perPokemon. -/
-def sv8_60 : Card := .pokemon
-  { name := "Magnezone", stage := .stage2, evolvesFrom := some "Magneton",
-    hp := 17, type := .lightning, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Mighty Magnetism", cost := [.lightning, .colorless, .colorless], damage := 8,
-        effect := .seq (.inflict .confused) (.linger .opp .next (.lock .retreat)),
-        gx := false },
-      { name := "Zap Cannon", cost := [.lightning, .colorless, .colorless, .colorless], damage := 18,
-        effect := .skip,
-        gx := false, selfLock := .this }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   sv6pt5_53,
@@ -1870,6 +1870,7 @@ def cards : List Card := [
   sv7_40,
   sv7_41,
   sv7_43,
+  sv7_44,
   sv7_46,
   sv7_47,
   sv7_48,
@@ -1981,8 +1982,7 @@ def cards : List Card := [
   sv8_53,
   sv8_54,
   sv8_55,
-  sv8_58,
-  sv8_60]
+  sv8_58]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

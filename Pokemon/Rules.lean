@@ -471,6 +471,33 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Reading: moving damage counters off that Pokémon (`moveCounter`) is not healing and stays allowed (no
   ruling checked; importer caveat `healMove`, allows more). With no such effect in force the rules are
   their old forms (`Run.inflict_old`, `Run.heal_old`, `Run.healAll_old`);
+* threshold prevention (milestone MV14, survey S28, `Pokemon/Threshold.lean`): "Prevent all damage done
+  to this Pokémon by attacks from your opponent's Pokémon if that damage is 200 or more" (Drednaw
+  sv7-44) is a static `SEff.preventGe 20 .any`; "During your opponent's next turn, prevent all damage
+  done to this Pokémon by attacks if that damage is 60 or less" (Metapod sv9-2, Roggenrola rsv10pt5-46)
+  is `linger .own .next (.preventLe 6)`, stored as the largest threshold in effect (`Mods.upto`). Both
+  are step-5 effects on the Defending Pokémon. The rulebook (2026 p. 20) gives no order among step-5
+  effects and says nothing about thresholds; the model compares the threshold with the damage after
+  every other effect of the calculation, Weakness, Resistance, the step-5 increase and every
+  reduction, stored or static, included (`uptoCut` in `dealtBy`, `GameState.thrCut` in
+  `GameState.dealt`): a reading (importer caveat `thresholdRead`, both). An attack whose damage
+  "isn't affected by any effects on your opponent's Active Pokémon" (`Ign.fx`) ignores both
+  thresholds. On the Bench the static threshold compares with the amount the Bench damage
+  primitive places (`GameState.benchThr`, damage forms only, as MV13's Bench prevention); the
+  lingering one is stored per player and read at the Active Spot only, as every lingering
+  modifier (`perPokemon`, `benchMods`). Two consequences: the damage is no longer monotone in its
+  inputs under a static threshold (more damage can be prevented where less lands), so
+  `GameState.dealt_le_dealtI` and `GameState.dealtI_le_dealt_weak` now assume no static threshold in
+  force; and the capped clamp needs every static threshold at most its cap (`GameState.ThrLe`, part
+  of `CapOk`; `GameState.Fit` gives it through `Card.tmax`, which now includes the thresholds,
+  `Card.thrMax`; without a bound on the thresholds the clamp need not be a simulation: for `k = 3` a
+threshold of 8 separates two states with the same clamp, and `Move.clamp_sim` with the pre-MV14
+premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_false`). A
+  lingering threshold is not `Mod.plain` (like a reduction): a deck with one is not tame, and the
+  exact-store clamp covers it. With no threshold the damage step is the old one
+  (`GameState.dealt_old`, `Run.damage_old`). Not expressed: "can't be Knocked Out / its remaining HP
+  becomes 10 if it has full HP" (Sturdy-type triggers, Survival Brace) and "if this Pokémon has full
+  HP, it takes 60 less damage" (Steelix me6-52), which read the damage on the Pokémon, other rows;
 * lingering modifiers (`Store`, `Effect.linger`): each player has a damage bonus for their
   attacks, a damage reduction and a damage prevention for attacks against their Pokémon, and
   locks on attacking, retreating and playing Items, for this turn, the next turn, the turn
@@ -530,8 +557,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   done to this Pokémon by attacks from your opponent's Pokémon ex") is read at step 5 with the
   defender's other effects (`GameState.sPrevent`); it is never stored, and prevented damage fires
   no `damaged` trigger (`Prevent.prevented_quiet`). Since milestone MV13 it is also read on the Bench
-  (item on static damage prevention below). Absent: threshold
-  prevention ("prevent damage of 40 or less"), prevention of effects of Abilities and of filtered or
+  (item on static damage prevention below). Threshold prevention ("if that damage is 200 or more /
+  60 or less") is expressed since milestone MV14 (item on threshold prevention below). Absent:
+  prevention of effects of Abilities and of filtered or
   chosen Pokémon (prevention of effects of attacks is milestone MV10's, item below), locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, effects that change Weakness,
   Resistance or type (other than the Coloring counter), "attack twice" and "take another turn",
@@ -862,7 +890,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the V, VSTAR, VMAX or V-UNION subtype in the card data (3219 records, checked for survey S14), so
   no Pokémon V can be played in a Standard game, though 39 of those records name "Pokémon V" in
   their text. A deck with older cards would need the filter. Absent kinds, for a later milestone: other damage prevention (Battle Cage's counters on
-  the Bench; prevention on the Bench, 7 cards; thresholds, Drednaw sv7-44), prevention of effects of
+  the Bench; prevention on the Bench, 7 cards, expressed since milestone MV13; thresholds, Drednaw sv7-44,
+  expressed since milestone MV14), prevention of effects of
   Abilities (5; prevention of effects of attacks is expressed since milestone MV10, `SEff.shield`)
   and Special Condition immunity (Hoothoot, Festival Grounds ×2); attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
   Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no

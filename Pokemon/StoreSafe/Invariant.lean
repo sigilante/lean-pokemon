@@ -264,7 +264,7 @@ theorem reach_inv {g₀ g : GameState} (hL : g₀.LoopFree) (hG : g₀.GXOnly) (
 theorem modsLe_of {B : Nat} {m : Mods} (h : m.amt ≤ B) : Enum.ModsLe B m := by
   unfold Mods.amt at h
   -- One conjunct per `omega`: `omega` on a conjunction pulls in `Classical.choice`.
-  exact ⟨by omega, by omega, by omega, by omega⟩
+  exact ⟨by omega, by omega, by omega, by omega, by omega⟩
 
 /-- **Without recycling, the bound of master.** From a start state `g₀` satisfying clauses 1 and
 2 whose cards recycle nothing (`NoRecycle`: no effect moves a card out of a discard pile to a hand

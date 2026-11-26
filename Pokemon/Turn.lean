@@ -75,7 +75,7 @@ theorem dealtBy_zero (weak : Bool) (resist : Nat) (own opp : Store) :
 
 @[inherit_doc dealtBy_zero]
 theorem GameState.dealt_zero (g : GameState) : g.dealt 0 = 0 := by
-  unfold GameState.dealt; split <;> rfl
+  unfold GameState.dealt GameState.thrCut; split <;> (try split) <;> rfl
 
 /-- The state `Move.endTurn` produces from `g`, with Checkup coin flips `fa sa ca` for the
 opponent's Active Pokémon `a` and `fb sb cb` for the player's own `b`, the Benches after

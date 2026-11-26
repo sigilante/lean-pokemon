@@ -611,7 +611,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       have e : GameState.dealtI ig n
           { g with cur := { g.cur with active := c₂, bench := e₁ },
                    opp := { g.opp with active := some q, bench := e₂ } } = g.dealtI ig n := by
-        simp only [GameState.dealtI, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce, hsf.sPrevent]
+        simp only [GameState.dealtI, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce, hsf.sPrevent, hsf.thrCut_eq]
       exact ⟨_, .damage (ig := ig) hv₂ rfl, by
         simp only [GameState.xrclamp, GameState.xclampAt, e, Option.map_some, hc₂,
           InPlay.clamp_of_agree (hq.upd.2.1 (g.dealtI ig n)), he₁, he₂]⟩
@@ -628,7 +628,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       have e : GameState.dealt n
           { g with cur := { g.cur with active := some q₂, bench := e₁ },
                    opp := { g.opp with active := some p₂, bench := e₂ } } = g.dealt n := by
-        simp only [GameState.dealt, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce, hsf.sPrevent]
+        simp only [GameState.dealt, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce, hsf.sPrevent, hsf.thrCut_eq]
       have hq' : InPlay.Agree k .exact
           { q₂ with damage := q₂.damage - g.healAmt (g.dealt n) }
           { q with damage := q.damage - g.healAmt (g.dealt n) } := by
@@ -1016,7 +1016,9 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
 
 /-- The conditions under which the kernel of `xclamp` is a bisimulation for moves: `hpBound` of
 the cards, which bounds every derived HP, and every Resistance are at most `k` (`GameState.HpLe`;
-milestone M6: before it, every printed HP), and every card's test constants are below `k`. Nothing about modifiers, damage reduction or `drain`. (Since milestone
+milestone M6: before it, every printed HP), and every card's test constants are below `k` (since
+milestone MV14 also its static damage thresholds, `Card.tmax`; this clamp does not need them, since
+the damage it reads inside an attack is exact). Nothing about modifiers, damage reduction or `drain`. (Since milestone
 M4 damage inside an attack is kept exact, so the proof of `Move.xclamp_sim` no longer needs the
 bound on HP and Resistance; the definition keeps it, and the statements are unchanged.) -/
 def GameState.XFit (k : Nat) (g : GameState) : Prop :=
@@ -1057,12 +1059,12 @@ theorem GameState.XFit.attack {k : Nat} {g : GameState} (hF : g.XFit k) {a : InP
   have hb := hF.2 _ (GameState.mem_allCards_of_cur_active ha hc)
   have h2 : atk.effect.tmax ≤ c.tmax := by
     cases c with
-    | pokemon p => have := attacksTmax_mem (as := p.attacks) hmc; simp only [Card.tmax]; omega
-    | tool n gr => have := attacksTmax_mem (as := gr.attacks) hmc; simp only [Card.tmax]; omega
+    | pokemon p => have := attacksTmax_mem (as := p.attacks) hmc; simp only [Card.tmax, Card.testMax]; omega
+    | tool n gr => have := attacksTmax_mem (as := gr.attacks) hmc; simp only [Card.tmax, Card.testMax]; omega
     | energy t =>
         cases t with
         | basic => nomatch hmc
-        | special m pr x => have := attacksTmax_mem (as := x.grant.attacks) hmc; simp only [Card.tmax]; omega
+        | special m pr x => have := attacksTmax_mem (as := x.grant.attacks) hmc; simp only [Card.tmax, Card.testMax]; omega
     | _ => nomatch hmc
   rw [Attack.script_tmax]; omega
 
@@ -1334,7 +1336,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       have hp : ({ g₁ with cur := { g₁.cur with
           hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g₁.cur.discard } } :
           GameState).allCards.Perm g₁.allCards := by perm_count [hh]
-      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim hb (hF.1.of_perm hp)
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (Card.trainer_tmax _ _ _ _) hb) (hF.1.of_perm hp)
         (g₂ := { g₂ with cur := { g₂.cur with
           hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g₂.cur.discard } })
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂])
@@ -1358,7 +1360,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
   | @stadiumUse g' o n e ss hs hu hbt hst hat hr hnd hbh =>
       have hs' := hs₂ hst
       have hb := hF.2 _ (GameState.mem_allCards_of_stadium hs)
-      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim hb hF.1
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (Card.trainer_tmax _ _ _ _) hb) hF.1
         (g₂ := { g₂ with stadiumUsed := true })
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂])
         (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))
@@ -1399,7 +1401,7 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
           hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
           discard := Card.trainer n .supporter e :: g₁.cur.discard } } :
           GameState).allCards.Perm g₁.allCards := by perm_count [hh]
-      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim hb (hF.1.of_perm hp)
+      obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim (Nat.lt_of_le_of_lt (Card.trainer_tmax _ _ _ _) hb) (hF.1.of_perm hp)
         (g₂ := { g₂ with cur := { g₂.cur with
           hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
           discard := Card.trainer n .supporter e :: g₂.cur.discard } })

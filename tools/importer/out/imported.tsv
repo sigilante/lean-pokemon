@@ -336,6 +336,7 @@ sv7-39	Froakie	Pokémon	imported exactly		sv7-39	sv7_39
 sv7-40	Frogadier	Pokémon	imported exactly		sv7-40	sv7_40		
 sv7-41	Greninja ex	Pokémon	imported exactly		sv7-41	sv7_41		
 sv7-43	Chewtle	Pokémon	imported exactly		sv7-43	sv7_43		
+sv7-44	Drednaw	Pokémon	imported with caveats	thresholdRead	sv7-44	sv7_44		
 sv7-46	Electabuzz	Pokémon	imported exactly		sv7-46	sv7_46		
 sv7-47	Electivire	Pokémon	imported exactly		sv7-47	sv7_47		
 sv7-48	Chinchou	Pokémon	imported exactly		sv7-48	sv7_48		
@@ -585,6 +586,7 @@ sv8pt5-116	Max Rod	Item	imported with caveats	aceSpec,upTo0	sv8pt5-116	sv8pt5_11
 sv8pt5-127	Roto-Stick	Item	imported exactly		sv8pt5-127	sv8pt5_127		
 sv8pt5-131	Treasure Tracker	Item	imported with caveats	aceSpec,upTo0	sv8pt5-131	sv8pt5_131		
 sv9-1	Caterpie	Pokémon	imported exactly		sv9-1	sv9_1		
+sv9-2	Metapod	Pokémon	imported with caveats	perPokemon,thresholdRead	sv9-2	sv9_2		
 sv9-3	Butterfree	Pokémon	imported exactly		sv9-3	sv9_3		
 sv9-4	Paras	Pokémon	imported exactly		sv9-4	sv9_4		
 sv9-5	Parasect	Pokémon	imported exactly		sv9-5	sv9_5		
@@ -893,6 +895,7 @@ rsv10pt5-40	Cofagrigus	Pokémon	imported exactly		rsv10pt5-40 rsv10pt5-123	rsv10
 rsv10pt5-41	Gothita	Pokémon	imported exactly		rsv10pt5-41 rsv10pt5-124	rsv10pt5_41		
 rsv10pt5-42	Gothorita	Pokémon	imported exactly		rsv10pt5-42 rsv10pt5-125	rsv10pt5_42		
 rsv10pt5-44	Frillish	Pokémon	imported exactly		rsv10pt5-44 rsv10pt5-126	rsv10pt5_44		
+rsv10pt5-46	Roggenrola	Pokémon	imported with caveats	perPokemon,thresholdRead	rsv10pt5-46 rsv10pt5-127	rsv10pt5_46		
 rsv10pt5-47	Boldore	Pokémon	imported exactly		rsv10pt5-47 rsv10pt5-128	rsv10pt5_47		
 rsv10pt5-49	Sawk	Pokémon	imported exactly		rsv10pt5-49 rsv10pt5-130	rsv10pt5_49		
 rsv10pt5-50	Archen	Pokémon	imported exactly		rsv10pt5-50 rsv10pt5-131	rsv10pt5_50		

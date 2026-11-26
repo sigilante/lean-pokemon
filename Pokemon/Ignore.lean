@@ -22,7 +22,9 @@ both (`Run.cap_sim`'s damage case, re-proved for every `Ign`). The damage step i
 damage.
 
 * `dealt_le_dealtI`: switching off Resistance or effects on the defender, and not Weakness, never
-  lowers the damage (since milestone MV6: when no step-5 increase is in effect on the defender); `dealtI_le_dealt_weak`: switching off Weakness alone never raises it.
+  lowers the damage (since milestone MV6: when no step-5 increase is in effect on the defender; since
+  milestone MV14: when no static threshold is in force on it); `dealtI_le_dealt_weak`: switching off
+  Weakness alone never raises it (since MV14: with no static threshold in force).
 * `dealtI_le_open`: with step 5 off the damage is at most the unreduced value
   `dealtBy n w 0 own Store.empty`.
 * Witnesses (`pierce_ignores`, `plain_reduced`): the same defender, with Resistance 3 to the
@@ -41,7 +43,7 @@ theorem dealtBy_resist_anti {n : Nat} {w : Bool} {r r' : Nat} (h : r ≤ r') (c 
   · exact Nat.le_refl _
   · split
     · exact Nat.le_refl _
-    · cases w <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
+    · cases w <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> exact uptoCut_mono _ (by omega)
 
 /-- Effects on the defender that do not raise the damage never raise it: the empty store (no
 reduction, no prevention) gives at least as much as any store with no step-5 increase (milestone
@@ -61,36 +63,47 @@ theorem dealtBy_le_empty (n : Nat) (w : Bool) (r : Nat) (c o : Store) (s : Nat)
     rw [e1, e2, e3, e4]
     split
     · exact Nat.zero_le _
-    · simp only [Nat.sub_zero, Nat.add_zero]
-      exact Nat.sub_le _ _
+    · have e5 : (Store.empty.add .always (.reduce 0)).live.upto = 0 := rfl
+      rw [e5, uptoCut_zero]
+      simp only [Nat.sub_zero, Nat.add_zero]
+      exact Nat.le_trans (uptoCut_le _ _) (Nat.sub_le _ _)
 
 /-- **Switching off Resistance or the effects on the defender never lowers the damage** (with
 Weakness kept), when no step-5 increase is in effect on the defender (milestone MV6: switching off
 "takes 50 more damage" lowers it; before MV6 there was no such effect and the hypothesis was
-vacuous). -/
+vacuous), and (milestone MV14) when no static threshold is in force on the defender (`ht`): a
+threshold "if that damage is 200 or more" makes the damage fall to 0 when switching off Resistance
+raises it past the threshold, so the hypothesis is needed. -/
 theorem GameState.dealt_le_dealtI (g : GameState) (n : Nat) {ig : Ign} (hw : ig.weak = false)
-    (hm : g.opp.mods.live.more = 0) :
+    (hm : g.opp.mods.live.more = 0) (ht : ∀ d, g.sThr d = false) :
     g.dealt n ≤ g.dealtI ig n := by
   have hr : cond ig.resist 0 g.resist ≤ g.resist := by cases ig.resist <;> simp
+  have hcut : ∀ d, g.thrCut d = d := fun d => by
+    simp only [GameState.thrCut, ht d, Bool.false_eq_true, ite_false]
   unfold GameState.dealtI GameState.dealt
   rw [hw]
   cases hf : ig.fx
-  · simp only [Bool.cond_false]
+  · simp only [Bool.cond_false, hcut]
     split
     · exact Nat.le_refl _
     · exact dealtBy_resist_anti hr _ _
-  · simp only [Bool.cond_true, Bool.false_eq_true, ↓reduceIte]
+  · simp only [Bool.cond_true, Bool.false_eq_true, ↓reduceIte, id_eq, hcut]
     split
     · exact Nat.zero_le _
     · exact Nat.le_trans (dealtBy_le_empty _ _ _ _ _ _ hm) (dealtBy_resist_anti hr _ _)
 
-/-- **Switching off Weakness alone never raises the damage.** -/
-theorem GameState.dealtI_le_dealt_weak (g : GameState) (n : Nat) :
+/-- **Switching off Weakness alone never raises the damage**, when no static threshold is in force
+on the defender (milestone MV14: with "if that damage is 200 or more", Weakness can raise the damage
+past the threshold and make it 0). -/
+theorem GameState.dealtI_le_dealt_weak (g : GameState) (n : Nat) (ht : ∀ d, g.sThr d = false) :
     g.dealtI { weak := true } n ≤ g.dealt n := by
-  show (if g.sPrevent then 0 else dealtBy n false g.resist
-      (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce))) ≤
-    (if g.sPrevent then 0 else dealtBy n g.weak g.resist
-      (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce)))
+  have hcut : ∀ d, g.thrCut d = d := fun d => by
+    simp only [GameState.thrCut, ht d, Bool.false_eq_true, ite_false]
+  show (if g.sPrevent then 0 else g.thrCut (dealtBy n false g.resist
+      (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce)))) ≤
+    (if g.sPrevent then 0 else g.thrCut (dealtBy n g.weak g.resist
+      (g.cur.mods.add .always (.bonus g.sBonus)) (g.opp.mods.add .always (.reduce g.sReduce))))
+  simp only [hcut]
   split
   · exact Nat.le_refl _
   · cases g.weak
@@ -104,7 +117,7 @@ theorem GameState.dealtI_le_open (g : GameState) (n : Nat) {ig : Ign} (hf : ig.f
       (g.cur.mods.add .always (.bonus g.sBonus)) Store.empty := by
   unfold GameState.dealtI
   rw [hf]
-  simp only [Bool.cond_true, Bool.false_eq_true, ↓reduceIte]
+  simp only [Bool.cond_true, Bool.false_eq_true, ↓reduceIte, id_eq]
   exact dealtBy_resist_anti (Nat.zero_le _) _ _
 
 namespace Ignore

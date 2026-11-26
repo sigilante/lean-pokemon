@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.20.0'
+VERSION = '0.21.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -335,7 +335,8 @@ def run(data, out, survey=None):
            + ', '.join('cross_%d_%d' % (i + 1, j + 1) for j in range(len(part_names)) for i in range(j))
            + ', Bool.and_self])\n',
            '/-- The imported cards that write a stored amount (`Effect.writes`, `Mod.isAmt`: a damage bonus or reduction, and since\n'
-           'milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`), by name. -/',
+           'milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`, and since milestone MV14 a lingering damage\n'
+           'threshold `preventLe`), by name. -/',
            'theorem writers : (all.filter Card.writesAmt).map Card.label = ' + T.lean([recs[0]['name'] for recs, _ in writers])
            + ' := by decide +kernel\n',
            '/-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/',
@@ -912,7 +913,9 @@ def static_theorems(imported, part_names, hp_max, gain_max, red_max):
             '  sReduce_le_of reduceGain_le hg hn\n' % red_max,
             '/-- **The imported cards that are not tame** (%d), by name. Checked part by part. The tame-deck theorem\n'
             '`Reach.finite` asks, through `GameState.Fit`, that every card of the game be `Card.tame` (no `drain`, no\n'
-            'stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`\n'
+            'stored damage reduction, and since milestone MV14 no lingering damage threshold, `Mod.preventLe`) and\n'
+            'that no damage reduction or lingering threshold be stored at the start, and since MV14 that every static\n'
+            'damage threshold (`Card.thrMax`, part of `Card.tmax`) be below the cap; its clause `ReduceLe`\n'
             '(Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game\n'
             '(`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards\n'
             'is not covered by `Reach.finite`; every game of imported cards is `StoreSafe` (`storeSafe`), and\n'
@@ -1008,8 +1011,9 @@ def special_parts(term):
 
 def effect_tame(e):
     """`Effect.tame`: no `drain` and no modifier that is not `Mod.plain` (a stored damage reduction, and since
-    milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`)."""
-    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] in ('reduce', 'weaken', 'expose')):
+    milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`, and since milestone MV14 a lingering
+    damage threshold `preventLe`)."""
+    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] in ('reduce', 'weaken', 'expose', 'preventLe')):
         return False
     return all(effect_tame(x) for x in T.subs(e))
 
@@ -1236,7 +1240,8 @@ def coverage(results, P, commit, writers, lingerers, rs_pairs, nparts):
         L.append('| %d | %s | %s |' % (v, k.replace('|', '/'), exs[k]))
     L.append('')
     L.append('Imported cards that write a stored amount (a damage bonus or reduction, or since milestone MV6 a step-2 '
-             'penalty `weaken` or a step-5 increase `expose`; `Mod.isAmt`) (%d): %s.' % (
+             'penalty `weaken` or a step-5 increase `expose`, or since milestone MV14 a lingering damage threshold '
+             '`preventLe`; `Mod.isAmt`) (%d): %s.' % (
         len(writers), ', '.join('%s (%s)' % (recs[0]['name'], recs[0]['id']) for recs, _ in writers)))
     L.append('')
     L.append('Imported cards that write any lingering modifier (%d).' % len(lingerers))

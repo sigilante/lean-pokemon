@@ -514,6 +514,31 @@ opponent's Abilities (Known gaps). Witnesses: `Pokemon/BenchGuard.lean` (an atta
 protected and an unprotected Benched Pokémon, against an attacker outside the filter, and without the
 Ability) and `Pokemon/Immune.lean` (Item cards against an immune and a plain Active Pokémon, and Potion
 with and without the opponent's heal block).
+Milestone MV14 (threshold prevention; survey S28) added a static effect `SEff.preventGe t fr` ("prevent all
+damage … if that damage is 200 or more", Drednaw) and a lingering modifier `Mod.preventLe t` ("… if that
+damage is 60 or less", Metapod, Roggenrola), stored in a new field `Mods.upto` (the largest threshold in
+effect). Both are read at step 5 on the damage after every other effect (`GameState.thrCut` in
+`GameState.dealt`; `uptoCut` in `dealtBy`), the static one also on the Bench (`GameState.benchThr`).
+**The bound changed in meaning, not in text.** A static threshold is a constant of its card, and it now
+enters `Card.tmax` (`Card.tmax = max Card.testMax Card.thrMax`; `Card.testMax` is the old definition
+verbatim). So `GameState.Fit k`, `GameState.XFit k` and `Enum.bound` read as before, and for a game whose
+cards have no static threshold (every game before MV14) they are equal to the old ones
+(`Card.tmax_of_thrMax`, `cardsTmax_of_noThr`, `Enum.bound_of_noThr`, `GameState.fit_iff_old`,
+`GameState.xfit_iff_old`; in `Pokemon/Threshold.lean`); for a game with one, `Fit k` and `XFit k` also ask
+every threshold to be below `k`, and `Enum.bound` is above every threshold of the cards
+(`Enum.thrMax_lt_bound`), exceeding the old bound by at most the largest threshold (`Enum.bound_le_old`).
+`Reach.finite`, `Move.clamp_sim`, `Move.xclamp_sim`, `StoreSafe.xfinite` and the pool theorems therefore
+mention a cap that, for a deck with Drednaw, is at least 21 counters (its threshold 20, plus one); for a
+deck without a static threshold the cap is what it was. The capped clamp needs a bound on the thresholds (`GameState.ThrLe`, now in `CapOk`): without one it need not
+be a simulation; for `k = 3` a threshold of 8 separates two states with the same clamp, and since those
+states satisfy the pre-MV14 premise, `Move.clamp_sim` stated with the old `Fit` is false
+(`Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_false`); nothing is claimed for a threshold
+of `k + 1` or for other abstractions. The exact-store clamp does not use it, but
+`XFit` carries it since it reads `Card.tmax`. A lingering threshold is not `Mod.plain`: a deck with Metapod
+or Roggenrola is not tame (as with a damage reduction), and `Mods.NoReduce` now also asks `upto = 0`. With
+no threshold the damage step is the old one (`GameState.dealt_old`, `Run.damage_old`). Witnesses:
+`Pokemon/Threshold.lean` (30 against "30 or more" prevented, 20 lands, also on the Bench; 20 against
+"20 or less" prevented, 30 lands; universal forms over every resolution).
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
@@ -985,9 +1010,12 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,612 are imported (1,093 exactly, 519 with
-caveats) as 1,603 distinct terms, and 549 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.20.0, which since 0.20.0 translates static damage
+damage reduction, and since milestone MV14 every static damage threshold). Of the pool's 2,161 cards,
+1,615 are imported (1,093 exactly, 522 with caveats) as 1,606 distinct terms, and 546 are refused, each
+with a reason (`tools/importer/out/coverage.md`; importer 0.21.0, which since 0.21.0 translates threshold
+prevention, "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon if that
+damage is N or more" and "During your opponent's next turn, prevent all damage done to this Pokémon by
+attacks if that damage is N or less" (caveat `thresholdRead`); since 0.20.0 it translates static damage
 prevention on the Bench ("As long as this Pokémon is on your Bench, prevent all damage …", "… done to
 your Benched Pokémon", Shadowy Darkness Energy), "This Pokémon can't be Asleep" and "Your opponent's
 Active Pokémon can't be healed"; since 0.19.0 it translates computed spread

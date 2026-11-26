@@ -56,7 +56,7 @@ theorem dealtBy_le_weak (n r : Nat) (own opp : Store) :
   · exact Nat.le_refl _
   · split
     · exact Nat.le_refl _
-    · simp only [Bool.false_eq_true, ↓reduceIte]; omega
+    · simp only [Bool.false_eq_true, ↓reduceIte]; exact uptoCut_mono _ (by omega)
 
 /-- **One calculation for an attack whose text adds to its damage** (Jynx base1-31, "20 damage
 plus 10 more for each damage counter on the Defending Pokémon", written

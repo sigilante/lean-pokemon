@@ -146,9 +146,24 @@ theorem GameState.ReduceLe.of_perm {k : Nat} {g g' : GameState} (h : g.ReduceLe 
     (hp : g'.allCards.Perm g.allCards) : g'.ReduceLe k :=
   fun p hm => by rw [sReduceBound_perm hp]; exact h p (hp.mem_iff.1 hm)
 
+/-- Every static damage threshold of the cards (`Card.thrMax`, `SEff.preventGe`) is at most `k`
+(milestone MV14, survey S28). Inside an attack the capped clamp determines the damage an attack does
+only up to `k` (`dealtBy_cap`): two related states do the same damage, or both at least `k`; a
+threshold at most `k` prevents both or neither. `GameState.Fit k` gives it (`Card.thrMax_le_tmax`). For a
+game whose cards have no threshold it holds at every `k` (`GameState.thrLe_of_noThr`). -/
+def GameState.ThrLe (k : Nat) (g : GameState) : Prop := ∀ c ∈ g.allCards, c.thrMax ≤ k
+
+theorem GameState.ThrLe.of_perm {k : Nat} {g g' : GameState} (h : g.ThrLe k)
+    (hp : g'.allCards.Perm g.allCards) : g'.ThrLe k :=
+  fun c hc => h c (hp.mem_iff.1 hc)
+
+theorem GameState.thrLe_of_noThr {g : GameState} (h : ∀ c ∈ g.allCards, c.thrMax = 0) (k : Nat) :
+    g.ThrLe k := fun c hc => by rw [h c hc]; exact Nat.zero_le _
+
 /-- What `Run.cap_sim` and `TRun.clamp_sim` need of the cards (milestone M6): `HpLe k`, and
-`ReduceLe k` (the Resistance and the static damage reduction in force are together at most `k`). -/
-def GameState.CapOk (k : Nat) (g : GameState) : Prop := g.HpLe k ∧ g.ReduceLe k
+`ReduceLe k` (the Resistance and the static damage reduction in force are together at most `k`);
+since milestone MV14 also `ThrLe k` (every static damage threshold at most `k`). -/
+def GameState.CapOk (k : Nat) (g : GameState) : Prop := g.HpLe k ∧ g.ReduceLe k ∧ g.ThrLe k
 
 /-- In states with the same `rclamp k`, an Active Pokémon of the first is matched by one of the
 second; with the same damage if the opponent's damage is below `k`. -/
@@ -248,10 +263,64 @@ theorem CMove.sim {f : Filter} {noKO : Bool} {hp hp₂ : Spot → InPlay → Nat
 
 theorem GameState.CapOk.of_perm {k : Nat} {g g' : GameState} (h : g.CapOk k)
     (hp : g'.allCards.Perm g.allCards) : g'.CapOk k :=
-  ⟨h.1.of_perm hp, h.2.of_perm hp⟩
+  ⟨h.1.of_perm hp, h.2.1.of_perm hp, h.2.2.of_perm hp⟩
 
 theorem GameState.CapOk.resist {k : Nat} {g : GameState} (h : g.CapOk k) : g.resist ≤ k :=
   h.1.resist
+
+theorem List.any_congr_mem {α : Type} {f f' : α → Bool} :
+    ∀ {l : List α}, (∀ x ∈ l, f x = f' x) → l.any f = l.any f'
+  | [], _ => rfl
+  | x :: l, h => by
+      simp only [List.any_cons, h x (.head _), List.any_congr_mem (fun y hy => h y (.tail _ hy))]
+
+/-- A static threshold reads two damages of at least itself alike (milestone MV14). -/
+theorem Static.thrFrom_of_le {a : PokemonCard} {s : Static} {d₁ d₂ : Nat} (h1 : s.thr ≤ d₁)
+    (h2 : s.thr ≤ d₂) : s.thrFrom a d₂ = s.thrFrom a d₁ := by
+  unfold Static.thr at h1 h2
+  unfold Static.thrFrom
+  split
+  · next t fr he =>
+      rw [he] at h1 h2
+      simp only at h1 h2
+      simp only [decide_eq_true h1, decide_eq_true h2]
+  · rfl
+
+/-- **The static threshold commutes with the cap** (milestone MV14): if every threshold of the cards
+is at most `k` (`ThrLe k`), two damages that agree under `min · k` are cut alike. Below `k` they are
+equal; at or above `k` every threshold in force is reached by both, so both are prevented or
+neither is. The lemma itself is false for a threshold of `k + 1` (`d₁ = k`, `d₂ = k + 1` agree under
+`min · k`; only the second is cut), although inside an attack two related damages that differ are
+both at least `k + 1`, so the simulation is argued (not proved) to survive there; for `k = 3` and a
+threshold of 8 the clamp is not a simulation (`Threshold.threshold_breaks_clamp`). -/
+theorem GameState.thrCut_cap {k : Nat} {g : GameState} (hT : g.ThrLe k) {d₁ d₂ : Nat}
+    (h : min d₂ k = min d₁ k) : min (g.thrCut d₂) k = min (g.thrCut d₁) k := by
+  by_cases e : d₂ = d₁
+  · rw [e]
+  · have h1 : k ≤ d₁ := by omega
+    have h2 : k ≤ d₂ := by omega
+    have hs : g.sThr d₂ = g.sThr d₁ := by
+      unfold GameState.sThr
+      split
+      · next a q ha hq =>
+          refine List.any_congr_mem fun s hs => ?_
+          obtain ⟨c, hc, hsc⟩ := g.mem_inForce (w := .opp) (sp := .active) hq hs
+          have := Static.thr_le_staticsThr hsc
+          have := hT c hc
+          simp only [Card.thrMax] at this
+          exact Static.thrFrom_of_le (by omega) (by omega)
+      · rfl
+    simp only [GameState.thrCut, hs]
+    split <;> omega
+
+/-- `GameState.thrCut_cap` as the damage step reads it: no threshold when the step ignores the effects
+on the defender (`Ign.fx`), and two states with the same field (milestone MV14). -/
+theorem GameState.cond_thrCut_cap {k : Nat} {g g₂ : GameState} (fx : Bool) (hT : g.ThrLe k)
+    (hsf : GameState.SameField g g₂) {d₁ d₂ : Nat} (h : min d₂ k = min d₁ k) :
+    min (cond fx id g₂.thrCut d₂) k = min (cond fx id g.thrCut d₁) k := by
+  cases fx
+  · simp only [Bool.cond_false, hsf.thrCut]; exact GameState.thrCut_cap hT h
+  · exact h
 
 /-- **Inside an attack's effect, the kernel of `rclamp k` is a simulation**, for a tame effect
 whose test constants are below `k`, from a state with no stored damage reduction and `CapOk k`.
@@ -443,7 +512,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       have hwr := GameState.wr_of_rclamp hc
       have hsf := GameState.sameField_of_clampAt hc
       have hr : cond ig.resist 0 g.resist + g.sReduce ≤ k := by
-        have h1 := hR.2 _ (GameState.top_mem_opp_active h)
+        have h1 := hR.2.1 _ (GameState.top_mem_opp_active h)
         have h2 := g.sReduce_le
         have h3 : g.resist ≤ p.top.resistAmt :=
           GameState.resist_le fun d hd => by rw [h] at hd; cases hd; exact Nat.le_refl _
@@ -469,7 +538,8 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           simp only [GameState.dealtI, hwr.1, hwr.2, hsf.sBonus, hsf.sReduce, hsf.sPrevent]
           rcases Bool.eq_false_or_eq_true (cond ig.fx false g.sPrevent) with hc | hc <;>
             simp only [hc, ↓reduceIte, Bool.false_eq_true]
-          exact dealtBy_cap_ign hk0 (Store.cap_add hm₁ _ _) hm₂ hn.2 (hn.1.add _ _ rfl) n _ ig.fx hr
+          exact GameState.cond_thrCut_cap ig.fx hR.2.2 hsf
+            (dealtBy_cap_ign hk0 (Store.cap_add hm₁ _ _) hm₂ hn.2 (hn.1.add _ _ rfl) n _ ig.fx hr)
         have hq' : InPlay.Agree k (.upto k)
             { q with damage := q.damage + GameState.dealtI ig n { g with
                 cur := { g.cur with active := c₂, bench := e₁, mods := m₁ },
@@ -904,8 +974,8 @@ theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameSt
 
 /-- The conditions under which the kernel of `clamp k` is a bisimulation for moves: `0 < k`;
 `HpLe k` (`hpBound` of the cards, which bounds every derived HP, and every Resistance at most `k`);
-every card is tame (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`)) and its test constants are below `k`;
-no damage reduction is stored; and `ReduceLe k` (every Resistance plus the static reduction bound
+every card is tame (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`; since milestone MV14 no lingering damage threshold, `Mod.preventLe`)) and its test constants, and since milestone MV14 its static damage thresholds (`Card.tmax`, `Card.thrMax`), are below `k`;
+no damage reduction (since milestone MV14 no lingering threshold, `Mods.upto`) is stored; and `ReduceLe k` (every Resistance plus the static reduction bound
 `sReduceBound` of the cards at most `k`; milestone M6). Static damage reductions are allowed: the
 one in force is a function of the cards in play, bounded by `sReduceBound`, not an amount that
 play can raise. -/
@@ -936,18 +1006,18 @@ theorem Card.attack_tame {c : Card} (h : c.tame = true) {atk : Attack} (hm : atk
   | pokemon p =>
       simp only [Card.tame, Bool.and_eq_true] at h
       have := attacksTmax_mem (as := p.attacks) hm
-      exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax]; omega⟩
+      exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax, Card.testMax]; omega⟩
   | tool n gr =>
       simp only [Card.tame, Bool.and_eq_true] at h
       have := attacksTmax_mem (as := gr.attacks) hm
-      exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax]; omega⟩
+      exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax, Card.testMax]; omega⟩
   | energy t =>
       cases t with
       | basic => nomatch hm
       | special m pr x =>
           simp only [Card.tame, Bool.and_eq_true] at h
           have := attacksTmax_mem (as := x.grant.attacks) hm
-          exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax]; omega⟩
+          exact ⟨attacksTame_mem h.1 hm, by simp only [Card.tmax, Card.testMax]; omega⟩
   | _ => nomatch hm
 
 /-- The effect an attack resolves is tame, with test constants below `k`. -/
@@ -966,7 +1036,8 @@ theorem GameState.Fit.trainer {k : Nat} {g : GameState} (hF : g.Fit k) {n : Stri
     (hh : g.cur.hand = l₁ ++ Card.trainer n t e :: l₂) : e.tame = true ∧ e.tmax < k := by
   have hx : Card.trainer n t e ∈ g.cur.hand := by
     rw [hh]; exact List.mem_append_right _ (.head _)
-  exact hF.2.2.1 _ (GameState.mem_allCards_of_hand hx)
+  have h := hF.2.2.1 _ (GameState.mem_allCards_of_hand hx)
+  exact ⟨h.1, Nat.lt_of_le_of_lt (Card.trainer_tmax n t e []) h.2⟩
 
 theorem abilitiesTame_mem {ab : Ability} : ∀ {as : List Ability}, abilitiesTame as = true →
     ab ∈ as → ∀ e ∈ ab.scripts, e.tame = true
@@ -989,12 +1060,12 @@ any card, a Tool's granted Abilities included). -/
 theorem Card.ability_tmax {c : Card} {ab : Ability} (hm : ab ∈ c.abilities) :
     ab.tmax ≤ c.tmax := by
   cases c with
-  | pokemon p => have := abilitiesTmax_mem (as := p.abilities) hm; simp only [Card.tmax]; omega
-  | tool n gr => have := abilitiesTmax_mem (as := gr.abilities) hm; simp only [Card.tmax]; omega
+  | pokemon p => have := abilitiesTmax_mem (as := p.abilities) hm; simp only [Card.tmax, Card.testMax]; omega
+  | tool n gr => have := abilitiesTmax_mem (as := gr.abilities) hm; simp only [Card.tmax, Card.testMax]; omega
   | energy t =>
       cases t with
       | basic => nomatch hm
-      | special m pr x => have := abilitiesTmax_mem (as := x.grant.abilities) hm; simp only [Card.tmax]; omega
+      | special m pr x => have := abilitiesTmax_mem (as := x.grant.abilities) hm; simp only [Card.tmax, Card.testMax]; omega
   | _ => nomatch hm
 
 theorem Card.ability_tame {c : Card} (h : c.tame = true) {ab : Ability} (hm : ab ∈ c.abilities) :
@@ -1315,7 +1386,8 @@ directions.) -/
 theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k) (h : Move g₁ g₁')
     (hc : g₁.clamp k = g₂.clamp k) : ∃ g₂', Move g₂ g₂' ∧ g₁'.clamp k = g₂'.clamp k := by
   have hH : g₁.HpBelow k := hF.2.1.below
-  have hcap : g₁.CapOk k := ⟨hF.2.1, hF.2.2.2.2⟩
+  have hcap : g₁.CapOk k := ⟨hF.2.1, hF.2.2.2.2, fun c hc =>
+    Nat.le_of_lt (Nat.lt_of_le_of_lt (Card.thrMax_le_tmax c) (hF.2.2.1 c hc).2)⟩
   have hsf := GameState.sameField_of_clampAt hc
   have hk₂ := fun hk => GameState.damageBounded_of_clamp hc hk hH
   have hs₂ := fun hs => GameState.settled_of_clamp hc hs hH
@@ -1420,7 +1492,8 @@ theorem Move.clamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.Fit k)
   | @stadiumUse g' o n e ss hs hu hbt hst hat hr hnd hbh =>
       have hs' := hs₂ hst
       obtain ⟨ht, hb⟩ := hF.2.2.1 _ (GameState.mem_allCards_of_stadium hs)
-      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 ht hb hF.2.2.2.1 hcap
+      obtain ⟨g₂', hr', hc'⟩ := hr.clamp_sim hF.1 ht
+        (Nat.lt_of_le_of_lt (Card.trainer_tmax n .stadium e ss) hb) hF.2.2.2.1 hcap
         (g₂ := { g₂ with stadiumUsed := true })
         (by subst hg; simp only [GameState.clamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₁, he₂])
         (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))

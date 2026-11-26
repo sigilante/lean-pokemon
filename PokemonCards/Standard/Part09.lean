@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 9 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,45 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part09
 open Pokemon
+
+/-- Snom (me2pt5-52). Records: me2pt5-52. -/
+def me2pt5_52 : Card := .pokemon
+  { name := "Snom", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .water, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Icicle", cost := [.water], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Frosmoth (me2pt5-53). Records: me2pt5-53. Caveats: energyOfBasic, moveAnyPair, moveMayFail. -/
+def me2pt5_53 : Card := .pokemon
+  { name := "Frosmoth", stage := .stage1, evolvesFrom := some "Snom",
+    hp := 11, type := .water, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Alluring Wings", use := .once,
+        spot := some .active, cond := none,
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.ite (.countGe (.pile .opp .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.move .own (.top 1) .hand .any .all) (.move .opp (.top 1) .hand .any .all))) }],
+    attacks := [
+      { name := "Cold Cyclone", cost := [.water, .water], damage := 9,
+        effect := .moveEnergy .own (.energyOf .water),
+        gx := false }] }
+
+/-- Glastrier (me2pt5-54). Records: me2pt5-54. Caveats: benchMods. -/
+def me2pt5_54 : Card := .pokemon
+  { name := "Glastrier", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .water, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Ice Shot", cost := [.water], damage := 2,
+        effect := .benchDamage .opp 2,
+        gx := false },
+      { name := "Frosty Typhoon", cost := [.water, .water, .water], damage := 13,
+        effect := .skip,
+        gx := false, selfLock := .this }] }
 
 /-- Pikachu (me2pt5-55). Records: me2pt5-55. -/
 def me2pt5_55 : Card := .pokemon
@@ -1738,50 +1777,11 @@ def me4_20 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Frogadier (me4-21). Records: me4-21, me4-89. -/
-def me4_21 : Card := .pokemon
-  { name := "Frogadier", stage := .stage1, evolvesFrom := some "Froakie",
-    hp := 10, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Summoning Jutsu", cost := [.water], damage := 0,
-        effect := .seq (.move .own .deck .hand .pokemon (.upTo 3)) .shuffle,
-        gx := false },
-      { name := "Aqua Edge", cost := [.water, .water], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
-/-- Mega Greninja ex (me4-22). Records: me4-22, me4-100, me4-116, me4-122. Caveats: energyOfBasic. -/
-def me4_22 : Card := .pokemon
-  { name := "Mega Greninja ex", stage := .stage2, evolvesFrom := some "Frogadier",
-    hp := 35, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .megaEx, tera := false,
-    abilities := [
-      { name := "Mortal Shuriken", use := .once,
-        spot := some .active, cond := none,
-        effect := .fx (.seq (.move .own .hand .discard (.energyOf .water) (.exactly 1)) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 6) (.benchCounters .opp 6)) (.counters 6))) }],
-    attacks := [
-      { name := "Ninja Spinner", cost := [.water, .water], damage := 0,
-        effect := .choice (.damage (.const 12)) (.seq (.returnEnergy .own .active (.energyOf .water) (.exactly 1) .hand) (.damage (.const 20))),
-        gx := false }] }
-
-/-- Bergmite (me4-23). Records: me4-23. -/
-def me4_23 : Card := .pokemon
-  { name := "Bergmite", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .water, retreat := 2, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Chilly", cost := [.water], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Frost Breath", cost := [.water, .colorless, .colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me2pt5_52,
+  me2pt5_53,
+  me2pt5_54,
   me2pt5_55,
   me2pt5_56,
   me2pt5_58,
@@ -1928,10 +1928,7 @@ def cards : List Card := [
   me4_15,
   me4_16,
   me4_19,
-  me4_20,
-  me4_21,
-  me4_22,
-  me4_23]
+  me4_20]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

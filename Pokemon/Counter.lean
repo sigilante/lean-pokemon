@@ -379,7 +379,7 @@ def haltMarks : Marks := Marks.set .imprison true Marks.empty
 
 /-- A store with only a rest-of-game damage bonus `b` and damage reduction `r`. -/
 def storeOf (b r : Nat) : Store :=
-  ⟨Mods.empty, Mods.empty, Mods.empty, ⟨b, r, false, false, false, false, 0, 0, false⟩⟩
+  ⟨Mods.empty, Mods.empty, Mods.empty, ⟨b, r, false, false, false, false, 0, 0, false, 0⟩⟩
 
 def isEnergy : Card → Bool
   | .energy _ => true
@@ -625,11 +625,11 @@ theorem dealt_shape {kc ko : Pk} {g : GameState} (hs : Shape kc ko g) (hns : g.N
   have hrs : g.resist = 0 := by
     simp [GameState.resist, hp, hp', PokemonCard.resistTo, h1', hr]
   simp [GameState.dealt, hb0, hr0, hp0, dealtBy, hwk, hrs, hs.cur.mods, hs.opp.mods, storeOf,
-    Store.live, Mods.merge, Mods.empty]
+    Store.live, Mods.merge, Mods.empty, GameState.thrCut, g.sThr_noStatics hns]
 
 /-- Base damage 0 does no damage (the rulebook's "Stop if the base damage is 0"). -/
 theorem dealt_zero (g : GameState) : g.dealt 0 = 0 := by
-  simp [GameState.dealt, dealtBy]
+  simp [GameState.dealt, dealtBy, GameState.thrCut]
 
 theorem Does.damage (n : Nat) (kc ko : Pk) (hw : ko.top.weakness = none)
     (hr : ko.top.resistance = none) :

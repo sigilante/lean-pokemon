@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 11 of 11 (103 cards).
+Imported Standard cards, part 11 of 11 (106 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,39 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part11
 open Pokemon
+
+/-- Gimmighoul (me55-81). Records: me55-81. Caveats: searchAny. -/
+def me55_81 : Card := .pokemon
+  { name := "Gimmighoul", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Strolls So Much", cost := [.colorless], damage := 0,
+        effect := .choice (.seq (.move .own .deck .hand .any (.upTo 1)) .shuffle) .skip,
+        gx := false }] }
+
+/-- Groudon (me55-82). Records: me55-82. Caveats: benchMods. -/
+def me55_82 : Card := .pokemon
+  { name := "Groudon", stage := .basic, evolvesFrom := none,
+    hp := 14, type := .fighting, retreat := 4, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Break Ground", cost := [.fighting, .fighting, .fighting, .fighting, .fighting], damage := 25,
+        effect := .spreadDamage .own 2,
+        gx := false }] }
+
+/-- Lucario (me55-83). Records: me55-83. Caveats: benchMods. -/
+def me55_83 : Card := .pokemon
+  { name := "Lucario", stage := .stage1, evolvesFrom := some "Riolu",
+    hp := 12, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Aura Sphere", cost := [.fighting, .fighting, .colorless], damage := 10,
+        effect := .benchDamage .opp 6,
+        gx := false }] }
 
 /-- Koraidon (me55-86). Records: me55-86. Caveats: energyOfBasic, energyOfCount. -/
 def me55_86 : Card := .pokemon
@@ -1324,6 +1357,9 @@ def me6_103 : Card := .trainer "Zinnia's Trust" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me55_81,
+  me55_82,
+  me55_83,
   me55_86,
   me55_87,
   me55_88,
