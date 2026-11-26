@@ -281,6 +281,21 @@ def prim(e, coin):
         if q[0] == 'all':
             return none, none
         return f_or(none, [conj(cov('upTo0'))]), none
+    if h == 'returnEnergy':
+        # importer 0.18.0 (milestone MV11): the take of `discardEnergy`, the cards put elsewhere
+        return prim(('discardEnergy',) + e[1:5], coin)
+    if h == 'shiftEnergy':
+        # importer 0.18.0 (milestone MV11): nothing moves with an empty Bench (`shiftNone`), or with nothing to take
+        _, w, src, f, q, dst, one = e
+        if q[0] == 'exactly':
+            return (TRUE, TRUE) if q[1] == 0 else (FALSE, [lit(bench(w), False)])
+        if src == ('active',):
+            must = [lit(ge(('energy', w, f)), False), lit(bench(w), False)]
+        else:
+            must = [lit(bench(w), False), conj((bench(w), True), notest('Energy on a Benched Pokémon'))]
+        if q[0] == 'upTo':
+            return f_or(must, [conj(cov('upTo0'))]), must
+        return must, must
     if h == 'switch':
         f_ = [lit(bench(e[1]), False)]
         return f_, f_

@@ -231,6 +231,16 @@ CAVEATS = {
                        "'SAmt.perEnergy and Static.need count cards'). Written only where the Pokémon read can hold a "
                        "card that provides 2 (see MULTI_UNIT). On no imported card in 0.15.0: kept because the rule that "
                        "writes it is live (a future static of this form would otherwise be written exact)",
+    # importer 0.18.0 (milestone MV11)
+    'moveUnits': "'put N Energy attached to … into the hand', 'move N Energy' (N at least 2) are `returnEnergy` / "
+                 "`shiftEnergy … (Filter.energy)`, read as `discardEnergy` reads 'discard N Energy', by the Energy the "
+                 "cards provide (`Qty.okE`); 'move up to N Energy from your Benched Pokémon' is N one-card steps, each "
+                 "of which may take one card providing 2. Print may count cards, or Energy where the model counts "
+                 "cards (Known gaps, Energy item: readings). Written only where the Pokémon taken from can hold a card "
+                 "that provides 2 (MULTI_UNIT)",
+    'shiftFromMoved': "'move Energy from the Pokémon you moved to your Bench to the new Active Pokémon' takes the Energy "
+                      "from a Benched Pokémon chosen when the move resolves: the model does not record which Pokémon the "
+                      "switch moved (Known gaps, Energy item: 'shiftEnergy … bench')",
     'discardUnits': "'discard N Energy' (N at least 2) is `discardEnergy … (Filter.energy)`, read by the Energy the cards "
                     "provide (`Qty.okE`): one card that provides 2 pays 2, a card providing more than still needed may be "
                     "discarded, no card the payment does not need may be (Known gaps, Energy item: readings, no rule found "
@@ -321,6 +331,11 @@ CAVEATS = {
 # ('allows more'), forbid outcomes the printed card allows ('forbids some'), or both? A card imported
 # with caveats is in general neither an over- nor an under-approximation of its printed card.
 CAVEAT_DIRECTION = {
+    # importer 0.18.0
+    'moveUnits': 'both',           # by units a 2-unit card counts 2 (fewer cards than print by cards), and the steps
+                                   # of 'up to N from your Benched Pokémon' may move N 2-unit cards (more than by units)
+    'shiftFromMoved': 'allows more',  # the Energy of another Benched Pokémon may move; the printed move is among the
+                                      # outcomes
     # importer 0.17.0
     'shieldReach': 'both',         # a gust or a Bench-to-Bench Energy move print may allow is absent (forbids some); an
                                    # attachment onto the protected Pokémon from a window is kept (allows more)
@@ -1866,6 +1881,82 @@ def _(m, ctx):
     return Eff(min_take(('energy', w, f), num(q), mk, ctx))
 
 
+# importer 0.18.0 (milestone MV11, survey S25): attached Energy put into the hand or shuffled into the deck
+# (`Effect.returnEnergy w sp f q d`, the same take as `discardEnergy`, the cards put at `d`). The take is read as the
+# discard's (`min_take`, `Qty.okE`); its Energy caveats come from the term walk (`_energy_reads`, kind 'select').
+def return_energy(q, basic, t, special, who, dst, ctx):
+    f = energy_filter(special or basic, t)
+    if who == 'this Pokémon':
+        if ctx['kind'] != 'attack':
+            raise Refuse('this Pokémon outside an attack')
+        w = OWN
+    else:
+        w = OPP
+    mk = lambda qq: ('returnEnergy', w, ('active',), f, qq, dst)  # noqa: E731
+    if q == 'all':
+        return mk(('all',))
+    return min_take(('energy', w, f), num(q), mk, ctx)
+
+
+RET_E = (r"(an|a|all|\d+) (?:(Basic )?" + TYPE_RE + r" |(Special) )?Energy attached to (this Pokémon|" + OPPA + r")")
+
+
+@rule('put-energy-hand', r"Put " + RET_E + r" into (your|their) hand\.", 'B',
+      'returnEnergy w active F (exactly n | all) hand, under min_take')
+def _(m, ctx):
+    if (m.group(5) == 'this Pokémon') != (m.group(6) == 'your'):
+        raise Refuse('wording')
+    return Eff(return_energy(m.group(1), m.group(2), m.group(3), m.group(4), m.group(5), ('hand',), ctx))
+
+
+@rule('may-put-energy-opp-hand', r"You may put (an|a|\d+) Energy attached to your opponent's Active (Stage 2 )?Pokémon "
+      r"into their hand\.", 'A', 'choice (ite (top opp (stage stage2))) (returnEnergy opp active energy … hand) skip) skip')
+def _(m, ctx):
+    e = return_energy(m.group(1), None, None, None, OPPA, ('hand',), ctx)
+    if m.group(2):
+        e = ite(('top', OPP, ('stage', ('stage2',))), e, SKIP)
+    return Eff(choice(e, SKIP))
+
+
+@rule('shuffle-energy-deck', r"Shuffle (all) Energy attached to this Pokémon into your deck\.", 'A',
+      'returnEnergy own active energy all shuffle')
+def _(m, ctx):
+    return Eff(return_energy('all', None, None, None, 'this Pokémon', ('shuffle',), ctx))
+
+
+# importer 0.18.0 (milestone MV11): "You may move any amount of [T] Energy from your Pokémon to your other Pokémon in any
+# way you like." is `iter (moveEnergy own F)`: each step moves one card between two of the player's Pokémon, and any
+# final placement is reached by moving each card once, from where it is to where it ends (each step checks
+# `Card.attachOk` at its target, as print's attachment does); `iter` may stop at once (the printed "may", "any amount")
+@rule('move-energy-any-way', r"You may move any amount of (?:(Basic )?" + TYPE_RE + r" )?Energy from your Pokémon to your "
+      r"other Pokémon in any way you like\.", 'B', 'iter (moveEnergy own F)')
+def _(m, ctx):
+    return Eff(('iter', ('moveEnergy', OWN, energy_filter(m.group(1), m.group(2)))))
+
+
+# importer 0.18.0 (milestone MV11): directed moves (`Effect.shiftEnergy w src F q dst one`): from this Pokémon (the
+# attacker, Active) to one Benched Pokémon or to the Bench in any way; from the Benched Pokémon to the Active Pokémon
+@rule('move-energy-self-to-bench', r"Move (all|\d+) Energy from this Pokémon to (1 of your Benched Pokémon|your Benched "
+      r"Pokémon in any way you like)\.", 'A', 'shiftEnergy own active energy (all | exactly n) bench (one?)')
+def _(m, ctx):
+    one = m.group(2).startswith('1 of')
+    mk = lambda qq: ('shiftEnergy', OWN, ('active',), ENERGY_F, qq, ('bench',), one)  # noqa: E731
+    if m.group(1) == 'all':
+        return Eff(mk(('all',)))
+    return Eff(min_take(('energy', OWN, ENERGY_F), num(m.group(1)), mk, ctx))
+
+
+@rule('move-energy-bench-to-active', r"Move up to (\d+) Energy from your Benched Pokémon to your Active Pokémon\.", 'T',
+      'shiftEnergy own bench energy (upTo 1) active true, n times')
+def _(m, ctx):
+    # "from your Benched Pokémon": each card may come from another Benched Pokémon, so n one-card steps, each from a
+    # Benched Pokémon chosen when it resolves; "up to" allows 0 (upTo0). Each step takes one card (`upTo 1` by units: one
+    # card providing at least 1), so the n steps move up to n cards (moveUnits)
+    n = num(m.group(1))
+    st = ('shiftEnergy', OWN, ('bench',), ENERGY_F, ('upTo', 1), ('active',), True)
+    return Eff(seq(*[st] * n), {'upTo0', 'moveUnits'})
+
+
 @rule('ling-reduce-self', r"During your opponent's next turn, this Pokémon takes (\d+) less damage from attacks \(after applying Weakness and Resistance\)\.",
       'A', 'linger own next (reduce n)')
 def _(m, ctx):
@@ -2932,11 +3023,47 @@ class Parser:
             self.items.append((i, Eff(seq(('move', OWN, ('top', k), ('hand',), ('any',), ('upTo', c)), ('shuffle',)),
                                       {'upTo0'} if ctx['kind'] != 'attack' else set())))
             return i + 2
+        # importer 0.18.0 (milestone MV11): "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, [you
+        # may] move (any amount of Energy | an Energy) from the Pokémon you moved to your Bench to the new Active
+        # Pokémon." (Scramble Switch sv8-186, Zinnia's Trust me6-103): the switch, then a move from a Benched Pokémon
+        # chosen when it resolves (`shiftEnergy own bench energy q active`); the model does not record which Pokémon the
+        # switch moved (shiftFromMoved). With an empty Bench both do nothing (`switchNone`, `shiftNone`)
+        if s == 'Switch your Active Pokémon with 1 of your Benched Pokémon.' and ctx['kind'] == 'trainer':
+            mm = re.match(r'^If you do, (you may move any amount of|move an) Energy from the Pokémon you moved to your Bench '
+                          r'to the new Active Pokémon\.$', nxt)
+            if mm:
+                q = ('upTo', 60) if mm.group(1).startswith('you may') else ('most', 1)
+                cv = {'shiftFromMoved'} | ({'anyAmount60', 'upTo0'} if q[0] == 'upTo' else set())
+                self.used.append(('switch-then-move-energy', s + ' ' + nxt))
+                self.items.append((i, Eff(seq(('switch', OWN),
+                                              ('shiftEnergy', OWN, ('bench',), ENERGY_F, q, ('active',), True)), cv)))
+                return i + 2
+        # importer 0.18.0 (milestone MV11): "You may (put | shuffle | discard) X Energy attached to / from this Pokémon
+        # [into your hand | into your deck] (to | and) have this attack do N more damage." The choice is made before the
+        # damage step and the Energy leaves first, as printed (a static bonus with an Energy condition reads the
+        # attacker's Energy at the damage step): `choice (damage b) (seq X (damage (b + N)))` (`Dmg('mayPre')`)
+        m = re.match(r"^You may (put|shuffle|discard) (an|a|all|\d+) (?:(Basic )?" + TYPE_RE + r" )?Energy (?:attached to|from) "
+                     r"this Pokémon(?: (into your hand|into your deck))? (?:to|and) have this attack do (\d+) more damage\.$", s)
+        if m and ctx['kind'] == 'attack':
+            verb, dst = m.group(1), m.group(5)
+            if (verb == 'put') != (dst == 'into your hand') or (verb == 'shuffle') != (dst == 'into your deck'):
+                raise Refuse('wording', s)
+            f = energy_filter(m.group(3), m.group(4))
+            q = ('all',) if m.group(2) == 'all' else ('exactly', num(m.group(2)))
+            if verb == 'discard':
+                X = ('discardEnergy', OWN, ('active',), f, q)
+            else:
+                X = ('returnEnergy', OWN, ('active',), f, q, ('hand',) if verb == 'put' else ('shuffle',))
+            self.used.append(('may-energy-for-more', s))
+            self.items.append((i, Dmg('mayPre', X, counters(m.group(6)))))
+            return i + 1
         # "Discard all Energy from this Pokémon, and this attack [also] does ...": two items, the discard first.
         # Since importer 0.7 (milestone MV2 census, S13 §B) the discard may be of N, or of all of a type. Since importer
         # 0.13.0 every such discard is resolved before the damage step, as printed (`build_attack`, `first_dmg`): the
         # damage step reads the attacker's Energy through a static bonus with an Energy condition (`Static.need`).
-        m = re.match(r"^(Discard (?:all|an|a|\d+) (?:(?:Basic )?" + TYPE_RE + r" )?Energy from this Pokémon), and "
+        # importer 0.18.0: also "Shuffle all Energy attached to this Pokémon into your deck, and …" (Mega Skarmory ex me3-55)
+        m = re.match(r"^(Discard (?:all|an|a|\d+) (?:(?:Basic )?" + TYPE_RE + r" )?Energy from this Pokémon|"
+                     r"Shuffle all Energy attached to this Pokémon into your deck), and "
                      r"(?P<dmg>this attack (?:also )?does (?!.*for each).+)$", s)
         if m and ctx['kind'] == 'attack':
             first = self.one(m.group(1) + '.')
@@ -3688,6 +3815,8 @@ def tmap(tree, f):
         raise Refuse('another damage change with damage to each Pokémon of a kind')
     if tree[0] == 'FU':
         raise Refuse('another damage change with "for each card you discarded in this way"')
+    if tree[0] == 'MP':
+        raise Refuse('another damage change with an optional cost of more damage')
     raise AssertionError(tree)
 
 
@@ -3742,6 +3871,12 @@ def to_effect(tree, drain=False, ig=None):
             raise Refuse('drain with damage to chosen Pokémon')
         _, k, n = tree
         return some_of(k, dmg(('const', n), ig), lambda j: ('benchSome', OPP, j, ('any',), True, n))
+    if tree[0] == 'MP':
+        # importer 0.18.0 (milestone MV11): decline (the base damage), or the Energy first and N more
+        if drain:
+            raise Refuse('drain with an optional cost of more damage')
+        _, X, b, n = tree
+        return choice(dmg(b, ig), seq(X, dmg(amt_add(b, ('const', n)), ig)))
     if tree[0] == 'FU':
         # milestone MV3: `Effect.forUpTo f n` unfolded as its definition reads (`forUpTo f 0 = f 0`,
         # `forUpTo f (n + 1) = choice (forUpTo f n) (f (n + 1))`), f i = seq (discard exactly i) (damage (b + k·i))
@@ -3938,6 +4073,12 @@ def build_attack(base, suffix, items, cost):
                     if suffix != '×' or tree != 'X' or k != base:
                         raise Refuse('"damage for each card you discarded" does not match the printed damage')
                     tree = ('FU', mk, n, k, 0)
+            elif op == 'mayPre':
+                # importer 0.18.0 (milestone MV11): the optional Energy cost of N more damage, before the damage step
+                X, n = a
+                if suffix != '+' or tree is None or tree == 'X' or tree[0] != 'L':
+                    raise Refuse('an optional cost of more damage without a printed "+"')
+                tree = ('MP', X, tree[1], n)
             elif op == 'afterGust':
                 if tree is not None:
                     raise Refuse('damage to the new Active Pokémon with a printed base damage')
@@ -3973,6 +4114,8 @@ def build_attack(base, suffix, items, cost):
         raise Refuse('printed "%s" damage with no recognized amount' % suffix)
     if tree is not None and tree_reads(tree) and dmg_idx is not None and any(i < dmg_idx for i, _ in post):
         raise Refuse('an effect printed before damage that reads the state')
+    if tree is not None and tree[0] == 'MP' and any(i < dmg_idx for i, _ in post):
+        raise Refuse('an effect printed before an optional cost of more damage')
     if tree is not None and tree[0] == 'FU' and any(i < dmg_idx for i, _ in post):
         # the discard of each branch resolves with the damage step; an effect printed before it would follow it
         raise Refuse('an effect printed before "discard …, and this attack does … for each card discarded"')
@@ -4149,6 +4292,11 @@ def _energy_reads(x, out, ctx='any'):
         return 'self' if ctx == 'self' and c[0] == 'energy' and c[1] == OWN else 'any'
     if h == 'discardEnergy' and len(x) == 5:
         out.append(('select', x[3], x[4], 'self' if ctx == 'self' and x[1] == OWN and x[2] == ('active',) else 'any'))
+    elif h == 'returnEnergy' and len(x) == 6:
+        # importer 0.18.0: the take of `discardEnergy`, read the same way (units: moveUnits, not discardUnits)
+        out.append(('selectMove', x[3], x[4], 'self' if ctx == 'self' and x[1] == OWN and x[2] == ('active',) else 'any'))
+    elif h == 'shiftEnergy' and len(x) == 7:
+        out.append(('selectMove', x[3], x[4], 'self' if ctx == 'self' and x[1] == OWN and x[2] == ('active',) else 'any'))
     elif h == 'moveEnergy' and len(x) == 3:
         out.append(('select', x[2], None, 'any'))
     elif h == 'energyTo' and len(x) == 2:
@@ -4223,7 +4371,8 @@ def energy_caveats(term, c):
             cv.add('forAllUnits' if _has_all_guard(root) else 'forUpToUnits')
         # the guard `countGe (energy w energy) n` written with "discard n Energy" (`min_take`) is that discard's own
         # reading (discardUnits), not a separate count
-        guards = {(q[1], who) for k, f, q, who in reads if k == 'select' and f == ENERGY_F and q and q[0] == 'exactly'}
+        guards = {(q[1], who) for k, f, q, who in reads if k in ('select', 'selectMove') and f == ENERGY_F and q and
+                  q[0] == 'exactly'}
         for kind, f, q, who in reads:
             if kind == 'test' and (q, who) in guards:
                 kind = 'guard'
@@ -4231,7 +4380,7 @@ def energy_caveats(term, c):
                 w = TYPE_WORD[t]
                 if re.search(r'(?<!Basic )\b' + w + r' Energy\b(?! cards?\b)', text):
                     # "discard all [T] Energy" leaves the Special Energy card attached: one different outcome, not fewer
-                    cv.add('energyOfBasic' if kind == 'select' and q != ('all',) else 'energyOfCount')
+                    cv.add('energyOfBasic' if kind in ('select', 'selectMove') and q != ('all',) else 'energyOfCount')
             if kind == 'amount' and (f == SPECIAL_F or (f[0] == 'named' and KNOWN_NAMES.get(f[1]) == {'Special Energy'})) \
                     and re.search(r'for each Special Energy (?!card)', text):
                 cv.add('specialCountCards')
@@ -4243,6 +4392,10 @@ def energy_caveats(term, c):
                 cv.add('energyUnitsCount')
             if kind == 'select' and not fu and q is not None and q[0] in ('exactly', 'upTo', 'most') and q[1] >= 2:
                 cv.add('discardUnits')
+            # "any amount" is `upTo 60` (anyAmount60), a bound no reading of units against cards changes
+            if kind == 'selectMove' and q is not None and q[0] in ('exactly', 'upTo', 'most') and q[1] >= 2 and \
+                    q != ('upTo', 60):
+                cv.add('moveUnits')
     return cv
 
 

@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.17.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.18.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,16 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec. -/
+def sv5_157 : Card := .trainer "Prime Catcher" .item
+    (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
+
+/-- Mist Energy (sv5-161). Records: sv5-161. Caveats: shieldActive, shieldReach. -/
+def sv5_161 : Card := .energy (.special "Mist Energy" [[.colorless]] { grant := { holder := .pokemon, attacks := [], abilities := [], statics := [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .shield .any }] } })
+
+/-- Neo Upper Energy (sv5-162). Records: sv5-162. Caveats: aceSpec, unitsReading. -/
+def sv5_162 : Card := .energy (.special "Neo Upper Energy" [[.colorless]] { alt := some (.holder (.stage .stage2), [[.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless], [.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless]]) })
 
 /-- Tangela (sv6-1). Records: sv6-1. -/
 def sv6_1 : Card := .pokemon
@@ -1802,41 +1812,11 @@ def sv7_8 : Card := .pokemon
         effect := .seq (.seq (.discardTools .opp .active) (.discardEnergy .opp .active .specialEnergy .all)) (.damage (.const 3)),
         gx := false }] }
 
-/-- Grubbin (sv7-9). Records: sv7-9, me2pt5-17. -/
-def sv7_9 : Card := .pokemon
-  { name := "Grubbin", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ambush", cost := [.colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 4)) (.damage (.const 1)),
-        gx := false }] }
-
-/-- Gossifleur (sv7-10). Records: sv7-10. -/
-def sv7_10 : Card := .pokemon
-  { name := "Gossifleur", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Double Spin", cost := [.colorless], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.damage (.const 2))),
-        gx := false }] }
-
-/-- Applin (sv7-12). Records: sv7-12, sv8pt5-9. -/
-def sv7_12 : Card := .pokemon
-  { name := "Applin", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Spray Fluid", cost := [.grass], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv5_157,
+  sv5_161,
+  sv5_162,
   sv6_1,
   sv6_2,
   sv6_4,
@@ -1983,10 +1963,7 @@ def cards : List Card := [
   sv7_4,
   sv7_5,
   sv7_7,
-  sv7_8,
-  sv7_9,
-  sv7_10,
-  sv7_12]
+  sv7_8]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
