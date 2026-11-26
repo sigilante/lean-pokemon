@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part05
 open Pokemon
 
+/-- Wailmer (sv9-40). Records: sv9-40. -/
+def sv9_40 : Card := .pokemon
+  { name := "Wailmer", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .water, retreat := 3, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Surf", cost := [.colorless, .colorless, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
 /-- Wailord (sv9-41). Records: sv9-41, sv9-162. Caveats: energyOfCount. -/
 def sv9_41 : Card := .pokemon
   { name := "Wailord", stage := .stage1, evolvesFrom := some "Wailmer",
@@ -1890,22 +1901,9 @@ def sv10_76 : Card := .pokemon
         effect := .benchDamage .own 4,
         gx := false }] }
 
-/-- Rotom (sv10-77). Records: sv10-77, sv10-197. -/
-def sv10_77 : Card := .pokemon
-  { name := "Rotom", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Astonish", cost := [.lightning], damage := 2,
-        effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .shuffle .any (.exactly 1)) .skip,
-        gx := false },
-      { name := "Gadget Show", cost := [.colorless, .colorless], damage := 0,
-        effect := .damage (.count (.tools .own) 3),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv9_40,
   sv9_41,
   sv9_42,
   sv9_44,
@@ -2054,8 +2052,7 @@ def cards : List Card := [
   sv10_72,
   sv10_73,
   sv10_75,
-  sv10_76,
-  sv10_77]
+  sv10_76]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

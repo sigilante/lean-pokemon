@@ -511,6 +511,20 @@ def sv6_62 : Card := .pokemon
         effect := .ifDone (.countGe (.bench .own .pokemon) 1) (.switch .own) (.switch .opp),
         gx := false }] }
 
+/-- Wellspring Mask Ogerpon ex (sv6-64). Records: sv6-64, sv6-194, sv6-213. Caveats: benchMods, perPokemon. -/
+def sv6_64 : Card := .pokemon
+  { name := "Wellspring Mask Ogerpon ex", stage := .basic, evolvesFrom := none,
+    hp := 21, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .ex, tera := true,
+    abilities := [],
+    attacks := [
+      { name := "Sob", cost := [.colorless], damage := 2,
+        effect := .linger .opp .next (.lock .retreat),
+        gx := false },
+      { name := "Torrential Pump", cost := [.water, .colorless, .colorless], damage := 10,
+        effect := .choice (.seq (.returnEnergy .own .active .energy (.exactly 3) .shuffle) (.benchDamage .opp 12)) .skip,
+        gx := false }] }
+
 /-- Zapdos (sv6-65). Records: sv6-65. -/
 def sv6_65 : Card := .pokemon
   { name := "Zapdos", stage := .basic, evolvesFrom := none,
@@ -1801,17 +1815,6 @@ def sv7_7 : Card := .pokemon
         effect := .damage (.sub (.const 13) (.per .own 1)),
         gx := false }] }
 
-/-- Mow Rotom (sv7-8). Records: sv7-8. -/
-def sv7_8 : Card := .pokemon
-  { name := "Mow Rotom", stage := .basic, evolvesFrom := none,
-    hp := 9, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Reaping Dash", cost := [.colorless], damage := 0,
-        effect := .seq (.seq (.discardTools .opp .active) (.discardEnergy .opp .active .specialEnergy .all)) (.damage (.const 3)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   sv5_157,
@@ -1855,6 +1858,7 @@ def cards : List Card := [
   sv6_58,
   sv6_59,
   sv6_62,
+  sv6_64,
   sv6_65,
   sv6_66,
   sv6_67,
@@ -1962,8 +1966,7 @@ def cards : List Card := [
   sv7_2,
   sv7_4,
   sv7_5,
-  sv7_7,
-  sv7_8]
+  sv7_7]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part04
 open Pokemon
 
+/-- Uxie (sv8-78). Records: sv8-78. -/
+def sv8_78 : Card := .pokemon
+  { name := "Uxie", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Painful Memories", cost := [.psychic], damage := 0,
+        effect := .seq (.counters 2) (.spreadCounters .opp 2),
+        gx := false }] }
+
 /-- Mesprit (sv8-79). Records: sv8-79, sv8-204. -/
 def sv8_79 : Card := .pokemon
   { name := "Mesprit", stage := .basic, evolvesFrom := none,
@@ -1737,19 +1748,9 @@ def sv9_39 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Wailmer (sv9-40). Records: sv9-40. -/
-def sv9_40 : Card := .pokemon
-  { name := "Wailmer", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .water, retreat := 3, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Surf", cost := [.colorless, .colorless, .colorless], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv8_78,
   sv8_79,
   sv8_81,
   sv8_82,
@@ -1898,8 +1899,7 @@ def cards : List Card := [
   sv9_35,
   sv9_36,
   sv9_38,
-  sv9_39,
-  sv9_40]
+  sv9_39]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

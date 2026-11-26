@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part06
 open Pokemon
 
+/-- Rotom (sv10-77). Records: sv10-77, sv10-197. -/
+def sv10_77 : Card := .pokemon
+  { name := "Rotom", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Astonish", cost := [.lightning], damage := 2,
+        effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .shuffle .any (.exactly 1)) .skip,
+        gx := false },
+      { name := "Gadget Show", cost := [.colorless, .colorless], damage := 0,
+        effect := .damage (.count (.tools .own) 3),
+        gx := false }] }
+
 /-- Zeraora (sv10-78). Records: sv10-78. Caveats: benchMods. -/
 def sv10_78 : Card := .pokemon
   { name := "Zeraora", stage := .basic, evolvesFrom := none,
@@ -1755,19 +1769,9 @@ def zsv10pt5_4 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Simisage (zsv10pt5-5). Records: zsv10pt5-5, zsv10pt5-90. -/
-def zsv10pt5_5 : Card := .pokemon
-  { name := "Simisage", stage := .stage1, evolvesFrom := some "Pansage",
-    hp := 10, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 7,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_77,
   sv10_78,
   sv10_79,
   sv10_80,
@@ -1916,8 +1920,7 @@ def cards : List Card := [
   zsv10pt5_1,
   zsv10pt5_2,
   zsv10pt5_3,
-  zsv10pt5_4,
-  zsv10pt5_5]
+  zsv10pt5_4]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

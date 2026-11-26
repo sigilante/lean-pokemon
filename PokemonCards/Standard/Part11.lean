@@ -1,5 +1,5 @@
 /-
-Imported Standard cards, part 11 of 11 (54 cards).
+Imported Standard cards, part 11 of 11 (55 cards).
 
 GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.18.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
@@ -10,6 +10,20 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part11
 open Pokemon
+
+/-- Magmar (me6-20). Records: me6-20. -/
+def me6_20 : Card := .pokemon
+  { name := "Magmar", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gather Strength", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
+        gx := false },
+      { name := "Combustion", cost := [.fire, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
 
 /-- Torkoal (me6-22). Records: me6-22. -/
 def me6_22 : Card := .pokemon
@@ -686,6 +700,7 @@ def me6_103 : Card := .trainer "Zinnia's Trust" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me6_20,
   me6_22,
   me6_24,
   me6_25,

@@ -3038,6 +3038,20 @@ class Parser:
                 self.items.append((i, Eff(seq(('switch', OWN),
                                               ('shiftEnergy', OWN, ('bench',), ENERGY_F, q, ('active',), True)), cv)))
                 return i + 2
+        # importer 0.18.0 (milestone MV11): "You may (shuffle | put) N Energy attached to this Pokémon into your (deck |
+        # hand). If you do, X." (Wellspring Mask Ogerpon ex sv6-64): `choice (seq A X) skip` with A the `exactly N` take,
+        # which has no resolution that takes nothing (N ≥ 1, `Qty.okE`), so X follows only a take that happened
+        m = re.match(r"^You may (shuffle|put) (an|a|\d+) Energy attached to this Pokémon into your (deck|hand)\.$", s)
+        if m and ctx['kind'] == 'attack' and nxt.startswith('If you do, ') and \
+                (m.group(1) == 'shuffle') == (m.group(3) == 'deck'):
+            X = self.clause(nxt[len('If you do, '):])
+            if not isinstance(X, Eff) or X.pre:
+                raise Refuse("'If you do' with a consequence that is not a plain effect", nxt)
+            A = ('returnEnergy', OWN, ('active',), ENERGY_F, ('exactly', num(m.group(2))),
+                 ('shuffle',) if m.group(1) == 'shuffle' else ('hand',))
+            self.used.append(('may-return-energy-if-you-do', s + ' ' + nxt))
+            self.items.append((i, Eff(choice(seq(A, X.e), SKIP), X.cavs)))
+            return i + 2
         # importer 0.18.0 (milestone MV11): "You may (put | shuffle | discard) X Energy attached to / from this Pokémon
         # [into your hand | into your deck] (to | and) have this attack do N more damage." The choice is made before the
         # damage step and the Energy leaves first, as printed (a static bonus with an Energy condition reads the

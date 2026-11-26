@@ -22,7 +22,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1554 terms, for 1562 of the pool's 2161 cards: 8 cards share the term of another,
+/-- Every imported card (1555 terms, for 1564 of the pool's 2161 cards: 9 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -39,7 +39,7 @@ def all : List Card :=
 
 /-- The imported cards whose term is that of an earlier card in `all` (their records differ only in
 text read as a reminder): representative record id, name, and the id of the card whose term it is. -/
-def sameTerm : List (String × String × String) := [("sv8pt5-17", "Hearthflame Mask Ogerpon ex", "sv6-40"), ("sv8pt5-58", "Cornerstone Mask Ogerpon ex", "sv6-112"), ("sv8pt5-73", "Dragapult ex", "sv6-130"), ("me1-166", "Air Balloon", "zsv10pt5-79"), ("me2pt5-113", "Mega Lucario ex", "me1-77"), ("me2pt5-267", "Mega Diancie ex", "me2-41"), ("me5-104", "Brave Bangle", "rsv10pt5-80"), ("me6-133", "Growing Grass Energy", "me3-86")]
+def sameTerm : List (String × String × String) := [("sv8pt5-17", "Hearthflame Mask Ogerpon ex", "sv6-40"), ("sv8pt5-27", "Wellspring Mask Ogerpon ex", "sv6-64"), ("sv8pt5-58", "Cornerstone Mask Ogerpon ex", "sv6-112"), ("sv8pt5-73", "Dragapult ex", "sv6-130"), ("me1-166", "Air Balloon", "zsv10pt5-79"), ("me2pt5-113", "Mega Lucario ex", "me1-77"), ("me2pt5-267", "Mega Diancie ex", "me2-41"), ("me5-104", "Brave Bangle", "rsv10pt5-80"), ("me6-133", "Growing Grass Energy", "me3-86")]
 
 /-- The cards of the pool that were not imported, each with its representative record id, name and
 first blocking reason (the full list of reasons is in tools/importer/out/not-imported.tsv). -/
@@ -121,7 +121,6 @@ def notImported : List (String × String × String) := [
   ("sv6-54", "Glaceon", "unhandled sentence: At the end of your opponent's next turn, put 9 damage counters on the Defending Pokémon."),
   ("sv6-60", "Palafin", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin ex and switch it with this Pokémon. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. If you switched a Pokémon in this way, put this card into your deck. Then, shuffle your deck."),
   ("sv6-63", "Walking Wake", "unhandled sentence: Put up to 9 damage counters on this Pokémon."),
-  ("sv6-64", "Wellspring Mask Ogerpon ex", "unhandled sentence: You may shuffle 3 Energy attached to this Pokémon into your deck."),
   ("sv6-77", "Iron Thorns ex", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent's) have no Abilities, except for Future Pokémon. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)"),
   ("sv6-79", "Clefable", "unhandled sentence: Choose 1 of your opponent's Active Pokémon's attacks and use it as this attack."),
   ("sv6-80", "Abra", "Ability: returns its Pokémon from play: Once during your turn, if this Pokémon is in the Active Spot, you may shuffle it and all attached cards into your deck."),
@@ -283,7 +282,6 @@ def notImported : List (String × String × String) := [
   ("sv8pt5-14", "Flareon ex", "several cards to one chosen Pokémon: Search your deck for up to 2 Basic Energy cards and attach them to 1 of your Pokémon."),
   ("sv8pt5-21", "Seaking", "Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots): If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent's Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."),
   ("sv8pt5-26", "Glaceon ex", "unhandled sentence: Knock Out 1 of your opponent's Pokémon that has exactly 6 damage counters on it."),
-  ("sv8pt5-27", "Wellspring Mask Ogerpon ex", "unhandled sentence: You may shuffle 3 Energy attached to this Pokémon into your deck."),
   ("sv8pt5-30", "Jolteon ex", "unhandled sentence: You may discard up to 2 Basic Energy from your Benched Pokémon."),
   ("sv8pt5-34", "Espeon ex", "unhandled sentence: Devolve each of your opponent's evolved Pokémon by shuffling the highest Stage Evolution card on it into your opponent's deck."),
   ("sv8pt5-60", "Umbreon ex", "unhandled sentence: Discard all Energy from this Pokémon, and take a Prize card."),
@@ -645,13 +643,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-132", "Bubbly Water Energy", "Special Energy: rider not modelled: Special Condition recovery and immunity (no static form): The Water Pokémon this card is attached to recovers from all Special Conditions and can't be affected by any Special Conditions."),
   ("me6-134", "Nitro Fire Energy", "Special Energy: rider not modelled: return after a discard by the holder's attack (no machinery): If this card is discarded by an effect of an attack used by the Fire Pokémon this card is attached to, put this card into your hand after attack damage and effects.")]
 
-/-- **The count.** `all` has 1554 entries. -/
-theorem all_length : all.length = 1554 := by decide +kernel
+/-- **The count.** `all` has 1555 entries. -/
+theorem all_length : all.length = 1555 := by decide +kernel
 
-/-- `notImported` has 599 entries. -/
-theorem notImported_length : notImported.length = 599 := by decide +kernel
+/-- `notImported` has 597 entries. -/
+theorem notImported_length : notImported.length = 597 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1554 + 8 + 599 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1555 + 9 + 597 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -839,7 +837,7 @@ theorem cross_9_11 : crossOk Part09.cards Part11.cards = true := by decide +kern
 /-- No card of part 10 is the same term as a card of part 11. -/
 theorem cross_10_11 : crossOk Part10.cards Part11.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1554 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1555 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=
@@ -852,7 +850,7 @@ milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`), by name.
 theorem writers : (all.filter Card.writesAmt).map Card.label = ["Feraligatr", "Seedot", "Grotle", "Torkoal", "Kilowattrel", "Houndoom", "Varoom", "Drifloon", "Tornadus", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Hop's Corviknight", "Shelgon", "Hop's Rookidee", "Clamperl", "Sigilyph", "Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk", "Carkol", "Registeel ex", "Mega Pyroar ex", "Donphan", "Metang", "Rampardos ex", "Mabosstiff", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
 
 /-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/
-theorem lingerers : (all.filter Card.lingers).map Card.label = ["Feraligatr", "Pecharunt", "Seedot", "Roserade", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Elgyem", "Golett", "Golurk", "Dunsparce", "Torkoal", "Luxio", "Kilowattrel", "Nosepass", "Mightyena", "Whirlipede", "Joltik", "Houndoom", "Sneasel", "Dusknoir", "Varoom", "Lileep", "Turtonator", "Electivire", "Galvantula ex", "Drifloon", "Purugly", "Tornadus", "Bruxish", "Magnezone", "Flittle", "Donphan", "Vibrava", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Maractus", "Shelmet", "Togedemaru", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Hop's Corviknight", "Shelgon", "Kecleon", "Hop's Rookidee", "Oinkologne", "Cynthia's Feebas", "Clamperl", "Barraskewda", "Team Rocket's Muk", "Skarmory", "Sigilyph", "Frillish", "Petilil", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Genesect ex", "Tranquill", "Unfezant", "Bulbasaur", "Exeggutor", "Snom", "Yveltal", "Buneary", "Pawmi", "Gliscor", "Eternatus", "Empoleon ex", "Bronzor", "Chikorita", "N's Vanillish", "Stunfisk", "Marill", "Hop's Phantump", "Stunfisk ex", "Carkol", "Registeel ex", "Noivern", "Larry's Braviary", "Spinarak", "Ariados", "Spewpa", "Mega Pyroar ex", "Flaaffy", "Donphan", "Krookodile ex", "Metang", "Rampardos ex", "Mabosstiff", "Trumbeak", "Cherubi", "Slowpoke", "Pikachu", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Masquerain", "Mega Golisopod ex", "Wattrel", "Onix", "Jangmo-o", "Fletchinder"] := by decide +kernel
+theorem lingerers : (all.filter Card.lingers).map Card.label = ["Feraligatr", "Pecharunt", "Seedot", "Roserade", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Elgyem", "Golett", "Golurk", "Dunsparce", "Torkoal", "Wellspring Mask Ogerpon ex", "Luxio", "Kilowattrel", "Nosepass", "Mightyena", "Whirlipede", "Joltik", "Houndoom", "Sneasel", "Dusknoir", "Varoom", "Lileep", "Turtonator", "Electivire", "Galvantula ex", "Drifloon", "Purugly", "Tornadus", "Bruxish", "Magnezone", "Flittle", "Donphan", "Vibrava", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Maractus", "Shelmet", "Togedemaru", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Hop's Corviknight", "Shelgon", "Kecleon", "Hop's Rookidee", "Oinkologne", "Cynthia's Feebas", "Clamperl", "Barraskewda", "Team Rocket's Muk", "Skarmory", "Sigilyph", "Frillish", "Petilil", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Genesect ex", "Tranquill", "Unfezant", "Bulbasaur", "Exeggutor", "Snom", "Yveltal", "Buneary", "Pawmi", "Gliscor", "Eternatus", "Empoleon ex", "Bronzor", "Chikorita", "N's Vanillish", "Stunfisk", "Marill", "Hop's Phantump", "Stunfisk ex", "Carkol", "Registeel ex", "Noivern", "Larry's Braviary", "Spinarak", "Ariados", "Spewpa", "Mega Pyroar ex", "Flaaffy", "Donphan", "Krookodile ex", "Metang", "Rampardos ex", "Mabosstiff", "Trumbeak", "Cherubi", "Slowpoke", "Pikachu", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Masquerain", "Mega Golisopod ex", "Wattrel", "Onix", "Jangmo-o", "Fletchinder"] := by decide +kernel
 
 /-- The imported Items that write a bonus or reduction (`Card.wAmt`), the cards clause 3 (a) of
 `StoreSafe` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/

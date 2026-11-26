@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part08
 open Pokemon
 
+/-- Bewear (me1-112). Records: me1-112. -/
+def me1_112 : Card := .pokemon
+  { name := "Bewear", stage := .stage1, evolvesFrom := some "Stufful",
+    hp := 13, type := .colorless, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Knuckle Punch", cost := [.colorless, .colorless], damage := 5,
+        effect := .skip,
+        gx := false },
+      { name := "Hyper Lariat", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .choice (.damage (.const 20)) (.damage (.const 10)),
+        gx := false }] }
+
 /-- Boss's Orders (me1-114). Records: me1-114, me2pt5-183, me2pt5-256. -/
 def me1_114 : Card := .trainer "Boss's Orders" .supporter
     (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.switch .opp))
@@ -1781,22 +1795,9 @@ def me2pt5_143 : Card := .pokemon
         effect := .ite (.usedLast .own) (.damage (.const 7)) (.damage (.const 2)),
         gx := false, selfLock := .note }] }
 
-/-- Mawile (me2pt5-144). Records: me2pt5-144, me2pt5-246. -/
-def me2pt5_144 : Card := .pokemon
-  { name := "Mawile", stage := .basic, evolvesFrom := none,
-    hp := 9, type := .metal, retreat := 1, weakness := some .fire,
-    resistance := some (.grass, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Call for Family", cost := [.colorless], damage := 0,
-        effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
-        gx := false },
-      { name := "Bite", cost := [.metal, .colorless, .colorless], damage := 9,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_112,
   me1_114,
   me1_115,
   me1_116,
@@ -1945,8 +1946,7 @@ def cards : List Card := [
   me2pt5_138,
   me2pt5_139,
   me2pt5_141,
-  me2pt5_143,
-  me2pt5_144]
+  me2pt5_143]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

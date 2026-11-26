@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part09
 open Pokemon
 
+/-- Mawile (me2pt5-144). Records: me2pt5-144, me2pt5-246. -/
+def me2pt5_144 : Card := .pokemon
+  { name := "Mawile", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .metal, retreat := 1, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Call for Family", cost := [.colorless], damage := 0,
+        effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
+        gx := false },
+      { name := "Bite", cost := [.metal, .colorless, .colorless], damage := 9,
+        effect := .skip,
+        gx := false }] }
+
 /-- Registeel ex (me2pt5-145). Records: me2pt5-145. Caveats: perPokemon. -/
 def me2pt5_145 : Card := .pokemon
   { name := "Registeel ex", stage := .basic, evolvesFrom := none,
@@ -1720,22 +1734,9 @@ def me5_8 : Card := .pokemon
         effect := .seq (.inflict .burned) (.inflict .confused),
         gx := false }] }
 
-/-- Sizzlipede (me5-9). Records: me5-9. -/
-def me5_9 : Card := .pokemon
-  { name := "Sizzlipede", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Controlled Burn", cost := [.fire], damage := 0,
-        effect := .move .opp (.top 1) .discard .any .all,
-        gx := false },
-      { name := "Bug Out", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .seq (.damage (.count (.pile .own (.bottom 7) (.and .pokemon (.hasAttack "Bug Out"))) 5)) (.look .own (.bottom 7) .pokemon .all (.put .shuffle) .discard),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me2pt5_144,
   me2pt5_145,
   me2pt5_146,
   me2pt5_147,
@@ -1884,8 +1885,7 @@ def cards : List Card := [
   me5_1,
   me5_2,
   me5_3,
-  me5_8,
-  me5_9]
+  me5_8]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

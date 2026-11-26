@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part07
 open Pokemon
 
+/-- Simisage (zsv10pt5-5). Records: zsv10pt5-5, zsv10pt5-90. -/
+def zsv10pt5_5 : Card := .pokemon
+  { name := "Simisage", stage := .stage1, evolvesFrom := some "Pansage",
+    hp := 10, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gentle Slap", cost := [.colorless, .colorless], damage := 7,
+        effect := .skip,
+        gx := false }] }
+
 /-- Petilil (zsv10pt5-6). Records: zsv10pt5-6, zsv10pt5-91. Caveats: perPokemon, shieldReach. -/
 def zsv10pt5_6 : Card := .pokemon
   { name := "Petilil", stage := .basic, evolvesFrom := none,
@@ -1873,22 +1884,9 @@ def me1_111 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Bewear (me1-112). Records: me1-112. -/
-def me1_112 : Card := .pokemon
-  { name := "Bewear", stage := .stage1, evolvesFrom := some "Stufful",
-    hp := 13, type := .colorless, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Knuckle Punch", cost := [.colorless, .colorless], damage := 5,
-        effect := .skip,
-        gx := false },
-      { name := "Hyper Lariat", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 20)) (.damage (.const 10)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  zsv10pt5_5,
   zsv10pt5_6,
   zsv10pt5_7,
   zsv10pt5_10,
@@ -2037,8 +2035,7 @@ def cards : List Card := [
   me1_107,
   me1_108,
   me1_109,
-  me1_111,
-  me1_112]
+  me1_111]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

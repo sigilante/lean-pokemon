@@ -4,16 +4,16 @@ Pool: 3402 records, 2161 cards (S9 identities: 2164), 11 Lean files.
 
 | kind | cards | imported exactly | with caveats | not imported |
 |---|---|---|---|---|
-| Pokémon | 1881 | 993 (52.8%) | 435 (23.1%) | 453 (24.1%) |
+| Pokémon | 1881 | 993 (52.8%) | 437 (23.2%) | 451 (24.0%) |
 | Item | 86 | 25 (29.1%) | 23 (26.7%) | 38 (44.2%) |
 | Supporter | 83 | 24 (28.9%) | 14 (16.9%) | 45 (54.2%) |
 | Pokémon Tool | 44 | 8 (18.2%) | 8 (18.2%) | 28 (63.6%) |
 | Stadium | 36 | 9 (25.0%) | 3 (8.3%) | 24 (66.7%) |
 | Basic Energy | 9 | 9 (100.0%) | 0 (0.0%) | 0 (0.0%) |
 | Special Energy | 22 | 5 (22.7%) | 6 (27.3%) | 11 (50.0%) |
-| **all** | **2161** | **1073 (49.7%)** | **489 (22.6%)** | **599 (27.7%)** |
+| **all** | **2161** | **1073 (49.7%)** | **491 (22.7%)** | **597 (27.6%)** |
 
-By records: imported exactly 1622, with caveats 739, not imported 1041 (of 3402).
+By records: imported exactly 1622, with caveats 744, not imported 1036 (of 3402).
 
 Readers of Special Energy cards (column `special_parts` of imported.tsv, `vacuous_parts` until importer 0.14.0): 11 imported cards have a part that reads Special Energy cards by kind or name. Until 0.14.0 no imported card was a Special Energy card and these parts were vacuous in a game of imported cards (S11 §15); since 0.15.0 the imported Special Energy cards make them live, each read by card (`Filter.weight`: a filter other than `Filter.energy` counts and discards cards): sv5-30 Victini (Singe Off, imported exactly); sv5-137 Cinccino (Special Roll, imported exactly); sv6-148 Enhanced Hammer ((card), imported exactly); sv6pt5-46 Haxorus (Bring Down the Axe, imported with caveats); sv7-8 Mow Rotom (Reaping Dash, imported exactly); sv7-86 Diancie (Diffuse Reflection, imported with caveats); sv9-85 Lycanroc (Spike-Clad, imported with caveats); sv10-51 Team Rocket's Articuno (Dark Frost, imported with caveats); sv10-70 Team Rocket's Zapdos (Wicked Thunder, imported with caveats); zsv10pt5-66 Cobalion (Righteous Edge, imported exactly); me3-45 Tyrantrum (Tyrannically Gutsy, imported exactly).
 
@@ -47,8 +47,8 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `movedCheckup` | forbids some | 1 | a promotion after Pokémon Checkup is read as in no player's turn, so it never fires a 'during your turn' `movedUp` trigger; under the reading of Checkup as part of the ending player's turn it would (Known gaps, triggers of the player's own moves: reading, fewer outcomes). On no imported card in 0.15.0 (the one `movedUp` card, Yanmega ex, is refused for an attack): kept because `translate_moved` writes it on every `movedUp` trigger it imports |
 | `rocketMove` | forbids some | 1 | 'This card can only be attached to a Team Rocket's Pokémon. If this card is attached to anything other than a Team Rocket's Pokémon, discard this card.' is `EnergyText.only`: an effect cannot move the card onto a Pokémon that is not a Team Rocket's Pokémon, where print moves it and then discards it (a subset of print); the discard rule is not applied at evolution, vacuous for the card data (every card that evolves from a Team Rocket's Pokémon is one; survey S22) (Known gaps, Energy item) |
 | `usedLastBenchUse` | forbids some | 1 | 'You can use this attack only if this Pokémon used X during your last turn' reads the use record of X (as usedLastBench): a Pokémon that used X, moved to the Bench and came back cannot use the attack in the model, where print allows it; a failed Confused attempt of X writes no record, also a reading |
-| `perPokemon` | both | 106 | a lingering effect printed on one Pokémon ('this Pokémon', 'the Defending Pokémon') is a modifier of its player in the model (Known gaps: modifiers belong to a player) |
-| `benchMods` | both | 79 | attack damage to Benched Pokémon takes no bonus, reduction or prevention in the model (Known gaps, milestone M3) |
+| `perPokemon` | both | 108 | a lingering effect printed on one Pokémon ('this Pokémon', 'the Defending Pokémon') is a modifier of its player in the model (Known gaps: modifiers belong to a player) |
+| `benchMods` | both | 81 | attack damage to Benched Pokémon takes no bonus, reduction or prevention in the model (Known gaps, milestone M3) |
 | `recoil` | both | 69 | self-damage ('also does N damage to itself') is written as damage counters (selfDamage): no Weakness, Resistance or modifier applies to it (Known gaps) |
 | `energyOfCount` | both | 42 | '[T] Energy attached' in a count or a test is `Filter.energyOf t` (Basic Energy cards only) or a static count (`SAmt.perEnergy`, `Static.need`) of Basic cards: a Special Energy card that provides T is not counted, so the count or test reads less than print; likewise 'discard all [T] Energy' leaves such a card attached (Known gaps, Energy item); a different amount, branch or discard, so outcomes differ either way |
 | `shieldReach` | both | 28 | 'prevent all effects of attacks done to this Pokémon' removes from the opponent's attack the primitives the model counts as done to the Defending Pokémon (`Effect.shielded`): damage counters, Special Conditions, Poison strength, a switch of the Defending Pokémon in either direction (a gust from the Bench included), the Defending Pokémon's attack and retreat locks and damage modifiers, Energy and Tools discarded from or attached to it, every move of Energy between the opponent's Pokémon (Bench to Bench included), and markers on the opponent's Pokémon; it keeps everything on the Bench, attachments from a looked-at window ('attach … to your opponent's Pokémon in any way'), and locks on the player (Items) (Known gaps, prevention of effects: a reading of 'done to this Pokémon'; no ruling was checked) |
@@ -75,7 +75,7 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `printedMaxHP` | both | 1 | 'has a maximum HP of N' reads the printed HP of the card (`Filter.hpLe`, as every filter reads the printed card), not the derived HP that static effects change (`GameState.hpOf`; Known gaps, filters: maximum HP): a Pokémon whose HP an effect raises to N, or from N, is counted the other way |
 | `specialCountCards` | both | 1 | 'for each Special Energy attached' (no 'card') is `Count.energy … specialEnergy`, which counts cards (`Filter.weight`: under a filter other than `Filter.energy`, cards; Known gaps, Energy item): a Special Energy card that provides 2 (Team Rocket's Energy) counts 1, where print, read as 'for each Energy attached' is (by the Energy provided), may count 2; a reading either way |
 
-Blocking mechanisms of the 599 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
+Blocking mechanisms of the 597 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
 
 | mechanism | blocks alone | blocks (any) |
 |---|---|---|
@@ -84,7 +84,7 @@ Blocking mechanisms of the 599 cards not imported (keyword classification of eac
 | "If you do" / "in this way" consequences | 22 | 51 |
 | a condition the model cannot test | 18 | 23 |
 | static text (Ability, Tool or Stadium): prevention or immunity (damage, effects, Special Conditions, healing) | 17 | 21 |
-| damage or counters spread "in any way you like" / to several chosen | 16 | 28 |
+| damage or counters spread "in any way you like" / to several chosen | 16 | 26 |
 | evolution or devolution by effect | 14 | 19 |
 | return from play to hand or deck | 13 | 21 |
 | Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms) | 13 | 20 |
@@ -115,8 +115,8 @@ Blocking mechanisms of the 599 cards not imported (keyword classification of eac
 | static text (Ability, Tool or Stadium): attack cost or Energy provision | 3 | 18 |
 | static text (Ability, Tool or Stadium): a filter the model has not (name prefix, Ancient, Future, Tera, "has an Ability", Mega Evolution Pokémon ex) | 3 | 17 |
 | own Special Conditions | 3 | 10 |
-| Energy to hand, deck or between specific Pokémon | 3 | 8 |
 | Weakness/Resistance or effects ignored | 3 | 7 |
+| Energy to hand, deck or between specific Pokémon | 3 | 6 |
 | test on a card in play (ex, Evolution, Basic, name, Tool, attack) | 3 | 6 |
 | static text (Ability, Tool or Stadium): a change of type or Weakness | 3 | 5 |
 | draw or discard variants (may draw until, draw for each, discard until) | 3 | 5 |
@@ -460,17 +460,17 @@ Top unhandled sentences (templates: numbers N, own name SELF, types TYPE) in car
 | 2 | Your turn ends. | sv5-143 |
 | 2 | You can use this attack only if you go second, and only during your first turn. | sv6-10 |
 | 2 | If you attached Energy to a Pokémon in this way, draw a card. | sv6-25 |
-| 2 | You may shuffle N Energy attached to this Pokémon into your deck. | sv6-64 |
-| 2 | If you do, this attack also does N damage to N of your opponent's Benched Pokémon. | sv6-64 |
 | 2 | As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent's) have no Abilities, except for Future Pokémon. (Pokémon ex, Pokémon V, etc. have Rule Boxes.) | sv6-77 |
 | 2 | If you do, this Pokémon also does N damage to itself. | sv6-104 |
 | 2 | If you have more Prize cards remaining than your opponent, this attack does N more damage. | sv6-107 |
 | 2 | Put damage counters on your opponent's Active Pokémon until its remaining HP is N. | sv6-117 |
 | 2 | Blood Moon used by this Pokémon costs TYPE less for each Prize card your opponent has taken. | sv6-141 |
+| 2 | If you go first, you may use this card during your first turn. | sv6-145 |
+| 2 | If you do, this attack does N more damage. | sv6pt5-21 |
 
 Imported cards that write a stored amount (a damage bonus or reduction, or since milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`; `Mod.isAmt`) (40): Feraligatr (svp-89), Seedot (sv5-3), Grotle (sv5-11), Torkoal (sv6-30), Kilowattrel (sv6-76), Houndoom (sv6pt5-8), Varoom (sv6pt5-43), Drifloon (sv7-60), Tornadus (sv7-120), Donphan (sv8-103), Vibrava (sv8-105), Skarmory (sv8-124), Jasmine's Gaze (sv8-178), Hop's Corviknight (sv9-108), Shelgon (sv9-113), Hop's Rookidee (sv9-133), Clamperl (sv10-54), Sigilyph (rsv10pt5-38), Klink (zsv10pt5-61), Klang (zsv10pt5-62), Genesect ex (zsv10pt5-67), Exeggutor (me1-5), Buneary (me1-107), Pawmi (me2-32), Empoleon ex (me2-70), Chikorita (me2pt5-8), Stunfisk (me2pt5-62), Carkol (me2pt5-119), Registeel ex (me2pt5-145), Mega Pyroar ex (me4-15), Donphan (me4-45), Metang (me4-60), Rampardos ex (me5-45), Mabosstiff (me5-58), Cosmoem (me55-79), Nidoran ♀ (me55-87), Zamazenta (me55-107), Jangmo-o (me55-110), Onix (me6-51), Jangmo-o (me6-73).
 
-Imported cards that write any lingering modifier (112).
+Imported cards that write any lingering modifier (113).
 
 Imported cards that write `Mod.weaken` (7): Houndoom (sv6pt5-8), Hop's Rookidee (sv9-133), Buneary (me1-107), Pawmi (me2-32), Chikorita (me2pt5-8), Mega Pyroar ex (me4-15), Nidoran ♀ (me55-87).
 

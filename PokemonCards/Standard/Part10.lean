@@ -11,6 +11,20 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part10
 open Pokemon
 
+/-- Sizzlipede (me5-9). Records: me5-9. -/
+def me5_9 : Card := .pokemon
+  { name := "Sizzlipede", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Controlled Burn", cost := [.fire], damage := 0,
+        effect := .move .opp (.top 1) .discard .any .all,
+        gx := false },
+      { name := "Bug Out", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .seq (.damage (.count (.pile .own (.bottom 7) (.and .pokemon (.hasAttack "Bug Out"))) 5)) (.look .own (.bottom 7) .pokemon .all (.put .shuffle) .discard),
+        gx := false }] }
+
 /-- Centiskorch (me5-10). Records: me5-10. Caveats: recoil. -/
 def me5_10 : Card := .pokemon
   { name := "Centiskorch", stage := .stage1, evolvesFrom := some "Sizzlipede",
@@ -1857,22 +1871,9 @@ def me6_19 : Card := .pokemon
         effect := .selfDamage 5,
         gx := false }] }
 
-/-- Magmar (me6-20). Records: me6-20. -/
-def me6_20 : Card := .pokemon
-  { name := "Magmar", stage := .basic, evolvesFrom := none,
-    hp := 9, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gather Strength", cost := [.colorless], damage := 0,
-        effect := .seq (.move .own .deck .hand .basicEnergy (.upTo 2)) .shuffle,
-        gx := false },
-      { name := "Combustion", cost := [.fire, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me5_9,
   me5_10,
   me5_11,
   me5_13,
@@ -2021,8 +2022,7 @@ def cards : List Card := [
   me6_16,
   me6_17,
   me6_18,
-  me6_19,
-  me6_20]
+  me6_19]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

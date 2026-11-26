@@ -4,7 +4,7 @@ shuffle	shuffle	134	197	svp-123 Teal Mask Ogerpon	Then, shuffle your deck.
 if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	127	143	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
 inflict	inflict c [; inflict c' ...]	124	152	svp-129 Pecharunt	Your opponent's Active Pokémon is now Poisoned.
 discard-energy	ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip); in a Trainer no fallback when none (min_take)	95	121	svp-105 Armarouge ex	Discard a Fire Energy from this Pokémon.
-reminder	skip (the model never applies Weakness or Resistance to the Bench)	72	105	svp-163 Cinderace ex	(Don't apply Weakness and Resistance for Benched Pokémon.)
+reminder	skip (the model never applies Weakness or Resistance to the Bench)	74	105	svp-163 Cinderace ex	(Don't apply Weakness and Resistance for Benched Pokémon.)
 draw	move own (top n) hand any all	70	80	svp-114 Picnicker	Draw 4 cards.
 search-to-hand	move own deck hand F (upTo n)	69	78	svp-123 Teal Mask Ogerpon	Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand.
 recoil	selfDamage n	69	82	sv5-23 Rellor	This Pokémon also does 10 damage to itself.
@@ -13,13 +13,13 @@ flip-n-coins-damage	choice over 0..N heads of damage (const (h * k)) [+ base]	48
 more-damage-for-each	damage (add (const B) (count C k))	47	63	svp-123 Teal Mask Ogerpon	This attack does 20 more damage for each of your opponent's Benched Pokémon.
 heal-self	heal n	41	43	svp-87 Sprigatito ex	Heal 30 damage from this Pokémon.
 static-ability		39	43	svp-129 Pecharunt	As long as this Pokémon is in the Active Spot, put 5 more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup.
-ling-lock-defending	linger opp next (lock attack|retreat)	37	49	svp-129 Pecharunt	During your opponent's next turn, that Pokémon can't retreat.
+ling-lock-defending	linger opp next (lock attack|retreat)	39	49	svp-129 Pecharunt	During your opponent's next turn, that Pokémon can't retreat.
 self-lock-all		31	42	sv5-7 Breloom	During your next turn, this Pokémon can't attack.
 search-to-bench	putBench own deck F (n times)	31	34	sv5-18 Grubbin	Search your deck for up to 2 Grubbin and put them onto your Bench.
 damage-ignores	damage a {weak/resist/fx := true} on every damage step to the opponent's Active Pokémon	29	37	svp-91 Koraidon	This attack's damage isn't affected by any effects on your opponent's Active Pokémon.
 mill	move w (top n) discard any all	25	32	sv5-22 Scovillain ex	Discard the top card of your opponent's deck.
+also-1-bench	benchDamage w n	25	28	sv5-79 Iron Valiant	This attack also does 20 damage to 1 of your opponent's Benched Pokémon.
 ling-reduce-self	linger own next (reduce n)	24	30	sv5-3 Seedot	During your opponent's next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).
-also-1-bench	benchDamage w n	23	26	sv5-79 Iron Valiant	This attack also does 20 damage to 1 of your opponent's Benched Pokémon.
 self-lock-this		22	27	svp-89 Feraligatr	During your next turn, this Pokémon can't use Giant Wave.
 search-attach	attach own deck F spot any (n times)	22	26	sv5-59 Boltund	Search your deck for up to 2 Basic Lightning Energy cards and attach them to your Benched Pokémon in any way you like.
 ling-shield-self	linger own next prevent; linger own next shield	22	22	sv5-73 Elgyem	During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon.
@@ -113,6 +113,7 @@ move-energy-any-way	iter (moveEnergy own F)	2	2	sv5-131 Delcatty	You may move an
 search-top-in-order	shuffle; move own deck top any (exactly n, or as many as there are; at least 1 in a Trainer)	2	2	sv5-145 Ciphermaniac's Codebreaking	Search your deck for 2 cards, shuffle your deck, then put those cards on top of it in any order.
 se-alt-holder		2	2	sv5-162 Neo Upper Energy	If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy but provides only 2 Energy at a time.
 if-condition-more-and		2	2	sv6-40 Hearthflame Mask Ogerpon ex	If your opponent's Active Pokémon is an Evolution Pokémon, this attack does 140 more damage, and discard all Energy from this Pokémon.
+may-return-energy-if-you-do		2	2	sv6-64 Wellspring Mask Ogerpon ex	You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent's Benched Pokémon.
 also-each-bench-both	spreadDamage own n; spreadDamage opp n	2	2	sv6-69 Emolga	This attack also does 10 damage to each Benched Pokémon (both yours and your opponent's).
 discard-all-for-each		2	2	sv6-123 Heatran	Discard all Metal Energy from this Pokémon. This attack does 50 damage for each card you discarded in this way.
 heal-active	heal n	2	4	sv6-147 Cook	Heal 70 damage from your Active Pokémon.

@@ -11,6 +11,17 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part03
 open Pokemon
 
+/-- Mow Rotom (sv7-8). Records: sv7-8. -/
+def sv7_8 : Card := .pokemon
+  { name := "Mow Rotom", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Reaping Dash", cost := [.colorless], damage := 0,
+        effect := .seq (.seq (.discardTools .opp .active) (.discardEnergy .opp .active .specialEnergy .all)) (.damage (.const 3)),
+        gx := false }] }
+
 /-- Grubbin (sv7-9). Records: sv7-9, me2pt5-17. -/
 def sv7_9 : Card := .pokemon
   { name := "Grubbin", stage := .basic, evolvesFrom := none,
@@ -1851,19 +1862,9 @@ def sv8_77 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Uxie (sv8-78). Records: sv8-78. -/
-def sv8_78 : Card := .pokemon
-  { name := "Uxie", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Painful Memories", cost := [.psychic], damage := 0,
-        effect := .seq (.counters 2) (.spreadCounters .opp 2),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_8,
   sv7_9,
   sv7_10,
   sv7_12,
@@ -2012,8 +2013,7 @@ def cards : List Card := [
   sv8_71,
   sv8_73,
   sv8_76,
-  sv8_77,
-  sv8_78]
+  sv8_77]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

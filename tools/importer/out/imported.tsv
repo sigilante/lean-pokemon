@@ -190,6 +190,7 @@ sv6-57	Frogadier	Pokémon	imported exactly		sv6-57	sv6_57
 sv6-58	Cramorant	Pokémon	imported with caveats	benchMods	sv6-58 sv6-176	sv6_58		
 sv6-59	Finizen	Pokémon	imported exactly		sv6-59	sv6_59		
 sv6-62	Iron Bundle	Pokémon	imported exactly		sv6-62	sv6_62		
+sv6-64	Wellspring Mask Ogerpon ex	Pokémon	imported with caveats	benchMods,perPokemon	sv6-64 sv6-194 sv6-213	sv6_64		
 sv6-65	Zapdos	Pokémon	imported exactly		sv6-65	sv6_65		
 sv6-66	Shinx	Pokémon	imported with caveats	hiddenInfo	sv6-66	sv6_66		
 sv6-67	Luxio	Pokémon	imported with caveats	perPokemon	sv6-67	sv6_67		
@@ -529,6 +530,7 @@ sv8pt5-18	Slowpoke	Pokémon	imported exactly		sv8pt5-18	sv8pt5_18
 sv8pt5-19	Slowking	Pokémon	imported with caveats	moveUnits	sv8pt5-19	sv8pt5_19		
 sv8pt5-23	Vaporeon ex	Pokémon	imported with caveats	benchMods	sv8pt5-23 sv8pt5-149	sv8pt5_23		
 sv8pt5-24	Suicune	Pokémon	imported with caveats	benchMods	sv8pt5-24	sv8pt5_24		
+sv8pt5-27	Wellspring Mask Ogerpon ex	Pokémon	imported with caveats	benchMods,perPokemon	sv8pt5-27 sv8pt5-152	sv6_64		
 sv8pt5-28	Pikachu ex	Pokémon	imported with caveats	recoil	sv8pt5-28	sv8pt5_28		
 sv8pt5-38	Spritzee	Pokémon	imported exactly		sv8pt5-38	sv8pt5_38		
 sv8pt5-39	Aromatisse	Pokémon	imported exactly		sv8pt5-39	sv8pt5_39		
