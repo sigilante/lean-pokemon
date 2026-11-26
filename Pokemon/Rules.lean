@@ -984,7 +984,8 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves (for a
   `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check, or
   (milestone MV15) returned from play by its own attack, its replacement is hit; a `damaged` trigger
-  after the attacker returned itself finds its Active Spot empty and does nothing, `Fire.vacant`); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
+  after the attacker returned itself finds its Active Spot empty and, if its effect has no resolution
+  there, does nothing, `Fire.vacant`; one whose effect still resolves, such as a draw, resolves); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
   while the turn's attack has been made" (Knock Outs by the attack's damage counters and by later
   rounds of the check included); the failed Confused attempt (`Move.attackConfused`) also sets
   `GameState.attacked`, so in the check after it a Knock Out of an opponent's Pokémon fires its
@@ -1387,6 +1388,13 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   p. 21 speaks of an Active Pokémon "Knocked Out (or otherwise removed from play)"); a player left
   with no Pokémon in play loses there (`winWays`; 2026 p. 7: "If your opponent doesn't have any more
   Pokémon in play, you win the game!", read at the batch step, as p. 21 reads the replacement).
+  `Fire.vacant` skips a whole trigger whose effect has no resolution, not only the part aimed at the
+  missing attacker: a trigger `seq (counters n) draw` would lose its draw, which print would probably
+  still do. Of the imported `damaged` and `koByAttack` triggers (grep of the generated terms) none mixes
+  an attacker-aimed part with an independent one, except Deluxe Bomb ("put 12 damage counters on the
+  Attacking Pokémon. If you put any damage counters in this way, discard this card",
+  `seq (counters 12) (discardTools .own .active)`), where print makes the second part conditional, so
+  skipping both matches; no imported card is affected, and no caveat was added.
   Departures: the promotion after a return of the player's own Active Pokémon raises no `movedUp`
   event (`GameState.promoUp` reads a removal by Knock Out), where print may count the promoted Pokémon
   as moved from the Bench to the Active Spot in its owner's turn (importer caveat `returnPromote`,
@@ -1395,9 +1403,10 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Pokémon moves from your Bench to the Active Spot" trigger (Buzzing Boost) print may fire and the
   model does not. A `damaged` trigger of an opponent's Active Pokémon that the same attack
   damaged and then returned from play does not fire: the attack's hit is recorded (`HitRun`), but
-  the triggers are those of the Pokémon in the opponent's Active Spot when the resolution ends, and
-  that spot stays empty to the end of the attack (`HitTrig.nil_of_empty`; nothing in an attack fills
-  it). Print agrees under the reading that an Ability of a Pokémon that has left play does not work
+  the triggers are those of the Pokémon in the opponent's Active Spot when the resolution ends:
+  if that spot is empty then, none fires (`HitTrig.nil_of_empty`, which assumes it empty at the end);
+  that nothing in an attack fills it after the return (`switch` needs an Active Pokémon) is argued from
+  the `Run` constructors, not stated as a theorem. Print agrees under the reading that an Ability of a Pokémon that has left play does not work
   (the printed exception "even if this Pokémon is Knocked Out" covers Knock Outs only); the rulebook
   has no rule on it, and no imported card damages and then returns the Defending Pokémon. Per-player
   lingering modifiers stay with the player (as for every lingering modifier, `perPokemon`). An

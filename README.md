@@ -569,14 +569,19 @@ attack of such a game has no return (`Return.attack_retFree`), and for such an a
 definitions that `Move.attack` reads have their old values (`Return.attack_old`: `Attack.wf` through
 `switchSafe_old`, `Attack.lockSet` through `switchesOwn_old`, `Attack.against` through `shielded_old`;
 also `spares_old`, `ownFree_old`, with `switchesOwnOld`, `ownFreeOld`, `sparesOld`, `shieldedOld`,
-`switchSafeOld` copied from the pre-MV15 sources); and no zone step of an effect with no return is one
-of the three new constructors (`Return.ZStep.not_return`; `Run` gained no constructor). The trigger
-fragment `Effect.trigOk` is unchanged. A `damaged` trigger aimed at "the Attacking Pokémon" after the
-attacker returned itself finds that Active Spot empty; it then does nothing, mandatory or not
-(`Fire.vacant`, a fourth constructor of `Fire`; before it no `Move` made such an attack against a
-mandatory trigger, `Return.fireOld_stuck`); from a state whose player to move has an Active Pokémon,
-`Fire` is the old relation (`Return.fire_old`, against a copy `Return.FireOld`), witnesses
-`Return.fade_vs_spikes` and `Return.jab_vs_spikes`. A `koByAttack` trigger after such a return
+`switchSafeOld` copied from the pre-MV15 sources); the three new zone-step constructors are exactly
+those indexed by `returnPokemon` (by inspection of the inductive, so an effect with no return uses
+none; `Run` gained no constructor); the trigger fragment `Effect.trigOk` is unchanged; and every
+`Fire` a move resolves is the pre-MV15 relation (copied as `Return.FireOld`): `Return.fire_old`
+(`Fire ↔ FireOld` from a state whose player to move has an Active Pokémon), with that hypothesis
+proved at the three firing sites, `Return.attack_fire_old` (`Move.attack`, in a game with no return
+card), `Return.batch_fire_old` (`Move.knockOuts`, every game) and `Return.owed_old` (`Owed`, under
+`Move.trigger` and `Resolve.trigger`, every game, against a copy `Return.OwedOld`). A `damaged`
+trigger aimed at "the Attacking Pokémon" after the attacker returned itself finds that Active Spot
+empty; if its effect has no resolution there it does nothing, mandatory or not (`Fire.vacant`, a
+fourth constructor of `Fire`, which skips the whole trigger; Known gaps). Before it, the trigger step
+had no result after Fade Out against a mandatory trigger (`Return.fireOld_stuck`, one step), so such
+an attack had no `Move` (argued); witnesses `Return.fade_vs_spikes` and `Return.jab_vs_spikes`. A `koByAttack` trigger after such a return
 acts on the promoted Pokémon (Known gaps, triggered Abilities; caveat `trigAttacker`). Witnesses in
 `Pokemon/Return.lean`: from a well-formed, settled start, a Pokémon uses its once-per-turn Ability (a
 stored bonus), returns itself to the hand by its attack (with its Energy; its damage counters on no Pokémon in play), the

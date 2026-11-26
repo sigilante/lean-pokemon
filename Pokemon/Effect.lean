@@ -1169,11 +1169,14 @@ inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → P
       Fire ev (ab :: l) g g₂
   | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
       (ho : ab.use.optional = true) (ht : Fire ev l g g₂) : Fire ev (ab :: l) g g₂
-  /-- (milestone MV15) **a trigger with no target left**: when the Active Spot of the player whose turn
-  it is (the side the trigger's effects are aimed at, `.opp` on the exchanged state) is empty and the
-  trigger's effect has no resolution there, the trigger does nothing, mandatory or not. The empty spot
-  arises only after an attack returned its own Pokémon from play (`Effect.returnPokemon .own .active`;
-  `Return.fire_old`): a `damaged` trigger aimed at "the Attacking Pokémon", which has left play, does
+  /-- (milestone MV15) **a trigger with no target left**: when the Active Spot of `g.cur` (the side the
+  trigger's effects are aimed at, `.opp` on the exchanged state: for `damaged`, `koByAttack` and
+  `oppBenched` triggers the player to move, under `FireMine` their opponent) is empty and the
+  trigger's effect has no resolution there, the trigger does nothing, mandatory or not; the whole
+  trigger is skipped, not only the part that fails. In a game with no return card no move reaches this
+  case (`Return.attack_fire_old`, `Return.batch_fire_old`, `Return.owed_old`); that with return cards
+  it arises only after an attack returned its own Pokémon (`Effect.returnPokemon .own .active`) is
+  argued. A `damaged` trigger aimed at "the Attacking Pokémon", which has left play, then does
   nothing, as in print -/
   | vacant {ab : Ability} {l : List Ability} {g g₂ : GameState}
       (hk : (ab.script ev.place).trigOk = true) (ha : g.cur.active = none)

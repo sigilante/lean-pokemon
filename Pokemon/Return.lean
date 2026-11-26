@@ -467,7 +467,7 @@ Every definition MV15 changed differs from its old form only on effects that con
 `returnPokemon`, and the five move constructors that gained the premise `Effect.retFree` have exactly
 their old premises in a game none of whose cards has such an effect (`GameState.RetFree`, kept by play:
 `Reach.retFree`). The three new `ZStep` constructors have the effect index `returnPokemon _ _ _`, so no
-resolution of an effect without it uses them (`ZStep.not_return`). `Move.attack` reads three changed
+resolution of an effect without it uses them (by inspection of the inductive; `retFree_not_return`). `Move.attack` reads three changed
 definitions (`Attack.wf`, `Attack.lockSet`, `Attack.against`), equal to their old forms for an attack
 with no return (`attack_old`), and every attack of such a game has none (`attack_retFree`). This is
 proved in pieces: no copy of the pre-MV15 `Move`, `Run`, `ZStep` was made, so there is no single
@@ -791,11 +791,11 @@ theorem attack_old {atk : Attack} (h : atk.effect.retFree = true) :
     simp only [Attack.lockSet, switchesOwn_old (script_retFree h)], fun b => ?_⟩
   rw [Attack.against_script, shielded_old _ (script_retFree h)]
 
-/-- **No resolution of an effect with no return uses the three MV15 zone steps**: they are the
-steps of `returnPokemon` (`ZStep.monActive`, `monBench`, `monNone` have that index), so a zone step of
-an effect with `retFree` is one of the pre-MV15 constructors. `Run` gained no constructor. -/
-theorem ZStep.not_return {e : Effect} {s s' : PlayerState} (_h : ZStep e s s')
-    (hr : e.retFree = true) : ∀ w sp d, e ≠ .returnPokemon w sp d := by
+/-- An effect with no return is not a `returnPokemon` step. (That the three MV15 zone steps
+`ZStep.monActive`, `monBench`, `monNone` are exactly the constructors with that index, so that no
+zone step of an effect with `retFree` uses them, is read off the inductive, not a theorem.) -/
+theorem retFree_not_return {e : Effect} (hr : e.retFree = true) :
+    ∀ w sp d, e ≠ .returnPokemon w sp d := by
   rintro w sp d rfl; simp [Effect.retFree] at hr
 
 /-- **Every attack of a game with no return card has no return** (the attack is on a card of the game:
@@ -813,8 +813,9 @@ A `damaged` trigger of the Defending Pokémon resolves after the attack's script
 script leaves (`Move.attack`: `HitTrig`, then `Fire .damaged`). After a return of the attacker
 (`returnPokemon .own .active`) the attacker's Active Spot is empty, and a trigger aimed at "the
 Attacking Pokémon" (`counters`, `inflict` on `.opp` of the exchanged state) has no resolution. Before
-this round `Fire` could only skip an optional trigger, so the whole attack had no `Move` against a
-defender with a mandatory one (`fireOld_stuck`); in print the trigger finds no Attacking Pokémon and does
+this round `Fire` could only skip an optional trigger, so such a trigger step had no result
+(`fireOld_stuck`, one step at the state the script leaves) and, argued from that, the attack had no
+`Move` against a defender with a mandatory one; in print the trigger finds no Attacking Pokémon and does
 nothing. `Fire.vacant` lets such a trigger do nothing. -/
 
 /-- `Fire` before fix round 2 of milestone MV15 (copied: `nil`, `run`, `decline`). -/
@@ -873,10 +874,8 @@ theorem _root_.Pokemon.Run.opp_isSome_of_trigOk {e : Effect} {g g' : GameState} 
 
 /-- **No change where the attacker is in play**: from a state whose player to move has an Active
 Pokémon, `Fire` is the pre-round relation `FireOld` (the new case `vacant` needs that spot empty, and
-a trigger's effect never empties it). The spot is empty at a `Fire` only after the turn's attack
-returned the player's own Active Pokémon (argued from the moves that fire: `Move.attack`'s `damaged`
-triggers run on the state the script leaves; `koByAttack` triggers after a batch step that went on,
-whose promotions fill both spots; owed triggers from a state with both spots filled). -/
+a trigger's effect never empties it). At the three places a move fires triggers the hypothesis is
+proved for a game with no return card: `attack_fire_old`, `batch_fire_old`, `owed_old` (below). -/
 theorem fire_old {ev : TrigEvent} {l : List Ability} {g g' : GameState} (ha : g.cur.active.isSome = true) :
     Fire ev l g g' ↔ FireOld ev l g g' := by
   constructor
@@ -937,8 +936,10 @@ theorem spikes_none : ∀ g₁, ¬ Run (TriggerWitness.spikes.script TrigEvent.d
   | zone hw => simp [Effect.zSide] at hw
 
 /-- **The departure the round fixes (step 1)**: under the pre-round `FireOld`, the mandatory trigger
-of `spiky` cannot be resolved after Fade Out (no resolution, and it cannot be declined), so no
-`Move.attack` with Fade Out existed from `t0` with the old relation. -/
+of `spiky` has no result at `u` (no resolution, and it cannot be declined). Since `u` is the state Fade
+Out's script leaves from `t0` (`run_fade_t0`), Fade Out had no `Move` from `t0` with the old relation:
+**argued**, not proved (that every resolution of the script leaves `u` and that the fired list is
+`[spikes]` is not stated). -/
 theorem fireOld_stuck : ∀ g'', ¬ FireOld .damaged [TriggerWitness.spikes] u g'' := by
   intro g'' h
   cases h with
@@ -991,5 +992,155 @@ theorem jab_vs_spikes : ∃ g, Move t0 g ∧ g.cur.active.map InPlay.damage = so
     (.fire (.seq (.hit (b := true) rfl (.damage (.const 1 _) rfl) rfl (fun _ => rfl)) (.plain rfl (.skip _)))
       (.refl _))
     (.run rfl (.counters 3 rfl) (.nil _)), rfl, rfl⟩
+
+/-! ## Every `Fire` inside a move of a game with no return card is a `FireOld` (fix round 3) -/
+
+theorem cmove_isSome {f : Filter} {noKO : Bool} {hp : Spot → InPlay → Nat} {a a' : Option InPlay}
+    {b b' : List InPlay} (h : CMove f noKO hp a b a' b') (ha : a.isSome = true) : a'.isSome = true := by
+  cases h with
+  | ab => rfl
+  | ba => rfl
+  | bb => exact ha
+
+/-- **An effect with no return keeps both Active Spots filled**: each that was filled stays filled. -/
+theorem _root_.Pokemon.Run.isSome_of_retFree {e : Effect} {g g' : GameState} (h : Run e g g') :
+    e.retFree = true → (g.cur.active.isSome = true → g'.cur.active.isSome = true) ∧
+      (g.opp.active.isSome = true → g'.opp.active.isSome = true) := by
+  induction h with
+  | iteT _ _ _ ih =>
+      intro hk; simp only [Effect.retFree, Bool.and_eq_true] at hk; exact ih hk.1
+  | iteF _ _ _ ih =>
+      intro hk; simp only [Effect.retFree, Bool.and_eq_true] at hk; exact ih hk.2
+  | seq _ _ ih₁ ih₂ =>
+      intro hk; simp only [Effect.retFree, Bool.and_eq_true] at hk
+      exact ⟨fun a => (ih₂ hk.2).1 ((ih₁ hk.1).1 a), fun a => (ih₂ hk.2).2 ((ih₁ hk.1).2 a)⟩
+  | choiceL _ ih =>
+      intro hk; simp only [Effect.retFree, Bool.and_eq_true] at hk; exact ih hk.1
+  | choiceR _ ih =>
+      intro hk; simp only [Effect.retFree, Bool.and_eq_true] at hk; exact ih hk.2
+  | iterNil => intro _; exact ⟨id, id⟩
+  | iterCons _ _ ih₁ ih₂ =>
+      intro hk; simp only [Effect.retFree] at hk ih₂
+      exact ⟨fun a => (ih₂ hk).1 ((ih₁ hk).1 a), fun a => (ih₂ hk).2 ((ih₁ hk).2 a)⟩
+  | @zone e w g s' hw hz =>
+      intro hk
+      have hr : ∀ w d, e ≠ .returnPokemon w .active d := by
+        rintro w' d rfl; simp [Effect.retFree] at hk
+      cases w with
+      | own => exact ⟨fun a => hz.active_isSome hr a, id⟩
+      | opp => exact ⟨id, fun a => hz.active_isSome hr a⟩
+  | switch w ha hb =>
+      intro _
+      cases w <;> simp only [Whose.noteBenched, GameState.noteBenched, GameState.updSide] <;>
+        refine ⟨fun a => ?_, fun a => ?_⟩ <;> (try split) <;> first | exact a | rfl | simp_all
+  | @touchActive _ w => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | @touchBench _ w _ _ _ _ _ _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | unmark w m g =>
+      intro _
+      cases w <;> simp only [GameState.updSide, PlayerState.unmark] <;>
+        exact ⟨fun a => by simpa using a, fun a => by simpa using a⟩
+  | linger w _ _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | @benchCounters _ _ _ _ w _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | spreadCounters w _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | benchSome w _ _ _ _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | hitByActive w _ _ _ _ _ h _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | hitByBench w _ _ _ _ _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | @benchDamage _ _ _ _ w _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | spreadDamage w _ _ => intro _; cases w <;> exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+  | moveCounter h =>
+      intro _
+      exact ⟨fun a => cmove_isSome h a, id⟩
+  | _ => intro _; exact ⟨fun a => by first | exact a | rfl, fun a => by first | exact a | rfl⟩
+
+theorem promote_isSome {a a' : Option InPlay} {b b' : List InPlay} (h : Promote a b a' b') :
+    a'.isSome = true := by
+  cases h <;> rfl
+
+/-- A trigger resolution from a state with both Active Spots filled keeps them filled. -/
+theorem _root_.Pokemon.Fire.bothActive {ev : TrigEvent} {l : List Ability} {g g' : GameState}
+    (h : Fire ev l g g') (hb : g.BothActive) : g'.BothActive := by
+  induction h with
+  | nil => exact hb
+  | @run ab l g g₁ g₂ hk hr _ ih =>
+      have e := hr.isSome_of_retFree (Effect.retFree_of_trigOk hk)
+      exact ih ⟨e.2 hb.1, e.1 hb.2⟩
+  | decline _ _ ih => exact ih hb
+  | vacant _ hv _ _ => have := hb.1; rw [hv] at this; cases this
+
+/-- **Site 1, `Move.attack`, in a game with no return card**: the `damaged` triggers resolve by the
+pre-round relation (`FireOld`): the attack (or its shielded form) returns nothing, so the state its
+script leaves still has the attacker in the Active Spot (`Run.isSome_of_retFree`). -/
+theorem attack_fire_old {g g' g'' : GameState} {a : InPlay} {atk : Attack} {l : List Ability}
+    (hR : g.RetFree) (ha : g.cur.active = some a) (hm : atk ∈ a.attacks)
+    (hr : Run (atk.against g.shield).script g g') (ht : Fire .damaged l g' g'') :
+    FireOld .damaged l g' g'' := by
+  have hs := script_retFree (attack_retFree hR ha hm)
+  have hrf : (atk.against g.shield).script.retFree = true := by
+    rw [Attack.against_script]
+    cases g.shield
+    · exact hs
+    · exact shielded_retFree _ hs
+  have hc : g'.cur.active.isSome = true := (hr.isSome_of_retFree hrf).1 (by rw [ha]; rfl)
+  exact (fire_old hc).1 ht
+
+/-- **Site 2, `Move.knockOuts`** (every game): the `koByAttack` triggers resolve by `FireOld`: either
+the batch step ended the game and none fires, or it promoted, filling the player to move's Active
+Spot. -/
+theorem batch_fire_old {g g₁ g' : GameState} {l : List Ability} (hk : KOBatch g g₁)
+    (hl : l.Perm (g.batchTrigs g₁)) (ht : Fire .koByAttack l g₁ g') : FireOld .koByAttack l g₁ g' := by
+  cases hk with
+  | won _ hw =>
+      rw [GameState.batchTrigs_of_won hw] at hl
+      have := List.Perm.eq_nil hl
+      subst this
+      rw [ht.nil_eq]; exact .nil _
+  | @go ac ao bc bo _ _ hc _ _ =>
+      refine (fire_old ?_).1 ht
+      show (if g.promoUp then ac.map (InPlay.noteMove .movedUp .active) else ac).isSome = true
+      have := promote_isSome hc
+      split
+      · cases ac with
+        | none => cases this
+        | some _ => rfl
+      · exact this
+
+/-- `FireMine` with `FireOld`. -/
+def FireMineOld (u d : List Ability) (g g' : GameState) : Prop :=
+  ∃ g₁ g₂, FireOld .movedUp u g.swap g₁ ∧ FireOld .movedDown d g₁ g₂ ∧ g' = g₂.swap
+
+/-- `Owed` with `FireOld` (the pre-round relation). -/
+inductive OwedOld (g : GameState) : GameState → Prop where
+  | mineFirst {u d l : List Ability} {g₁ g' : GameState} (hu : u.Perm g.upOwed)
+      (hd : d.Perm g.downOwed) (hl : l.Perm g.owedTrigs) (hm : FireMineOld u d g.unpend g₁)
+      (ht : FireOld .oppBenched l g₁ g') : OwedOld g g'
+  | oppFirst {u d l : List Ability} {g₁ g' : GameState} (hu : u.Perm g.upOwed)
+      (hd : d.Perm g.downOwed) (hl : l.Perm g.owedTrigs) (ht : FireOld .oppBenched l g.unpend g₁)
+      (hm : FireMineOld u d g₁ g') : OwedOld g g'
+
+theorem fireMine_old {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') (hb : g.BothActive) :
+    FireMineOld u d g g' ∧ g'.BothActive := by
+  obtain ⟨x₁, x₂, h₁, h₂, rfl⟩ := h
+  have b₁ := h₁.bothActive hb.swap
+  have b₂ := h₂.bothActive b₁
+  exact ⟨⟨x₁, x₂, (fire_old hb.swap.1).1 h₁, (fire_old b₁.1).1 h₂, rfl⟩, b₂.swap⟩
+
+theorem unpend_bothActive {g : GameState} (hb : g.BothActive) : g.unpend.BothActive := by
+  refine ⟨?_, ?_⟩
+  · show (g.cur.active.map InPlay.clearOwe).isSome = true
+    have := hb.1; cases h : g.cur.active <;> simp_all
+  · show (g.opp.active.map InPlay.clearOwe).isSome = true
+    have := hb.2; cases h : g.opp.active <;> simp_all
+
+/-- **Site 3, `Owed`** (`Move.trigger`, `Resolve.trigger`; every game): from a state with both Active
+Spots filled, as both callers require, the owed triggers resolve by `FireOld`. -/
+theorem owed_old {g g' : GameState} (h : Owed g g') (hb : g.BothActive) : OwedOld g g' := by
+  have hb' := unpend_bothActive hb
+  cases h with
+  | mineFirst hu hd hl hm ht =>
+      obtain ⟨m, b⟩ := fireMine_old hm hb'
+      exact .mineFirst hu hd hl m ((fire_old b.1).1 ht)
+  | oppFirst hu hd hl ht hm =>
+      have b := ht.bothActive hb'
+      exact .oppFirst hu hd hl ((fire_old hb'.1).1 ht) (fireMine_old hm b).1
 
 end Pokemon.Return
