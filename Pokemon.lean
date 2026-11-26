@@ -67,4 +67,5 @@ import Pokemon.Played
 import Pokemon.Shield
 import Pokemon.EnergyMoves
 import Pokemon.Heals
+import Pokemon.Computed
 import Pokemon.Audit

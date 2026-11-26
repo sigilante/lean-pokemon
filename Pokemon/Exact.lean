@@ -705,7 +705,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           have ho' : q.hitOk f hurt = true := by rw [hq.hitOk (c := .exact) trivial]; exact ho
           exact ⟨_, .hitByActive .own m f hurt dmg a rfl ho', by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, Option.map_some, ha₂,
-              he₁, he₂, GameState.side]
+              he₁, he₂]
             rw [clampWith_addAmt a hcv hsf .own .active p q (InPlay.clamp_of_agree hq)]⟩
       | opp =>
           simp only [GameState.side] at h
@@ -714,7 +714,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           have ho' : q.hitOk f hurt = true := by rw [hq.hitOk (c := .exact) trivial]; exact ho
           exact ⟨_, .hitByActive .opp m f hurt dmg a rfl ho', by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, Option.map_some, hc₂,
-              he₁, he₂, GameState.side]
+              he₁, he₂]
             rw [clampWith_addAmt a hcv hsf .opp .active p q (InPlay.clamp_of_agree hq)]⟩
   | @hitByActiveSkip g p w m f hurt dmg a h ho =>
       intro _ g₂ hc

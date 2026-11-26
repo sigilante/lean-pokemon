@@ -569,7 +569,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
           have ho' : q.hitOk f hurt = true := by rw [hq.hitOk (c := .exact) trivial]; exact ho
           exact ⟨_, .hitByActive .own m f hurt dmg a rfl ho', by
             simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, Option.map_some, ha₂,
-              hm₁, hm₂, he₁, he₂, GameState.side]
+              hm₁, hm₂, he₁, he₂]
             rw [clampWith_addAmt a hcv hsf .own .active p q (InPlay.clamp_of_agree hq)]⟩
       | opp =>
           simp only [GameState.side] at h
@@ -579,7 +579,7 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
             rw [hq.hitOk (c := .upto k) (show 0 < k from hk0)]; exact ho
           exact ⟨_, .hitByActive .opp m f hurt dmg a rfl ho', by
             simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, Option.map_some, hc₂,
-              hm₁, hm₂, he₁, he₂, GameState.side]
+              hm₁, hm₂, he₁, he₂]
             rw [clampWith_addAmt a hcv hsf .opp .active p q (InPlay.clamp_of_agree hq)]⟩
   | @hitByActiveSkip g p w m f hurt dmg a h ho =>
       intro _ _ _ _ g₂ hc

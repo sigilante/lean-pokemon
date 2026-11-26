@@ -1710,6 +1710,158 @@ def _(m, ctx):
     return Eff(ite(t, ('heal', n), NO_PLAY), noop(ctx))
 
 
+# importer 0.19.0 (milestone MV12, survey S26): computed amounts on chosen or filtered Pokémon (`Effect.hitBy w sp m F
+# hurt dmg a`: at sp = active the w player's Active Pokémon if it is a target, damage counters; at sp = bench m distinct
+# Benched targets, all if fewer, attack damage (dmg, none on a Tera Pokémon) or counters; a target passes F and, with
+# hurt, has a damage counter; the amount `HAmt` is const n, count C k, per k (k per counter on the target) or toHp n
+# ("until its remaining HP is n"), computed per target), and moves of all damage counters from one of the player's
+# Benched Pokémon to the opponent's (`Effect.dumpCounters F sp`). Both clamps commute with every such read (survey S26:
+# the amount added depends on the old damage only through the target, and only raises it; "has any damage counters"
+# is kept by a cap at a positive bound): `Run.cap_sim`, `Run.xcap_sim`. Reads of the opponent's damage that lower it
+# or move it (Sableye sv5-107, Alakazam sv6-82) stay refused.
+def hit_by(w, sp, m, f, hurt, dmg, a):
+    return ('hitBy', w, (sp,), m, f, hurt, dmg, a)
+
+
+def count_hamt(x, k, ctx):
+    """'k for each X' as an `HAmt` (`count C k` only; refused for other amounts)."""
+    a = parse_count(x, ctx)(k)
+    if a[0] != 'count':
+        raise Refuse('a computed amount on a chosen Pokémon that is not a count')
+    return a
+
+
+@rule('damage-to-1-opp-for-each', r"This attack does (\d+) damage to 1 of your opponent's Pokémon for each (.+)\.", 'A',
+      "ite (countGe (bench opp pokemon) 1) (choice (damage A) (hitBy opp bench 1 any false true H)) (damage A); "
+      "A = count C k, H = count C k; 'for each damage counter on that Pokémon': A = per opp k, H = per k")
+def _(m, ctx):
+    k = counters(m.group(1))
+    if m.group(2) == 'damage counter on that Pokémon':
+        return Dmg('target1x', ('per', OPP, k), ('per', k), cavs={'benchMods'})
+    a = count_hamt(m.group(2), k, ctx)
+    return Dmg('target1x', a, a, cavs={'benchMods'})
+
+
+@rule('also-1-opp-bench-hurt', r"This attack also does (\d+) damage to 1 of your opponent's Benched Pokémon that has any "
+      r"damage counters on it\.", 'A', 'hitBy opp bench 1 any true true (const n)')
+def _(m, ctx):
+    return Eff(hit_by(OPP, 'bench', 1, ('any',), True, True, ('const', counters(m.group(1)))), {'benchMods'})
+
+
+@rule('bench-for-each-counter', r"This attack does (\d+) damage to 1 of your opponent's Benched Pokémon for each damage "
+      r"counter on that Pokémon\.", 'A', 'hitBy opp bench 1 any false true (per k)')
+def _(m, ctx):
+    if ctx['base'] is not None:
+        raise Refuse('Bench-only damage with a printed base damage')
+    return Eff(hit_by(OPP, 'bench', 1, ('any',), False, True, ('per', counters(m.group(1)))), {'benchMods'})
+
+
+@rule('also-each-bench-hurt-both', r"This attack also does (\d+) damage to each Benched Pokémon that has any damage "
+      r"counters on it \(both yours and your opponent's\)\.", 'A',
+      'hitBy own bench 5 any true true (const n); hitBy opp bench 5 any true true (const n)')
+def _(m, ctx):
+    n = ('const', counters(m.group(1)))
+    return Eff(seq(hit_by(OWN, 'bench', BENCH_ALL, ('any',), True, True, n),
+                   hit_by(OPP, 'bench', BENCH_ALL, ('any',), True, True, n)), {'benchMods'})
+
+
+@rule('damage-each-hurt-both', r"This attack does (\d+) damage to each Pokémon that has any damage counters on it "
+      r"\(both yours and your opponent's\), except for this Pokémon\.", 'A',
+      'ite (atLeast opp 1) (damage n) skip; hitBy opp bench 5 any true true n; hitBy own bench 5 any true true n')
+def _(m, ctx):
+    return Dmg('eachHurt', counters(m.group(1)), cavs={'benchMods'})
+
+
+@rule('counters-each-opp-hurt', r"(?:Put|Place) (\d+) damage counters on each of your opponent's Pokémon that has any "
+      r"damage counters on it\.", 'A', 'hitBy opp active 1 any true false (const n); hitBy opp bench 5 any true false (const n)')
+def _(m, ctx):
+    n = ('const', num(m.group(1)))
+    return Eff(seq(hit_by(OPP, 'active', 1, ('any',), True, False, n),
+                   hit_by(OPP, 'bench', BENCH_ALL, ('any',), True, False, n)))
+
+
+@rule('counters-each-ability-both', r"(?:Put|Place) (\d+) damage counters on each Pokémon that has an Ability \(both "
+      r"yours and your opponent's\)\.", 'A', 'hitBy w sp m hasAbility false false (const n), for both players and spots')
+def _(m, ctx):
+    # `Filter.hasAbility` reads the printed card: an Ability a Tool gives is not read (caveat abilityByTool)
+    n = ('const', num(m.group(1)))
+    f = ('hasAbility',)
+    return Eff(seq(hit_by(OWN, 'active', 1, f, False, False, n), hit_by(OWN, 'bench', BENCH_ALL, f, False, False, n),
+                   hit_by(OPP, 'active', 1, f, False, False, n), hit_by(OPP, 'bench', BENCH_ALL, f, False, False, n)),
+               {'abilityByTool'})
+
+
+@rule('counters-opp-active-to-hp', r"(?:Put|Place) damage counters on your opponent's Active Pokémon until its "
+      r"remaining HP is (\d+)\.", 'A', 'hitBy opp active 1 any false false (toHp n)')
+def _(m, ctx):
+    return Eff(hit_by(OPP, 'active', 1, ('any',), False, False, ('toHp', counters(m.group(1)))))
+
+
+@rule('counters-opp-bench-to-hp', r"(?:Put|Place) damage counters on each of your opponent's Benched Pokémon until its "
+      r"remaining HP is (\d+)\.", 'A', 'hitBy opp bench 5 any false false (toHp n)')
+def _(m, ctx):
+    return Eff(hit_by(OPP, 'bench', BENCH_ALL, ('any',), False, False, ('toHp', counters(m.group(1)))))
+
+
+@rule('counters-opp-active-for-each', r"(?:Put|Place) (\d+) damage counters on your opponent's Active Pokémon for each "
+      r"(.+)\.", 'A', 'hitBy opp active 1 any false false (count C n)')
+def _(m, ctx):
+    return Eff(hit_by(OPP, 'active', 1, ('any',), False, False, count_hamt(m.group(2), num(m.group(1)), ctx)))
+
+
+MULT = {'Double': 1, 'Triple': 2, 'Quadruple': 3}
+
+
+@rule('multiply-each-opp', r"(Double|Triple|Quadruple) the number of damage counters on each of your opponent's "
+      r"Pokémon\.", 'A', 'hitBy opp active 1 any false false (per k); hitBy opp bench 5 any false false (per k)')
+def _(m, ctx):
+    a = ('per', MULT[m.group(1)])
+    return Eff(seq(hit_by(OPP, 'active', 1, ('any',), False, False, a),
+                   hit_by(OPP, 'bench', BENCH_ALL, ('any',), False, False, a)))
+
+
+@rule('multiply-M-opp', r"[Cc]hoose (\d+) of your opponent's Pokémon and (double|triple|quadruple) the number of damage "
+      r"counters on each of them\.", 'A', 'some_of m (hitBy opp active 1 any false false (per k)) (hitBy opp bench j any false false (per k))')
+def _(m, ctx):
+    k = num(m.group(1))
+    if k < 2:
+        raise Refuse('wording')
+    a = ('per', MULT[m.group(2).capitalize()])
+    return Eff(some_of(k, hit_by(OPP, 'active', 1, ('any',), False, False, a),
+                       lambda j: hit_by(OPP, 'bench', j, ('any',), False, False, a)))
+
+
+@rule('recoil-per-counter', r'This Pokémon also does (\d+) damage to itself for each damage counter on it\.', 'A',
+      'hitBy own active 1 any false false (per k)')
+def _(m, ctx):
+    return Eff(hit_by(OWN, 'active', 1, ('any',), False, False, ('per', counters(m.group(1)))), {'recoil'})
+
+
+@rule('also-each-own-named', r"This attack also does (\d+) damage to each of your (\S+) and (\S+)\.", 'A',
+      'hitBy own active 1 F false false (const n); benchSome own 5 F true n; F = or (named a) (named b)')
+def _(m, ctx):
+    # "each of your Drifloon and Drifblim" (Drifblim svp-135): the player's own Active Pokémon (the attacker, if it has
+    # one of the names) as damage counters (caveat recoil), and attack damage to each Benched one (benchMods)
+    a, b = m.group(2), m.group(3)
+    if not all(KNOWN_NAMES.get(x) == {'Pokémon'} for x in (a, b)):
+        raise Refuse('names')
+    f = ('or', ('named', a), ('named', b))
+    n = counters(m.group(1))
+    return Eff(seq(hit_by(OWN, 'active', 1, f, False, False, ('const', n)), ('benchSome', OWN, BENCH_ALL, f, True, n)),
+               {'recoil', 'benchMods'})
+
+
+@rule('dump-counters', r"Move all damage counters from 1 of your Benched ((?:.+ )?Pokémon) to (your opponent's Active "
+      r"Pokémon|1 of your opponent's Pokémon)\.", 'A',
+      "dumpCounters F active; '1 of your opponent's Pokémon': ite (countGe (bench opp pokemon) 1) (choice (dumpCounters F "
+      "active) (dumpCounters F bench)) (dumpCounters F active)")
+def _(m, ctx):
+    f = heal_filter(m.group(1), ctx)
+    if m.group(2).startswith('your'):
+        return Eff(('dumpCounters', f, ('active',)))
+    return Eff(one_of(OPP, ('dumpCounters', f, ('active',)), ('dumpCounters', f, ('bench',))))
+
+
 COND_RE = r'(?:Asleep|Burned|Confused|Paralyzed|Poisoned)'
 
 
@@ -3906,7 +4058,7 @@ def tmap(tree, f):
         return ('ite', tree[1], tmap(tree[2], f), tmap(tree[3], f))
     if tree[0] == 'choice':
         return ('choice', tmap(tree[1], f), tmap(tree[2], f))
-    if tree[0] in ('T1', 'TM'):
+    if tree[0] in ('T1', 'TM', 'T1X'):
         raise Refuse('computed damage to a chosen Pokémon')
     if tree[0] == 'S':
         raise Refuse('another damage change with damage to each Pokémon of a kind')
@@ -3962,6 +4114,13 @@ def to_effect(tree, drain=False, ig=None):
             raise Refuse('drain with damage to a chosen Pokémon')
         n = tree[1]
         return one_of(OPP, dmg(('const', n), ig), ('benchDamage', OPP, n))
+    if tree[0] == 'T1X':
+        # importer 0.19.0 (milestone MV12): "N damage to 1 of your opponent's Pokémon for each X": the damage step with
+        # the amount A, or attack damage of the amount H (computed on the chosen Benched Pokémon) to one Benched one
+        if drain:
+            raise Refuse('drain with damage to a chosen Pokémon')
+        _, a, h = tree
+        return one_of(OPP, dmg(a, ig), hit_by(OPP, 'bench', 1, ('any',), False, True, h))
     if tree[0] == 'TM':
         # milestone MV2: `Effect.hitSome m n`, unfolded
         if drain:
@@ -4001,6 +4160,8 @@ def amt_reads(a):
 def tree_reads(tree):
     if tree[0] in ('L', 'LS'):
         return amt_reads(tree[1])
+    if tree[0] == 'T1X':
+        return True
     if tree[0] == 'ite':
         return True
     if tree[0] == 'choice':
@@ -4148,6 +4309,21 @@ def build_attack(base, suffix, items, cost):
                 if tree is not None:
                     raise Refuse('damage to a chosen Pokémon with a printed base damage')
                 tree = ('T1', a[0])
+            elif op == 'target1x':
+                if tree is not None:
+                    raise Refuse('damage to a chosen Pokémon with a printed base damage')
+                tree = ('T1X', a[0], a[1])
+            elif op == 'eachHurt':
+                # importer 0.19.0 (milestone MV12): "N damage to each Pokémon that has any damage counters on it (both
+                # yours and your opponent's), except for this Pokémon": the damage step on the opponent's Active Pokémon
+                # if it has a damage counter (else no damage step), attack damage N to every Benched Pokémon of both
+                # players that has one (`hitBy … 5 any true true`)
+                if tree is not None:
+                    raise Refuse('damage to each damaged Pokémon with a printed base damage')
+                (n,) = a
+                tree = ('ite', ('atLeast', OPP, 1), ('L', ('const', n)), ('S',))
+                post.append((idx, hit_by(OPP, 'bench', BENCH_ALL, ('any',), True, True, ('const', n))))
+                post.append((idx, hit_by(OWN, 'bench', BENCH_ALL, ('any',), True, True, ('const', n))))
             elif op == 'targetM':
                 if tree is not None:
                     raise Refuse('damage to chosen Pokémon with a printed base damage')
