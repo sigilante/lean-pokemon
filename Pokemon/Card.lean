@@ -856,6 +856,24 @@ inductive Effect where
   spot is empty. "Move all damage counters from 1 of your Benched Ancient Pokémon to your opponent's
   Active Pokémon" (Flutter Mane sv8-96) is `dumpCounters (.nameIn […]) .active` -/
   | dumpCounters (f : Filter) (sp : Spot)
+  /-- (milestone MV15) **return a Pokémon from play**: put one of the `w` player's Pokémon at `sp`
+  (the Active Pokémon, or one Benched Pokémon chosen when the effect resolves), with every card
+  attached to it and every card under it (`InPlay.cardList`), at `d` in that player's zones; its
+  damage counters, Special Conditions, markers and other effects on it are gone with it (no card
+  carries them). No Knock Out, no Prize card. "Put this Pokémon and all attached cards into your hand"
+  (Emolga me4-30) is `returnPokemon .own .active .hand`; "Shuffle this Pokémon and all attached cards
+  into your deck" (Lokix me2-10), `returnPokemon .own .active .shuffle`; "Shuffle 1 of your
+  opponent's Benched Pokémon and all attached cards into their deck" (Illumise sv6-10),
+  `returnPokemon .opp .bench .shuffle`; "Put 1 of your Benched Pokémon and all attached cards into
+  your hand" (Swoobat rsv10pt5-37), `returnPokemon .own .bench .hand`. With `bench` and an empty
+  Bench, nothing; with `active` and an empty Active Spot, no resolution. An Active Spot it empties is
+  filled by the batch step that follows (`KOBatch`, no Prize card), and a player left with no Pokémon
+  in play loses there (`winWays`). **Attacks only** (`Effect.retFree`, a premise of `Move.item`,
+  `Move.supporter`, `Move.stadiumUse`, `Move.ability`, `Move.onPlay`; `Effect.trigOk` excludes it):
+  an attack ends the turn, and that is what pays for the return in the store bound (a Pokémon played
+  again can use its Ability again, which no function of the board pays for; `StoreSafe`, survey
+  S29) -/
+  | returnPokemon (w : Whose) (sp : Spot) (d : Dst)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -972,15 +990,19 @@ def Effect.ownFree : Effect → Bool
   | .moveCounter _ _ => false
   | .look .own _ _ _ (.attach _) _ => false
   | .hitBy .own .active _ _ _ _ _ => false
+  | .returnPokemon .own .active _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
   | .seq a b => a.ownFree && b.ownFree
   | .choice a b => a.ownFree && b.ownFree
   | .iter a => a.ownFree
   | _ => true
 
-/-- The effect may switch the player's own Active Pokémon (`switch .own` somewhere in it). -/
+/-- The effect may switch the player's own Active Pokémon (`switch .own` somewhere in it), or
+(milestone MV15) take it out of play (`returnPokemon .own .active`): after either, the Pokémon in
+the Active Spot is not the attacker. -/
 def Effect.switchesOwn : Effect → Bool
   | .switch .own => true
+  | .returnPokemon .own .active _ => true
   | .ite _ a b => a.switchesOwn || b.switchesOwn
   | .seq a b => a.switchesOwn || b.switchesOwn
   | .choice a b => a.switchesOwn || b.switchesOwn
@@ -1031,7 +1053,8 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
-  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
+  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _
+  | .returnPokemon _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -1069,6 +1092,44 @@ def Effect.trigOk : Effect → Bool
   | .seq a b => a.trigOk && b.trigOk
   | .choice a b => a.trigOk && b.trigOk
   | _ => false
+
+/-- **No return from play** (milestone MV15): no `returnPokemon` anywhere in the effect. A premise of
+every move that resolves an effect outside an attack (`Move.item`, `Move.supporter`,
+`Move.stadiumUse`, `Move.ability`, `Move.onPlay`; it is an auto-parameter there, proved by `rfl` for a
+closed effect), and implied by the trigger fragment (`Effect.retFree_of_trigOk`). So a Pokémon leaves
+play by an effect only inside an attack, which ends the turn: the store bound's potential
+(`GameState.abPot`), which a return could raise, is read only before the turn's attack. Every effect
+written before milestone MV15 has it. -/
+def Effect.retFree : Effect → Bool
+  | .returnPokemon _ _ _ => false
+  | .ite _ a b => a.retFree && b.retFree
+  | .seq a b => a.retFree && b.retFree
+  | .choice a b => a.retFree && b.retFree
+  | .iter a => a.retFree
+  | _ => true
+
+/-- A trigger's effect returns nothing from play (milestone MV15). -/
+theorem Effect.retFree_of_trigOk : ∀ {e : Effect}, e.trigOk = true → e.retFree = true
+  | .seq a b, h => by
+      simp only [Effect.trigOk, Bool.and_eq_true] at h
+      simp only [Effect.retFree, retFree_of_trigOk h.1, retFree_of_trigOk h.2, Bool.and_self]
+  | .choice a b, h => by
+      simp only [Effect.trigOk, Bool.and_eq_true] at h
+      simp only [Effect.retFree, retFree_of_trigOk h.1, retFree_of_trigOk h.2, Bool.and_self]
+  | .returnPokemon _ _ _, h => by simp [Effect.trigOk] at h
+  | .ite _ _ _, h => by simp [Effect.trigOk] at h
+  | .iter _, h => by simp [Effect.trigOk] at h
+  | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
+  | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
+  | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
+  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
+  | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
+  | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .shiftEnergy _ _ _ _ _ _, _
+  | .moveCounter _ _, _ | .discardStadium, _
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
+  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
 
 /-- What an attack resolves (rulebook 2023 p. 20, step F: "Apply any effects that happen before
 damage, then place damage counters, and then do all other effects"). An attack with printed base
@@ -1125,6 +1186,7 @@ def Effect.shielded : Effect → Effect
   | .shiftEnergy .opp _ _ _ _ _ => .skip
   | .hitBy .opp .active _ _ _ _ _ => .skip
   | .dumpCounters _ .active => .skip
+  | .returnPokemon .opp .active _ => .skip
   | .ite t a b => .ite t a.shielded b.shielded
   | .seq a b => .seq a.shielded b.shielded
   | .choice a b => .choice a.shielded b.shielded
@@ -1176,7 +1238,8 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
-  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
+  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _
+  | .returnPokemon _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

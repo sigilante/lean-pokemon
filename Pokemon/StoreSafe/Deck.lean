@@ -547,6 +547,8 @@ theorem ZStep.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {e : Effect} {
           omega
   | retActive _ _ _ hp => exact hp.wsum_discard w
   | retBench _ _ _ hp => exact hp.wsum_discard w
+  | monActive _ hp => exact hp.wsum_discard w
+  | monBench _ hp => exact hp.wsum_discard w
   | _ => exact Nat.le_refl _
 
 theorem GameState.mem_allCards_of_cur_discard {g : GameState} {x : Card} (hx : x ∈ g.cur.discard) :
@@ -1510,9 +1512,12 @@ theorem Place.abPot_le {i : Into} {t : List Card} {s s' : PlayerState} (h : Plac
 
 /-- **A zone step never raises its player's potential**; putting a Basic Pokémon onto the Bench
 fills a place with an unused Pokémon. -/
-theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
-    s'.abPot ≤ s.abPot := by
+theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s')
+    (hrf : e.retFree = true) : s'.abPot ≤ s.abPot := by
   cases h with
+  | monActive => simp [Effect.retFree] at hrf
+  | monBench => simp [Effect.retFree] at hrf
+  | monNone => exact Nat.le_refl _
   | @move w src dst f q s s' t r hs hq hp =>
       obtain ⟨_, ha, hb⟩ := hp.fields
       exact Nat.le_of_eq (PlayerState.abPot_congr (by rw [ha, hb, Src.set_active, Src.set_bench])
@@ -1631,19 +1636,26 @@ theorem CMove.abPot {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : Li
       exact ⟨by omega, by omega⟩
 
 /-- **No step of an effect raises the potential.** -/
-theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot ≤ g.abPot := by
+theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') (hrf : e.retFree = true) :
+    g'.abPot ≤ g.abPot := by
   induction h with
-  | iteT _ _ _ ih => exact ih
-  | iteF _ _ _ ih => exact ih
-  | seq _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
-  | choiceL _ ih => exact ih
-  | choiceR _ ih => exact ih
+  | iteT _ _ _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.1
+  | iteF _ _ _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.2
+  | seq _ _ ih₁ ih₂ =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact Nat.le_trans (ih₂ hrf.2) (ih₁ hrf.1)
+  | choiceL _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.1
+  | choiceR _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.2
   | iterNil => exact Nat.le_refl _
-  | iterCons _ _ ih₁ ih₂ => exact Nat.le_trans ih₂ ih₁
+  | iterCons _ _ ih₁ ih₂ =>
+      simp only [Effect.retFree] at hrf ih₂; exact Nat.le_trans (ih₂ hrf) (ih₁ hrf)
   | @zone e w g s' hw hz =>
       cases w with
       | own =>
-          have := hz.abPot_le
+          have := hz.abPot_le hrf
           simp only [GameState.side] at this
           simp only [GameState.abPot, GameState.updSide]
           have e2 : (g.cur.setZones s').abPot = s'.abPot := rfl
@@ -1925,11 +1937,11 @@ theorem Run.oppAbPot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
         unfold InPlay.inflictIf; split <;> cases c <;> rfl
       simp only [PlayerState.abPot, h, abWo, optN, e]; omega
   | @zone e w g s' hw hz =>
-      intro _
+      intro hk
       cases w with
       | own => exact Nat.le_refl _
       | opp =>
-          have := hz.abPot_le
+          have := hz.abPot_le (Effect.retFree_of_trigOk hk)
           simp only [GameState.side] at this
           exact this
   | skip => intro _; exact Nat.le_refl _
@@ -1966,7 +1978,7 @@ theorem Fire.swap_abPot_le {ev : TrigEvent} {l : List Ability} {g g' : GameState
   induction h with
   | nil => exact Nat.le_refl _
   | @run ab l g g₁ g₂ hk hr _ ih =>
-      have h1 := hr.abPot_le
+      have h1 := hr.abPot_le (Effect.retFree_of_trigOk hk)
       rw [GameState.swap_swap] at ih
       exact Nat.le_trans ih h1
   | decline _ _ ih => exact ih
@@ -2022,19 +2034,29 @@ theorem Resolve.abPot_le {g g' : GameState} (h : Resolve g g') (hw : g'.winner =
   | step _ hm hr ih => exact Nat.le_trans (ih hw) (hm.abPot_le (hr.winner_back hw))
   | trigger _ _ _ ho _ ih => exact Nat.le_trans (ih hw) ho.abPot_le
 
-/-- A Trainer effect's resolution does not raise the potential, unless it ends the game. -/
-theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') (hw : g'.winner = none) :
-    g'.abPot ≤ g.abPot := by
+/-- A Trainer effect's resolution does not raise the potential, unless it ends the game. Since
+milestone MV15 the effect returns nothing from play (`Effect.retFree`, a premise of every move that
+resolves a `TRun`): a return frees a place in play, which can raise the potential. -/
+theorem TRun.abPot_le {e : Effect} {g g' : GameState} (h : TRun e g g') (hrf : e.retFree = true)
+    (hw : g'.winner = none) : g'.abPot ≤ g.abPot := by
   induction h with
-  | prim _ _ hr hk => exact Nat.le_trans (hk.abPot_le hw) hr.abPot_le
+  | prim _ _ hr hk => exact Nat.le_trans (hk.abPot_le hw) (hr.abPot_le hrf)
   | stop => exact Nat.le_refl _
-  | iteT _ _ _ _ ih => exact ih hw
-  | iteF _ _ _ _ ih => exact ih hw
-  | seq _ h₂ ih₁ ih₂ => exact Nat.le_trans (ih₂ hw) (ih₁ (h₂.winner_back hw))
-  | choiceL _ ih => exact ih hw
-  | choiceR _ ih => exact ih hw
+  | iteT _ _ _ _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.1 hw
+  | iteF _ _ _ _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.2 hw
+  | seq _ h₂ ih₁ ih₂ =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf
+      exact Nat.le_trans (ih₂ hrf.2 hw) (ih₁ hrf.1 (h₂.winner_back hw))
+  | choiceL _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.1 hw
+  | choiceR _ ih =>
+      simp only [Effect.retFree, Bool.and_eq_true] at hrf; exact ih hrf.2 hw
   | iterNil => exact Nat.le_refl _
-  | iterCons _ h₂ ih₁ ih₂ => exact Nat.le_trans (ih₂ hw) (ih₁ (h₂.winner_back hw))
+  | iterCons _ h₂ ih₁ ih₂ =>
+      simp only [Effect.retFree] at hrf ih₂
+      exact Nat.le_trans (ih₂ hrf hw) (ih₁ hrf (h₂.winner_back hw))
 
 /-- **A play from the hand lowers the potential by at least one**: a Basic Pokémon fills a place
 (two units) and is unused (one unit); an evolution spends the Pokémon's evolution for the turn

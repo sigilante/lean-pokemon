@@ -2397,7 +2397,8 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
       (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false)
-      (hnd : e.hitFree = true) (hbh : e.benchHitFree = true) :
+      (hnd : e.hitFree = true) (hbh : e.benchHitFree = true)
+      (hrf : e.retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- play a Supporter card, once per turn, and not on the first turn of the game ("The player
   who goes first cannot play a Supporter card on their first turn", rulebook 2023 p. 12); its
@@ -2409,7 +2410,8 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
       (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
-      (hbh : e.benchHitFree = true) :
+      (hbh : e.benchHitFree = true)
+      (hrf : e.retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- play a Stadium card (milestone M5): "You can play only one Stadium card each turn", "You
   can't play a Stadium card if a Stadium with the same name is already in play", "Only one Stadium
@@ -2463,7 +2465,8 @@ inductive Move : GameState → GameState → Prop where
       (hs : g.stadium = some (o, Card.trainer n .stadium e ss)) (hu : g.stadiumUsed = false)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
-      (hbh : e.benchHitFree = true) :
+      (hbh : e.benchHitFree = true)
+      (hrf : e.retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, its own or
   (milestone M5) one an attached Tool gives it (`InPlay.abilities`), Active or
@@ -2482,7 +2485,8 @@ inductive Move : GameState → GameState → Prop where
       (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun (ab.script (some sp)) g₁ g') (hnd : (ab.script (some sp)).hitFree = true)
-      (hbh : (ab.script (some sp)).benchHitFree = true) :
+      (hbh : (ab.script (some sp)).benchHitFree = true)
+      (hrf : (ab.script (some sp)).retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- play a Pokémon from the hand (onto the Bench, or to evolve) and resolve an on-play Ability
   of the card played (milestone M8a: "When you play this Pokémon from your hand onto your Bench
@@ -2498,7 +2502,8 @@ inductive Move : GameState → GameState → Prop where
       (hp : PlayFromHand g x how g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use = .onPlay w)
       (hw : w.fires how = true) (hst : Settled g₁) (hc : ab.CondOk g₁)
       (hr : TRun (ab.script none) g₁ g') (hnd : (ab.script none).hitFree = true)
-      (hbh : (ab.script none).benchHitFree = true) :
+      (hbh : (ab.script none).benchHitFree = true)
+      (hrf : (ab.script none).retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- attack with one of the Active Pokémon's attacks, its own or (milestone M5) one an attached
   Tool gives it (`InPlay.attacks`): the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script

@@ -282,6 +282,23 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
       have hm := ha.bench
       rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
       exact ⟨s₂, .shiftNone hm, ha⟩
+  | @monActive w d s s' a hac hp =>
+      have hm := ha.active
+      rw [hac] at hm
+      obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
+      obtain ⟨y₂, hp₂, hy⟩ := hp.sim (c := c) (cb := cb) (x₂ := { s₂ with active := none })
+        ⟨ha.deck, ha.hand, ha.discard, rfl, ha.bench⟩
+      exact ⟨y₂, .monActive ha₂ (by rw [hag.cardList]; exact hp₂), hy⟩
+  | @monBench w d s s' p b₁ b₂ hb hp =>
+      obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
+      have hpa := InPlay.agree_of_clamp h2
+      obtain ⟨y₂, hp₂, hy⟩ := hp.sim (c := c) (cb := cb) (x₂ := { s₂ with bench := d₁ ++ d₂ })
+        ⟨ha.deck, ha.hand, ha.discard, ha.active, by simp only [List.map_append, h1, h3]⟩
+      exact ⟨y₂, .monBench hb₂ (by rw [hpa.cardList]; exact hp₂), hy⟩
+  | monNone hb =>
+      have hm := ha.bench
+      rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
+      exact ⟨s₂, .monNone hm, ha⟩
 
 /-! ## Triggers (milestone M8b)
 

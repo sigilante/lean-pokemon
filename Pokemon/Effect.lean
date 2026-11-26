@@ -250,6 +250,7 @@ def Effect.zSide : Effect → Option Whose
   | .shiftEnergy w _ _ _ _ _ => some w
   | .discardTools w _ => some w
   | .look w _ _ _ _ _ => some w
+  | .returnPokemon w _ _ => some w
   | _ => none
 
 /-- `s` with the five zones (deck, hand, discard pile, Active Spot, Bench) of `z`; every other
@@ -410,6 +411,19 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       {s s₁ s' : PlayerState} {t r : List Card} (hs : Split f (src.get s) t r) (hq : q.ok f t r)
       (hr : Put rest r (src.set [] s) s₁) (hp : Place i t s₁ s') :
       ZStep (.look w src f q i rest) s s'
+  /-- return the Active Pokémon from play (milestone MV15): it leaves the Active Spot, which is left
+  empty, and its cards (`InPlay.cardList`: the top card, the cards under it, attached Energy and
+  Tools) are put at `d` (`Put`) -/
+  | monActive {w : Whose} {d : Dst} {s s' : PlayerState} {a : InPlay}
+      (ha : s.active = some a) (hp : Put d a.cardList { s with active := none } s') :
+      ZStep (.returnPokemon w .active d) s s'
+  /-- return one Benched Pokémon from play (milestone MV15) -/
+  | monBench {w : Whose} {d : Dst} {s s' : PlayerState} {p : InPlay} {b₁ b₂ : List InPlay}
+      (hb : s.bench = b₁ ++ p :: b₂) (hp : Put d p.cardList { s with bench := b₁ ++ b₂ } s') :
+      ZStep (.returnPokemon w .bench d) s s'
+  /-- with an empty Bench, a return from the Bench does nothing (milestone MV15) -/
+  | monNone {w : Whose} {d : Dst} {s : PlayerState} (hb : s.bench = []) :
+      ZStep (.returnPokemon w .bench d) s s
 
 /-- `CMove f noKO a b a' b'` (milestone M8a): one damage counter moves from one of the player's
 Pokémon in play (Active Pokémon `a`, Bench `b`) whose card passes `f` to another of them, giving
