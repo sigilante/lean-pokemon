@@ -205,6 +205,29 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
       obtain ⟨y₁, hr₂, hy₁⟩ := hr.sim (Src.set_agree ha src [])
       obtain ⟨y₂, hp₂, hy₂⟩ := hp.sim hy₁
       exact ⟨y₂, .look (by rw [Src.get_congr ha]; exact hs) hq hr₂ hp₂, hy₂⟩
+  | @retActive w f q d s s' a t r hac hs hq hp =>
+      have hm := ha.active
+      rw [hac] at hm
+      obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
+      obtain ⟨y₂, hp₂, hy⟩ := hp.sim (c := c) (cb := cb) (x₂ := { s₂ with active := some { a₂ with energy := r } })
+        ⟨ha.deck, ha.hand, ha.discard,
+          by simp only [Option.map_some, InPlay.clamp_of_agree (hag.setEnergy r)], ha.bench⟩
+      exact ⟨y₂, .retActive ha₂ (by rw [hag.energy]; exact hs)
+        (by rw [hag.top, hag.energy]; exact hq) hp₂, hy⟩
+  | @retBench w f q d s s' p b₁ b₂ t r hb hs hq hp =>
+      obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
+      have hpa := InPlay.agree_of_clamp h2
+      obtain ⟨y₂, hp₂, hy⟩ := hp.sim (c := c) (cb := cb)
+        (x₂ := { s₂ with bench := d₁ ++ { q₂ with energy := r } :: d₂ })
+        ⟨ha.deck, ha.hand, ha.discard, ha.active,
+          by simp only [List.map_append, List.map_cons, h1, h3,
+            InPlay.clamp_of_agree (hpa.setEnergy r)]⟩
+      exact ⟨y₂, .retBench hb₂ (by rw [hpa.energy]; exact hs)
+        (by rw [hpa.top, hpa.energy]; exact hq) hp₂, hy⟩
+  | retNone hb =>
+      have hm := ha.bench
+      rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
+      exact ⟨s₂, .retNone hm, ha⟩
 
 /-! ## Triggers (milestone M8b)
 

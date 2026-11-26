@@ -528,6 +528,8 @@ theorem ZStep.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {e : Effect} {
           have h1 := hput.wsum_discard w
           simp only [Src.set] at h1
           omega
+  | retActive _ _ _ hp => exact hp.wsum_discard w
+  | retBench _ _ _ hp => exact hp.wsum_discard w
   | _ => exact Nat.le_refl _
 
 theorem GameState.mem_allCards_of_cur_discard {g : GameState} {x : Card} (hx : x ∈ g.cur.discard) :
@@ -1544,6 +1546,18 @@ theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
         (by rw [ha, hb, Src.set_active, Src.set_bench]) (by rw [ha, hb, Src.set_active, Src.set_bench])
       exact e ▸ hp.abPot_le
   | toolsNone => exact Nat.le_refl _
+  | @retActive w f q d s s' a t r ha hs hq hp =>
+      obtain ⟨_, ha', hb'⟩ := hp.fields
+      have e : InPlay.abW { a with energy := r } = a.abW := rfl
+      exact Nat.le_of_eq (PlayerState.abPot_congr (by simp only [ha', hb', ha, abWo, e])
+        (by simp [ha', hb', ha, optN]))
+  | @retBench w f q d s s' p b₁ b₂ t r hb hs hq hp =>
+      obtain ⟨_, ha', hb'⟩ := hp.fields
+      exact Nat.le_of_eq (PlayerState.abPot_congr
+        (by simp only [ha', hb', hb, abWs_split (b₁ := b₁) (b₂ := b₂) (q := p)
+              (q' := { p with energy := r }) rfl])
+        (by simp [ha', hb', hb]))
+  | retNone => exact Nat.le_refl _
 
 /-- Moving a damage counter keeps the weights and the number of Pokémon in play. -/
 theorem CMove.abPot {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}

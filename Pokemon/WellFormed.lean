@@ -127,6 +127,11 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
   | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
       refine hp.benchOk ?_
       rw [hr.fields.2.2, Src.set_bench]; exact hb
+  | retActive _ _ _ hp => rw [hp.fields.2.2]; exact hb
+  | @retBench w f q d s s' p b₁ b₂ t r hb' hs hq hp =>
+      rw [hp.fields.2.2]
+      exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
+  | retNone => exact hb
 
 /-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
 theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}

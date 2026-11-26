@@ -207,6 +207,9 @@ theorem ZStep.noMarks {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hs :
   | toolsBench hb => exact ⟨hs.1, hs.2.upd' hb rfl⟩
   | toolsNone => exact hs
   | look _ _ hr hp => exact hp.noMarks (hr.noMarks (Src.set_noMarks hs))
+  | retActive ha _ _ hp => exact hp.noMarks ⟨hs.1.some_eq ha rfl, hs.2⟩
+  | retBench hb _ _ hp => exact hp.noMarks ⟨hs.1, hs.2.upd' hb rfl⟩
+  | retNone => exact hs
 
 theorem CMove.noOwe {f : Filter} {noKO : Bool} {hp : Spot → InPlay → Nat} {a a' : Option InPlay}
     {b b' : List InPlay} (h : CMove f noKO hp a b a' b') (ha : OptNoOwe a) (hb : ListNoOwe b) :

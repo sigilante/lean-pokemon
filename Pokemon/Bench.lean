@@ -567,6 +567,8 @@ theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e
   | moveBA ha => rw [ha]; rfl
   | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
       rw [hp.active_pokemonCards, hr.fields.2.1, Src.set_active]
+  | retActive ha _ _ hp => rw [hp.fields.2.1, ha]; rfl
+  | retBench _ _ _ hp => rw [hp.fields.2.1]
   | _ => rfl
 
 /-- An effect that does not switch the player's own Active Pokémon leaves the same Pokémon in the

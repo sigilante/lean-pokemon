@@ -145,6 +145,8 @@ theorem ZStep.setZones {e : Effect} {s s' : PlayerState} (h : ZStep e s s') : s.
       | put hp => cases hp <;> cases hr <;> cases src <;> rfl
       | bench _ _ => cases hr <;> cases src <;> rfl
       | attach _ => cases hr <;> cases src <;> rfl
+  | retActive _ _ _ hp => cases hp <;> rfl
+  | retBench _ _ _ hp => cases hp <;> rfl
   | _ => rfl
 
 /-- The counts of the cards in a Pokémon's card list. -/
@@ -279,6 +281,19 @@ theorem ZStep.count {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (x : Ca
       have h4 := hp.count x
       simp only [List.count_nil, Nat.add_zero] at h2
       omega
+  | @retActive w f q d s s' a t r ha hs hq hp =>
+      have h3 := hs.count x
+      have h4 := hp.count x
+      simp only [PlayerState.allCards, List.count_append, optCardList, ha,
+        InPlay.count_cardList] at h4 ⊢
+      omega
+  | @retBench w f q d s s' p b₁ b₂ t r hb hs hq hp =>
+      have h3 := hs.count x
+      have h4 := hp.count x
+      simp only [PlayerState.allCards, List.count_append, hb, count_benchCardList_append,
+        benchCardList, InPlay.count_cardList] at h4 ⊢
+      omega
+  | retNone => rfl
 
 theorem ZStep.perm {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
     s'.allCards.Perm s.allCards :=

@@ -235,6 +235,9 @@ theorem _root_.Pokemon.ZStep.conds {e : Effect} {s s' : PlayerState} (h : ZStep 
   | toolsBench => rfl
   | toolsNone => rfl
   | look _ _ hr hp => rw [hp.conds, hr.active, Src.set_active]
+  | retActive ha _ _ hp => rw [hp.fields.2.1, ha]; rfl
+  | retBench _ _ _ hp => rw [hp.fields.2.1]
+  | retNone => rfl
 
 /-- **A spared resolution keeps the opponent's Active Pokémon's Special Conditions and Poison
 strength.** -/

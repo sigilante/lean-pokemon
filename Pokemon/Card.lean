@@ -714,6 +714,18 @@ inductive Effect where
   /-- move one Energy card that passes `f` from one of the `w` player's Pokémon in play to another
   ("Move an Energy from 1 of your Benched Pokémon to your Active Pokémon"); or nothing -/
   | moveEnergy (w : Whose) (f : Filter)
+  /-- (milestone MV11) put Energy cards that pass `f`, attached to one of the `w` player's Pokémon at
+  `sp`, at `d` in that player's zones, as much as `q` says, counted as `discardEnergy` counts
+  (`Qty.okE`): "Put an Energy attached to this Pokémon into your hand" (Chien-Pao svp-152) is
+  `returnEnergy .own .active .energy (.exactly 1) .hand` (under `min_take`'s test); "You may put 2
+  Energy attached to your opponent's Active Pokémon into their hand" (Unfezant sv5-135),
+  `returnEnergy .opp .active .energy …  .hand`; "shuffle all Energy attached to this Pokémon into
+  your deck" (Dialga me1-95), `returnEnergy .own .active .energy .all .shuffle`. With `d = .discard`
+  it is `discardEnergy`. The cards leave play for a zone they can be played from again: not a
+  recycler in the sense of `Effect.recFilters` (no card leaves a discard pile), and the cards it
+  moves are cards attached as Energy, which write nothing when played (`Card.wAmt`). With `bench`
+  and an empty Bench, nothing -/
+  | returnEnergy (w : Whose) (sp : Spot) (f : Filter) (q : Qty) (d : Dst)
   /-- move one damage counter from one of the player's own Pokémon in play whose card passes `f`
   to another of the player's Pokémon (milestone M8a: "move 1 damage counter from 1 of your Team
   Rocket's Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an "as often as you
@@ -868,6 +880,7 @@ def Effect.ownFree : Effect → Bool
   | .attach .own _ _ .active _ => false
   | .discardEnergy .own .active _ _ => false
   | .moveEnergy .own _ => false
+  | .returnEnergy .own .active _ _ _ => false
   | .moveCounter _ _ => false
   | .look .own _ _ _ (.attach _) _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
@@ -925,7 +938,8 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
@@ -1013,6 +1027,7 @@ def Effect.shielded : Effect → Effect
   | .discardTools .opp .active => .skip
   | .attach .opp _ _ .active _ => .skip
   | .moveEnergy .opp _ => .skip
+  | .returnEnergy .opp .active _ _ _ => .skip
   | .ite t a b => .ite t a.shielded b.shielded
   | .seq a b => .seq a.shielded b.shielded
   | .choice a b => .choice a.shielded b.shielded
@@ -1060,7 +1075,8 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :

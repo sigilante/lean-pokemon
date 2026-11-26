@@ -242,6 +242,7 @@ def Effect.zSide : Effect → Option Whose
   | .putBench w _ _ => some w
   | .discardEnergy w _ _ _ => some w
   | .moveEnergy w _ => some w
+  | .returnEnergy w _ _ _ _ => some w
   | .discardTools w _ => some w
   | .look w _ _ _ _ _ => some w
   | _ => none
@@ -346,6 +347,21 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       (hok : x.attachOk q'.top = true) :
       ZStep (.moveEnergy w f) s { s with bench := c₁ ++ q'.addEnergy x :: c₂ }
   | moveNone (w : Whose) (f : Filter) (s : PlayerState) : ZStep (.moveEnergy w f) s s
+  /-- put Energy attached to the Active Pokémon at a zone (milestone MV11): taken as
+  `discardActive` takes them, then put at `d` (`Put`) -/
+  | retActive {w : Whose} {f : Filter} {q : Qty} {d : Dst} {s s' : PlayerState} {a : InPlay}
+      {t r : List Card} (ha : s.active = some a) (hs : Split f a.energy t r)
+      (hq : q.okE (f.weightOn a.top a.energy) f t r)
+      (hp : Put d t { s with active := some { a with energy := r } } s') :
+      ZStep (.returnEnergy w .active f q d) s s'
+  /-- put Energy attached to one Benched Pokémon at a zone (milestone MV11) -/
+  | retBench {w : Whose} {f : Filter} {q : Qty} {d : Dst} {s s' : PlayerState} {p : InPlay}
+      {b₁ b₂ : List InPlay} {t r : List Card} (hb : s.bench = b₁ ++ p :: b₂)
+      (hs : Split f p.energy t r) (hq : q.okE (f.weightOn p.top p.energy) f t r)
+      (hp : Put d t { s with bench := b₁ ++ { p with energy := r } :: b₂ } s') :
+      ZStep (.returnEnergy w .bench f q d) s s'
+  | retNone {w : Whose} {f : Filter} {q : Qty} {d : Dst} {s : PlayerState} (hb : s.bench = []) :
+      ZStep (.returnEnergy w .bench f q d) s s
   /-- discard the Tools of the Active Pokémon (milestone M5) -/
   | toolsActive {w : Whose} {s : PlayerState} {a : InPlay} (ha : s.active = some a) :
       ZStep (.discardTools w .active) s

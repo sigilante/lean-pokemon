@@ -364,6 +364,7 @@ theorem ZStep.exists_of_trigOk {e : Effect} {w : Whose} (hw : e.zSide = some w)
         | nil => exact ⟨_, .toolsNone (w := w') hb, ha⟩
         | cons p b => exact ⟨_, .toolsBench (w := w') (b₁ := []) (by rw [hb]; rfl), ha⟩
   case look => simp [Effect.trigOk] at hk
+  case returnEnergy => simp [Effect.trigOk] at hk
 
 theorem GameState.BothActive.swap {g : GameState} (h : g.BothActive) : g.swap.BothActive :=
   ⟨h.2, h.1⟩
@@ -415,7 +416,8 @@ theorem Run.exists_of_trigOk : ∀ {e : Effect}, e.trigOk = true → ∀ {g : Ga
   | .linger .., hk, _, _ | .damage _ _, hk, _, _ | .drain _, hk, _, _
   | .benchCounters .., hk, _, _ | .spreadCounters .., hk, _, _ | .benchHeal _, hk, _, _
   | .switch _, hk, _, _ | .benchDamage .., hk, _, _ | .spreadDamage .., hk, _, _
-  | .moveCounter .., hk, _, _ | .discardStadium, hk, _, _ | .iter _, hk, _, _ => by
+  | .moveCounter .., hk, _, _ | .discardStadium, hk, _, _ | .iter _, hk, _, _
+  | .returnEnergy .., hk, _, _ => by
       simp [Effect.trigOk] at hk
 
 /-- A trigger that fires on `ev` resolves an effect of the fragment. -/
