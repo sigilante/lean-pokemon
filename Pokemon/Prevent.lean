@@ -22,7 +22,9 @@ Survey S15 §3. What is implemented:
   may write the damage-only form ("prevent all damage done to this Pokémon by attacks", no effect
   clause) as `linger .own .next .prevent`; the filtered form ("from Basic Pokémon", 11 cards) and
   the effect half ("damage from and effects of attacks", 22 cards) are not modelled, and writing the
-  latter as damage prevention alone would let the attack's effects through (more outcomes).
+  latter as damage prevention alone would let the attack's effects through (more outcomes). (Since
+  milestone MV10 the effect half is `Mod.shield`, `Pokemon/Shield.lean`; the filtered form is still
+  absent.)
 * (c) thresholds ("if that damage is 60 or less", 3 cards) are not modelled.
 
 Interaction with stage 1: an attack whose damage "isn't affected by any effects on your opponent's

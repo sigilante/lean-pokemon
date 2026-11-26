@@ -428,6 +428,33 @@ ends when the Pokémon moves to the Bench or evolves; that end is a reading for 
 (the filters on test cards, the record written by a played Supporter and read by an attack in the
 same turn, cleared for the next player, and a use record written in one turn and read in the
 player's next turn, six legal moves).
+Milestone MV10 (prevention of effects of attacks; survey S24) added a lingering flag and a static
+effect: `Mod.shield` (`Mods.shield`, a Boolean in each slot of a player's store) and `SEff.shield fr`.
+`GameState.shield` (the flag in effect on the opponent, or a `shield` effect in force on the
+opponent's Active Pokémon against the attacker) is read by `Move.attack` in the state before the
+attack, which then resolves `atk.against g.shield`: the attack with its effect `Effect.shielded`,
+every primitive the model counts as done to the Defending Pokémon replaced by `skip` (damage
+counters, Special Conditions, Poison strength, switching it, its locks and damage modifiers, Energy
+and Tools discarded from or attached to it, Energy moves between the opponent's Pokémon, markers);
+damage is prevented, as before, by `Mod.prevent` and `SEff.prevent`. Which effects are "done to" a
+Pokémon is a reading (Known gaps). Changed definitions: `Mod` (one constructor), `Mods` (one field,
+so `Mods.empty`, `Mods.merge`, `Mods.addMod`, and the finite list `modss`), `SEff` (one constructor),
+`Move.attack` (its resolution and its triggers read `atk.against g.shield`). Both clamps keep the flag
+(`GameState.shield_of_clampAt`, `GameState.shield_of_xclampAt`), and `Effect.shielded` keeps
+tameness, test constants, loop-freedom, stored amounts and recycling filters
+(`Effect.shielded_tame`, `_tmax`, `_loopFree`, `_amtAt`, `_recFilters`), so `Reach.finite`,
+`Reach.clamp_mem`, `Move.clamp_sim`, the exact-store bisimulation, `StoreSafe` with its five clauses,
+`StoreSafe.xfinite`, the negative theorems, `Counter.universal` and the count theorems are unchanged in
+text. `Move.attackOpen` and `Move.attackShielded` give the constructor's premises for an unprotected
+and a protected defender. Statements changed: `Mods.cap_iff` (one more conjunct),
+`Move.attack_of_trigFree` (an auto-parameter `g.shield = false`), and three witness lemmas that
+invert an attack on a parametric state (`Promoted.attack_inv`, `Gust.attack_inv`,
+`Bench.move_lastHit`, each with a hypothesis that the defender is not protected). Witnesses:
+`Pokemon/Shield.lean` (over a round from a well-formed, settled start: the flag written by the
+attack and not in effect in the owner's turn, in effect in the opponent's turn, where the opponent's
+attack does neither its damage nor its Paralysis but writes its Item lock, and gone when the owner's
+next turn starts; without the flag the same attack Paralyzes; a static protection blocks the
+Paralysis but not the damage).
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
@@ -899,9 +926,12 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,512 are imported (1,063 exactly, 449 with
-caveats) as 1,504 distinct terms, and 649 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.16.0, which since 0.16.0 translates the MV9 vocabulary:
+damage reduction). Of the pool's 2,161 cards, 1,540 are imported (1,063 exactly, 477 with
+caveats) as 1,532 distinct terms, and 621 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.17.0, which since 0.17.0 translates prevention of
+effects of attacks: the lingering "prevent all damage from and effects of attacks done to this
+Pokémon" as `Mod.prevent` with `Mod.shield`, the static form as `SEff.shield`, also on Mist and Rocky
+Fighting Energy, every such card with caveats; since 0.16.0 the MV9 vocabulary:
 the filters above, "Ancient" and "Future" as `Filter.nameIn` over the pool, the played-Supporter test
 `Count.played` in attacks, Abilities and a Stadium's use, and "if this Pokémon used X during your last
 turn" with the use record; since 0.15.0 the MV7c and MV8

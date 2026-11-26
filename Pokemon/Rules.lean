@@ -181,7 +181,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (the card stays inert, with an empty payload): on-attach effects (Enriching, Jet, Telepathic Psychic
   Energy), "discard it at the end of your turn" (Ignition Energy, whose provision alone is
   expressible), return after a discard by the holder's attack (Boomerang, Nitro Fire Energy),
-  prevention of effects of attacks (Mist, Rocky Fighting Energy), Special Condition recovery and
+  (prevention of effects of attacks, Mist and Rocky Fighting Energy, is expressed since milestone MV10:
+  `SEff.shield` given by the Tool path, item on prevention of effects below), Special Condition recovery and
   immunity (Bubbly Water Energy), prevention of damage to a Benched holder (Shadowy Darkness Energy:
   `SEff.prevent` is read in the Active Spot only), and a Prize change on Knock Out once per game
   (Legacy Energy); also cost changes ("this attack costs ✱ less"). A Special Energy card whose
@@ -404,6 +405,37 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Pokémon, Bench included); the damage step's amount (`Amt`) reads the damage on either
   Active Pokémon (`Amt.per`); the damage step itself reads the Weakness and Resistance of the
   opponent's Active Pokémon and the type of the player's;
+* prevention of effects of attacks (milestone MV10, survey S24, `Pokemon/Shield.lean`): "During your
+  opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon" is
+  `seq (linger .own .next .prevent) (linger .own .next .shield)` (`Mod.shield`, `Mods.shield`), and
+  "Prevent all effects of attacks used by your opponent's Pokémon done to this Pokémon. (Damage is not
+  an effect.)" a static `SEff.shield fr`. `Move.attack` reads `GameState.shield` (the flag in effect
+  on the opponent, or a `shield` effect in force on the opponent's Active Pokémon against the
+  attacker's top card) in the state before the attack and, when it holds, resolves the attack's
+  effect as `Effect.shielded` (`Attack.against`). Readings and departures: (a) "done to this Pokémon":
+  rulebook 2026 gives no list (it says only that effects of attacks on a Pokémon end when it moves to
+  the Bench or evolves, pp. 11, 20); the model removes damage counters, Special Conditions, Poison
+  strength, the switch of the Defending Pokémon in either direction (a gust from the Bench too: forbids
+  some, if print lets the gust through), the Defending Pokémon's locks and damage modifiers
+  (`linger .opp` with `lock .attack`, `lock .retreat`, `weaken`, `expose`), Energy and Tools discarded
+  from or attached to it, every move of Energy between the opponent's Pokémon (Bench to Bench too:
+  forbids some), and markers on the opponent's Pokémon; it keeps the damage step (damage is not an
+  effect; the damage half is `Mod.prevent`/`SEff.prevent`), everything on the Bench, an attachment
+  from a looked-at window onto it (allows more), and the Item lock on the player (an effect on the
+  player, not on the Pokémon); no ruling was checked (importer caveat `shieldReach`, both). (b) The
+  lingering flag belongs to the player, as every lingering modifier (item below): it protects
+  whichever Pokémon the player has Active in the opponent's turn and survives its evolution, where
+  print protects the one Pokémon until it moves to the Bench or evolves (forbids some: effects on a
+  replacement are prevented; caveat `perPokemon`). Its timing is print's: written by the owner's
+  attack in the `next` slot, in effect during the opponent's next turn, gone when the owner's next
+  turn starts (`Shield.round`). (c) The static effect is read for the holder in the Active Spot, at
+  the start of the attack: effects of attacks on a Benched holder (damage counters on the Bench) are
+  not prevented, and a holder that the attack switches into the Active Spot is not protected from the
+  rest of it (allows more; caveat `shieldActive`). (d) Existing effects are not removed (print's
+  reminder): the flag changes only what an attack resolves. (e) Absent: prevention of effects of
+  Abilities ("attacks and Abilities", 4 cards; "Abilities", 1), protection of Benched Pokémon only
+  (4 cards), and the filtered or chosen lingering form (Acerola's Mischief); Trainer cards are not
+  attacks and are never affected;
 * lingering modifiers (`Store`, `Effect.linger`): each player has a damage bonus for their
   attacks, a damage reduction and a damage prevention for attacks against their Pokémon, and
   locks on attacking, retreating and playing Items, for this turn, the next turn, the turn
@@ -463,7 +495,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   done to this Pokémon by attacks from your opponent's Pokémon ex") is read at step 5 with the
   defender's other effects (`GameState.sPrevent`); it is never stored, and prevented damage fires
   no `damaged` trigger (`Prevent.prevented_quiet`). Absent: threshold
-  prevention ("prevent damage of 40 or less"), prevention of effects, locks on Supporters,
+  prevention ("prevent damage of 40 or less"), prevention of effects of Abilities and of filtered or
+  chosen Pokémon (prevention of effects of attacks is milestone MV10's, item below), locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, effects that change Weakness,
   Resistance or type (other than the Coloring counter), "attack twice" and "take another turn",
   and "that much more damage" (damage taken last turn).
@@ -733,7 +766,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   the V, VSTAR, VMAX or V-UNION subtype in the card data (3219 records, checked for survey S14), so
   no Pokémon V can be played in a Standard game, though 39 of those records name "Pokémon V" in
   their text. A deck with older cards would need the filter. Absent kinds, for a later milestone: other damage prevention (Battle Cage's counters on
-  the Bench; prevention on the Bench, 7 cards; thresholds, Drednaw sv7-44), prevention of effects (8)
+  the Bench; prevention on the Bench, 7 cards; thresholds, Drednaw sv7-44), prevention of effects of
+  Abilities (5; prevention of effects of attacks is expressed since milestone MV10, `SEff.shield`)
   and Special Condition immunity (Hoothoot, Festival Grounds ×2); attack cost changes (Stadium 1, Nighttime Mine; Tools 3: Counter Gain ×2, Sparkling Crystal, and
   Hop's Choice Band); Bench size (Stadiums 2: Area Zero Underdepths ×2); Ability locks ("have no
   Abilities": Stadiums 2, Legendary Pyroduct, Team Rocket's Watchtower); Tool locks (Stadiums 2:
