@@ -1,5 +1,6 @@
 import Pokemon.Lock
 import Pokemon.StoreSafe
+import Pokemon.Shield
 
 /-!
 # Return from play (milestone MV15, survey S29)
@@ -396,5 +397,225 @@ theorem trun_raises_abPot :
     (.step rfl (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide)) rfl
       (.pick (b₁ := []) (b₂ := [])) .keep)
       (.done (.inl ((GameState.settled_iff _).2 (by decide))))), rfl, by decide⟩
+
+/-! ## No return card, no change (milestone MV15)
+
+Every definition MV15 changed differs from its old form only on effects that contain
+`returnPokemon`, and the five move constructors that gained the premise `Effect.retFree` have exactly
+their old premises in a game none of whose cards has such an effect (`GameState.RetFree`, kept by play:
+`Reach.retFree`). The three new `ZStep` constructors have the effect index `returnPokemon _ _ _`, so no
+resolution of an effect without it uses them. -/
+
+/-- No effect of the card (a Trainer's effect, any script of its or a granted Ability, any attack's
+effect) contains `returnPokemon`. -/
+def _root_.Pokemon.Card.retFree (c : Card) : Bool :=
+  (match c with | .trainer _ _ e _ => e.retFree | _ => true) &&
+    c.abilities.all (fun ab => ab.scripts.all Effect.retFree) &&
+    c.attacks.all (fun atk => atk.effect.retFree)
+
+/-- No card of the game has a return from play. -/
+def _root_.Pokemon.GameState.RetFree (g : GameState) : Prop := ∀ c ∈ g.allCards, c.retFree = true
+
+theorem _root_.Pokemon.Reach.retFree {g₀ g : GameState} (h : Reach g₀ g) (h₀ : g₀.RetFree) :
+    g.RetFree := fun c hc => h₀ c (h.perm.mem_iff.1 hc)
+
+theorem trainer_retFree {g : GameState} {n : String} {k : TrainerKind} {e : Effect} {ss : List Static}
+    (hR : g.RetFree) (hc : Card.trainer n k e ss ∈ g.allCards) : e.retFree = true := by
+  have := hR _ hc
+  simp only [Card.retFree, Bool.and_eq_true] at this
+  exact this.1.1
+
+theorem ability_retFree {g : GameState} {c : Card} {ab : Ability} (hR : g.RetFree)
+    (hc : c ∈ g.allCards) (hm : ab ∈ c.abilities) (p : Option Spot) : (ab.script p).retFree = true := by
+  have := hR _ hc
+  simp only [Card.retFree, Bool.and_eq_true, List.all_eq_true] at this
+  exact this.1.2 ab hm _ (ab.script_mem p)
+
+/-- **`Move.item` with its pre-MV15 premises**, in a game with no return card. -/
+theorem _root_.Pokemon.Move.item_old {g g' : GameState} {l₁ l₂ : List Card} {n : String} {e : Effect}
+    (hR : g.RetFree)
+    (hh : g.cur.hand = l₁ ++ Card.trainer n .item e :: l₂) (hbt : g.between = false)
+    (hst : Settled g)
+    (hr : TRun e { g with cur := { g.cur with
+      hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
+    (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false)
+    (hnd : e.hitFree = true) (hbh : e.benchHitFree = true) : Move g g' :=
+  .item hh hbt hst hr hl hat hnd hbh
+    (trainer_retFree (n := n) (k := .item) (ss := []) hR (GameState.mem_allCards_of_hand (by rw [hh]; simp)))
+
+/-- **`Move.supporter` with its pre-MV15 premises**, in a game with no return card. -/
+theorem _root_.Pokemon.Move.supporter_old {g g' : GameState} {l₁ l₂ : List Card} {n : String}
+    {e : Effect} (hR : g.RetFree)
+    (hh : g.cur.hand = l₁ ++ Card.trainer n .supporter e :: l₂)
+    (hs : g.cur.supporterPlayed = false) (hbt : g.between = false) (hst : Settled g)
+    (hr : TRun e { g with cur := { g.cur with
+      hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
+      discard := Card.trainer n .supporter e :: g.cur.discard } } g')
+    (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
+    (hbh : e.benchHitFree = true) : Move g g' :=
+  .supporter hh hs hbt hst hr hat hf hnd hbh
+    (trainer_retFree (n := n) (k := .supporter) (ss := []) hR (GameState.mem_allCards_of_hand (by rw [hh]; simp)))
+
+/-- **`Move.stadiumUse` with its pre-MV15 premises**, in a game with no return card. -/
+theorem _root_.Pokemon.Move.stadiumUse_old {g g' : GameState} {o : Bool} {n : String} {e : Effect}
+    {ss : List Static} (hR : g.RetFree)
+    (hs : g.stadium = some (o, Card.trainer n .stadium e ss)) (hu : g.stadiumUsed = false)
+    (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+    (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
+    (hbh : e.benchHitFree = true) : Move g g' :=
+  .stadiumUse hs hu hbt hst hat hr hnd hbh (trainer_retFree hR (GameState.mem_allCards_of_stadium hs))
+
+/-- **`Move.ability` with its pre-MV15 premises**, in a game with no return card. -/
+theorem _root_.Pokemon.Move.ability_old {g g₁ g' : GameState} {x : InPlay} {sp : Spot} {ab : Ability}
+    (hR : g.RetFree)
+    (hu : UseAt g x sp g₁) (hm : ab ∈ x.abilities) (hk : ab.use.activated = true)
+    (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
+    (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
+    (hr : TRun (ab.script (some sp)) g₁ g') (hnd : (ab.script (some sp)).hitFree = true)
+    (hbh : (ab.script (some sp)).benchHitFree = true) : Move g g' := by
+  obtain ⟨c, hcx, hmc⟩ := InPlay.ability_mem hm
+  exact .ability hu hm hk hsp hn hc hbt hst hat hr hnd hbh
+    (ability_retFree hR (hu.card_mem hcx) hmc _)
+
+/-- **`Move.onPlay` with its pre-MV15 premises**, in a game with no return card. -/
+theorem _root_.Pokemon.Move.onPlay_old {g g₁ g' : GameState} {x : InPlay} {how w : PlayWay}
+    {ab : Ability} (hR : g.RetFree)
+    (hp : PlayFromHand g x how g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use = .onPlay w)
+    (hw : w.fires how = true) (hst : Settled g₁) (hc : ab.CondOk g₁)
+    (hr : TRun (ab.script none) g₁ g') (hnd : (ab.script none).hitFree = true)
+    (hbh : (ab.script none).benchHitFree = true) : Move g g' :=
+  .onPlay hp hm hk hw hst hc hr hnd hbh
+    (ability_retFree (c := .pokemon x.top) hR hp.top_mem hm _)
+
+/-- `Effect.switchesOwn` before milestone MV15. -/
+def switchesOwnOld : Effect → Bool
+  | .switch .own => true
+  | .ite _ a b => switchesOwnOld a || switchesOwnOld b
+  | .seq a b => switchesOwnOld a || switchesOwnOld b
+  | .choice a b => switchesOwnOld a || switchesOwnOld b
+  | .iter a => switchesOwnOld a
+  | _ => false
+
+/-- `Effect.spares` before milestone MV15. -/
+def sparesOld : Effect → Bool
+  | .inflict _ => false
+  | .poisonUp _ => false
+  | .switch .opp => false
+  | .ite _ a b => sparesOld a && sparesOld b
+  | .seq a b => sparesOld a && sparesOld b
+  | .choice a b => sparesOld a && sparesOld b
+  | .iter a => sparesOld a
+  | _ => true
+
+theorem switchesOwn_old : ∀ {e : Effect}, e.retFree = true → e.switchesOwn = switchesOwnOld e
+  | .ite _ a b, h | .seq a b, h | .choice a b, h => by
+      simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.switchesOwn, switchesOwnOld, switchesOwn_old h.1, switchesOwn_old h.2]
+  | .iter a, h => by
+      simp only [Effect.retFree] at h
+      simp only [Effect.switchesOwn, switchesOwnOld, switchesOwn_old h]
+  | .returnPokemon _ _ _, h => by simp [Effect.retFree] at h
+  | .switch w, _ => by cases w <;> rfl
+  | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
+  | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
+  | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
+  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
+  | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
+  | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .shiftEnergy _ _ _ _ _ _, _
+  | .moveCounter _ _, _ | .discardStadium, _
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
+  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
+
+theorem spares_old : ∀ {e : Effect}, e.retFree = true → e.spares = sparesOld e
+  | .ite _ a b, h | .seq a b, h | .choice a b, h => by
+      simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.spares, sparesOld, spares_old h.1, spares_old h.2]
+  | .iter a, h => by
+      simp only [Effect.retFree] at h
+      simp only [Effect.spares, sparesOld, spares_old h]
+  | .returnPokemon _ _ _, h => by simp [Effect.retFree] at h
+  | .switch w, _ => by cases w <;> rfl
+  | .skip, _ | .draw, _ | .heal _, _ | .counters _, _ | .inflict _, _ | .poisonUp _, _
+  | .cure, _ | .shuffle, _ | .search, _ | .handToBottom, _ | .scale _ _, _
+  | .selfDamage _, _ | .healAll, _ | .mark _ _, _ | .unmark _ _, _ | .color _ _, _
+  | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
+  | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
+  | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .shiftEnergy _ _ _ _ _ _, _
+  | .moveCounter _ _, _ | .discardStadium, _
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
+  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
+
+/-- `Effect.shielded` on an effect with no return is the same effect as before milestone MV15 on that
+effect: the new case maps only `returnPokemon .opp .active _`, and shielding keeps `retFree`. -/
+theorem shielded_retFree (e : Effect) : e.retFree = true → e.shielded.retFree = true := by
+  induction e with
+  | ite t a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.shielded, Effect.retFree, iha h.1, ihb h.2, Bool.and_self]
+  | seq a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.shielded, Effect.retFree, iha h.1, ihb h.2, Bool.and_self]
+  | choice a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.shielded, Effect.retFree, iha h.1, ihb h.2, Bool.and_self]
+  | iter a iha =>
+      intro h; simp only [Effect.retFree] at h
+      simp only [Effect.shielded, Effect.retFree, iha h]
+  | returnPokemon => intro h; simp [Effect.retFree] at h
+  | _ => intro _; unfold Effect.shielded; (try split) <;> simp_all [Effect.retFree]
+
+/-- `Effect.ownFree` before milestone MV15. -/
+def ownFreeOld : Effect → Bool
+  | .heal _ => false
+  | .cure => false
+  | .selfDamage _ => false
+  | .healAll => false
+  | .damage _ _ => false
+  | .drain _ => false
+  | .scale .own _ => false
+  | .switch .own => false
+  | .attach .own _ _ .active _ => false
+  | .discardEnergy .own .active _ _ => false
+  | .moveEnergy .own _ => false
+  | .returnEnergy .own .active _ _ _ => false
+  | .shiftEnergy .own _ _ _ _ _ => false
+  | .moveCounter _ _ => false
+  | .look .own _ _ _ (.attach _) _ => false
+  | .hitBy .own .active _ _ _ _ _ => false
+  | .ite t a b => !t.onOwn && ownFreeOld a && ownFreeOld b
+  | .seq a b => ownFreeOld a && ownFreeOld b
+  | .choice a b => ownFreeOld a && ownFreeOld b
+  | .iter a => ownFreeOld a
+  | _ => true
+
+theorem ownFree_old (e : Effect) : e.retFree = true → e.ownFree = ownFreeOld e := by
+  induction e with
+  | ite t a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.ownFree, ownFreeOld, iha h.1, ihb h.2]
+  | seq a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.ownFree, ownFreeOld, iha h.1, ihb h.2]
+  | choice a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.ownFree, ownFreeOld, iha h.1, ihb h.2]
+  | iter a iha =>
+      intro h; simp only [Effect.retFree] at h
+      simp only [Effect.ownFree, ownFreeOld, iha h]
+  | returnPokemon => intro h; simp [Effect.retFree] at h
+  | scale w => intro _; cases w <;> rfl
+  | switch w => intro _; cases w <;> rfl
+  | attach w _ _ sp => intro _; cases w <;> cases sp <;> rfl
+  | discardEnergy w sp => intro _; cases w <;> cases sp <;> rfl
+  | moveEnergy w => intro _; cases w <;> rfl
+  | returnEnergy w sp => intro _; cases w <;> cases sp <;> rfl
+  | shiftEnergy w => intro _; cases w <;> rfl
+  | look w _ _ _ i => intro _; cases w <;> cases i <;> rfl
+  | hitBy w sp => intro _; cases w <;> cases sp <;> rfl
+  | _ => intro _; rfl
 
 end Pokemon.Return
