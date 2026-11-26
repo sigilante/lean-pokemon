@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,11 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Full Metal Lab (sv5-148). Records: sv5-148. Caveats: staticBench. -/
+def sv5_148 : Card := .trainer "Full Metal Lab" .stadium
+    .skip [
+      { sel := .all, filt := .ptype .metal, tgt := none, src := none, need := none, eff := .reduce 3 .any }]
 
 /-- Hero's Cape (sv5-152). Records: sv5-152. Caveats: aceSpec. -/
 def sv5_152 : Card := .tool "Hero's Cape"
@@ -186,6 +191,20 @@ def sv6_19 : Card := .pokemon
         gx := false },
       { name := "Avenging Edge", cost := [.grass, .colorless, .colorless], damage := 0,
         effect := .ite (.countGe (.koLast .own true) 1) (.damage (.const 16)) (.damage (.const 10)),
+        gx := false }] }
+
+/-- Poltchageist (sv6-20). Records: sv6-20, sv6-171. Caveats: shieldBench. -/
+def sv6_20 : Card := .pokemon
+  { name := "Poltchageist", stage := .basic, evolvesFrom := none,
+    hp := 3, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Storehouse Hideaway", use := .static [{ sel := .self, filt := .any, tgt := none, src := some .bench, need := none, eff := .prevent .any }, { sel := .self, filt := .any, tgt := none, src := some .bench, need := none, eff := .shield .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Hook", cost := [.grass], damage := 1,
+        effect := .skip,
         gx := false }] }
 
 /-- Poltchageist (sv6-21). Records: sv6-21. -/
@@ -937,7 +956,7 @@ def sv6_111 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Cornerstone Mask Ogerpon ex (sv6-112). Records: sv6-112, sv6-199, sv6-215. Caveats: abilityByTool, ignFxStadium, staticPreventBench. -/
+/-- Cornerstone Mask Ogerpon ex (sv6-112). Records: sv6-112, sv6-199, sv6-215. Caveats: abilityByTool, ignFxStadium. -/
 def sv6_112 : Card := .pokemon
   { name := "Cornerstone Mask Ogerpon ex", stage := .basic, evolvesFrom := none,
     hp := 21, type := .fighting, retreat := 1, weakness := some .grass,
@@ -1792,26 +1811,9 @@ def sv6pt5_52 : Card := .pokemon
         effect := .selfDamage 1,
         gx := false }] }
 
-/-- Bewear (sv6pt5-53). Records: sv6pt5-53, sv6pt5-79. -/
-def sv6pt5_53 : Card := .pokemon
-  { name := "Bewear", stage := .stage1, evolvesFrom := some "Stufful",
-    hp := 13, type := .colorless, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Power Charger", cost := [.colorless], damage := 3,
-        effect := .seq (.attach .own .deck .basicEnergy .active .any) .shuffle,
-        gx := false },
-      { name := "Hammer In", cost := [.colorless, .colorless, .colorless], damage := 13,
-        effect := .skip,
-        gx := false }] }
-
-/-- Academy at Night (sv6pt5-54). Records: sv6pt5-54. -/
-def sv6pt5_54 : Card := .trainer "Academy at Night" .stadium
-    (.move .own .hand .top .any (.exactly 1))
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv5_148,
   sv5_152,
   sv5_153,
   sv5_154,
@@ -1830,6 +1832,7 @@ def cards : List Card := [
   sv6_14,
   sv6_17,
   sv6_19,
+  sv6_20,
   sv6_21,
   sv6_26,
   sv6_27,
@@ -1959,9 +1962,7 @@ def cards : List Card := [
   sv6pt5_48,
   sv6pt5_49,
   sv6pt5_51,
-  sv6pt5_52,
-  sv6pt5_53,
-  sv6pt5_54]
+  sv6pt5_52]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1980,7 +1981,7 @@ theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.la
 theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Maximum Belt", "Okidogi"] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
-theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Tangrowth"] := by decide +kernel
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Full Metal Lab", "Tangrowth"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
 theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = [] := by decide +kernel

@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 6 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,67 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part06
 open Pokemon
+
+/-- Team Rocket's Articuno (sv10-51). Records: sv10-51. Caveats: shieldActive, shieldReach. -/
+def sv10_51 : Card := .pokemon
+  { name := "Team Rocket's Articuno", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Repelling Veil", use := .static [{ sel := .own, filt := .and .basic (.namePrefix "Team Rocket's "), tgt := none, src := none, need := none, eff := .shield .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Dark Frost", cost := [.water, .colorless, .colorless], damage := 0,
+        effect := .ite (.countGe (.energy .own (.named "Team Rocket's Energy")) 1) (.damage (.const 12)) (.damage (.const 6)),
+        gx := false }] }
+
+/-- Cynthia's Feebas (sv10-52). Records: sv10-52. Caveats: perPokemon, shieldReach. -/
+def sv10_52 : Card := .pokemon
+  { name := "Cynthia's Feebas", stage := .basic, evolvesFrom := none,
+    hp := 3, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Undulate", cost := [.colorless], damage := 1,
+        effect := .choice (.seq (.linger .own .next .prevent) (.linger .own .next .shield)) .skip,
+        gx := false }] }
+
+/-- Cynthia's Milotic (sv10-53). Records: sv10-53. Caveats: benchMods. -/
+def sv10_53 : Card := .pokemon
+  { name := "Cynthia's Milotic", stage := .stage1, evolvesFrom := some "Cynthia's Feebas",
+    hp := 13, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Aqua Split", cost := [.water, .colorless], damage := 6,
+        effect := .benchSome .opp 2 .any true 3,
+        gx := false }] }
+
+/-- Clamperl (sv10-54). Records: sv10-54, sv10-195. Caveats: perPokemon. -/
+def sv10_54 : Card := .pokemon
+  { name := "Clamperl", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Shell Press", cost := [.water], damage := 1,
+        effect := .linger .own .next (.reduce 1),
+        gx := false }] }
+
+/-- Buizel (sv10-57). Records: sv10-57. -/
+def sv10_57 : Card := .pokemon
+  { name := "Buizel", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Tail Whap", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Wave Splash", cost := [.water, .colorless, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
 
 /-- Floatzel (sv10-58). Records: sv10-58. -/
 def sv10_58 : Card := .pokemon
@@ -1745,72 +1806,13 @@ def rsv10pt5_58 : Card := .pokemon
         effect := .damage (.heads (.count (.inPlay .own (.ptype .darkness)) 1) 6),
         gx := false }] }
 
-/-- Trubbish (rsv10pt5-59). Records: rsv10pt5-59, rsv10pt5-140. -/
-def rsv10pt5_59 : Card := .pokemon
-  { name := "Trubbish", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Drool", cost := [.darkness], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Sludge Bomb", cost := [.darkness, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Garbodor (rsv10pt5-60). Records: rsv10pt5-60, rsv10pt5-141. -/
-def rsv10pt5_60 : Card := .pokemon
-  { name := "Garbodor", stage := .stage1, evolvesFrom := some "Trubbish",
-    hp := 14, type := .darkness, retreat := 3, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Suffocating Gas", cost := [.darkness], damage := 4,
-        effect := .skip,
-        gx := false },
-      { name := "Gunk Shot", cost := [.darkness, .darkness, .colorless], damage := 12,
-        effect := .inflict .poisoned,
-        gx := false }] }
-
-/-- Zorua (rsv10pt5-61). Records: rsv10pt5-61, rsv10pt5-142. Caveats: recoil. -/
-def rsv10pt5_61 : Card := .pokemon
-  { name := "Zorua", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Take Down", cost := [.darkness], damage := 3,
-        effect := .selfDamage 1,
-        gx := false }] }
-
-/-- Vullaby (rsv10pt5-63). Records: rsv10pt5-63, rsv10pt5-144. -/
-def rsv10pt5_63 : Card := .pokemon
-  { name := "Vullaby", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Playful Kick", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Mandibuzz (rsv10pt5-64). Records: rsv10pt5-64, rsv10pt5-145. Caveats: oppBenchFresh. -/
-def rsv10pt5_64 : Card := .pokemon
-  { name := "Mandibuzz", stage := .stage1, evolvesFrom := some "Vullaby",
-    hp := 11, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Look for Prey", use := .once,
-        spot := none, cond := none,
-        effect := .fx (.seq (.ite (.countGe (.pile .opp .hand .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.bench .opp .pokemon) 5) (.look .opp .hand .any (.exactly 0) (.put .hand) .hand) (.look .opp .hand (.and .basic (.hpLe 7)) (.most 1) .bench .hand))) }],
-    attacks := [
-      { name := "Cutting Wind", cost := [.colorless, .colorless, .colorless], damage := 9,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_51,
+  sv10_52,
+  sv10_53,
+  sv10_54,
+  sv10_57,
   sv10_58,
   sv10_59,
   sv10_60,
@@ -1955,12 +1957,7 @@ def cards : List Card := [
   rsv10pt5_55,
   rsv10pt5_56,
   rsv10pt5_57,
-  rsv10pt5_58,
-  rsv10pt5_59,
-  rsv10pt5_60,
-  rsv10pt5_61,
-  rsv10pt5_63,
-  rsv10pt5_64]
+  rsv10pt5_58]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2022,6 +2019,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Virizion", "Sigilyph"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Clamperl", "Virizion", "Sigilyph"] := by decide +kernel
 
 end PokemonCards.Standard.Part06

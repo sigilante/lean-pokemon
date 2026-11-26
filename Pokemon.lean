@@ -68,4 +68,6 @@ import Pokemon.Shield
 import Pokemon.EnergyMoves
 import Pokemon.Heals
 import Pokemon.Computed
+import Pokemon.BenchGuard
+import Pokemon.Immune
 import Pokemon.Audit

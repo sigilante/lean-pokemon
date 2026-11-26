@@ -156,11 +156,11 @@ counter. -/
 theorem hitBy_bench_targets {w : Whose} {m : Nat} {f : Filter} {dmg : Bool} {a : HAmt}
     {g g' : GameState} (h : Run (.hitBy w .bench m f true dmg a) g g') :
     ∀ y ∈ (g'.side w).bench, y ∈ (g.side w).bench ∨
-      ∃ x ∈ (g.side w).bench, 0 < x.damage ∧ y = x.hitWith dmg (a.at g w .bench x) := by
+      ∃ x ∈ (g.side w).bench, 0 < x.damage ∧ y = x.hitWith dmg (g.bAmt w dmg (a.at g w .bench x) x) := by
   cases h with
   | @hitByBench _ b' _ _ _ _ _ _ hh =>
       have key : ∀ y ∈ b', y ∈ (g.side w).bench ∨
-          ∃ x ∈ (g.side w).bench, 0 < x.damage ∧ y = x.hitWith dmg (a.at g w .bench x) := by
+          ∃ x ∈ (g.side w).bench, 0 < x.damage ∧ y = x.hitWith dmg (g.bAmt w dmg (a.at g w .bench x) x) := by
         intro y hy
         rcases hh.cases_of y hy with e | ⟨x, hx, hp, e⟩
         · exact .inl e

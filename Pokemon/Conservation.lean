@@ -118,8 +118,8 @@ theorem InPlay.cardList_hitWith (dmg : Bool) (n : Nat) (p : InPlay) :
   · exact InPlay.cardList_hitBench n p
 
 /-- `Effect.benchSome` keeps the cards of the Bench (milestone MV2). -/
-theorem Hits.benchCardList {dmg : Bool} {n k : Nat} {f : Filter} {b b' : List InPlay}
-    (h : Hits (InPlay.hitWith dmg n) f k b b') : benchCardList b' = benchCardList b :=
+theorem Hits.benchCardList {dmg : Bool} {F : InPlay → Nat} {k : Nat} {f : Filter} {b b' : List InPlay}
+    (h : Hits (fun q => q.hitWith dmg (F q)) f k b b') : benchCardList b' = benchCardList b :=
   h.congr Pokemon.benchCardList fun x y _ _ hy he => by
     rcases hy with rfl | rfl
     · simp only [Pokemon.benchCardList, he]
@@ -145,6 +145,13 @@ theorem Hits.benchCardList_heal {n : Option Nat} {k : Nat} {f : Filter} {b b' : 
     · simp only [Pokemon.benchCardList, he]
     · simp only [Pokemon.benchCardList, he, InPlay.cardList_healBy]
 
+/-- As `benchCardList_hitBench`, with an amount per Pokémon (milestone MV13). -/
+theorem benchCardList_hitBenchF (F : InPlay → Nat) (b : List InPlay) :
+    benchCardList (b.map fun q => q.hitBench (F q)) = benchCardList b := by
+  induction b with
+  | nil => rfl
+  | cons p ps ih => simp only [List.map, benchCardList, ih, InPlay.cardList_hitBench]
+
 theorem benchCardList_hitBench (n : Nat) (b : List InPlay) :
     benchCardList (b.map (InPlay.hitBench n)) = benchCardList b := by
   induction b with
@@ -157,6 +164,14 @@ theorem benchCardList_append (a b : List InPlay) :
   | nil => rfl
   | cons p ps ih => simp only [List.cons_append, benchCardList, ih, List.append_assoc]
 
+@[simp] theorem InPlay.inflictIf_top (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).top = p.top := by cases b <;> cases c <;> rfl
+@[simp] theorem InPlay.inflictIf_under (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).under = p.under := by cases b <;> cases c <;> rfl
+@[simp] theorem InPlay.inflictIf_energy (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).energy = p.energy := by cases b <;> cases c <;> rfl
+@[simp] theorem InPlay.inflictIf_tools (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).tools = p.tools := by cases b <;> cases c <;> rfl
 @[simp] theorem InPlay.inflict_top (c : Condition) (p : InPlay) : (p.inflict c).top = p.top := by
   cases c <;> rfl
 @[simp] theorem InPlay.inflict_under (c : Condition) (p : InPlay) :
@@ -192,7 +207,8 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
     simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,
       List.count_nil, optCardList, benchCardList, benchCardList_append, InPlay.cardList,
       InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
-      InPlay.inflict_energy, InPlay.inflict_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
+      InPlay.inflict_energy, InPlay.inflict_tools, InPlay.inflictIf_top, InPlay.inflictIf_under,
+      InPlay.inflictIf_energy, InPlay.inflictIf_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
       GameState.noteBenched, Whose.noteBenched, optCardList_noteOwe, benchCardList_noteOwe,
       InPlay.unlock, InPlay.noteMove_top, InPlay.noteMove_under, InPlay.noteMove_energy,
       InPlay.noteMove_tools, Whose.noteUp, Whose.noteDown,
@@ -269,8 +285,8 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | switchNone => exact .refl _
   | @benchDamage g q b₁ b₂ w n h =>
       cases w <;> simp only [GameState.side] at h <;>
-        perm_count [h, GameState.updSide, (q.hitBench_fields n).1, (q.hitBench_fields n).2.1,
-          (q.hitBench_fields n).2.2.1, (q.hitBench_fields n).2.2.2.1]
+        perm_count [h, GameState.updSide, (q.hitBench_fields _).1, (q.hitBench_fields _).2.1,
+          (q.hitBench_fields _).2.2.1, (q.hitBench_fields _).2.2.2.1]
   | benchDamageNone => exact .refl _
   | benchHealSome m f n h =>
       have hb := h.benchCardList_heal
@@ -292,7 +308,7 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | spreadDamage w n g =>
       cases w <;>
         simp only [GameState.allCards, PlayerState.allCards, GameState.updSide,
-          benchCardList_hitBench] <;> exact .refl _
+          benchCardList_hitBenchF] <;> exact .refl _
   | damage n h => perm_count [h]
   | drain n h hq => perm_count [h, hq]
   | shuffle h =>

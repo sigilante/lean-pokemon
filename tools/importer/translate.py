@@ -78,8 +78,9 @@ CAVEATS = {
                   "is a modifier of its player in the model (Known gaps: modifiers belong to a player)",
     'recoil': "self-damage ('also does N damage to itself') is written as damage counters (selfDamage): "
               "no Weakness, Resistance or modifier applies to it (Known gaps)",
-    'benchMods': "attack damage to Benched Pokémon takes no bonus, reduction or prevention in the model "
-                 "(Known gaps, milestone M3)",
+    'benchMods': "attack damage to Benched Pokémon takes no bonus, reduction or stored (lingering) prevention in the "
+                 "model; since milestone MV13 a static prevention in force on the Benched Pokémon is read (Known gaps, "
+                 "milestone M3)",
     'mayFail': "an attach or Bench placement may do nothing in the model (`attach` and `putBench` always allow "
                "nothing), a superset of the printed 'attach a …' from the hand or discard pile, and of 'if you can' "
                "(Known gaps)",
@@ -308,6 +309,19 @@ CAVEATS = {
     'usedLastBenchUse': "'You can use this attack only if this Pokémon used X during your last turn' reads the use record "
                         "of X (as usedLastBench): a Pokémon that used X, moved to the Bench and came back cannot use the "
                         "attack in the model, where print allows it; a failed Confused attempt of X writes no record, also a reading",
+    # importer 0.20.0 (milestone MV13, survey S27)
+    'shieldBench': "a static 'prevent all damage from and effects of attacks … done to' a Benched Pokémon (in force on "
+                   "the Bench only: 'As long as this Pokémon is on your Bench', 'done to your Benched Pokémon') prevents "
+                   "the damage (`SEff.prevent`, read by the Bench damage primitives, `GameState.benchSafe`) but not the "
+                   "effects: in the model an opponent's attack still places damage counters on the protected Benched "
+                   "Pokémon (`benchCounters`, `spreadCounters`, `benchSome` and `hitBy` with counters, `dumpCounters` "
+                   "to the Bench), still switches it into the Active Spot (a gust, `switch .opp`), and still discards "
+                   "Energy or Tools from it or puts markers on it, none of which print allows if the printed protection "
+                   "covers them, because `Run` does not know whether it resolves an attack (Known gaps, prevention of "
+                   "effects (e); survey S27 §2)",
+    'healMove': "'can't be healed' (`SEff.noHeal`) is read by the heals of the Active Pokémon (`heal`, `healAll`, the "
+                "heal of `drain`); moving damage counters off it (`moveCounter`) is not read as healing, a reading with "
+                "no ruling checked (Known gaps, heal block)",
     # importer 0.17.0 (milestone MV10, survey S24)
     'shieldReach': "'prevent all effects of attacks done to this Pokémon' removes from the opponent's attack the primitives "
                    "the model counts as done to the Defending Pokémon (`Effect.shielded`): damage counters, Special Conditions, "
@@ -339,6 +353,10 @@ CAVEAT_DIRECTION = {
                                    # of 'up to N from your Benched Pokémon' may move N 2-unit cards (more than by units)
     'shiftFromMoved': 'both',  # the Energy of another Benched Pokémon may move (allows more); a forced move blocked
                                # by a holder restriction blocks the play (forbids some)
+    # importer 0.20.0
+    'shieldBench': 'both',         # a forced effect of an attack lands on the protected Benched Pokémon: print's
+                                   # outcome (nothing) absent, another present
+    'healMove': 'allows more',     # moving damage counters off the protected Active Pokémon is allowed in the model
     # importer 0.17.0
     'shieldReach': 'both',         # a gust or a Bench-to-Bench Energy move print may allow is absent (forbids some); an
                                    # attachment onto the protected Pokémon from a window is kept (allows more)
@@ -4742,8 +4760,8 @@ SE_INERT = [
     (r'at the end of your turn', 'end-of-turn discard (stage 4 of MV8, not done)'),
     (r'If this card is discarded by an effect of an attack', 'return after a discard by the holder\'s attack (no machinery)'),
     (r'Special Conditions', 'Special Condition recovery and immunity (no static form)'),
-    (r'is on your Bench, prevent all damage', 'prevention of damage to a Benched holder (`SEff.prevent` is read in the '
-                                              'Active Spot only)'),
+    # importer 0.20.0 (milestone MV13): "As long as the X this card is attached to is on your Bench, prevent all damage
+    # done to it by attacks from your opponent's Pokémon" is now read (`static_tool_sentence`; Shadowy Darkness Energy)
     (r'Prize card', 'a Prize change on Knock Out, once per game (absent)'),
 ]
 
@@ -5545,12 +5563,29 @@ def static_ability_sentence(s, ctx, src=None, need=None):
         if src == 'bench':
             raise Refuse('other', s)
         return S('own', ('shield', prevent_filter(m.group(1), ctx)), filt=static_filter(m.group(2), ctx))
+    # importer 0.20.0 (milestone MV13, survey S27 A1): a source in force on the Bench only ("As long as this Pokémon is on
+    # your Bench, prevent all damage from and effects of attacks …") is imported: the damage half is read by the Bench
+    # damage primitives (`GameState.benchSafe`); the effect half (`SEff.shield`) is never read on the Bench (caveat
+    # shieldBench, from `static_caveats`).
     m = re.match(r"^Prevent all damage from and effects of attacks from your opponent's (.+?) done to this Pokémon\.$", s)
     if m:
-        if src == 'bench':
-            raise Refuse('other', s)
         fr = prevent_filter(m.group(1), ctx)
         return S('self', ('prevent', fr)) + S('self', ('shield', fr))
+    m = re.match(r"^Prevent all damage from and effects of attacks from your opponent's (.+?) done to your Benched "
+                 r"Pokémon\.$", s)
+    if m:
+        fr = prevent_filter(m.group(1), ctx)
+        return S('own', ('prevent', fr), tgt='bench') + S('own', ('shield', fr), tgt='bench')
+    m = re.match(r"^Prevent all damage done to your Benched (.+?) by attacks from your opponent's (.+?)\.$", s)
+    if m:
+        return S('own', ('prevent', prevent_filter(m.group(2), ctx)), filt=static_filter(m.group(1), ctx), tgt='bench')
+    # importer 0.20.0 (milestone MV13, survey S27 A3, A4): Special Condition immunity (`SEff.noCond c`, read by
+    # `Run.inflict`) and the heal block on the opponent's Active Pokémon (`SEff.noHeal`, read by heal, healAll, drain)
+    m = re.match(r"^This Pokémon can't be (Asleep|Burned|Confused|Paralyzed|Poisoned)\.$", s)
+    if m:
+        return S('self', ('noCond', (CONDS[m.group(1)],)))
+    if s == "Your opponent's Active Pokémon can't be healed.":
+        return S('opp', ('noHeal',), tgt='active')
     m = re.match(r"^Prevent all damage (?:done to this Pokémon by attacks from|from attacks done to this Pokémon by) your "
                  r"opponent's (.+?)\.$", s)
     if m:
@@ -5623,6 +5658,12 @@ def static_tool_sentence(s, ctx):
                  r"to\.$", s)
     if m:
         return m.group(2), [mk_static('self', ('shield', prevent_filter(m.group(1), ctx)))]
+    # importer 0.20.0 (milestone MV13, survey S27 A1): Shadowy Darkness Energy me5-83, damage prevention for a Benched
+    # holder (`SEff.prevent` with `tgt = bench`, read by the Bench damage primitives)
+    m = re.match(r"^As long as the (.+?) this card is attached to is on your Bench, prevent all damage done to it by "
+                 r"attacks from your opponent's (.+?)\.$", s)
+    if m:
+        return m.group(1), [mk_static('self', ('prevent', prevent_filter(m.group(2), ctx)), tgt='bench')]
     # importer 0.15.0 (milestone MV8): "The Metal Pokémon this card is attached to has no Retreat Cost." (`SEff.noRetreat`,
     # applied last: caveat noRetreatLast, added by the caller)
     m = re.match(r'^The (.+?) this card is attached to has no Retreat Cost\.$', s)
@@ -5667,12 +5708,18 @@ def static_caveats(ss):
     for s in ss:
         if s['eff'][0] == 'reduce' and s['tgt'] != ('some', ('active',)):
             cv.add('staticBench')
-        if s['eff'][0] == 'prevent' and s['tgt'] != ('some', ('active',)):
-            cv.add('staticPreventBench')
+        # importer 0.20.0 (milestone MV13): a static prevention is read on the Bench too (`GameState.benchSafe`), so
+        # `staticPreventBench` is no longer written
         if s['eff'][0] == 'shield':
-            # importer 0.17.0: read for the holder in the Active Spot, at the start of the attack
-            cv.add('shieldActive')
-            cv.add('shieldReach')
+            if s['tgt'] == ('some', ('bench',)) or s['src'] == ('some', ('bench',)):
+                # importer 0.20.0: in force on the Bench only, where the effect half is never read
+                cv.add('shieldBench')
+            else:
+                # importer 0.17.0: read for the holder in the Active Spot, at the start of the attack
+                cv.add('shieldActive')
+                cv.add('shieldReach')
+        if s['eff'] == ('noHeal',):
+            cv.add('healMove')
         if s['eff'] == ('noRetreat',):
             # importer 0.15.0: `SEff.noRetreat` is applied after the additions and subtractions (a reading)
             cv.add('noRetreatLast')

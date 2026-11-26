@@ -445,9 +445,32 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage prevention is read at the damage step: a source that left play during the attack would
   still protect (no imported source can leave so). (d) Existing effects are not removed (print's
   reminder): the flag changes only what an attack resolves. (e) Absent: prevention of effects of
-  Abilities ("attacks and Abilities", 4 cards; "Abilities", 1), protection of Benched Pokémon only
-  (4 cards), and the filtered or chosen lingering form (Acerola's Mischief); Trainer cards are not
-  attacks and are never affected;
+  Abilities ("attacks and Abilities", 4 cards; "Abilities", 1; survey S27 §2: the protection would have
+  to be read when an Ability resolves, by `Move.ability`, `Move.onPlay` and every `Fire`, with Knock
+  Outs between the steps of an activated Ability), the effect half of protection of Benched Pokémon
+  (since milestone MV13 the damage half is read on the Bench, item on static damage prevention below;
+  the `shield` half of "As long as this Pokémon is on your Bench, prevent all damage from and effects of
+  attacks …" and of "… done to your Benched Pokémon" is never read: an opponent's attack still places
+  damage counters on the protected Benched Pokémon (`benchCounters`, `spreadCounters`, `benchSome` and
+  `hitBy` with counters, `dumpCounters` to the Bench), still switches it into the Active Spot (a gust,
+  `switch .opp`), and still discards Energy or Tools from it or puts markers on it, where print prevents
+  them — a forced effect present where print has none, so both directions; importer caveat `shieldBench`; the obstacle is that `Run`
+  does not know whether it resolves an attack, and the counter primitives are also used by Trainers
+  and Abilities, which these texts do not prevent), Battle Cage's "Prevent all damage counters from
+  being placed on Benched Pokémon … by effects of attacks and Abilities" (same obstacle), and the
+  filtered or chosen lingering form (Acerola's Mischief); Trainer cards are not attacks and are never
+  affected;
+* Special Condition immunity and heal block (milestone MV13, survey S27 A3, A4, `Pokemon/Immune.lean`):
+  "This Pokémon can't be Asleep" is a static `SEff.noCond .asleep`; `Run.inflict` leaves a Pokémon on
+  which such an effect is in force as it was (`GameState.condImmune`), whatever the source of the
+  Special Condition, which is print's reading of an immunity of the Pokémon; it cures nothing, and
+  "recovers from all Special Conditions" (Festival Grounds, Bubbly Water Energy) is not expressed (a
+  continuous cure, not a read). "Your opponent's Active Pokémon can't be healed" is a static
+  `SEff.noHeal` with `sel = opp`, `tgt = some .active`; `Run.heal`, `Run.healAll` and the heal of
+  `Run.drain` heal nothing when it is in force on the player's Active Pokémon (`GameState.healBlocked`).
+  Reading: moving damage counters off that Pokémon (`moveCounter`) is not healing and stays allowed (no
+  ruling checked; importer caveat `healMove`, allows more). With no such effect in force the rules are
+  their old forms (`Run.inflict_old`, `Run.heal_old`, `Run.healAll_old`);
 * lingering modifiers (`Store`, `Effect.linger`): each player has a damage bonus for their
   attacks, a damage reduction and a damage prevention for attacks against their Pokémon, and
   locks on attacking, retreating and playing Items, for this turn, the next turn, the turn
@@ -506,7 +529,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage prevention by a filter on the attacker (milestone MV3, `SEff.prevent`, "Prevent all damage
   done to this Pokémon by attacks from your opponent's Pokémon ex") is read at step 5 with the
   defender's other effects (`GameState.sPrevent`); it is never stored, and prevented damage fires
-  no `damaged` trigger (`Prevent.prevented_quiet`). Absent: threshold
+  no `damaged` trigger (`Prevent.prevented_quiet`). Since milestone MV13 it is also read on the Bench
+  (item on static damage prevention below). Absent: threshold
   prevention ("prevent damage of 40 or less"), prevention of effects of Abilities and of filtered or
   chosen Pokémon (prevention of effects of attacks is milestone MV10's, item below), locks on Supporters,
   Stadiums, Abilities or Energy attachment, cost changes, effects that change Weakness,
@@ -817,13 +841,22 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   card-by-card check of every condition. Since milestone MV3 damage prevention by a filter on the
   attacker is expressed (`SEff.prevent`: Neutralization Zone, without its "can't be put into your
   hand or deck" rider; on Abilities Sylveon sv8pt5-40, Crustle sv10-12, Farigiraf ex sv5-108,
-  Cornerstone Mask Ogerpon ex ×2; survey S15 §3), for the Active Pokémon only: `SEff.prevent` is
-  read at the damage step against the Active Pokémon (`GameState.sPrevent`) and `InPlay.hitBench`
-  reads no static effect, so a Benched Pokémon whose Ability (or the Stadium) prevents damage from
-  the attacker still takes the attack's Bench damage (`benchDamage`, `spreadDamage`, `benchSome`).
-  Direction: the model does damage to the Bench that print prevents (an outcome print forbids,
-  and the printed outcome, no damage, is missing), so these cards are exact in the Active Spot
-  only. Neutralization Zone prevents damage "by attacks from your opponent's Pokémon ex and
+  Cornerstone Mask Ogerpon ex ×2; survey S15 §3). Until milestone MV13 for the Active Pokémon only
+  (`GameState.sPrevent`, read at the damage step); since milestone MV13 (survey S27 A1) also on the
+  Bench: the damage forms of the Bench primitives (`benchDamage`, `spreadDamage`, `benchSome … true`,
+  `hitBy … .bench … true`) place nothing on a Benched Pokémon of the opponent on which a `prevent`
+  effect against the attacker's top card is in force (`GameState.benchSafe`, `GameState.bAmt`; the
+  old importer caveat `staticPreventBench` is no longer written). This also reads "Prevent all damage
+  done to your Benched Pokémon that don't have a Rule Box …" (Shaymin sv10-10: `sel = own`, `tgt =
+  some .bench`), "As long as this Pokémon is on your Bench, prevent all damage …" (`src = some
+  .bench`) and Shadowy Darkness Energy. The damage forms are used only by attacks, so "by attacks" needs
+  no mode of `Run`; damage counters on the Bench are not read (next items). Stored (lingering)
+  prevention and static or stored reductions still protect the Active Pokémon only (`staticBench`,
+  `benchMods`). The attacker whose top card the filter reads is the player's Active Pokémon when the
+  Bench step resolves: after the attack's own `switch .own` it would be the Pokémon switched in (a
+  departure for filtered preventions only; no imported attack switches before its Bench damage, checked
+  by a search of the 0.20.0 library). With no `prevent` effect in force on the Bench each Bench rule is its old form
+  (`Run.benchDamage_old` and the like, `Pokemon/BenchGuard.lean`). Neutralization Zone prevents damage "by attacks from your opponent's Pokémon ex and
   Pokémon V"; the model has no "Pokémon V" filter (`RuleBox` has `none`, `ex`, `megaEx`), and the
   filter is `ex` alone. That is exact for today's Standard: no card of regulation mark H, I or J has
   the V, VSTAR, VMAX or V-UNION subtype in the card data (3219 records, checked for survey S14), so

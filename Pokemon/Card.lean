@@ -617,7 +617,8 @@ inductive Effect where
   | skip
   /-- the player to move draws one card (no-op on an empty deck) -/
   | draw
-  /-- remove up to `n` damage counters from the player's Active Pokémon -/
+  /-- remove up to `n` damage counters from the player's Active Pokémon; none under a heal block
+  (milestone MV13, `SEff.noHeal`: the rule removes `GameState.healAmt n`) -/
   | heal (n : Nat)
   /-- place `n` damage counters on the opponent's Active Pokémon -/
   | counters (n : Nat)
@@ -645,7 +646,8 @@ inductive Effect where
   | scale (w : Whose) (k : Nat)
   /-- place `n` damage counters on the player's own Active Pokémon -/
   | selfDamage (n : Nat)
-  /-- remove all damage counters from the player's own Active Pokémon -/
+  /-- remove all damage counters from the player's own Active Pokémon; none under a heal block
+  (milestone MV13: the rule removes `GameState.healAmt` of its damage) -/
   | healAll
   /-- put the marker `m` on one of the `w` player's Pokémon in play, Active or Benched (the
   player chooses). A Pokémon has the marker or not: placing it again changes nothing. -/
@@ -669,7 +671,8 @@ inductive Effect where
   `damage a {}`, the full calculation -/
   | damage (a : Amt) (ig : Ign := {})
   /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
-  Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
+  Pokémon the same amount of damage you did to your opponent's Active Pokémon"); the heal is none
+  under a heal block (milestone MV13: `GameState.healAmt` of the damage done), the damage is done -/
   | drain (a : Amt)
   /-- place `n` damage counters on one of the `w` player's Benched Pokémon, chosen when the effect
   resolves ("Put 2 damage counters on 1 of your opponent's Benched Pokémon"); nothing if that
@@ -708,8 +711,10 @@ inductive Effect where
   Resistance ("Don't apply Weakness and Resistance for Benched Pokémon!", rulebook 2023 p. 14);
   in the model no other modifier applies either: no bonus (a departure: the rulebook's example
   bonus, "this Pokémon's attacks do 40 more damage", p. 20, names no target), and no reduction
-  or prevention (a departure the other way: the model's modifiers protect a player's Active
-  Pokémon only; Known gaps), and a Tera Pokémon on the Bench takes none (`InPlay.hitBench`). The amount is a printed number. Not a damage step of the Active
+  or stored prevention (a departure the other way: the model's stored modifiers protect a player's
+  Active Pokémon only; Known gaps), and a Tera Pokémon on the Bench takes none (`InPlay.hitBench`).
+  Since milestone MV13 a static `SEff.prevent` in force on the target against the attacker is read:
+  the target then takes none (`GameState.bAmt`, `GameState.benchSafe`). The amount is a printed number. Not a damage step of the Active
   Pokémon (`hitFree`, `oneHit` ignore it); only attacks may use it (`benchHitFree`, required by
   `Move.item` and `Move.supporter`). Milestone M3 -/
   | benchDamage (w : Whose) (n : Nat)
@@ -1232,7 +1237,9 @@ inductive SAmt where
 * `prevent fr` (milestone MV3): "Prevent all damage done to this Pokémon by attacks from your
   opponent's Pokémon ex" (Sylveon sv8pt5-40: `fr = ex`); damage to the affected Pokémon in the
   Active Spot from attacks of Pokémon whose top card passes `fr` is 0 (step 5 of the damage
-  calculation, with the defender's other effects; `GameState.sPrevent`). A flag, not an amount: it
+  calculation, with the defender's other effects; `GameState.sPrevent`), and since milestone MV13
+  attack damage to the affected Pokémon on the Bench from such an attacker is 0 too
+  (`GameState.benchSafe`). A flag, not an amount: it
   is read, never stored, and an attack whose damage "isn't affected by any effects on your
   opponent's Active Pokémon" (`Ign.fx`) is not prevented.
 * `condMore c n` (milestone MV7b, survey S20 §a T1): during Pokémon Checkup, `n` more damage
@@ -1249,7 +1256,15 @@ inductive SAmt where
   to this Pokémon. (Damage is not an effect.)" (Skeledirge sv8-31, Empoleon ex me2-70: `fr = any`):
   an attack of a Pokémon whose top card passes `fr` against the affected Pokémon in the Active Spot
   resolves with its effects on that Pokémon removed (`Effect.shielded`, `GameState.sShield`). Read,
-  never stored, at the start of the attack; damage is not prevented. -/
+  never stored, at the start of the attack; damage is not prevented.
+* `noCond c` (milestone MV13, survey S27 A3): "This Pokémon can't be Asleep" (Hoothoot sv8pt5-77:
+  `c = asleep`): an `inflict c` on the affected Pokémon in the Active Spot leaves it as it was
+  (`GameState.condImmune`, read by `Run.inflict`), whatever the source (attack, Trainer, Ability).
+  It cures nothing: "recovers from" is not this effect.
+* `noHeal` (milestone MV13, survey S27 A4): "Your opponent's Active Pokémon can't be healed"
+  (Yveltal me55-100: `sel = opp`, `tgt = some .active`): `heal`, `healAll` and the heal of `drain`
+  remove no damage counter from the affected Pokémon in the Active Spot (`GameState.healBlocked`).
+  Moving damage counters (`moveCounter`) is not healing and is not read. -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -1261,6 +1276,8 @@ inductive SEff where
   | condMore (c : Condition) (n : Nat)
   | noRetreat
   | shield (fr : Filter)
+  | noCond (c : Condition)
+  | noHeal
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative

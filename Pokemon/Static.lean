@@ -286,6 +286,85 @@ def GameState.sShield (g : GameState) : Bool :=
   | some a, some d => (g.inForce .opp .active d.sv).any (Static.shieldsFrom a.top)
   | _, _ => false
 
+/-- **Static damage prevention on a Benched Pokémon** (milestone MV13, survey S27 A1): the `w` player's
+Benched Pokémon `q` takes no attack damage from the player to move's attacker, because some
+`SEff.prevent fr` in force on it at the Bench (`GameState.inForce w .bench q.sv`) passes the top card of
+the player to move's Active Pokémon. Only for `w = opp`: every printed prevention is "from your
+opponent's Pokémon", so a player's own attack is never prevented on their own Bench. False when the
+player to move has no Active Pokémon. Read by the damage forms of the Bench primitives
+(`GameState.bAmt`), which only attacks use (`Effect.benchHitFree`): "Prevent all damage done to your
+Benched Pokémon … by attacks from your opponent's Pokémon" (Shaymin sv10-10), "As long as this Pokémon
+is on your Bench, prevent all damage … done to this Pokémon" (Poltchageist sv6-20), and every
+`SEff.prevent` that is not limited to the Active Spot ("Prevent all damage done to this Pokémon by
+attacks from your opponent's Pokémon ex", Sylveon sv8pt5-40, now on the Bench too). The attacker is
+read as the mover's Active Pokémon in the state the Bench step starts in: after the attack's own
+`switch .own` it is the Pokémon switched in, not the one that attacked (a departure for filtered
+preventions only; Known gaps, the item on static damage prevention, milestone MV13). -/
+def GameState.benchSafe (g : GameState) (w : Whose) (q : InPlay) : Bool :=
+  match w, g.cur.active with
+  | .opp, some a => (g.inForce .opp .bench q.sv).any (Static.preventsFrom a.top)
+  | _, _ => false
+
+/-- **The amount a Bench primitive puts on the `w` player's Benched Pokémon `q`** (milestone MV13):
+`n`, or 0 when the step is attack damage (`dmg`) and a static prevention protects `q`
+(`GameState.benchSafe`). Damage counters (`dmg = false`) are never prevented here: "effects of
+attacks" on the Bench are not read (Known gaps). -/
+def GameState.bAmt (g : GameState) (w : Whose) (dmg : Bool) (n : Nat) (q : InPlay) : Nat :=
+  if dmg && g.benchSafe w q then 0 else n
+
+/-- With no protection on `q`, the amount is the printed one (milestone MV13). -/
+theorem GameState.bAmt_of_safe {g : GameState} {w : Whose} {q : InPlay}
+    (h : g.benchSafe w q = false) (dmg : Bool) (n : Nat) : g.bAmt w dmg n q = n := by
+  simp only [GameState.bAmt, h, Bool.and_false, Bool.false_eq_true, ite_false]
+
+/-- Damage counters are never prevented by `bAmt` (milestone MV13). -/
+@[simp] theorem GameState.bAmt_counters (g : GameState) (w : Whose) (n : Nat) (q : InPlay) :
+    g.bAmt w false n q = n := by
+  simp only [GameState.bAmt, Bool.false_and, Bool.false_eq_true, ite_false]
+
+/-- The player's own Bench is never protected from their own attack (milestone MV13). -/
+@[simp] theorem GameState.benchSafe_own (g : GameState) (q : InPlay) : g.benchSafe .own q = false := by
+  unfold GameState.benchSafe; rfl
+
+/-- The amount is the printed one or nothing (milestone MV13). -/
+theorem GameState.bAmt_cases (g : GameState) (w : Whose) (dmg : Bool) (n : Nat) (q : InPlay) :
+    g.bAmt w dmg n q = n ∨ g.bAmt w dmg n q = 0 := by
+  unfold GameState.bAmt; split <;> simp
+
+theorem GameState.bAmt_le (g : GameState) (w : Whose) (dmg : Bool) (n : Nat) (q : InPlay) :
+    g.bAmt w dmg n q ≤ n := by
+  unfold GameState.bAmt; split <;> simp
+
+/-- Does a static effect make its Pokémon immune to the Special Condition `c`? (milestone MV13,
+`SEff.noCond`) -/
+def Static.blocksCond (c : Condition) (s : Static) : Bool :=
+  match s.eff with
+  | .noCond c' => decide (c' = c)
+  | _ => false
+
+/-- **Special Condition immunity** (milestone MV13, survey S27 A3): some `noCond c` effect is in force
+on the `w` player's Pokémon `p` in the Active Spot. Read by `Run.inflict`. -/
+def GameState.condImmune (g : GameState) (w : Whose) (c : Condition) (p : InPlay) : Bool :=
+  (g.inForce w .active p.sv).any (Static.blocksCond c)
+
+/-- Is a static effect "can't be healed"? (milestone MV13, `SEff.noHeal`) -/
+def Static.isNoHeal (s : Static) : Bool :=
+  match s.eff with
+  | .noHeal => true
+  | _ => false
+
+/-- **Heal block** (milestone MV13, survey S27 A4): some `noHeal` effect is in force on the player to
+move's Active Pokémon; false if the Active Spot is empty. Read by `Run.heal`, `Run.healAll` and the heal
+of `Run.drain`, which heal only that Pokémon. -/
+def GameState.healBlocked (g : GameState) : Bool :=
+  match g.cur.active with
+  | some p => (g.inForce .own .active p.sv).any Static.isNoHeal
+  | none => false
+
+/-- The heal of `n` damage counters the player's Active Pokémon gets (milestone MV13): none under a
+heal block. -/
+def GameState.healAmt (g : GameState) (n : Nat) : Nat := if g.healBlocked then 0 else n
+
 /-- **Is the opponent's Active Pokémon protected from the effects of the player's attack?**
 (milestone MV10): a lingering `Mod.shield` in effect on the opponent (`Mods.shield`), or a static
 `SEff.shield` in force on it against the attacker (`GameState.sShield`). Read by `Move.attack` in the
@@ -437,6 +516,42 @@ theorem GameState.SameField.sShield {g₁ g₂ : GameState} (h : GameState.SameF
       reduceCtorEq, Option.some.injEq] at hc ho ⊢
   next a₁ a₂ d₁ d₂ =>
     rw [h.inForce, ho, show a₂.top = a₁.top from congrArg SView.top hc]
+
+/-- The clamps keep the Bench protection (milestone MV13): it reads the field and the attacker's
+top card, which `SameField` keeps, and the view of the Benched Pokémon. -/
+theorem GameState.SameField.benchSafe {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂)
+    (w : Whose) {p q : InPlay} (hv : q.sv = p.sv) : g₂.benchSafe w q = g₁.benchSafe w p := by
+  have hc := fieldOf_active h.cur
+  unfold GameState.benchSafe
+  cases w with
+  | own => rfl
+  | opp =>
+      cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;>
+        simp only [h1, h2, Option.map_none, Option.map_some, reduceCtorEq, Option.some.injEq] at hc ⊢
+      next a₁ a₂ =>
+        rw [h.inForce, hv, show a₂.top = a₁.top from congrArg SView.top hc]
+
+theorem GameState.SameField.bAmt {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂)
+    (w : Whose) (dmg : Bool) (n : Nat) {p q : InPlay} (hv : q.sv = p.sv) :
+    g₂.bAmt w dmg n q = g₁.bAmt w dmg n p := by
+  simp only [GameState.bAmt, h.benchSafe w hv]
+
+theorem GameState.SameField.condImmune {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂)
+    (w : Whose) (c : Condition) {p q : InPlay} (hv : q.sv = p.sv) :
+    g₂.condImmune w c q = g₁.condImmune w c p := by
+  simp only [GameState.condImmune, h.inForce, hv]
+
+theorem GameState.SameField.healBlocked {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
+    g₂.healBlocked = g₁.healBlocked := by
+  have hc := fieldOf_active h.cur
+  unfold GameState.healBlocked
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;>
+    simp only [h1, h2, Option.map_none, Option.map_some, reduceCtorEq, Option.some.injEq] at hc ⊢
+  next a₁ a₂ => rw [h.inForce, hc]
+
+theorem GameState.SameField.healAmt {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) (n : Nat) :
+    g₂.healAmt n = g₁.healAmt n := by
+  simp only [GameState.healAmt, h.healBlocked]
 
 theorem GameState.SameField.sReduce {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
     g₂.sReduce = g₁.sReduce := by
@@ -867,6 +982,27 @@ theorem GameState.sShield_noStatics {g : GameState} (hn : g.NoStatics) : g.sShie
   · next a d ha hd =>
       rw [g.inForce_noStatics (w := .opp) (sp := .active) hn hd]
       rfl
+  · rfl
+
+/-- **With no static effects, no Benched Pokémon is protected** (milestone MV13): for a Pokémon in
+play `p` of a state with no static effects, `benchSafe` is false. -/
+theorem GameState.benchSafe_noStatics {g : GameState} (hn : g.NoStatics) {w' : Whose} {sp : Spot}
+    {p : InPlay} (hp : g.In w' sp p) (w : Whose) : g.benchSafe w p = false := by
+  unfold GameState.benchSafe
+  split
+  · rw [g.inForce_noStatics hn hp .opp .bench]; rfl
+  · rfl
+
+/-- With no static effects, no Pokémon in play is immune to a Special Condition (milestone MV13). -/
+theorem GameState.condImmune_noStatics {g : GameState} (hn : g.NoStatics) {w' : Whose} {sp : Spot}
+    {p : InPlay} (hp : g.In w' sp p) (w : Whose) (c : Condition) : g.condImmune w c p = false := by
+  simp only [GameState.condImmune, g.inForce_noStatics hn hp w .active, List.any_nil]
+
+/-- With no static effects, nothing blocks a heal (milestone MV13). -/
+theorem GameState.healBlocked_noStatics {g : GameState} (hn : g.NoStatics) : g.healBlocked = false := by
+  unfold GameState.healBlocked
+  split
+  · next p hp => rw [g.inForce_noStatics (w := .own) (sp := .active) hn hp]; rfl
   · rfl
 
 /-- With no static effects and no stored effect prevention on the opponent, an attack resolves as

@@ -449,7 +449,8 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
                     List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge,
                     Store.add, Mods.addMod, Store.empty, Mods.empty, bonusNow,
-                    InPlay.ofBasic, drainer, prey, mon, InPlay.noteLock, GameState.afterAttack] at e <;> omega
+                    InPlay.ofBasic, drainer, prey, mon, InPlay.noteLock, GameState.afterAttack,
+                    GameState.healAmt, GameState.healBlocked] at e <;> omega
               | touchActive he => simp [Effect.touch] at he
               | touchBench he => simp [Effect.touch] at he
               | zone hw => simp [Effect.zSide] at hw

@@ -249,25 +249,25 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
             | exact hb.map fun q hq => hq.of_eq rfl rfl rfl rfl
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | @benchDamage g q b₁ b₂ w n h =>
-      have hq : ∀ x, Benched x → Benched (x.hitBench n) := fun x hx => by
-        obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields n
+      have hq' : ∀ k x, Benched x → Benched (x.hitBench k) := fun k x hx => by
+        obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields k
         exact hx.of_eq e1 e2 e3 e4
       cases w <;> simp only [GameState.side] at h <;>
         exact ⟨fun hb => by
             first
             | exact benched_update h hb
-                (hq q (hb q (by rw [h]; exact List.mem_append_right _ (.head _))))
+                (hq' _ q (hb q (by rw [h]; exact List.mem_append_right _ (.head _))))
             | exact hb,
           fun hb => by
             first
             | exact benched_update h hb
-                (hq q (hb q (by rw [h]; exact List.mem_append_right _ (.head _))))
+                (hq' _ q (hb q (by rw [h]; exact List.mem_append_right _ (.head _))))
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
-  | benchSome w m f dmg n h =>
-      have hq : ∀ x, Benched x → Benched (x.hitWith dmg n) := fun x hx => by
+  | @benchSome g b' w m f dmg n h =>
+      have hq : ∀ x, Benched x → Benched (x.hitWith dmg (g.bAmt w dmg n x)) := fun x hx => by
         cases dmg
         · exact hx.of_eq rfl rfl rfl rfl
-        · obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields n
+        · obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields (g.bAmt w true n x)
           exact hx.of_eq e1 e2 e3 e4
       cases w <;>
         exact ⟨fun hb => by
@@ -279,17 +279,17 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
             | exact h.forall_of hq hb
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | spreadDamage w n g =>
-      have hq : ∀ x, Benched x → Benched (x.hitBench n) := fun x hx => by
-        obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields n
+      have hq' : ∀ k x, Benched x → Benched (x.hitBench k) := fun k x hx => by
+        obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields k
         exact hx.of_eq e1 e2 e3 e4
       cases w <;>
         exact ⟨fun hb => by
             first
-            | exact hb.map hq
+            | exact hb.map fun x hx => hq' _ x hx
             | exact hb,
           fun hb => by
             first
-            | exact hb.map hq
+            | exact hb.map fun x hx => hq' _ x hx
             | exact hb, rfl, rfl, rfl, rfl, rfl⟩
   | @zone e w g s' hw hz =>
       cases w with
@@ -302,10 +302,11 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
       exact ⟨fun hb => h.forall_of hq hb, id, rfl, rfl, rfl, rfl, rfl⟩
   | hitByActive w _ _ _ _ _ _ _ => cases w <;> exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
   | @hitByBench g₀ b' w m f hurt dmg a h =>
-      have hq : ∀ x, Benched x → Benched (x.hitWith dmg (a.at g₀ w .bench x)) := fun x hx => by
+      have hq : ∀ x, Benched x →
+          Benched (x.hitWith dmg (g₀.bAmt w dmg (a.at g₀ w .bench x) x)) := fun x hx => by
         cases dmg
         · exact hx.of_eq rfl rfl rfl rfl
-        · obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields (a.at g₀ w .bench x)
+        · obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields (g₀.bAmt w true (a.at g₀ w .bench x) x)
           exact hx.of_eq e1 e2 e3 e4
       cases w <;>
         exact ⟨fun hb => by

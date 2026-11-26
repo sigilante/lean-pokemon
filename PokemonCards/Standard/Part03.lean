@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 3 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,24 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part03
 open Pokemon
+
+/-- Bewear (sv6pt5-53). Records: sv6pt5-53, sv6pt5-79. -/
+def sv6pt5_53 : Card := .pokemon
+  { name := "Bewear", stage := .stage1, evolvesFrom := some "Stufful",
+    hp := 13, type := .colorless, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Power Charger", cost := [.colorless], damage := 3,
+        effect := .seq (.attach .own .deck .basicEnergy .active .any) .shuffle,
+        gx := false },
+      { name := "Hammer In", cost := [.colorless, .colorless, .colorless], damage := 13,
+        effect := .skip,
+        gx := false }] }
+
+/-- Academy at Night (sv6pt5-54). Records: sv6pt5-54. -/
+def sv6pt5_54 : Card := .trainer "Academy at Night" .stadium
+    (.move .own .hand .top .any (.exactly 1))
 
 /-- Colress's Tenacity (sv6pt5-57). Records: sv6pt5-57, sv6pt5-87. -/
 def sv6pt5_57 : Card := .trainer "Colress's Tenacity" .supporter
@@ -1624,7 +1642,7 @@ def sv8_41 : Card := .pokemon
         effect := .switch .own,
         gx := false }] }
 
-/-- Milotic ex (sv8-42). Records: sv8-42, sv8-217, sv8-237. Caveats: shieldActive, shieldReach, staticPreventBench. -/
+/-- Milotic ex (sv8-42). Records: sv8-42, sv8-217, sv8-237. Caveats: shieldActive, shieldReach. -/
 def sv8_42 : Card := .pokemon
   { name := "Milotic ex", stage := .stage1, evolvesFrom := some "Feebas",
     hp := 27, type := .water, retreat := 2, weakness := some .lightning,
@@ -1813,36 +1831,10 @@ def sv8_60 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .this }] }
 
-/-- Rotom (sv8-61). Records: sv8-61. Caveats: energyUnitsCount. -/
-def sv8_61 : Card := .pokemon
-  { name := "Rotom", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Crushing Pulse", cost := [.lightning], damage := 0,
-        effect := .move .opp .hand .discard (.or (.kind .item) .tool) .all,
-        gx := false },
-      { name := "Energy Short", cost := [.lightning], damage := 0,
-        effect := .damage (.count (.energy .opp .energy) 2),
-        gx := false }] }
-
-/-- Blitzle (sv8-62). Records: sv8-62. -/
-def sv8_62 : Card := .pokemon
-  { name := "Blitzle", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Add On", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Static Shock", cost := [.lightning, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6pt5_53,
+  sv6pt5_54,
   sv6pt5_57,
   sv6pt5_58,
   sv6pt5_61,
@@ -1990,9 +1982,7 @@ def cards : List Card := [
   sv8_54,
   sv8_55,
   sv8_58,
-  sv8_60,
-  sv8_61,
-  sv8_62]
+  sv8_60]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
