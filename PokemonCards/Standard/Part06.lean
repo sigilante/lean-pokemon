@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 6 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,42 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part06
 open Pokemon
+
+/-- Hearthflame Mask Ogerpon (sv10-44). Records: sv10-44. -/
+def sv10_44 : Card := .pokemon
+  { name := "Hearthflame Mask Ogerpon", stage := .basic, evolvesFrom := none,
+    hp := 11, type := .fire, retreat := 1, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Fire Kagura", cost := [.colorless], damage := 0,
+        effect := .seq (.choice (.attach .own .deck (.energyOf .fire) .active .any) (.attach .own .deck (.energyOf .fire) .bench .any)) .shuffle,
+        gx := false },
+      { name := "Searing Flame", cost := [.fire, .fire, .colorless], damage := 8,
+        effect := .inflict .burned,
+        gx := false }] }
+
+/-- Misty's Staryu (sv10-46). Records: sv10-46. -/
+def sv10_46 : Card := .pokemon
+  { name := "Misty's Staryu", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bubble Beam", cost := [.water], damage := 2,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false }] }
+
+/-- Misty's Starmie (sv10-47). Records: sv10-47. -/
+def sv10_47 : Card := .pokemon
+  { name := "Misty's Starmie", stage := .stage1, evolvesFrom := some "Misty's Staryu",
+    hp := 10, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Abrupt Flash", cost := [.water], damage := 0,
+        effect := .ite (.evolved .own) (.damage (.const 14)) (.damage (.const 6)),
+        gx := false }] }
 
 /-- Misty's Magikarp (sv10-48). Records: sv10-48. Caveats: shieldBench. -/
 def sv10_48 : Card := .pokemon
@@ -1634,6 +1670,20 @@ def rsv10pt5_36 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Swoobat (rsv10pt5-37). Records: rsv10pt5-37, rsv10pt5-120. -/
+def rsv10pt5_37 : Card := .pokemon
+  { name := "Swoobat", stage := .stage1, evolvesFrom := some "Woobat",
+    hp := 9, type := .psychic, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Happy Return", cost := [.colorless], damage := 0,
+        effect := .returnPokemon .own .bench .hand,
+        gx := false },
+      { name := "Gust", cost := [.colorless, .colorless], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
 /-- Sigilyph (rsv10pt5-38). Records: rsv10pt5-38, rsv10pt5-121. Caveats: benchMods, perPokemon. -/
 def rsv10pt5_38 : Card := .pokemon
   { name := "Sigilyph", stage := .basic, evolvesFrom := none,
@@ -1762,58 +1812,11 @@ def rsv10pt5_50 : Card := .pokemon
         effect := .choice (.damage (.const 3)) (.choice (.damage (.const 6)) (.damage (.const 9))),
         gx := false }] }
 
-/-- Mienfoo (rsv10pt5-52). Records: rsv10pt5-52, rsv10pt5-133. -/
-def rsv10pt5_52 : Card := .pokemon
-  { name := "Mienfoo", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .fighting, retreat := 1, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Kick", cost := [.fighting], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Mienshao (rsv10pt5-53). Records: rsv10pt5-53, rsv10pt5-134. -/
-def rsv10pt5_53 : Card := .pokemon
-  { name := "Mienshao", stage := .stage1, evolvesFrom := some "Mienfoo",
-    hp := 10, type := .fighting, retreat := 1, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Low Sweep", cost := [.fighting], damage := 4,
-        effect := .skip,
-        gx := false },
-      { name := "Smash Uppercut", cost := [.fighting, .fighting], damage := 0,
-        effect := .damage (.const 8) { resist := true },
-        gx := false }] }
-
-/-- Terrakion (rsv10pt5-54). Records: rsv10pt5-54, rsv10pt5-135. Caveats: koAttackWide. -/
-def rsv10pt5_54 : Card := .pokemon
-  { name := "Terrakion", stage := .basic, evolvesFrom := none,
-    hp := 14, type := .fighting, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Retaliate", cost := [.fighting, .colorless], damage := 0,
-        effect := .ite (.countGe (.koLast .own true) 1) (.damage (.const 13)) (.damage (.const 5)),
-        gx := false },
-      { name := "Land Crush", cost := [.fighting, .fighting, .colorless], damage := 10,
-        effect := .skip,
-        gx := false }] }
-
-/-- Purrloin (rsv10pt5-55). Records: rsv10pt5-55, rsv10pt5-136. -/
-def rsv10pt5_55 : Card := .pokemon
-  { name := "Purrloin", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Invite Evil", cost := [.darkness], damage := 0,
-        effect := .seq (.move .own .deck .hand (.ptype .darkness) (.upTo 3)) .shuffle,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_44,
+  sv10_46,
+  sv10_47,
   sv10_48,
   sv10_50,
   sv10_51,
@@ -1950,6 +1953,7 @@ def cards : List Card := [
   rsv10pt5_34,
   rsv10pt5_35,
   rsv10pt5_36,
+  rsv10pt5_37,
   rsv10pt5_38,
   rsv10pt5_39,
   rsv10pt5_40,
@@ -1959,11 +1963,7 @@ def cards : List Card := [
   rsv10pt5_46,
   rsv10pt5_47,
   rsv10pt5_49,
-  rsv10pt5_50,
-  rsv10pt5_52,
-  rsv10pt5_53,
-  rsv10pt5_54,
-  rsv10pt5_55]
+  rsv10pt5_50]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

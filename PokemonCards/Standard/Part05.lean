@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 5 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,42 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part05
 open Pokemon
+
+/-- Sprigatito (sv9-16). Records: sv9-16. -/
+def sv9_16 : Card := .pokemon
+  { name := "Sprigatito", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Tons of Treading", cost := [.colorless], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.damage (.const 3)))),
+        gx := false }] }
+
+/-- Floragato (sv9-17). Records: sv9-17. -/
+def sv9_17 : Card := .pokemon
+  { name := "Floragato", stage := .stage1, evolvesFrom := some "Sprigatito",
+    hp := 9, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Magical Leaf", cost := [.colorless, .colorless], damage := 0,
+        effect := .choice (.damage (.const 3)) (.seq (.damage (.const 6)) (.heal 3)),
+        gx := false }] }
+
+/-- Meowscarada (sv9-18). Records: sv9-18. Caveats: selfBench. -/
+def sv9_18 : Card := .pokemon
+  { name := "Meowscarada", stage := .stage2, evolvesFrom := some "Floragato",
+    hp := 16, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Showtime", use := .once,
+        spot := some .bench, cond := none,
+        effect := .self .switchIn }],
+    attacks := [
+      { name := "Rising Bloom", cost := [.colorless, .colorless], damage := 0,
+        effect := .ite (.top .opp .ex) (.damage (.const 18)) (.damage (.const 9)),
+        gx := false }] }
 
 /-- Nymble (sv9-19). Records: sv9-19. -/
 def sv9_19 : Card := .pokemon
@@ -1859,44 +1895,11 @@ def sv10_43 : Card := .pokemon
         effect := .damage (.count (.tools .own) 3),
         gx := false }] }
 
-/-- Hearthflame Mask Ogerpon (sv10-44). Records: sv10-44. -/
-def sv10_44 : Card := .pokemon
-  { name := "Hearthflame Mask Ogerpon", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Fire Kagura", cost := [.colorless], damage := 0,
-        effect := .seq (.choice (.attach .own .deck (.energyOf .fire) .active .any) (.attach .own .deck (.energyOf .fire) .bench .any)) .shuffle,
-        gx := false },
-      { name := "Searing Flame", cost := [.fire, .fire, .colorless], damage := 8,
-        effect := .inflict .burned,
-        gx := false }] }
-
-/-- Misty's Staryu (sv10-46). Records: sv10-46. -/
-def sv10_46 : Card := .pokemon
-  { name := "Misty's Staryu", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bubble Beam", cost := [.water], damage := 2,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false }] }
-
-/-- Misty's Starmie (sv10-47). Records: sv10-47. -/
-def sv10_47 : Card := .pokemon
-  { name := "Misty's Starmie", stage := .stage1, evolvesFrom := some "Misty's Staryu",
-    hp := 10, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Abrupt Flash", cost := [.water], damage := 0,
-        effect := .ite (.evolved .own) (.damage (.const 14)) (.damage (.const 6)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv9_16,
+  sv9_17,
+  sv9_18,
   sv9_19,
   sv9_20,
   sv9_21,
@@ -2043,10 +2046,7 @@ def cards : List Card := [
   sv10_40,
   sv10_41,
   sv10_42,
-  sv10_43,
-  sv10_44,
-  sv10_46,
-  sv10_47]
+  sv10_43]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -309,6 +309,13 @@ CAVEATS = {
     'usedLastBenchUse': "'You can use this attack only if this Pokémon used X during your last turn' reads the use record "
                         "of X (as usedLastBench): a Pokémon that used X, moved to the Bench and came back cannot use the "
                         "attack in the model, where print allows it; a failed Confused attempt of X writes no record, also a reading",
+    # importer 0.22.0 (milestone MV15, survey S29)
+    'returnPromote': "the attack returns its own Pokémon from the Active Spot (`Effect.returnPokemon own active`); the "
+                     "Benched Pokémon promoted by the batch step after the attack (no Prize card) raises no `movedUp` "
+                     "event in the model (`GameState.promoUp` reads a Knock Out of the Active Pokémon), whereas print "
+                     "may count it as having moved from the Bench to the Active Spot during its owner's turn (a "
+                     "'when this Pokémon moves from your Bench to the Active Spot' trigger, Known gaps: return from "
+                     "play); no rule or ruling on this was found",
     # importer 0.21.0 (milestone MV14, survey S28)
     'thresholdRead': "a damage threshold ('prevent all damage … if that damage is N or more / N or less', `SEff.preventGe`, "
                      "`Mod.preventLe`) compares N with the damage after every other effect of the calculation: Weakness, "
@@ -361,6 +368,9 @@ CAVEAT_DIRECTION = {
                                    # of 'up to N from your Benched Pokémon' may move N 2-unit cards (more than by units)
     'shiftFromMoved': 'both',  # the Energy of another Benched Pokémon may move (allows more); a forced move blocked
                                # by a holder restriction blocks the play (forbids some)
+    # importer 0.22.0
+    'returnPromote': 'both',       # a trigger print may fire on the promotion is not fired: a mandatory one's
+                                   # outcome absent, the outcome without it present
     # importer 0.21.0
     'thresholdRead': 'both',       # with a reduction in force, another order of step 5 prevents what the model lets
                                    # through ('N or more' read before the reduction) or the reverse
@@ -2186,6 +2196,43 @@ def _(m, ctx):
       'returnEnergy own active energy all shuffle')
 def _(m, ctx):
     return Eff(return_energy('all', None, None, None, 'this Pokémon', ('shuffle',), ctx))
+
+
+# importer 0.22.0 (milestone MV15, survey S29): return from play, attacks only (`Effect.returnPokemon w sp d`; the
+# moves that resolve effects outside an attack refuse it, `Effect.retFree`). "This Pokémon" is the Active Pokémon (the
+# attacker stays the attacker: `switchesOwn` counts the return, so nothing after it may act on the Active Pokémon).
+# Its cards (top, under, attached) go to `d`; the empty Active Spot is filled by the batch step after the attack, no
+# Prize card. A promotion after a return of the Active Pokémon raises no `movedUp` event (returnPromote).
+@rule('return-self-hand', r"Put this Pokémon and all attached cards into your hand\.", 'A',
+      'returnPokemon own active hand')
+def _(m, ctx):
+    return Eff(('returnPokemon', OWN, ('active',), ('hand',)), {'returnPromote'})
+
+
+@rule('return-self-deck', r"(You may s|S)huffle this Pokémon and all attached cards into your deck\.", 'A',
+      'returnPokemon own active shuffle, or choice of it and skip')
+def _(m, ctx):
+    e = ('returnPokemon', OWN, ('active',), ('shuffle',))
+    return Eff(choice(e, SKIP) if m.group(1) == 'You may s' else e, {'returnPromote'})
+
+
+@rule('return-self-discard', r"Discard this Pokémon and all attached cards\.", 'A', 'returnPokemon own active discard')
+def _(m, ctx):
+    return Eff(('returnPokemon', OWN, ('active',), ('discard',)), {'returnPromote'})
+
+
+@rule('return-bench-own', r"(Put|Shuffle) 1 of your Benched Pokémon and all attached cards into your (hand|deck)\.", 'A',
+      'returnPokemon own bench (hand | shuffle)')
+def _(m, ctx):
+    if (m.group(1) == 'Put') != (m.group(2) == 'hand'):
+        raise Refuse('wording')
+    return Eff(('returnPokemon', OWN, ('bench',), ('hand',) if m.group(2) == 'hand' else ('shuffle',)))
+
+
+@rule('return-bench-opp', r"Shuffle 1 of your opponent's Benched Pokémon and all attached cards into their deck\.", 'A',
+      'returnPokemon opp bench shuffle')
+def _(m, ctx):
+    return Eff(('returnPokemon', OPP, ('bench',), ('shuffle',)))
 
 
 # importer 0.18.0 (milestone MV11): "You may move any amount of [T] Energy from your Pokémon to your other Pokémon in any

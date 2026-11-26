@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 3 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,28 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part03
 open Pokemon
+
+/-- Furfrou (sv6pt5-51). Records: sv6pt5-51. Caveats: mayFail. -/
+def sv6pt5_51 : Card := .pokemon
+  { name := "Furfrou", stage := .basic, evolvesFrom := none,
+    hp := 10, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Energy Assist", cost := [.colorless], damage := 3,
+        effect := .attach .own .discard .basicEnergy .bench .any,
+        gx := false }] }
+
+/-- Stufful (sv6pt5-52). Records: sv6pt5-52. Caveats: recoil. -/
+def sv6pt5_52 : Card := .pokemon
+  { name := "Stufful", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .colorless, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Take Down", cost := [.colorless], damage := 3,
+        effect := .selfDamage 1,
+        gx := false }] }
 
 /-- Bewear (sv6pt5-53). Records: sv6pt5-53, sv6pt5-79. -/
 def sv6pt5_53 : Card := .pokemon
@@ -1809,30 +1831,10 @@ def sv8_54 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Iron Bundle (sv8-55). Records: sv8-55. Caveats: printedRetreat. -/
-def sv8_55 : Card := .pokemon
-  { name := "Iron Bundle", stage := .basic, evolvesFrom := none,
-    hp := 10, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gusting Collision", cost := [.water, .water, .colorless], damage := 0,
-        effect := .damage (.sub (.const 20) (.count (.retreat .opp) 5)),
-        gx := false }] }
-
-/-- Magnemite (sv8-58). Records: sv8-58. -/
-def sv8_58 : Card := .pokemon
-  { name := "Magnemite", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Lightning Ball", cost := [.lightning], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6pt5_51,
+  sv6pt5_52,
   sv6pt5_53,
   sv6pt5_54,
   sv6pt5_57,
@@ -1980,9 +1982,7 @@ def cards : List Card := [
   sv8_51,
   sv8_52,
   sv8_53,
-  sv8_54,
-  sv8_55,
-  sv8_58]
+  sv8_54]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
