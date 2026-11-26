@@ -850,7 +850,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   .bench`) and Shadowy Darkness Energy. The damage forms are used only by attacks, so "by attacks" needs
   no mode of `Run`; damage counters on the Bench are not read (next items). Stored (lingering)
   prevention and static or stored reductions still protect the Active Pokémon only (`staticBench`,
-  `benchMods`). With no `prevent` effect in force on the Bench each Bench rule is its old form
+  `benchMods`). The attacker whose top card the filter reads is the player's Active Pokémon when the
+  Bench step resolves: after the attack's own `switch .own` it would be the Pokémon switched in (a
+  departure for filtered preventions only; no imported attack switches before its Bench damage, checked
+  by a search of the 0.20.0 library). With no `prevent` effect in force on the Bench each Bench rule is its old form
   (`Run.benchDamage_old` and the like, `Pokemon/BenchGuard.lean`). Neutralization Zone prevents damage "by attacks from your opponent's Pokémon ex and
   Pokémon V"; the model has no "Pokémon V" filter (`RuleBox` has `none`, `ex`, `megaEx`), and the
   filter is `ex` alone. That is exact for today's Standard: no card of regulation mark H, I or J has
