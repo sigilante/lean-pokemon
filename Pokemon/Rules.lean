@@ -377,7 +377,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   (`Amt.heads a k`: `k` times any number of heads up to the value of `a`; exact up to probability,
   as every coin flip; also "reveal any number of … from your hand, … for each card revealed"), and the per-player Supporter flag (`Count.supporter`: "this turn" for the player whose turn it
   is; for the other player it reads their last turn, since the flag is cleared when its player's
-  turn starts), all exact
+  turn starts), since milestone MV9 the Supporter card played (`Count.played w f`, read from
+  `PlayerState.supCard`, cleared at the same time), all exact
   under both clamps; absent: counts of damage counters on several Pokémon ("for each damage counter
   on all of your opponent's Pokémon", Azelf sv8-80; 5 refused Standard cards in S19 §C: not
   clamp-exact, since the clamps cap each Pokémon's damage), of Pokémon with any damage counters (2;
@@ -754,7 +755,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Tree evolves by effect; Mystery Garden draws to a count of Pokémon in play, and `drawTo` takes a
   printed number; Community Center's condition, a Supporter played this turn, is expressible since
   milestone MV4 (`Count.supporter`) but its healing of each of the player's Pokémon is not; Team
-  Rocket's Factory reads the name of the Supporter played this turn, which is not recorded), Tools 2 granting attacks (Technical Machine: Fluorite,
+  Rocket's Factory reads the name of the Supporter played this turn, recorded since milestone MV9,
+  `Count.played`, and imported since importer 0.16.0), Tools 2 granting attacks (Technical Machine: Fluorite,
   "heal all damage from each of your Tera Pokémon" and its end-of-turn discard; Mega Rayquaza Cap,
   an attachment per capped Pokémon). Backtrack Badge (re-flip coins) changes nothing in a model in
   which flips are nondeterministic choices. Expressed with effect: Stadiums 4 (Academy at Night,
@@ -1227,18 +1229,46 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   notices; a card reading `koLast .opp true` would. Knock Outs at Checkup are recorded in no turn
   (Checkup is between turns); a promotion
   after a Knock Out of the player's own Active Pokémon in their own turn does not set `movedUp`
-  (an under-model). Absent, with the refused cards of today's Standard that need them (S13 §A;
-  cards can need several): "if you played [named, Future, Ancient, Team Rocket] Supporter this
-  turn" (7; since milestone MV4 the unnamed "if they played a Supporter card from their hand this
-  turn" is `Count.supporter`, the existing flag), "if this Pokémon used [attack] during your last
-  turn" (4) and "if 1 of your Pokémon used [attack] during your last turn" (3) (both need a name
-  in the state, finite only under a reachability invariant the enumerations do not carry; survey
-  S17 §E), "healed this turn" (3), "damaged during
+  (an under-model). Since milestone MV9 (survey S23) "if you played [named, Future, Ancient, Team
+  Rocket's] Supporter from your hand during this turn" is `Count.played .own f`, read from the record
+  `PlayerState.supCard`: written by `Move.supporter` when the card is played (before its effect
+  resolves), cleared when the player's next turn starts (`Move.endTurn`, with `supporterPlayed`), so
+  for the player to move it holds this turn's Supporter (the rulebook allows one a turn, 2026 p. 12)
+  and for the other player their last turn's; it is a card of the game (`Reach.supCard_mem`), which is
+  the reachability invariant the enumerations now carry (`Enum.states C R`). Since MV9 the importer
+  also writes "if this Pokémon used X during your last turn" (X an attack of the same card) with the
+  use record of milestone MV6 (`AtkLock.note`, `Test.usedLast`), which X writes on every use
+  (`GameState.afterAttack`; a failed Confused attempt writes nothing), the end of its owner's turn
+  brings into force for the owner's next turn, and moving to the Bench or evolving ends
+  (`InPlay.unlock`). Print says that effects of attacks end then (2026 pp. 11, 20); it does not say
+  that the history "this Pokémon used X" ends, so the end on the Bench is a reading, caveated
+  `usedLastBench` (a bonus: both directions) and `usedLastBenchUse` ("You can use this attack only
+  if …": forbids some). Such a use condition is an `ite` with no resolution in its failing branch,
+  so `Move.attack` cannot use the attack; `Move.attackConfused` does not read the effect and allows
+  the Confused attempt, whose outcome (3 counters on the attacker, the turn's attack made) is that of a
+  Confused attempt of X, an attack of the same card whose cost is a sub-multiset (the importer's one
+  case, Miltank sv8pt5-81: Rollout [C] and Moomoo Rolling [C, C]). Absent, with the refused cards of
+  today's Standard that need them (S13 §A, S23; cards can need several): "if 1 of your [other
+  Ancient] Pokémon used [X / an attack] during your last turn" (3: a player-level record of an
+  attack name or of another Pokémon, finite only under a reachability invariant like the
+  Supporter record's, not built), "healed this turn" (3), "damaged during
   your opponent's last turn … that much more damage" (2, an amount), next-turn per-Pokémon
   triggers (4), filtered "during this turn" bonuses (4), Prize and Knock Out consequences (8),
   "Prize cards your opponent took during their last turn" (1, the one counted quantity, at most 6);
   the name prefixes these tests needed ("any of your Ethan's Pokémon", 2 of the 10 Knock Out tests)
   are expressible since milestone MV4 (`Filter.namePrefix`);
+* printed subtypes and printed data in filters (milestone MV9, survey S23, `Pokemon/Played.lean`): the
+  model's cards carry no "Ancient" or "Future" subtype. The importer writes "Ancient X" / "Future X"
+  as `X ∧ Filter.nameIn ns` over the names every record of which in its pool (regulation marks H, I, J)
+  has the subtype, or'd with `named n ∧ hasAttack a` for the records of the four names that have
+  records with and without it (Koraidon, Koraidon ex, Miraidon, Miraidon ex), `a` an attack no record
+  of that name without the subtype prints. On every card term the importer can write the filter and
+  the subtype agree; on a card term outside the pool (a hand-written card, a later set) they may not.
+  `Filter.resists t`, `Filter.megaEx` and `Filter.abilityNamed n` read the printed card;
+  `abilityNamed` ignores an Ability a Tool gives (the importer refuses a name that a Tool or Special
+  Energy card of the data prints). "Has a maximum HP of N" is written with `Filter.hpLe` on the
+  printed HP; maximum HP is the derived HP (`GameState.hpOf`), which static effects change: a reading,
+  caveated `printedMaxHP` (both directions);
 * per-Pokémon attack locks (milestone MV4, survey S17 §C, `Pokemon/Lock.lean`): "During your next
   turn, this Pokémon can't use [this attack]" (27 refused Standard cards) is `Attack.selfLock :=
   .this`, "… can't use attacks" is `.all`; the attack sets the lock on the attacker

@@ -4719,14 +4719,14 @@ def translate_stadium(c, res, text, joined):
             try:
                 cost = ab_cost(cap(mc.group(1)), ctx)
             except Refuse as r:
-                B.append(('Stadium: activated effect not expressible: ' + r.reason.replace('Ability: ', ''), t))
+                B.append(('Stadium: activated effect not expressible: ' + r.reason.replace('Ability: ', ''), text[0]))
                 return res
             sents = [cap(mc.group(2))] + sents[1:]
         p = Parser(ctx).run(sents)
-        res['used'] += [('stadium-use', t)] + p.used
+        res['used'] += [('stadium-use', text[0])] + p.used
         if p.blockers:
             # the reasons quote the text as read in the second person; the sentence is the printed one
-            B += [('Stadium: activated effect not expressible: ' + a, t) for a, _ in p.blockers]
+            B += [('Stadium: activated effect not expressible: ' + a, text[0]) for a, _ in p.blockers]
             return res
         effs = []
         for _, it in p.items:
