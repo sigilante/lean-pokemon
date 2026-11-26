@@ -545,7 +545,8 @@ Benched Pokémon chosen when the effect resolves) with its cards (top card, the 
 Energy and Tools) at `d` (hand, deck, discard pile); its damage counters, Special Conditions, markers and
 locks go with its record. It is a zone step (`ZStep.monActive`, `monBench`, `monNone`), so conservation,
 both clamp simulations (`ZStep.sim`), the Bench and mark conditions of `WellFormed` gained a case each
-and no hypothesis. It is **attacks only**: `Effect.retFree` (no return in the effect) is a new premise
+and no hypothesis; two lemmas stated for every zone step were false for a return and gained one
+(`ZStep.active_pokemonCards`, `Shield`'s `ZStep.conds`: the step is not a return of the Active Pokémon). It is **attacks only**: `Effect.retFree` (no return in the effect) is a new premise
 of `Move.item`, `Move.supporter`, `Move.stadiumUse`, `Move.ability` and `Move.onPlay` (an auto-parameter,
 proved by `rfl` for every closed effect, so no existing witness changed), and the trigger fragment
 excludes it. The reason: the store bound counts the uses of "once during your turn" and on-play
@@ -559,12 +560,20 @@ Spot is filled by the batch step that follows (no Knock Out, no Prize card), and
 Pokémon in play loses there (rulebook 2026 pp. 7, 21). `Reach.finite`, `Reach.clamp_mem`,
 `Move.clamp_sim`, `Move.xclamp_sim`, `Reach.xclamp_mem_bounded`, `StoreSafe` and `StoreSafe.xfinite`,
 the negative theorems, `Counter.universal` and the count theorems are unchanged in text; they now range
-over decks whose attacks return Pokémon, with no new hypothesis; for a game with no return card
-(`GameState.RetFree`, kept by play) the five changed move constructors have their old premises
-(`Move.item_old`, `supporter_old`, `stadiumUse_old`, `ability_old`, `onPlay_old`) and the changed
-definitions their old values (`Return.switchesOwn_old`, `spares_old`, `ownFree_old`). Witnesses in
+over decks whose attacks return Pokémon, with no new hypothesis. For a game with no return card
+(`GameState.RetFree`, kept by play, `Reach.retFree`) the move relation is the pre-MV15 one, proved in
+pieces, not as one equivalence (no copy of the old `Move`, `Run` and `ZStep` was made): the five
+constructors with the new premise are legal from their old premises (`Move.item_old`, `supporter_old`,
+`stadiumUse_old`, `ability_old`, `onPlay_old`; the other direction is dropping the premise); every
+attack of such a game has no return (`Return.attack_retFree`), and for such an attack the changed
+definitions that `Move.attack` reads have their old values (`Return.attack_old`: `Attack.wf` through
+`switchSafe_old`, `Attack.lockSet` through `switchesOwn_old`, `Attack.against` through `shielded_old`;
+also `spares_old`, `ownFree_old`, with `switchesOwnOld`, `ownFreeOld`, `sparesOld`, `shieldedOld`,
+`switchSafeOld` copied from the pre-MV15 sources); and no zone step of an effect with no return is one
+of the three new constructors (`Return.ZStep.not_return`; `Run` gained no constructor). The trigger
+fragment `Effect.trigOk` is unchanged. Witnesses in
 `Pokemon/Return.lean`: from a well-formed, settled start, a Pokémon uses its once-per-turn Ability (a
-stored bonus), returns itself to the hand by its attack (with its Energy; its damage counters gone), the
+stored bonus), returns itself to the hand by its attack (with its Energy; its damage counters on no Pokémon in play), the
 Benched Pokémon is promoted with no Prize card, the turns pass, and the card is played again and uses its
 Ability again (`Return.trace`: the danger is not hidden, it is paid by the attack's end of turn);
 returns to the deck, of the opponent's Benched and Active Pokémon (with the opponent's promotion), and a

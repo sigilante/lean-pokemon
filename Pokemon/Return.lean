@@ -39,12 +39,14 @@ uses its Ability again, writing the store again. The returned Pokémon re-enters
 Pokémon (no damage, unused, put into play this turn).
 
 **Witnesses** (legal moves from starts proved `WellFormed` and `Settled`; the states of `trace` are
-reached from `r0`): `return_hand` (to the hand, with the attached Energy; damage counters gone),
+reached from `r0`): `return_hand` (to the hand, with the attached Energy; the Active Spot empty),
 `return_deck` (shuffled into the deck), `return_opp_bench` (the opponent's Benched Pokémon into their
 deck), `opp_refill` (the opponent's Active Pokémon to their hand, and the opponent promotes with no
 Prize card taken), `refill` (the player's own Active Spot refilled, no Prize card), `no_pokemon_loses`
-(a player who returns their only Pokémon loses at the batch step), `trace` (above). **General**
-(every resolution): `monActive_empties`, `monActive_hand`. **Negative** (hand-built starts, labelled):
+(a player who returns their only Pokémon loses at the batch step: every move from there is that
+step), `trace` (above). **General**
+(every resolution): `monActive_empties`, `monActive_hand`, `HitTrig.nil_of_empty` (a defender returned
+by the attack fires no `damaged` trigger). **Negative** (hand-built starts, labelled):
 `return_raises_abPot`, `trun_raises_abPot`.
 -/
 
@@ -234,8 +236,9 @@ theorem reach_trans {a b c : GameState} (h₁ : Reach a b) (h₂ : Reach b c) : 
 
 /-- **The trace** (from the well-formed, `Settled` start `r0`; every state reached by legal moves):
 `flierA` uses Charge (this turn's bonus becomes 1), attacks with Fade Out (the defender takes 2
-counters, 10 damage plus the bonus; `flier` and its Fire Energy go to the hand, its 2 damage counters
-with it out of the game's state; the Active Spot is empty); the batch step promotes the Benched `big`
+counters, 10 damage plus the bonus; `flier` and its Fire Energy go to the hand; the Active Spot is
+empty, so `flierA`'s 2 damage counters are on no Pokémon in play, which is all the conjuncts below
+say of them); the batch step promotes the Benched `big`
 and nobody takes a Prize card; the turns pass; the player plays `flier` again from the hand (a new
 Pokémon: no damage, unused, put into play this turn) and it uses Charge again, from the Bench, in a
 later turn of the same player. So the model lets a returned Pokémon write the store again; what it
@@ -261,9 +264,24 @@ theorem trace : WellFormed r0 ∧ Settled r0 ∧ Move r0 r1 ∧ Move r1 r2 ∧ M
 
 /-! ## To the deck; the opponent's Pokémon; no Pokémon left -/
 
+/-- **Witness: to the hand.** From `r0`, Fade Out is a legal move after which the player's hand holds
+exactly `flier` and its Fire Energy (the hand was empty), the Active Spot is empty, the Bench is as it
+was, and the defender has the attack's 1 damage counter. `flierA`'s 2 damage counters are on no
+Pokémon in play afterwards: its record left the Active Spot, and the hand holds cards, which carry no
+damage. -/
+theorem return_hand : WellFormed r0 ∧ Settled r0 ∧ ∃ g, Move r0 g ∧ g.cur.active = none ∧
+    g.cur.hand = [.pokemon flier, .energy .fire] ∧ g.cur.bench = r0.cur.bench ∧
+    g.opp.active.map InPlay.damage = some 1 := by
+  have hr : Run fadeOut.script r0 _ :=
+    .seq (.damage (.const 1 _) rfl) (.zone (w := .own) rfl (.monActive rfl (.hand _ _)))
+  exact ⟨r0_wf, r0_settled, _, Move.attackOpen (atk := fadeOut) rfl (.head _) (.nil _) rfl rfl
+    rfl rfl r0_settled hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl,
+    rfl, rfl, rfl, rfl⟩
+
 /-- **Witness: to the deck.** From `r0`, Jumping Shot is a legal move after which `flier` and its
 Fire Energy are on top of the player's deck (the shuffle read as any order, here this one), the
-Active Spot is empty, and the player has the same cards (`Reach.perm`). -/
+Active Spot is empty and the hand empty. (That every move keeps the multiset of the player's cards is
+the general `Reach.perm`; it is not restated here.) -/
 theorem return_deck : WellFormed r0 ∧ Settled r0 ∧ ∃ g, Move r0 g ∧ g.cur.active = none ∧
     g.cur.deck = [.pokemon flier, .energy .fire] ++ deck3 ∧ g.cur.hand = [] := by
   have hr : Run jump.script r0 _ :=
@@ -332,20 +350,64 @@ theorem z0_settled : Settled z0 :=
   settled_of rfl rfl (show 2 < 10 by decide) (show 0 < 10 by decide) (fun p hp => by cases hp)
     (fun p hp => by cases hp)
 
-/-- **Witness: a player who returns their only Pokémon loses** at the batch step that follows (the
-rulebook's "If your opponent doesn't have any more Pokémon in play, you win the game!", 2026 p. 7;
-read at the batch step, as "has no Benched Pokémon to replace their Active Pokémon if it is Knocked
-Out (or otherwise removed from play)", p. 21). The first player (`curIsFirst`) moves; the outcome is
-a win for the second player (`Outcome.win false`). -/
-theorem no_pokemon_loses : WellFormed z0 ∧ Settled z0 ∧ ∃ g g', Move z0 g ∧ g.cur.active = none ∧
-    g.cur.bench = [] ∧ Move g g' ∧ g'.winner = some (.win false) := by
+/-- After Fade Out from `z0`: the player's only Pokémon is in the hand. -/
+def z1 : GameState :=
+  ({ z0 with
+      cur := { z0.cur with active := none, hand := [.pokemon flier, .energy .fire] },
+      opp := { z0.opp with active := some { InPlay.ofBasic big with damage := 1 } } } : GameState).afterAttack
+    .none false
+
+theorem z0_z1 : Move z0 z1 := by
   have hr : Run fadeOut.script z0 _ :=
     .seq (.damage (.const 1 _) rfl) (.zone (w := .own) rfl (.monActive rfl (.hand _ _)))
   have m : Move z0 _ := Move.attackOpen (atk := fadeOut) rfl (.head _) (.nil _) rfl rfl rfl rfl
     z0_settled hr rfl (fun h => nomatch h) rfl (HitTrig.exists_nil hr rfl) (.nil _) rfl
-  exact ⟨z0_wf, z0_settled, _, _, m, rfl, rfl,
-    Move.knockOuts_of_nil (.won (fun h => absurd ((GameState.calm_iff _).1 h) (by decide))
-      (by decide)) rfl, rfl⟩
+  exact m
+
+/-- **Witness: a player who returns their only Pokémon loses** at the batch step that follows (the
+rulebook's "If your opponent doesn't have any more Pokémon in play, you win the game!", 2026 p. 7;
+read at the batch step, as "has no Benched Pokémon to replace their Active Pokémon if it is Knocked
+Out (or otherwise removed from play)", p. 21). From `z0` (proved `WellFormed` and `Settled`) Fade Out
+leaves the first player (`curIsFirst`) with no Pokémon in play (`z1`), and **every** move from `z1` is
+the batch step, whose result is the check `z1.koStep`, a win for the second player
+(`Outcome.win false`). -/
+theorem no_pokemon_loses : WellFormed z0 ∧ Settled z0 ∧ Move z0 z1 ∧ z1.cur.active = none ∧
+    z1.cur.bench = [] ∧ (∃ g', Move z1 g') ∧
+    ∀ g', Move z1 g' → g' = z1.koStep ∧ g'.winner = some (.win false) := by
+  have hwin : z1.koStep.winner = some (.win false) := by decide
+  have hnc : ¬ Calm z1 := fun h => absurd ((GameState.calm_iff _).1 h) (by decide)
+  refine ⟨z0_wf, z0_settled, z0_z1, rfl, rfl,
+    ⟨_, Move.knockOuts_of_nil (.won hnc (by rw [hwin]; exact Option.some_ne_none _)) rfl⟩, ?_⟩
+  intro g' hm
+  rcases Move.after_attack_passTurn hm rfl rfl with ⟨g₁, l, hk, hl, hf⟩ | ⟨hb, -, -⟩ | ⟨_, b, _, _, _, _, _, _, _, _, _, _, _, hb, _⟩
+  · have hg₁ : g₁ = z1.koStep := by
+      cases hk with
+      | won => rfl
+      | go _ hw => rw [hwin] at hw; cases hw
+    subst hg₁
+    have hl' : l = [] := by
+      rw [GameState.batchTrigs_of_won (by rw [hwin]; exact Option.some_ne_none _)] at hl
+      exact List.Perm.eq_nil hl
+    subst hl'
+    cases hf
+    exact ⟨rfl, hwin⟩
+  · exact absurd hb.1 (by decide)
+  · have : z1.cur.active = none := rfl
+    rw [this] at hb; cases hb
+
+/-- **A defender returned from play fires no `damaged` trigger**: if the opponent's Active Spot is empty
+when the attack's resolution ends, the attack's `damaged` triggers are none, whatever the damage step
+did (`HitTrig.fire` takes the triggers of the Pokémon in the opponent's Active Spot at the end of the
+resolution, `optTrigs .damaged none = []`). Inside an attack no primitive puts a Pokémon into the
+opponent's empty Active Spot (`switch` needs an Active Pokémon; argued from the `Run` constructors, not
+stated as a theorem), so a `returnPokemon .opp .active` leaves it empty to the end. -/
+theorem _root_.Pokemon.HitTrig.nil_of_empty {atk : Attack} {g g' : GameState} {l : List Ability}
+    (h : HitTrig atk g g' l) (he : g'.opp.active = none) : l = [] := by
+  cases h with
+  | quiet => rfl
+  | fire _ hl =>
+      rw [he] at hl
+      exact List.Perm.eq_nil hl
 
 /-! ## General statements, every resolution -/
 
@@ -404,7 +466,11 @@ Every definition MV15 changed differs from its old form only on effects that con
 `returnPokemon`, and the five move constructors that gained the premise `Effect.retFree` have exactly
 their old premises in a game none of whose cards has such an effect (`GameState.RetFree`, kept by play:
 `Reach.retFree`). The three new `ZStep` constructors have the effect index `returnPokemon _ _ _`, so no
-resolution of an effect without it uses them. -/
+resolution of an effect without it uses them (`ZStep.not_return`). `Move.attack` reads three changed
+definitions (`Attack.wf`, `Attack.lockSet`, `Attack.against`), equal to their old forms for an attack
+with no return (`attack_old`), and every attack of such a game has none (`attack_retFree`). This is
+proved in pieces: no copy of the pre-MV15 `Move`, `Run`, `ZStep` was made, so there is no single
+equivalence theorem. -/
 
 /-- No effect of the card (a Trainer's effect, any script of its or a granted Ability, any attack's
 effect) contains `returnPokemon`. -/
@@ -549,8 +615,8 @@ theorem spares_old : ∀ {e : Effect}, e.retFree = true → e.spares = sparesOld
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
   | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
 
-/-- `Effect.shielded` on an effect with no return is the same effect as before milestone MV15 on that
-effect: the new case maps only `returnPokemon .opp .active _`, and shielding keeps `retFree`. -/
+/-- Shielding keeps `retFree` (an effect with no return shields to one with none). That the shielded
+effect is the pre-MV15 one is `shielded_old`. -/
 theorem shielded_retFree (e : Effect) : e.retFree = true → e.shielded.retFree = true := by
   induction e with
   | ite t a b iha ihb =>
@@ -617,5 +683,127 @@ theorem ownFree_old (e : Effect) : e.retFree = true → e.ownFree = ownFreeOld e
   | look w _ _ _ i => intro _; cases w <;> cases i <;> rfl
   | hitBy w sp => intro _; cases w <;> cases sp <;> rfl
   | _ => intro _; rfl
+
+/-- `Effect.shielded` before milestone MV15 (copied from d6cb457). -/
+def shieldedOld : Effect → Effect
+  | .counters _ => .skip
+  | .inflict _ => .skip
+  | .poisonUp _ => .skip
+  | .scale _ _ => .skip
+  | .switch .opp => .skip
+  | .mark .opp _ => .skip
+  | .color .opp _ => .skip
+  | .linger .opp _ (.lock .attack) => .skip
+  | .linger .opp _ (.lock .retreat) => .skip
+  | .linger .opp _ (.weaken _) => .skip
+  | .linger .opp _ (.expose _) => .skip
+  | .discardEnergy .opp .active _ _ => .skip
+  | .discardTools .opp .active => .skip
+  | .attach .opp _ _ .active _ => .skip
+  | .moveEnergy .opp _ => .skip
+  | .returnEnergy .opp .active _ _ _ => .skip
+  | .shiftEnergy .opp _ _ _ _ _ => .skip
+  | .hitBy .opp .active _ _ _ _ _ => .skip
+  | .dumpCounters _ .active => .skip
+  | .ite t a b => .ite t (shieldedOld a) (shieldedOld b)
+  | .seq a b => .seq (shieldedOld a) (shieldedOld b)
+  | .choice a b => .choice (shieldedOld a) (shieldedOld b)
+  | .iter a => .iter (shieldedOld a)
+  | e => e
+
+/-- **`Effect.shielded` is the pre-MV15 function on effects with no return.** -/
+theorem shielded_old (e : Effect) : e.retFree = true → e.shielded = shieldedOld e := by
+  induction e with
+  | ite t a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.shielded, shieldedOld, iha h.1, ihb h.2]
+  | seq a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.shielded, shieldedOld, iha h.1, ihb h.2]
+  | choice a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.shielded, shieldedOld, iha h.1, ihb h.2]
+  | iter a iha =>
+      intro h; simp only [Effect.retFree] at h
+      simp only [Effect.shielded, shieldedOld, iha h]
+  | returnPokemon => intro h; simp [Effect.retFree] at h
+  | switch w => intro _; cases w <;> rfl
+  | mark w => intro _; cases w <;> rfl
+  | color w => intro _; cases w <;> rfl
+  | linger w sl m =>
+      intro _
+      cases w <;> cases m with
+      | lock l => cases l <;> rfl
+      | _ => rfl
+  | discardEnergy w sp => intro _; cases w <;> cases sp <;> rfl
+  | discardTools w sp => intro _; cases w <;> cases sp <;> rfl
+  | attach w _ _ sp => intro _; cases w <;> cases sp <;> rfl
+  | moveEnergy w => intro _; cases w <;> rfl
+  | returnEnergy w sp => intro _; cases w <;> cases sp <;> rfl
+  | shiftEnergy w => intro _; cases w <;> rfl
+  | hitBy w sp => intro _; cases w <;> cases sp <;> rfl
+  | dumpCounters _ sp => intro _; cases sp <;> rfl
+  | _ => intro _; rfl
+
+/-- `Effect.switchSafe` read with the pre-MV15 `switchesOwn` and `ownFree`. -/
+def switchSafeOld : Effect → Bool
+  | .ite _ a b => switchSafeOld a && switchSafeOld b
+  | .seq a b => switchSafeOld a && switchSafeOld b && (!switchesOwnOld a || ownFreeOld b)
+  | .choice a b => switchSafeOld a && switchSafeOld b
+  | .iter a => switchSafeOld a && !switchesOwnOld a
+  | _ => true
+
+/-- **`Effect.switchSafe` is the pre-MV15 predicate on effects with no return.** -/
+theorem switchSafe_old (e : Effect) : e.retFree = true → e.switchSafe = switchSafeOld e := by
+  induction e with
+  | ite t a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.switchSafe, switchSafeOld, iha h.1, ihb h.2]
+  | seq a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.switchSafe, switchSafeOld, iha h.1, ihb h.2, switchesOwn_old h.1,
+        ownFree_old b h.2]
+  | choice a b iha ihb =>
+      intro h; simp only [Effect.retFree, Bool.and_eq_true] at h
+      simp only [Effect.switchSafe, switchSafeOld, iha h.1, ihb h.2]
+  | iter a iha =>
+      intro h; simp only [Effect.retFree] at h
+      simp only [Effect.switchSafe, switchSafeOld, iha h, switchesOwn_old h]
+  | _ => intro _; rfl
+
+/-- An attack whose effect has no return has a script with none. -/
+theorem script_retFree {atk : Attack} (h : atk.effect.retFree = true) : atk.script.retFree = true := by
+  unfold Attack.script; split
+  · exact h
+  · simp only [Effect.retFree, h, Bool.and_self]
+
+/-- **The premises of `Move.attack` that MV15 changed in meaning are the pre-MV15 ones** for an attack
+with no return: well-formedness (`Attack.wf`, through `switchSafe`), the lock it sets
+(`Attack.lockSet`, through `switchesOwn`), and the script resolved against a protected defender
+(`Attack.against`, through `shielded`). -/
+theorem attack_old {atk : Attack} (h : atk.effect.retFree = true) :
+    atk.wf = (atk.effect.oneHit && (decide (atk.damage = 0) || atk.effect.hitFree) &&
+      switchSafeOld atk.effect) ∧
+    atk.lockSet = (if switchesOwnOld atk.script then .none else atk.selfLock) ∧
+    (∀ b : Bool, (atk.against b).script = cond b (shieldedOld atk.script) atk.script) := by
+  refine ⟨by simp only [Attack.wf, switchSafe_old _ h], by
+    simp only [Attack.lockSet, switchesOwn_old (script_retFree h)], fun b => ?_⟩
+  rw [Attack.against_script, shielded_old _ (script_retFree h)]
+
+/-- **No resolution of an effect with no return uses the three MV15 zone steps**: they are the
+steps of `returnPokemon` (`ZStep.monActive`, `monBench`, `monNone` have that index), so a zone step of
+an effect with `retFree` is one of the pre-MV15 constructors. `Run` gained no constructor. -/
+theorem ZStep.not_return {e : Effect} {s s' : PlayerState} (_h : ZStep e s s')
+    (hr : e.retFree = true) : ∀ w sp d, e ≠ .returnPokemon w sp d := by
+  rintro w sp d rfl; simp [Effect.retFree] at hr
+
+/-- **Every attack of a game with no return card has no return** (the attack is on a card of the game:
+`InPlay.attack_mem`). -/
+theorem attack_retFree {g : GameState} {a : InPlay} {atk : Attack} (hR : g.RetFree)
+    (ha : g.cur.active = some a) (hm : atk ∈ a.attacks) : atk.effect.retFree = true := by
+  obtain ⟨c, hc, hmc⟩ := InPlay.attack_mem hm
+  have := hR c (GameState.mem_allCards_of_cur_active ha hc)
+  simp only [Card.retFree, Bool.and_eq_true, List.all_eq_true] at this
+  exact this.2 atk hmc
 
 end Pokemon.Return

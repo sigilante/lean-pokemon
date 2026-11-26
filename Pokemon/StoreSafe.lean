@@ -74,8 +74,9 @@ The writers are:
   being no effect that returns a Pokémon in play to the hand or deck before the turn's attack: a
   Pokémon leaves play then only by a Knock Out, which costs a Prize card. Since milestone MV15 an
   attack may return a Pokémon (`Effect.returnPokemon`), which can raise the potential
-  (`Return.return_raises_abPot`); every other move that resolves an effect refuses one
-  (`Effect.retFree`), and the attack ends the turn, after which the potential is not read until it
+  (`Return.return_raises_abPot`); every other move that resolves an effect refuses one (the
+  premise `Effect.retFree` of `Move.item`, `supporter`, `stadiumUse`, `ability`, `onPlay`; triggers
+  through `Effect.trigOk`, which excludes it, `Effect.retFree_of_trigOk`), and the attack ends the turn, after which the potential is not read until it
   is counted afresh for the next turn (`Move.abPot_le` has the hypothesis `g'.attacked = false`).
 * Stadium effects (milestone M5). The player to move uses the Stadium in play at most once
   (`GameState.stadiumUsed`) and plays at most one Stadium (`GameState.stadiumPlayed`), whose effect

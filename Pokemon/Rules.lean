@@ -1383,10 +1383,22 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Departures: the promotion after a return of the player's own Active Pokémon raises no `movedUp`
   event (`GameState.promoUp` reads a removal by Knock Out), where print may count the promoted Pokémon
   as moved from the Bench to the Active Spot in its owner's turn (importer caveat `returnPromote`,
-  both; no rule found); a `damaged` trigger of an opponent's Pokémon that the same attack damaged and
-  then returned still fires (`HitTrig` reads the hit, not the holder's place afterwards; no imported
-  card does both); per-player lingering modifiers stay with the player (as for every lingering
-  modifier, `perPokemon`). Not modelled: "that Pokémon" / "those Pokémon" chosen in another sentence
+  both; no rule found). A `damaged` trigger of an opponent's Active Pokémon that the same attack
+  damaged and then returned from play does not fire: the attack's hit is recorded (`HitRun`), but
+  the triggers are those of the Pokémon in the opponent's Active Spot when the resolution ends, and
+  that spot stays empty to the end of the attack (`HitTrig.nil_of_empty`; nothing in an attack fills
+  it). Print agrees under the reading that an Ability of a Pokémon that has left play does not work
+  (the printed exception "even if this Pokémon is Knocked Out" covers Knock Outs only); the rulebook
+  has no rule on it, and no imported card damages and then returns the Defending Pokémon. Per-player
+  lingering modifiers stay with the player (as for every lingering modifier, `perPokemon`). An
+  attack that, after `returnPokemon .own .active`, tests the player's own Active Pokémon (`ite` with
+  `Test.onOwn`, which needs an Active Pokémon to read), or that has a damage step after `returnPokemon
+  .opp .active`, passes `Attack.wf` (`switchSafe` forbids only acts on the own Active Pokémon after the
+  return, through `ownFree`) but has no resolution, so no `Move` makes it: fewer behaviours than print
+  would give such a text; none of the ten imported return attacks has anything after the return (the
+  generated terms are `returnPokemon` or `choice (returnPokemon …) skip`, the base damage first);
+  counts that read the player's own Active Pokémon after a self-return (`Count.energy .own`, …) read 0.
+  Not modelled: "that Pokémon" / "those Pokémon" chosen in another sentence
   (Shiftry, Sylveon, Sylveon ex), the Item and Ability forms, devolution, returns of a Pokémon's
   top card with its attached cards discarded (Team Rocket's Crobat ex), and the Knock Out replacement
   "put it into your hand instead of the discard pile" (Gengar me3-50);
