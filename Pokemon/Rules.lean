@@ -961,7 +961,8 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Prize changes; 44 cards of the 67 after-event triggers are of other shapes), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
-  (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45); Lycanroc sv9-85's "attach up to 2
+  (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45; excluded by `Effect.retFree` since
+  milestone MV15, which allows returns in attacks only); Lycanroc sv9-85's "attach up to 2
   Spiky Energy cards" is expressible since milestone MV5 (`Filter.named` reads a Special Energy
   card's name). The finiteness results cover activated and on-play Abilities:
   `Reach.finite` with tame, low-constant Ability effects, `StoreSafe.xfinite` under clause 4
@@ -1358,10 +1359,37 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Active Pokémon (`Effect.ownFree`), and the attacker at a damage step is the same Pokémon (top
   card and the cards under it) as when the attack began, its attached Energy possibly changed
   (`Attack.attacker_at_hit`, restated by milestone MV: before it, the whole card list was kept).
-  Absent: returning a Pokémon in play and its cards to the hand or deck (Scoop Up Cyclone, Abra,
-  Dudunsparce, Misty's Psyduck in S10), devolution, evolution by effect, switching a card in play
+  Absent: returning a Pokémon in play and its cards to the hand or deck outside an attack (Scoop Up
+  Cyclone, Abra, Dudunsparce, Misty's Psyduck in S10; in attacks since milestone MV15, next item),
+  devolution, evolution by effect, switching a card in play
   with one in the discard pile (Transformation Tome, Ogre's Mask), Prize-card moves other than
   taking them, the Lost Zone, and "attach to each of" a varying set;
+* return from play (milestone MV15, survey S29, `Pokemon/Return.lean`): `Effect.returnPokemon w sp d`
+  puts one of the `w` player's Pokémon at `sp` (the Active Pokémon, or one Benched Pokémon chosen when
+  the effect resolves) with its cards (`InPlay.cardList`: top card, the cards under it, attached Energy
+  and Tools) at `d` (hand, deck, discard pile); its damage counters, Special Conditions, markers and
+  attack locks leave the game's state with its `InPlay` record. **Attacks only**: `Effect.retFree` is a
+  premise of `Move.item`, `Move.supporter`, `Move.stadiumUse`, `Move.ability` and `Move.onPlay`, and the
+  trigger fragment excludes it. So the Item form (Scoop Up Cyclone sv6-162) and the mid-turn Ability
+  forms (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45) are not expressible (refused); a
+  return outside an attack would raise the potential `GameState.abPot` on which the Ability bound of
+  `StoreSafe` rests (`Return.return_raises_abPot`, `Return.trun_raises_abPot`). An Active Spot a
+  return empties is filled by the batch step that follows (`KOBatch`: no Knock Out, no Prize card; the
+  promoted Pokémon a nondeterministic choice, which covers its owner's; rulebook 2026 p. 14 says only
+  that "The player whose Pokémon was Knocked Out chooses a new Active Pokémon from their Bench", and
+  p. 21 speaks of an Active Pokémon "Knocked Out (or otherwise removed from play)"); a player left
+  with no Pokémon in play loses there (`winWays`; 2026 p. 7: "If your opponent doesn't have any more
+  Pokémon in play, you win the game!", read at the batch step, as p. 21 reads the replacement).
+  Departures: the promotion after a return of the player's own Active Pokémon raises no `movedUp`
+  event (`GameState.promoUp` reads a removal by Knock Out), where print may count the promoted Pokémon
+  as moved from the Bench to the Active Spot in its owner's turn (importer caveat `returnPromote`,
+  both; no rule found); a `damaged` trigger of an opponent's Pokémon that the same attack damaged and
+  then returned still fires (`HitTrig` reads the hit, not the holder's place afterwards; no imported
+  card does both); per-player lingering modifiers stay with the player (as for every lingering
+  modifier, `perPokemon`). Not modelled: "that Pokémon" / "those Pokémon" chosen in another sentence
+  (Shiftry, Sylveon, Sylveon ex), the Item and Ability forms, devolution, returns of a Pokémon's
+  top card with its attached cards discarded (Team Rocket's Crobat ex), and the Knock Out replacement
+  "put it into your hand instead of the discard pile" (Gengar me3-50);
 * windows (milestone MV6, survey S19 §A, `Pokemon/Look.lean`): `Effect.look w src f q i rest` takes
   the whole window `src.get` off its source at once (the top or bottom `n` cards of the deck as they
   are when the effect starts, `Src.bottom` being new; or a whole deck, hand or discard pile), takes

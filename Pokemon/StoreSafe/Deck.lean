@@ -1361,9 +1361,13 @@ then rise, but the opponent has taken their last Prize card and the game is over
 (`KOBatch.abPot_le` holds when the game goes on), so the per-turn invariant asks nothing of the
 potential of a finished game (`TInv.pot`, `TInv.turn`). So the uses of these Abilities in one turn are at most the
 potential at the start of the turn, which is at most `potBound` of the number of cards. The bound
-rests on the model having no effect that returns a Pokémon in play to the hand or deck (a Pokémon
-leaves play only by a Knock Out, which costs a Prize card); with such an effect (Scoop Up Cyclone)
-the same Pokémon card could re-enter play and use or trigger its Ability again. -/
+rests on the model having no effect that returns a Pokémon in play to the hand or deck before the
+turn's attack (a Pokémon leaves play then only by a Knock Out, which costs a Prize card); with such
+an effect (Scoop Up Cyclone) the same Pokémon card could re-enter play and use or trigger its Ability
+again in the same turn. Since milestone MV15 returns exist in attacks only (`Effect.returnPokemon`;
+`Effect.retFree` is a premise of every other move that resolves an effect), so the lemmas below that
+a step does not raise the potential take `Effect.retFree` (`ZStep.abPot_le`, `Run.abPot_le`,
+`TRun.abPot_le`), and `Move.abPot_le` the hypothesis that the move ends before the turn's attack. -/
 
 /-- The weight of a Pokémon in play in the potential: 1 if it has not used an Ability this turn,
 2 more if it can still evolve this turn. -/

@@ -71,8 +71,12 @@ The writers are:
   which no move of the turn raises while the game goes on (a batch Knock Out step that ends the
   game can raise it, milestone batch-KO) and which is at most `potBound` of the number of cards; each
   such use writes and recycles at most `Q` (`Ability.q`, `cardsAbQ`). The bound rests on there
-  being no effect that returns a Pokémon in play to the hand or deck: a Pokémon leaves play only
-  by a Knock Out, which costs a Prize card.
+  being no effect that returns a Pokémon in play to the hand or deck before the turn's attack: a
+  Pokémon leaves play then only by a Knock Out, which costs a Prize card. Since milestone MV15 an
+  attack may return a Pokémon (`Effect.returnPokemon`), which can raise the potential
+  (`Return.return_raises_abPot`); every other move that resolves an effect refuses one
+  (`Effect.retFree`), and the attack ends the turn, after which the potential is not read until it
+  is counted afresh for the next turn (`Move.abPot_le` has the hypothesis `g'.attacked = false`).
 * Stadium effects (milestone M5). The player to move uses the Stadium in play at most once
   (`GameState.stadiumUsed`) and plays at most one Stadium (`GameState.stadiumPlayed`), whose effect
   is then usable once more; both flags are cleared at the end of the turn. So a turn has at most
