@@ -863,7 +863,8 @@ inductive Effect where
   carries them). No Knock Out, no Prize card. "Put this Pokémon and all attached cards into your hand"
   (Emolga me4-30) is `returnPokemon .own .active .hand`; "Shuffle this Pokémon and all attached cards
   into your deck" (Lokix me2-10), `returnPokemon .own .active .shuffle`; "Shuffle 1 of your
-  opponent's Benched Pokémon and all attached cards into their deck" (Illumise sv6-10),
+  opponent's Benched Pokémon and all attached cards into their deck" (Illumise sv6-10, which the
+  importer refuses for its first-turn text; no imported card uses this form),
   `returnPokemon .opp .bench .shuffle`; "Put 1 of your Benched Pokémon and all attached cards into
   your hand" (Swoobat rsv10pt5-37), `returnPokemon .own .bench .hand`. With `bench` and an empty
   Bench, nothing; with `active` and an empty Active Spot, no resolution. An Active Spot it empties is
@@ -1418,7 +1419,7 @@ of today's Standard.
   this Pokémon moves from your Bench to the Active Spot, you may …" (Yanmega ex sv10-3) and "Once
   during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this
   Ability. …" (Clawitzer me1-38); both expressible (witnesses with test cards in `Pokemon/Moved.lean`;
-  since importer 0.15.0 Clawitzer is imported with caveats, Yanmega ex stays refused for an attack sentence). The "once during your turn" limit is part of the event: the holder's
+  since importer 0.15.0 Clawitzer is imported with caveats, and since importer 0.18.0 Yanmega ex, whose attack sentence became expressible; an earlier version of this note said it stayed refused). The "once during your turn" limit is part of the event: the holder's
   single `InPlay.used` flag (shared with activated Abilities; exact only for a holder whose one
   Ability is this trigger, Known gaps) is set when the event marks it, and a holder with the flag
   set is not marked. Raised for the player to move's own Pokémon, in their turn: by a retreat

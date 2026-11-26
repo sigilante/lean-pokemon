@@ -133,9 +133,10 @@ CAVEATS = {
               "attack has been made': Knock Outs by damage counters the attack placed, by later rounds of the check, "
               "and in the check after a failed Confused attempt also fire it (Known gaps, triggered Abilities, M8b)",
     'trigAttacker': "'the Attacking Pokémon' is the opponent's Active Pokémon when the trigger resolves: if the attack "
-                    "switched its attacker out ('damaged'), or the attacker was Knocked Out by the same check "
-                    "('Knocked Out'), the effect falls on the new Active Pokémon instead of the attacker or nothing "
-                    "(Known gaps, triggered Abilities, M8b)",
+                    "switched its attacker out ('damaged'), or the attacker was Knocked Out by the same check, or "
+                    "(importer 0.22.0) returned from play by its own attack ('Knocked Out'), the effect falls on the "
+                    "new Active Pokémon instead of the attacker or nothing; a 'damaged' trigger after the attacker "
+                    "returned itself does nothing (`Fire.vacant`) (Known gaps, triggered Abilities, M8b)",
     'koAttackWide': "'Knocked Out by damage from an attack during your opponent's last turn' is read as 'Knocked Out by the "
                     "Knock Out check after the turn's attack' (`Count.koLast w true`): Knock Outs by damage counters an "
                     "attack's effect placed also count (Known gaps, one-turn history, milestone MV2)",
@@ -431,7 +432,7 @@ CAVEAT_DIRECTION = {
                                    # HP may fire a trigger the printed card would not (allows more)
     'trigKO': 'allows more',       # more Knock Outs fire the trigger than the printed "by damage from an attack"
     'trigAttacker': 'both',        # a different Pokémon gets the effect: the printed outcome is not among the
-                                   # model's when the attacker was switched out or Knocked Out
+                                   # model's when the attacker was switched out, Knocked Out or returned
     'koAttackWide': 'both',        # the test is true in more states: the printed result of a false test (no bonus)
                                    # is then absent, and the model's bonus is an outcome the printed card lacks
     'koCheckup': 'forbids some',   # if a Checkup Knock Out counts in print, the model's test is false where it is true

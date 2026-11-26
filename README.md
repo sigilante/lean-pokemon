@@ -203,7 +203,7 @@ two events for the player's own Pokémon, "Once during your turn, when this Pok�
 Bench to the Active Spot" and "… from the Active Spot to your Bench" (`TrigEvent.movedUp`,
 `TrigEvent.movedDown`, `TrigEvent` now 5 constructors; Yanmega ex sv10-3 and Clawitzer me1-38
 expressible (the witnesses use test cards; since importer 0.15.0 Clawitzer is imported, on the Bench a superset, and
-Yanmega ex is refused for an attack sentence): a
+since importer 0.18.0 Yanmega ex, whose attack sentence became expressible): a
 retreat, a switch of the player's own Active Pokémon, and the promotion of
 the player's Pokémon after a Knock Out of their Active Pokémon in their own turn mark the Pokémon
 that moved (`InPlay.noteMove`: the `owe` mark, now on either side, and the "once during your turn"
@@ -571,7 +571,13 @@ definitions that `Move.attack` reads have their old values (`Return.attack_old`:
 also `spares_old`, `ownFree_old`, with `switchesOwnOld`, `ownFreeOld`, `sparesOld`, `shieldedOld`,
 `switchSafeOld` copied from the pre-MV15 sources); and no zone step of an effect with no return is one
 of the three new constructors (`Return.ZStep.not_return`; `Run` gained no constructor). The trigger
-fragment `Effect.trigOk` is unchanged. Witnesses in
+fragment `Effect.trigOk` is unchanged. A `damaged` trigger aimed at "the Attacking Pokémon" after the
+attacker returned itself finds that Active Spot empty; it then does nothing, mandatory or not
+(`Fire.vacant`, a fourth constructor of `Fire`; before it no `Move` made such an attack against a
+mandatory trigger, `Return.fireOld_stuck`); from a state whose player to move has an Active Pokémon,
+`Fire` is the old relation (`Return.fire_old`, against a copy `Return.FireOld`), witnesses
+`Return.fade_vs_spikes` and `Return.jab_vs_spikes`. A `koByAttack` trigger after such a return
+acts on the promoted Pokémon (Known gaps, triggered Abilities; caveat `trigAttacker`). Witnesses in
 `Pokemon/Return.lean`: from a well-formed, settled start, a Pokémon uses its once-per-turn Ability (a
 stored bonus), returns itself to the hand by its attack (with its Energy; its damage counters on no Pokémon in play), the
 Benched Pokémon is promoted with no Prize card, the turns pass, and the card is played again and uses its

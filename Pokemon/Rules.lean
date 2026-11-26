@@ -982,8 +982,9 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   check; `koByAttack` in the batch move, after the batch step. Departures: a trigger's steps get no
   Knock Out check between them (`TRun` checks after each step of a Trainer effect); "the
   Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves (for a
-  `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check its
-  replacement is hit); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
+  `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check, or
+  (milestone MV15) returned from play by its own attack, its replacement is hit; a `damaged` trigger
+  after the attacker returned itself finds its Active Spot empty and does nothing, `Fire.vacant`); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
   while the turn's attack has been made" (Knock Outs by the attack's damage counters and by later
   rounds of the check included); the failed Confused attempt (`Move.attackConfused`) also sets
   `GameState.attacked`, so in the check after it a Knock Out of an opponent's Pokémon fires its
@@ -1127,9 +1128,9 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic Water Energy
   cards from your hand to this Pokémon." (Clawitzer me1-38, expressible; "this
   Pokémon" on the Bench is a Benched Pokémon chosen at each step when the trigger resolves,
-  `SelfOp.atS`, so the two Energy may go to two different Benched Pokémon: a superset). Since importer 0.15.0 Clawitzer is imported, with caveats (survey S11); Yanmega ex is
-  still refused, for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your
-  Benched Pokémon"). The witnesses are test cards in `Pokemon/Moved.lean` (`Moved.yanC`, with one
+  `SelfOp.atS`, so the two Energy may go to two different Benched Pokémon: a superset). Since importer 0.15.0 Clawitzer is imported, with caveats (survey S11); Yanmega ex was
+  refused for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your Benched
+  Pokémon") until importer 0.18.0 (`shiftEnergy`), and is imported with caveats since. The witnesses are test cards in `Pokemon/Moved.lean` (`Moved.yanC`, with one
   Grass Energy, and `Moved.clawC`, with one Water Energy), not the printed cards. The triggers
   belong to the player to move and resolve from that player's side (`FireMine`: `Fire` on the
   exchanged state). Raised where the
@@ -1368,7 +1369,13 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   puts one of the `w` player's Pokémon at `sp` (the Active Pokémon, or one Benched Pokémon chosen when
   the effect resolves) with its cards (`InPlay.cardList`: top card, the cards under it, attached Energy
   and Tools) at `d` (hand, deck, discard pile); its damage counters, Special Conditions, markers and
-  attack locks leave the game's state with its `InPlay` record. **Attacks only**: `Effect.retFree` is a
+  attack locks leave the game's state with its `InPlay` record. Both (that the Evolution cards under
+  it go with it, and that its damage counters and other effects end) are readings with no rule
+  behind them (the rulebook is silent on returns; S29 §2 (c)); they apply to all ten imported return
+  attacks, the two imported as exact (Swoobat, Chimecho) included: the importer marks them exact
+  because these readings are the only ones the physical game allows (no card is left in play to
+  hold the counters or to sit on), unlike a reading between two possible orders, which carries a
+  caveat (`thresholdRead`, milestone MV14). **Attacks only**: `Effect.retFree` is a
   premise of `Move.item`, `Move.supporter`, `Move.stadiumUse`, `Move.ability` and `Move.onPlay`, and the
   trigger fragment excludes it. So the Item form (Scoop Up Cyclone sv6-162) and the mid-turn Ability
   forms (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45) are not expressible (refused); a
@@ -1383,7 +1390,10 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Departures: the promotion after a return of the player's own Active Pokémon raises no `movedUp`
   event (`GameState.promoUp` reads a removal by Knock Out), where print may count the promoted Pokémon
   as moved from the Bench to the Active Spot in its owner's turn (importer caveat `returnPromote`,
-  both; no rule found). A `damaged` trigger of an opponent's Active Pokémon that the same attack
+  both; no rule found). Concretely: Lokix me2-10 uses Jumping Shot and shuffles itself into the deck;
+  the batch step promotes a Benched Yanmega ex sv10-3 (imported since 0.18.0), whose "when this
+  Pokémon moves from your Bench to the Active Spot" trigger (Buzzing Boost) print may fire and the
+  model does not. A `damaged` trigger of an opponent's Active Pokémon that the same attack
   damaged and then returned from play does not fire: the attack's hit is recorded (`HitRun`), but
   the triggers are those of the Pokémon in the opponent's Active Spot when the resolution ends, and
   that spot stays empty to the end of the attack (`HitTrig.nil_of_empty`; nothing in an attack fills
@@ -2149,8 +2159,11 @@ after it, not after each of its steps as for a Trainer card (`TRun`); the effect
 read no damage (`Effect.trigOk`), so the only difference is that a later step can still act on a
 Pokémon an earlier step brought to its HP, which is what a printed sentence that is one effect does.
 "The Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves: for a
-`koByAttack` trigger after the promotions, so if the attacker was Knocked Out by the same check, the
-trigger acts on its replacement instead of on nothing. "Knocked Out by damage from an attack" is
+`koByAttack` trigger after the promotions, so if the attacker was Knocked Out by the same check, or
+(milestone MV15) returned from play by its own attack (`Effect.returnPokemon .own .active`), the
+trigger acts on its replacement instead of on nothing. A `damaged` trigger resolves before any
+promotion: after such a return it finds the attacker's Active Spot empty and, if its effect has no
+resolution there, does nothing, mandatory or not (`Fire.vacant`, milestone MV15 fix round 2). "Knocked Out by damage from an attack" is
 read as "Knocked Out by a check while the turn's attack has been made": it includes Knock Outs by
 damage counters the attack placed and by later rounds of the check. "Is damaged by an attack" is
 decided on the damage step (`HitRun`), with the reading and the corner listed in the Known gaps. -/

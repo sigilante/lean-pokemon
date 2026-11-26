@@ -1158,7 +1158,9 @@ def GameState.swap (g : GameState) : GameState :=
 /-- **Resolving triggers** (milestone M8b): the triggers `l` of the opponent of the player to move,
 one after another, each with "this Pokémon" where the event leaves it (`TrigEvent.place`): its effect
 resolves on the exchanged state (`GameState.swap`) by `Run`, as a whole, and the state is exchanged
-back; an optional one (`AbilityUse.optional`, "you may") may be declined instead. -/
+back; an optional one (`AbilityUse.optional`, "you may") may be declined instead; and (milestone MV15)
+one whose effect has no resolution because the player to move's Active Spot is empty does nothing
+(`vacant`). -/
 inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → Prop where
   | nil (g : GameState) : Fire ev [] g g
   | run {ab : Ability} {l : List Ability} {g g₁ g₂ : GameState}
