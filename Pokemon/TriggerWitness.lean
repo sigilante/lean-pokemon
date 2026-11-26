@@ -87,6 +87,7 @@ theorem start_settled (opt : Bool) (pz : List Card) (hz : pz = two ∨ pz = one)
     Settled (start opt pz) := by
   rcases hz with rfl | rfl <;> cases opt <;> decide
 
+set_option maxHeartbeats 1000000 in
 /-- **A `damaged` trigger fires and Knocks Out the attacker with the Defending Pokémon.** The
 attack does 5 damage to `spiky`; its `spikes` trigger puts 3 damage counters on `striker`; after
 the attack both Active Pokémon are at their HP, and the batch Knock Out step must follow. -/

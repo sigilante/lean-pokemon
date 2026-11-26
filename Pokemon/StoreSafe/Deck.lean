@@ -16,6 +16,7 @@ def Mod.amt : Mod → Nat
   | .reduce n => n
   | .weaken n => n
   | .expose n => n
+  | .preventLe t => t
   | _ => 0
 
 /-- Does the modifier carry an amount (a damage bonus or reduction; since milestone MV6 also a
@@ -25,6 +26,7 @@ def Mod.isAmt : Mod → Bool
   | .reduce _ => true
   | .weaken _ => true
   | .expose _ => true
+  | .preventLe _ => true
   | _ => false
 
 theorem Mod.amt_of_not_isAmt {m : Mod} (h : m.isAmt = false) : m.amt = 0 := by
@@ -143,8 +145,9 @@ theorem Effect.amtAt_le_amt (e : Effect) (s : Slot) : e.amtAt s ≤ e.amt := by
 /-! ## Amounts in the stores -/
 
 /-- The amount in one turn's modifiers (since milestone MV6 the step-2 penalty and the step-5
-increase too). -/
-def Mods.amt (m : Mods) : Nat := m.bonus + m.reduce + m.minus + m.more
+increase too; since milestone MV14 the lingering damage threshold, `Mods.upto`, which a write raises
+by at most its constant, `Mods.amt_addMod`). -/
+def Mods.amt (m : Mods) : Nat := m.bonus + m.reduce + m.minus + m.more + m.upto
 
 /-- One slot of a store. -/
 def Store.at : Slot → Store → Mods
@@ -161,26 +164,34 @@ def GameState.slotAmt (s : Slot) (g : GameState) : Nat :=
 def GameState.storeTotal (g : GameState) : Nat :=
   g.slotAmt .now + g.slotAmt .next + g.slotAmt .after + g.slotAmt .always
 
-theorem Mods.amt_addMod (m : Mods) (x : Mod) : (m.addMod x).amt = m.amt + x.amt := by
+/-- A write adds at most its amount (milestone MV14: an inequality, since the threshold is merged by
+`max`; every other modifier adds exactly its amount, `Mods.amt_addMod_of`). -/
+theorem Mods.amt_addMod (m : Mods) (x : Mod) : (m.addMod x).amt ≤ m.amt + x.amt := by
   cases x with
   | bonus n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
   | reduce n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
-  | prevent => rfl
-  | lock l => cases l <;> rfl
-  | shield => rfl
+  | prevent => exact Nat.le_refl _
+  | lock l => cases l <;> exact Nat.le_refl _
+  | shield => exact Nat.le_refl _
   | weaken n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
   | expose n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
+  | preventLe t => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
+
+/-- A modifier with no amount leaves the amount unchanged. -/
+theorem Mods.amt_addMod_of (m : Mods) {x : Mod} (h : x.isAmt = false) : (m.addMod x).amt = m.amt := by
+  cases x <;> simp [Mod.isAmt] at h <;> first | rfl | (rename_i l; cases l <;> rfl)
 
 theorem Store.at_add (t : Store) (s s' : Slot) (x : Mod) :
     (t.add s x).at s' = if s = s' then (t.at s').addMod x else t.at s' := by
   cases s <;> cases s' <;> rfl
 
 theorem GameState.slotAmt_linger (g : GameState) (w : Whose) (s s' : Slot) (m : Mod) :
-    (g.updSide w fun p => { p with mods := p.mods.add s m }).slotAmt s' =
+    (g.updSide w fun p => { p with mods := p.mods.add s m }).slotAmt s' ≤
       g.slotAmt s' + (if s = s' then m.amt else 0) := by
+  have h1 := Mods.amt_addMod (g.cur.mods.at s') m
+  have h2 := Mods.amt_addMod (g.opp.mods.at s') m
   cases w <;> by_cases hs : s = s' <;>
-    simp only [GameState.updSide, GameState.slotAmt, Store.at_add, hs, ite_true, ite_false,
-      Mods.amt_addMod] <;> omega
+    simp only [GameState.updSide, GameState.slotAmt, Store.at_add, hs, ite_true, ite_false] <;> omega
 
 /-! ## Amounts on cards, and the discard piles -/
 
@@ -350,8 +361,9 @@ theorem Run.slot_nowrite {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @zone e w g s' hw hz => intro _ s; cases w <;> exact Nat.le_refl _
   | linger w s m g =>
       intro hw s'
-      rw [GameState.slotAmt_linger, Mod.amt_of_not_isAmt hw]
-      simp only [ite_self, Nat.add_zero]; exact Nat.le_refl _
+      have := GameState.slotAmt_linger g w s s' m
+      rw [Mod.amt_of_not_isAmt hw] at this
+      simp only [ite_self, Nat.add_zero] at this; exact this
   | _ => intro _ s; exact Nat.le_refl _
 
 /-- **One resolution of a loop-free effect adds at most `e.amtAt s` to slot `s`.** -/
@@ -394,8 +406,7 @@ theorem Run.slot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
   | @zone e w g s' hw hz => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | linger w s m g =>
       intro _ s'
-      rw [GameState.slotAmt_linger]
-      exact Nat.le_refl _
+      exact GameState.slotAmt_linger g w s s' m
   | _ => intro _ s; exact Nat.le_add_right _ _
 
 /-! ## Weights of discarded cards, and recycling (milestone MV) -/

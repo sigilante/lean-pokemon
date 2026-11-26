@@ -150,7 +150,7 @@ theorem bonusNow_cap (k : Nat) :
   refine ⟨?_, rfl, rfl, rfl⟩
   rw [Mods.cap_iff]
   exact ⟨show min (0 + (2 * k + 1)) (2 * k) = min (0 + (2 * k + 2)) (2 * k) by omega, rfl, rfl,
-    rfl, rfl, rfl, rfl, rfl, rfl⟩
+    rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-! ## Damage reduction breaks the cap -/
 
@@ -209,7 +209,7 @@ theorem tmax_red₀ {k : Nat} (hk : 3 ≤ k) : ∀ x ∈ (red₀ k).allCards, x.
   simp [red₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
     stadiumCardList, InPlay.cardList, InPlay.ofBasic] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp [Card.tmax, attacksTmax, abilitiesTmax, Effect.tmax, redItem, hitter, target, mon] <;> omega
+    simp [Card.tmax, Card.testMax, Card.thrMax, Card.statics, staticsThr, attacksTmax, abilitiesTmax, Effect.tmax, redItem, hitter, target, mon] <;> omega
 
 /-- **Damage reduction breaks every cap on the damage bonus.** For every `k ≥ 3` there is a
 well-formed, `Settled` start with no damage reduction in effect, every HP (and Resistance) at
@@ -281,7 +281,7 @@ theorem reduce_breaks_clamp (k : Nat) (hk : 3 ≤ k) :
                   have e := congrArg (fun g : GameState => g.opp.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg, red, st,
                     side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,
-                    GameState.sReduce, GameState.sPrevent, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
+                    GameState.sReduce, GameState.sPrevent, GameState.thrCut, GameState.sThr, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
                     InPlay.sv, SView.statics, stadiumStatics, sumOf, List.flatMap_cons,
                     List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge, Store.add,
@@ -369,7 +369,7 @@ theorem tmax_dr₀ {k : Nat} (hk : 2 ≤ k) : ∀ x ∈ (dr₀ k).allCards, x.tm
   simp [dr₀, st, side, GameState.allCards, PlayerState.allCards, optCardList, benchCardList,
     stadiumCardList, InPlay.cardList, InPlay.ofBasic] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp [Card.tmax, attacksTmax, abilitiesTmax, Effect.tmax, bonusItem, drainer, prey, mon] <;> omega
+    simp [Card.tmax, Card.testMax, Card.thrMax, Card.statics, staticsThr, attacksTmax, abilitiesTmax, Effect.tmax, bonusItem, drainer, prey, mon] <;> omega
 
 /-- **`drain` breaks every cap on the damage bonus.** For every `k ≥ 2` there is a well-formed,
 `Settled` start with no damage reduction anywhere, every HP (and Resistance) at most `k` and
@@ -444,7 +444,7 @@ theorem drain_breaks_clamp (k : Nat) (hk : 2 ≤ k) :
                   have e := congrArg (fun g : GameState => g.cur.active) heq
                   simp [GameState.clamp, GameState.clampAt, InPlay.clampWith, Cap.dmg,
                     dr, st, side, GameState.dealt, dealtBy, GameState.weak, GameState.resist, GameState.sBonus,
-                    GameState.sReduce, GameState.sPrevent, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
+                    GameState.sReduce, GameState.sPrevent, GameState.thrCut, GameState.sThr, GameState.inForce, staticsInForce, PlayerState.field, fieldOf,
                     InPlay.sv, SView.statics, stadiumStatics, sumOf, List.flatMap_cons,
                     List.flatMap_nil, Whose.flip, GameState.stOwn, GameState.side,
                     PokemonCard.weakTo, PokemonCard.resistTo, Store.live, Mods.merge,

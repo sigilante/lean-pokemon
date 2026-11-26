@@ -75,7 +75,7 @@ theorem GameState.NoStatics.dealt {g : GameState} (h : g.NoStatics) (n : Nat) :
     g.dealt n = dealtBy n g.weak g.resist g.cur.mods g.opp.mods := by
   simp only [GameState.dealt, g.sBonus_noStatics h, g.sReduce_noStatics h,
     g.sPrevent_noStatics h, Bool.false_eq_true, ↓reduceIte, Store.add_bonus_zero,
-    Store.add_reduce_zero]
+    Store.add_reduce_zero, g.thrCut_noStatics h]
 
 /-- With no static effects, the Retreat Cost is the printed one. -/
 theorem GameState.NoStatics.retreatOf {g : GameState} (h : g.NoStatics) {a : InPlay}

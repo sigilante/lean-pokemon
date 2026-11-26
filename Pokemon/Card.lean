@@ -226,6 +226,13 @@ inductive Mod where
   next turn, prevent all damage from and effects of attacks done to this Pokémon" (Elgyem sv5-73) is
   `seq (linger .own .next .prevent) (linger .own .next .shield)`. A flag, as `prevent` -/
   | shield
+  /-- (milestone MV14, survey S28) prevent all damage done to the player's Pokémon by attacks if that
+  damage is `t` counters or less: "During your opponent's next turn, prevent all damage done to this
+  Pokémon by attacks if that damage is 60 or less" (Metapod sv9-2) is `linger .own .next (.preventLe 6)`.
+  Stored as the largest threshold written (`Mods.upto`, merged by `max`: two thresholds in effect
+  together prevent what either prevents); read in step 5 of the calculation (`dealtBy`). Not `plain`:
+  the capped clamp cannot absorb it, like a reduction (survey S28 §3) -/
+  | preventLe (t : Nat)
   deriving DecidableEq
 
 /-- A modifier the capped clamp can absorb (milestone MV6): every modifier but a damage reduction,
@@ -234,6 +241,7 @@ def Mod.plain : Mod → Bool
   | .reduce _ => false
   | .weaken _ => false
   | .expose _ => false
+  | .preventLe _ => false
   | _ => true
 
 /-! ## Card filters and zone moves (milestone MV) -/
@@ -1264,7 +1272,15 @@ inductive SAmt where
 * `noHeal` (milestone MV13, survey S27 A4): "Your opponent's Active Pokémon can't be healed"
   (Yveltal me55-100: `sel = opp`, `tgt = some .active`): `heal`, `healAll` and the heal of `drain`
   remove no damage counter from the affected Pokémon in the Active Spot (`GameState.healBlocked`).
-  Moving damage counters (`moveCounter`) is not healing and is not read. -/
+  Moving damage counters (`moveCounter`) is not healing and is not read.
+* `preventGe t fr` (milestone MV14, survey S28): "Prevent all damage done to this Pokémon by attacks
+  from your opponent's Pokémon if that damage is 200 or more" (Drednaw sv7-44: `t = 20`, `fr = any`):
+  the damage an attack of a Pokémon whose top card passes `fr` would do to the affected Pokémon is 0
+  when it is at least `t` counters. In the Active Spot "that damage" is the result of steps 1–5 of the
+  calculation with every other effect applied (`GameState.dealt`, `GameState.sThr`); on the Bench it is
+  the amount the Bench primitive places (`GameState.benchThr`). A threshold, not an amount: read,
+  never stored; `t` is a constant of the card and enters `Card.tmax` (through `Card.thrMax`), so the
+  clamp bound `Enum.bound` is above it. -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -1278,6 +1294,7 @@ inductive SEff where
   | shield (fr : Filter)
   | noCond (c : Condition)
   | noHeal
+  | preventGe (t : Nat) (fr : Filter)
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative
@@ -2153,12 +2170,65 @@ def abilitiesTame : List Ability → Bool
   | [] => true
   | a :: as => (a.scripts.all fun e => e.tame) && abilitiesTame as
 
-def Card.tmax : Card → Nat
+/-- The largest test constant of a card's effects: the definition of `Card.tmax` before milestone
+MV14, kept verbatim under this name. -/
+def Card.testMax : Card → Nat
   | .pokemon p => max (attacksTmax p.attacks) (abilitiesTmax p.abilities)
   | .energy (.basic _) => 0
   | .energy (.special _ _ x) => max (attacksTmax x.grant.attacks) (abilitiesTmax x.grant.abilities)
   | .trainer _ _ e _ => e.tmax
   | .tool _ gr => max (attacksTmax gr.attacks) (abilitiesTmax gr.abilities)
+
+/-- The damage threshold of a static effect (milestone MV14): `t` for `preventGe t _`, else 0. -/
+def Static.thr (s : Static) : Nat :=
+  match s.eff with
+  | .preventGe t _ => t
+  | _ => 0
+
+/-- The largest damage threshold of a list of static effects (milestone MV14). -/
+def staticsThr : List Static → Nat
+  | [] => 0
+  | s :: ss => max s.thr (staticsThr ss)
+
+/-- The largest damage threshold among a card's static effects (milestone MV14, survey S28): 0 for
+every card with no `SEff.preventGe`. -/
+def Card.thrMax (c : Card) : Nat := staticsThr c.statics
+
+/-- **The largest constant a card compares damage with** (since milestone MV14): its test
+constants (`Card.testMax`, the definition of `Card.tmax` before MV14) and its static damage
+thresholds (`Card.thrMax`). Through `cardsTmax` it is a summand of `Enum.bound`, and `GameState.Fit`
+and `GameState.XFit` ask it to be below the cap; for a card with no threshold it is what it was
+(`Card.tmax_of_thrMax`). -/
+def Card.tmax (c : Card) : Nat := max c.testMax c.thrMax
+
+theorem Static.thr_le_staticsThr {s : Static} : ∀ {ss : List Static}, s ∈ ss → s.thr ≤ staticsThr ss
+  | _ :: _, .head _ => by simp only [staticsThr]; omega
+  | _ :: _, .tail _ h => by have := Static.thr_le_staticsThr h; simp only [staticsThr]; omega
+
+theorem staticsThr_eq_zero : ∀ {ss : List Static}, (∀ s ∈ ss, s.thr = 0) → staticsThr ss = 0
+  | [], _ => rfl
+  | s :: ss, h => by
+      simp only [staticsThr, h s (.head _), staticsThr_eq_zero fun x hx => h x (.tail _ hx)]; rfl
+
+/-- **For a card with no damage threshold, `Card.tmax` is the definition before milestone MV14.** -/
+theorem Card.tmax_of_thrMax {c : Card} (h : c.thrMax = 0) : c.tmax = c.testMax := by
+  simp only [Card.tmax, h, Nat.max_zero]
+
+/-- A card none of whose static effects is a `preventGe` has threshold 0 (milestone MV14). -/
+theorem Card.thrMax_of_noGe {c : Card} (h : ∀ s ∈ c.statics, ∀ t fr, s.eff ≠ .preventGe t fr) :
+    c.thrMax = 0 :=
+  staticsThr_eq_zero fun s hs => by
+    unfold Static.thr; split
+    · next t fr he => exact absurd he (h s hs t fr)
+    · rfl
+
+theorem Card.testMax_le_tmax (c : Card) : c.testMax ≤ c.tmax := Nat.le_max_left _ _
+
+theorem Card.thrMax_le_tmax (c : Card) : c.thrMax ≤ c.tmax := Nat.le_max_right _ _
+
+theorem Card.trainer_tmax (n : String) (t : TrainerKind) (e : Effect) (ss : List Static) :
+    e.tmax ≤ (Card.trainer n t e ss).tmax := by
+  simp only [Card.tmax, Card.testMax]; omega
 
 /-- The script of an attack is tame when its effect is: the base damage adds no reduction and
 no `drain`. -/

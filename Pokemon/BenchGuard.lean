@@ -34,17 +34,19 @@ the field and the Stadium) and the attacker's top card; both clamps keep all of 
 
 namespace Pokemon
 
-/-- No Benched Pokémon of the `w` player is protected by a static damage prevention (milestone MV13). -/
+/-- No Benched Pokémon of the `w` player is protected by a static damage prevention (milestone MV13),
+nor (milestone MV14) by a static threshold at any amount. -/
 def GameState.BenchOpen (g : GameState) (w : Whose) : Prop :=
-  ∀ q ∈ (g.side w).bench, g.benchSafe w q = false
+  ∀ q ∈ (g.side w).bench, g.benchSafe w q = false ∧ ∀ n, g.benchThr w n q = false
 
 /-- The player's own Bench is always open to their own attack. -/
 theorem GameState.benchOpen_own (g : GameState) : g.BenchOpen .own :=
-  fun q _ => g.benchSafe_own q
+  fun q _ => ⟨g.benchSafe_own q, fun n => g.benchThr_own n q⟩
 
 /-- With no static effects in the game, every Bench is open. -/
 theorem GameState.benchOpen_noStatics {g : GameState} (hn : g.NoStatics) (w : Whose) : g.BenchOpen w :=
-  fun _ hq => g.benchSafe_noStatics hn (w' := w) (sp := .bench) hq w
+  fun _ hq => ⟨g.benchSafe_noStatics hn (w' := w) (sp := .bench) hq w,
+    fun n => g.benchThr_noStatics hn (w' := w) (sp := .bench) hq w n⟩
 
 /-- `Hits` with two updates that agree on the old Bench. -/
 theorem Hits.congr_upd {U V : InPlay → InPlay} {f : Filter} {k : Nat} {b b' : List InPlay}
@@ -68,7 +70,7 @@ theorem HitsP.congr_upd {P : InPlay → Bool} {U V : InPlay → InPlay} {k : Nat
 
 theorem GameState.BenchOpen.amt {g : GameState} {w : Whose} (h : g.BenchOpen w) (dmg : Bool) (n : Nat)
     {q : InPlay} (hq : q ∈ (g.side w).bench) : g.bAmt w dmg n q = n :=
-  GameState.bAmt_of_safe (h q hq) dmg n
+  GameState.bAmt_of_safe (h q hq).1 dmg n ((h q hq).2 n)
 
 /-- **The old step: one chosen Benched Pokémon** (milestone MV13). When no Benched Pokémon of the `w`
 player is protected, `benchDamage w n` has exactly the resolutions of its pre-MV13 rule: `n` more
@@ -190,7 +192,7 @@ theorem Run.hitByBench_counters {g g' : GameState} {w : Whose} {m : Nat} {f : Fi
 with `benchSafe` keeps its damage under every damage form. -/
 theorem GameState.hitBench_safe {g : GameState} {w : Whose} {q : InPlay} (h : g.benchSafe w q = true)
     (n : Nat) : (q.hitBench (g.bAmt w true n q)).damage = q.damage := by
-  simp only [GameState.bAmt, h, Bool.and_self, ite_true, InPlay.hitBench]
+  simp only [GameState.bAmt, h, Bool.true_or, Bool.and_self, ite_true, InPlay.hitBench]
   split <;> simp [InPlay.addDamage]
 
 namespace BenchGuard

@@ -272,6 +272,25 @@ def GameState.sPrevent (g : GameState) : Bool :=
   | some a, some d => (g.inForce .opp .active d.sv).any (Static.preventsFrom a.top)
   | _, _ => false
 
+/-- Does a static threshold on a defender prevent a damage of `d` counters from an attacker whose top
+card is `a`? (milestone MV14, `SEff.preventGe t fr`: `fr` passes `a` and `d` is at least `t`) -/
+def Static.thrFrom (a : PokemonCard) (d : Nat) (s : Static) : Bool :=
+  match s.eff with
+  | .preventGe t fr => fr.eval (.pokemon a) && decide (t ≤ d)
+  | _ => false
+
+/-- **Static threshold prevention** (milestone MV14, survey S28): some `preventGe t fr` in force on the
+opponent's Active Pokémon passes the player's Active Pokémon's top card and has `t ≤ d`, where `d` is
+the damage the attack would do; false if either Active Spot is empty. Read by `GameState.dealt` on the
+result of the calculation with every other effect applied. -/
+def GameState.sThr (g : GameState) (d : Nat) : Bool :=
+  match g.cur.active, g.opp.active with
+  | some a, some q => (g.inForce .opp .active q.sv).any (Static.thrFrom a.top d)
+  | _, _ => false
+
+/-- The static threshold applied to a damage `d` (milestone MV14): 0 if `GameState.sThr` prevents it. -/
+def GameState.thrCut (g : GameState) (d : Nat) : Nat := if g.sThr d then 0 else d
+
 /-- Does a static effect on a defender prevent the effects of an attack of an attacker whose top
 card is `a`? (milestone MV10, `SEff.shield`) -/
 def Static.shieldsFrom (a : PokemonCard) (s : Static) : Bool :=
@@ -305,17 +324,28 @@ def GameState.benchSafe (g : GameState) (w : Whose) (q : InPlay) : Bool :=
   | .opp, some a => (g.inForce .opp .bench q.sv).any (Static.preventsFrom a.top)
   | _, _ => false
 
+/-- **Static threshold prevention on a Benched Pokémon** (milestone MV14, survey S28): as
+`GameState.benchSafe`, for a `preventGe t fr` in force on `q` at the Bench with `t ≤ n`, where `n` is
+the amount the Bench primitive would place (no Weakness or Resistance on the Bench). Only for
+`w = opp`. -/
+def GameState.benchThr (g : GameState) (w : Whose) (n : Nat) (q : InPlay) : Bool :=
+  match w, g.cur.active with
+  | .opp, some a => (g.inForce .opp .bench q.sv).any (Static.thrFrom a.top n)
+  | _, _ => false
+
 /-- **The amount a Bench primitive puts on the `w` player's Benched Pokémon `q`** (milestone MV13):
 `n`, or 0 when the step is attack damage (`dmg`) and a static prevention protects `q`
-(`GameState.benchSafe`). Damage counters (`dmg = false`) are never prevented here: "effects of
+(`GameState.benchSafe`) or, since milestone MV14, a static threshold prevents an amount of `n`
+(`GameState.benchThr`). Damage counters (`dmg = false`) are never prevented here: "effects of
 attacks" on the Bench are not read (Known gaps). -/
 def GameState.bAmt (g : GameState) (w : Whose) (dmg : Bool) (n : Nat) (q : InPlay) : Nat :=
-  if dmg && g.benchSafe w q then 0 else n
+  if dmg && (g.benchSafe w q || g.benchThr w n q) then 0 else n
 
 /-- With no protection on `q`, the amount is the printed one (milestone MV13). -/
 theorem GameState.bAmt_of_safe {g : GameState} {w : Whose} {q : InPlay}
-    (h : g.benchSafe w q = false) (dmg : Bool) (n : Nat) : g.bAmt w dmg n q = n := by
-  simp only [GameState.bAmt, h, Bool.and_false, Bool.false_eq_true, ite_false]
+    (h : g.benchSafe w q = false) (dmg : Bool) (n : Nat) (ht : g.benchThr w n q = false) :
+    g.bAmt w dmg n q = n := by
+  simp only [GameState.bAmt, h, ht, Bool.or_false, Bool.and_false, Bool.false_eq_true, ite_false]
 
 /-- Damage counters are never prevented by `bAmt` (milestone MV13). -/
 @[simp] theorem GameState.bAmt_counters (g : GameState) (w : Whose) (n : Nat) (q : InPlay) :
@@ -325,6 +355,11 @@ theorem GameState.bAmt_of_safe {g : GameState} {w : Whose} {q : InPlay}
 /-- The player's own Bench is never protected from their own attack (milestone MV13). -/
 @[simp] theorem GameState.benchSafe_own (g : GameState) (q : InPlay) : g.benchSafe .own q = false := by
   unfold GameState.benchSafe; rfl
+
+/-- Nor by a threshold (milestone MV14). -/
+@[simp] theorem GameState.benchThr_own (g : GameState) (n : Nat) (q : InPlay) :
+    g.benchThr .own n q = false := by
+  unfold GameState.benchThr; rfl
 
 /-- The amount is the printed one or nothing (milestone MV13). -/
 theorem GameState.bAmt_cases (g : GameState) (w : Whose) (dmg : Bool) (n : Nat) (q : InPlay) :
@@ -394,23 +429,29 @@ stored reduction at step 5 (as rest-of-game amounts of a copy of the stores, so 
 unchanged). Weakness and Resistance apply to the Active Pokémon only ("Don't apply Weakness and
 Resistance for Benched Pokémon!", p. 14); attack damage to Benched Pokémon (`InPlay.hitBench`,
 milestone M3) skips the calculation. Since milestone MV3 a static prevention in force on the defender
-against the attacker (`GameState.sPrevent`, `SEff.prevent`) makes it 0, as stored prevention does. -/
+against the attacker (`GameState.sPrevent`, `SEff.prevent`) makes it 0, as stored prevention does.
+Since milestone MV14 a static threshold (`SEff.preventGe`, `GameState.thrCut`) makes the result 0 when
+it is at least the threshold; the result it reads is the damage with every other effect applied
+(stored and static reduction, step-5 increase, the lingering threshold `Mod.preventLe` in `dealtBy`):
+a reading, survey S28 §1. -/
 def GameState.dealt (n : Nat) (g : GameState) : Nat :=
   if g.sPrevent then 0 else
-  dealtBy n g.weak g.resist (g.cur.mods.add .always (.bonus g.sBonus))
-    (g.opp.mods.add .always (.reduce g.sReduce))
+  g.thrCut (dealtBy n g.weak g.resist (g.cur.mods.add .always (.bonus g.sBonus))
+    (g.opp.mods.add .always (.reduce g.sReduce)))
 
 /-- **The damage calculation with steps switched off** (milestone MV3, `Ign`): as `GameState.dealt`,
 with no Weakness if `ig.weak` (step 3), no Resistance if `ig.resist` (step 4), and, if `ig.fx`, none
 of the effects on the Defending Pokémon (step 5): its stored modifiers are read as the empty store
-and its static reduction as 0, and no static prevention applies. The attacker's bonuses (step 2)
+and its static reduction as 0, and no static prevention applies (since milestone MV14 no threshold
+either, static or stored). The attacker's bonuses (step 2)
 are always applied. `dealtI {}` is
 `dealt` by definition (`GameState.dealtI_none`). -/
 def GameState.dealtI (ig : Ign) (n : Nat) (g : GameState) : Nat :=
   if cond ig.fx false g.sPrevent then 0 else
-  dealtBy n (cond ig.weak false g.weak) (cond ig.resist 0 g.resist)
+  cond ig.fx id g.thrCut
+  (dealtBy n (cond ig.weak false g.weak) (cond ig.resist 0 g.resist)
     (g.cur.mods.add .always (.bonus g.sBonus))
-    ((cond ig.fx Store.empty g.opp.mods).add .always (.reduce (cond ig.fx 0 g.sReduce)))
+    ((cond ig.fx Store.empty g.opp.mods).add .always (.reduce (cond ig.fx 0 g.sReduce))))
 
 @[simp] theorem GameState.dealtI_none (n : Nat) (g : GameState) : g.dealtI {} n = g.dealt n := rfl
 
@@ -531,10 +572,43 @@ theorem GameState.SameField.benchSafe {g₁ g₂ : GameState} (h : GameState.Sam
       next a₁ a₂ =>
         rw [h.inForce, hv, show a₂.top = a₁.top from congrArg SView.top hc]
 
+/-- The clamps keep the static threshold on the Bench (milestone MV14), for one amount. -/
+theorem GameState.SameField.benchThr {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂)
+    (w : Whose) (n : Nat) {p q : InPlay} (hv : q.sv = p.sv) : g₂.benchThr w n q = g₁.benchThr w n p := by
+  have hc := fieldOf_active h.cur
+  unfold GameState.benchThr
+  cases w with
+  | own => rfl
+  | opp =>
+      cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;>
+        simp only [h1, h2, Option.map_none, Option.map_some, reduceCtorEq, Option.some.injEq] at hc ⊢
+      next a₁ a₂ =>
+        rw [h.inForce, hv, show a₂.top = a₁.top from congrArg SView.top hc]
+
+/-- The clamps keep the static threshold on the Active Spot (milestone MV14), for one damage. -/
+theorem GameState.SameField.sThr {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) (d : Nat) :
+    g₂.sThr d = g₁.sThr d := by
+  have hc := fieldOf_active h.cur
+  have ho := fieldOf_active h.opp
+  unfold GameState.sThr
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;> cases h3 : g₁.opp.active <;>
+    cases h4 : g₂.opp.active <;>
+    simp only [h1, h2, h3, h4, Option.map_none, Option.map_some,
+      reduceCtorEq, Option.some.injEq] at hc ho ⊢
+  next a₁ a₂ d₁ d₂ =>
+    rw [h.inForce, ho, show a₂.top = a₁.top from congrArg SView.top hc]
+
+theorem GameState.SameField.thrCut {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) (d : Nat) :
+    g₂.thrCut d = g₁.thrCut d := by
+  simp only [GameState.thrCut, h.sThr d]
+
+theorem GameState.SameField.thrCut_eq {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
+    g₂.thrCut = g₁.thrCut := funext h.thrCut
+
 theorem GameState.SameField.bAmt {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂)
     (w : Whose) (dmg : Bool) (n : Nat) {p q : InPlay} (hv : q.sv = p.sv) :
     g₂.bAmt w dmg n q = g₁.bAmt w dmg n p := by
-  simp only [GameState.bAmt, h.benchSafe w hv]
+  simp only [GameState.bAmt, h.benchSafe w hv, h.benchThr w n hv]
 
 theorem GameState.SameField.condImmune {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂)
     (w : Whose) (c : Condition) {p q : InPlay} (hv : q.sv = p.sv) :
@@ -973,6 +1047,26 @@ theorem GameState.sPrevent_noStatics {g : GameState} (hn : g.NoStatics) : g.sPre
   · next a d ha hd =>
       rw [g.inForce_noStatics (w := .opp) (sp := .active) hn hd]
       rfl
+  · rfl
+
+/-- With no static effects, there is no static threshold (milestone MV14). -/
+theorem GameState.sThr_noStatics {g : GameState} (hn : g.NoStatics) (d : Nat) : g.sThr d = false := by
+  unfold GameState.sThr
+  split
+  · next a q ha hq =>
+      rw [g.inForce_noStatics (w := .opp) (sp := .active) hn hq]
+      rfl
+  · rfl
+
+theorem GameState.thrCut_noStatics {g : GameState} (hn : g.NoStatics) (d : Nat) : g.thrCut d = d := by
+  simp only [GameState.thrCut, g.sThr_noStatics hn d, Bool.false_eq_true, ite_false]
+
+/-- With no static effects, no Benched Pokémon has a threshold (milestone MV14). -/
+theorem GameState.benchThr_noStatics {g : GameState} (hn : g.NoStatics) {w' : Whose} {sp : Spot}
+    {p : InPlay} (hp : g.In w' sp p) (w : Whose) (n : Nat) : g.benchThr w n p = false := by
+  unfold GameState.benchThr
+  split
+  · rw [g.inForce_noStatics hn hp .opp .bench]; rfl
   · rfl
 
 /-- With no static effects, there is no static effect prevention (milestone MV10). -/

@@ -377,17 +377,21 @@ structure Mods where
   /-- (milestone MV10) effects of attacks done to the player's Active Pokémon are prevented
   (`Mod.shield`) -/
   shield : Bool
+  /-- (milestone MV14) damage done to the player's Pokémon by attacks is prevented if it is at most
+  this many counters (`Mod.preventLe`; 0: nothing is prevented, since a damage of 0 places nothing) -/
+  upto : Nat
   deriving DecidableEq
 
 namespace Mods
 
-def empty : Mods := ⟨0, 0, false, false, false, false, 0, 0, false⟩
+def empty : Mods := ⟨0, 0, false, false, false, false, 0, 0, false, 0⟩
 
-/-- Two sets of modifiers in effect together: amounts add, flags combine. -/
+/-- Two sets of modifiers in effect together: amounts add, flags combine, and (milestone MV14) the
+larger damage threshold holds. -/
 def merge (a b : Mods) : Mods :=
   ⟨a.bonus + b.bonus, a.reduce + b.reduce, a.prevent || b.prevent, a.noAttack || b.noAttack,
     a.noRetreat || b.noRetreat, a.noItem || b.noItem, a.minus + b.minus, a.more + b.more,
-    a.shield || b.shield⟩
+    a.shield || b.shield, max a.upto b.upto⟩
 
 /-- Add one modifier. -/
 def addMod : Mod → Mods → Mods
@@ -400,6 +404,7 @@ def addMod : Mod → Mods → Mods
   | .weaken n, m => { m with minus := m.minus + n }
   | .expose n, m => { m with more := m.more + n }
   | .shield, m => { m with shield := true }
+  | .preventLe t, m => { m with upto := max m.upto t }
 
 end Mods
 
@@ -593,6 +598,20 @@ def GameState.activeOf : Whose → GameState → Option InPlay
   | .own, g => g.cur.active
   | .opp, g => g.opp.active
 
+/-- **The lingering threshold** (milestone MV14, `Mod.preventLe`): a damage `d` of at most `u`
+counters is prevented. With `u = 0` it is `d` (`uptoCut_zero`): a damage of 0 places nothing either
+way. -/
+def uptoCut (u d : Nat) : Nat := if d ≤ u then 0 else d
+
+@[simp] theorem uptoCut_zero (d : Nat) : uptoCut 0 d = d := by
+  unfold uptoCut; split <;> omega
+
+theorem uptoCut_le (u d : Nat) : uptoCut u d ≤ d := by unfold uptoCut; split <;> omega
+
+/-- The lingering threshold keeps the order of damages (milestone MV14). -/
+theorem uptoCut_mono (u : Nat) {d e : Nat} (h : d ≤ e) : uptoCut u d ≤ uptoCut u e := by
+  unfold uptoCut; split <;> split <;> omega
+
 /-- **The damage calculation** (rulebook 2026 p. 20; the 2023 edition has the same steps on p. 20, "Figuring out how many damage counters to
 place"; the same in the 2024 rulebook, survey S8 F2), for an attack whose base damage is `n`
 counters, against a Defending Pokémon that is weak to the attacker (`weak`) and has Resistance
@@ -624,6 +643,14 @@ counters, against a Defending Pokémon that is weak to the attacker (`weak`) and
    counters. From this step the model takes only that a final damage of 0 places nothing; it is
    not a second stop test, so a running damage of 0 before step 5 is still increased there.
 
+Threshold prevention (milestone MV14, survey S28): "prevent all damage done to this Pokémon by
+attacks if that damage is 60 or less" (`Mod.preventLe`, stored as `Mods.upto`) is a step-5 effect on
+the Defending Pokémon that compares "that damage" with its threshold. The rulebook (2026 p. 20) gives
+no order among step-5 effects; the model reads "that damage" as the damage after every other step-5
+effect (the increase and the reduction), that is the amount step 6 would place (`uptoCut`), a reading
+(importer caveat `thresholdRead`). The static form (`SEff.preventGe`) is read the same way, after
+the static reduction (`GameState.dealt`).
+
 Units: one counter is 10 damage, so Resistance −30 is 3. Prevention ("prevent all damage done
 to this Pokémon by attacks") is read in step 5, as an effect on the Defending Pokémon; since it
 makes the result 0 whatever the other step-5 effects, it is tested first. Step 2's stop is
@@ -636,8 +663,9 @@ carries over, which would give less where an increase follows a subtraction that
 only subtractions after it the result is 0 either way. -/
 def dealtBy (n : Nat) (weak : Bool) (resist : Nat) (own opp : Store) : Nat :=
   if n = 0 then 0 else if opp.live.prevent then 0 else
-    (((if weak then 2 * (n + own.live.bonus - own.live.minus)
-      else n + own.live.bonus - own.live.minus) - resist) + opp.live.more) - opp.live.reduce
+    uptoCut opp.live.upto
+    ((((if weak then 2 * (n + own.live.bonus - own.live.minus)
+      else n + own.live.bonus - own.live.minus) - resist) + opp.live.more) - opp.live.reduce)
 
 /-- Is the opponent's Active Pokémon weak to the type of the player's Active Pokémon (its type
 as `InPlay.type` gives it, Coloring counter included)? False if either Spot is empty. -/
