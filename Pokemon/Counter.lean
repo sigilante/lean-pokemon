@@ -565,14 +565,16 @@ theorem Does.handToBottom (kc ko : Pk) :
   | zone hw => simp [Effect.zSide] at hw
 
 theorem Does.healAll (kc ko : Pk) : Does .healAll kc ko { kc with dmg := 0 } ko := by
-  intro g hs _
+  intro g hs hns
   obtain ⟨p, hp, h1, h2, h3, h4, _, h6, h7⟩ := hs.cur.active
   refine ⟨⟨_, .healAll hp⟩, fun g' h => ?_⟩
   cases h with
   | healAll h' =>
       rw [hp] at h'; cases h'
       have hc := hs.cur
-      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, rfl, h6, h7⟩, hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked,
+      have e : p.damage - g.healAmt p.damage = 0 := by
+        simp only [GameState.healAmt, g.healBlocked_noStatics hns]; simp
+      exact ⟨⟨⟨_, rfl, h1, h2, h3, h4, e, h6, h7⟩, hc.bench, hc.deck, hc.hand, hc.mods, hc.stocked,
         hc.held⟩, hs.opp, hs.pend⟩
   | touchActive he => simp [Effect.touch] at he
   | touchBench he => simp [Effect.touch] at he

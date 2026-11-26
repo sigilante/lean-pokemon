@@ -56,6 +56,10 @@ long as this Pokémon is on your Bench, prevent all damage done to this Pokémon
 yours and your opponent's)", printed on every Tera Pokémon; rulebook 2023 p. 24). -/
 def InPlay.hitBench (n : Nat) (p : InPlay) : InPlay := if p.top.tera then p else p.addDamage n
 
+/-- A Special Condition `c`, unless the Pokémon is immune to it (`b`; milestone MV13,
+`GameState.condImmune`). -/
+def InPlay.inflictIf (b : Bool) (c : Condition) (p : InPlay) : InPlay := if b then p else p.inflict c
+
 /-- Remove the marker `m` from every Pokémon of one player. -/
 def PlayerState.unmark (m : Marker) (s : PlayerState) : PlayerState :=
   { s with active := s.active.map (InPlay.setMarks (Marks.set m false)),
@@ -742,12 +746,13 @@ inductive Run : Effect → GameState → GameState → Prop where
   | drawEmpty {g : GameState} (h : g.cur.deck = []) : Run .draw g g
   | heal {g : GameState} {p : InPlay} (n : Nat) (h : g.cur.active = some p) :
       Run (.heal n) g
-        { g with cur := { g.cur with active := some { p with damage := p.damage - n } } }
+        { g with cur := { g.cur with active := some { p with damage := p.damage - g.healAmt n } } }
   | counters {g : GameState} {p : InPlay} (n : Nat) (h : g.opp.active = some p) :
       Run (.counters n) g
         { g with opp := { g.opp with active := some { p with damage := p.damage + n } } }
   | inflict {g : GameState} {p : InPlay} (c : Condition) (h : g.opp.active = some p) :
-      Run (.inflict c) g { g with opp := { g.opp with active := some (p.inflict c) } }
+      Run (.inflict c) g
+        { g with opp := { g.opp with active := some (p.inflictIf (g.condImmune .opp c p) c) } }
   | poisonUp {g : GameState} {p : InPlay} (n : Nat) (h : g.opp.active = some p)
       (hp : p.poisoned = true) :
       Run (.poisonUp n) g
@@ -776,7 +781,8 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.selfDamage n) g
         { g with cur := { g.cur with active := some { p with damage := p.damage + n } } }
   | healAll {g : GameState} {p : InPlay} (h : g.cur.active = some p) :
-      Run .healAll g { g with cur := { g.cur with active := some { p with damage := 0 } } }
+      Run .healAll g
+        { g with cur := { g.cur with active := some { p with damage := p.damage - g.healAmt p.damage } } }
   /-- `mark` or `color` on the `w` player's Active Pokémon -/
   | touchActive {e : Effect} {w : Whose} {f : Marks → Marks} {g : GameState} {p : InPlay}
       (he : e.touch = some (w, f)) (h : (g.side w).active = some p) :
@@ -798,7 +804,7 @@ inductive Run : Effect → GameState → GameState → Prop where
   | drain {g : GameState} {p q : InPlay} {a : Amt} {n : Nat} (hv : a.Val g n)
       (h : g.opp.active = some p) (hq : g.cur.active = some q) :
       Run (.drain a) g
-        { g with cur := { g.cur with active := some { q with damage := q.damage - g.dealt n } },
+        { g with cur := { g.cur with active := some { q with damage := q.damage - g.healAmt (g.dealt n) } },
                  opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } }
   /-- damage counters on one of the `w` player's Benched Pokémon (milestone M3) -/
   | benchCounters {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)

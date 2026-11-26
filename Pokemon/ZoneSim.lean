@@ -316,14 +316,15 @@ theorem Run.trig_sim {co cp cbo cbp : Cap} {k : Nat} {e : Effect} {g₁ g₁' : 
       exact ⟨_, .counters n rfl, by
         simp only [GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
           InPlay.clamp_of_agree (hq.upd.2.1 n), he₁, he₂]⟩
-  | inflict c h =>
+  | @inflict g p c h =>
       intro _ g₂ hc
+      have hsf := GameState.sameField_of_clampAt hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
       rw [h] at ha₂
       obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
       exact ⟨_, .inflict c rfl, by
         simp only [GameState.clampAt, Option.map_some, hc₂, hm₁, hm₂,
-          InPlay.clamp_of_agree (hq.upd.2.2.2.1 c), he₁, he₂]⟩
+          InPlay.clamp_of_agree (hq.inflictIf (hsf.condImmune .opp c hq.sv) c), he₁, he₂]⟩
   | shuffle h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc

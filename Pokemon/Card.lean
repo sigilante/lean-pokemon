@@ -1249,7 +1249,15 @@ inductive SAmt where
   to this Pokémon. (Damage is not an effect.)" (Skeledirge sv8-31, Empoleon ex me2-70: `fr = any`):
   an attack of a Pokémon whose top card passes `fr` against the affected Pokémon in the Active Spot
   resolves with its effects on that Pokémon removed (`Effect.shielded`, `GameState.sShield`). Read,
-  never stored, at the start of the attack; damage is not prevented. -/
+  never stored, at the start of the attack; damage is not prevented.
+* `noCond c` (milestone MV13, survey S27 A3): "This Pokémon can't be Asleep" (Hoothoot sv8pt5-77:
+  `c = asleep`): an `inflict c` on the affected Pokémon in the Active Spot leaves it as it was
+  (`GameState.condImmune`, read by `Run.inflict`), whatever the source (attack, Trainer, Ability).
+  It cures nothing: "recovers from" is not this effect.
+* `noHeal` (milestone MV13, survey S27 A4): "Your opponent's Active Pokémon can't be healed"
+  (Yveltal me55-100: `sel = opp`, `tgt = some .active`): `heal`, `healAll` and the heal of `drain`
+  remove no damage counter from the affected Pokémon in the Active Spot (`GameState.healBlocked`).
+  Moving damage counters (`moveCounter`) is not healing and is not read. -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -1261,6 +1269,8 @@ inductive SEff where
   | condMore (c : Condition) (n : Nat)
   | noRetreat
   | shield (fr : Filter)
+  | noCond (c : Condition)
+  | noHeal
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative

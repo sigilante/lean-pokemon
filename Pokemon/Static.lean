@@ -332,6 +332,36 @@ theorem GameState.bAmt_le (g : GameState) (w : Whose) (dmg : Bool) (n : Nat) (q 
     g.bAmt w dmg n q ≤ n := by
   unfold GameState.bAmt; split <;> simp
 
+/-- Does a static effect make its Pokémon immune to the Special Condition `c`? (milestone MV13,
+`SEff.noCond`) -/
+def Static.blocksCond (c : Condition) (s : Static) : Bool :=
+  match s.eff with
+  | .noCond c' => decide (c' = c)
+  | _ => false
+
+/-- **Special Condition immunity** (milestone MV13, survey S27 A3): some `noCond c` effect is in force
+on the `w` player's Pokémon `p` in the Active Spot. Read by `Run.inflict`. -/
+def GameState.condImmune (g : GameState) (w : Whose) (c : Condition) (p : InPlay) : Bool :=
+  (g.inForce w .active p.sv).any (Static.blocksCond c)
+
+/-- Is a static effect "can't be healed"? (milestone MV13, `SEff.noHeal`) -/
+def Static.isNoHeal (s : Static) : Bool :=
+  match s.eff with
+  | .noHeal => true
+  | _ => false
+
+/-- **Heal block** (milestone MV13, survey S27 A4): some `noHeal` effect is in force on the player to
+move's Active Pokémon; false if the Active Spot is empty. Read by `Run.heal`, `Run.healAll` and the heal
+of `Run.drain`, which heal only that Pokémon. -/
+def GameState.healBlocked (g : GameState) : Bool :=
+  match g.cur.active with
+  | some p => (g.inForce .own .active p.sv).any Static.isNoHeal
+  | none => false
+
+/-- The heal of `n` damage counters the player's Active Pokémon gets (milestone MV13): none under a
+heal block. -/
+def GameState.healAmt (g : GameState) (n : Nat) : Nat := if g.healBlocked then 0 else n
+
 /-- **Is the opponent's Active Pokémon protected from the effects of the player's attack?**
 (milestone MV10): a lingering `Mod.shield` in effect on the opponent (`Mods.shield`), or a static
 `SEff.shield` in force on it against the attacker (`GameState.sShield`). Read by `Move.attack` in the
@@ -502,6 +532,23 @@ theorem GameState.SameField.bAmt {g₁ g₂ : GameState} (h : GameState.SameFiel
     (w : Whose) (dmg : Bool) (n : Nat) {p q : InPlay} (hv : q.sv = p.sv) :
     g₂.bAmt w dmg n q = g₁.bAmt w dmg n p := by
   simp only [GameState.bAmt, h.benchSafe w hv]
+
+theorem GameState.SameField.condImmune {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂)
+    (w : Whose) (c : Condition) {p q : InPlay} (hv : q.sv = p.sv) :
+    g₂.condImmune w c q = g₁.condImmune w c p := by
+  simp only [GameState.condImmune, h.inForce, hv]
+
+theorem GameState.SameField.healBlocked {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
+    g₂.healBlocked = g₁.healBlocked := by
+  have hc := fieldOf_active h.cur
+  unfold GameState.healBlocked
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;>
+    simp only [h1, h2, Option.map_none, Option.map_some, reduceCtorEq, Option.some.injEq] at hc ⊢
+  next a₁ a₂ => rw [h.inForce, hc]
+
+theorem GameState.SameField.healAmt {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) (n : Nat) :
+    g₂.healAmt n = g₁.healAmt n := by
+  simp only [GameState.healAmt, h.healBlocked]
 
 theorem GameState.SameField.sReduce {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
     g₂.sReduce = g₁.sReduce := by
@@ -941,6 +988,18 @@ theorem GameState.benchSafe_noStatics {g : GameState} (hn : g.NoStatics) {w' : W
   unfold GameState.benchSafe
   split
   · rw [g.inForce_noStatics hn hp .opp .bench]; rfl
+  · rfl
+
+/-- With no static effects, no Pokémon in play is immune to a Special Condition (milestone MV13). -/
+theorem GameState.condImmune_noStatics {g : GameState} (hn : g.NoStatics) {w' : Whose} {sp : Spot}
+    {p : InPlay} (hp : g.In w' sp p) (w : Whose) (c : Condition) : g.condImmune w c p = false := by
+  simp only [GameState.condImmune, g.inForce_noStatics hn hp w .active, List.any_nil]
+
+/-- With no static effects, nothing blocks a heal (milestone MV13). -/
+theorem GameState.healBlocked_noStatics {g : GameState} (hn : g.NoStatics) : g.healBlocked = false := by
+  unfold GameState.healBlocked
+  split
+  · next p hp => rw [g.inForce_noStatics (w := .own) (sp := .active) hn hp]; rfl
   · rfl
 
 /-- With no static effects and no stored effect prevention on the opponent, an attack resolves as

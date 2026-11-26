@@ -88,6 +88,9 @@ theorem ListNoOwe.ofBasic (ps : List PokemonCard) : ListNoOwe (ps.map InPlay.ofB
 theorem InPlay.inflict_owe (c : Condition) (p : InPlay) : (p.inflict c).owe = p.owe := by
   cases c <;> rfl
 
+theorem InPlay.inflictIf_owe (b : Bool) (c : Condition) (p : InPlay) : (p.inflictIf b c).owe = p.owe := by
+  cases b <;> cases c <;> rfl
+
 /-! ## Owed-trigger lemmas moved from `NoTriggers` -/
 
 /-- A Pokémon with no `oppBenched` trigger where it is is not marked (milestone MV7b). -/
@@ -296,7 +299,7 @@ theorem Run.marks {e : Effect} {g g' : GameState} (h : Run e g g') :
   | drawEmpty => exact marks_frame rfl id id
   | heal _ h => exact marks_frame rfl (fun hc => ⟨hc.1.some_eq h rfl, hc.2⟩) id
   | counters _ h => exact marks_frame rfl id (fun ho => ⟨ho.1.some_eq h rfl, ho.2⟩)
-  | @inflict g p c h => exact marks_frame rfl id (fun ho => ⟨ho.1.some_eq h (p.inflict_owe c), ho.2⟩)
+  | @inflict g p c h => exact marks_frame rfl id (fun ho => ⟨ho.1.some_eq h (p.inflictIf_owe _ c), ho.2⟩)
   | poisonUp _ h => exact marks_frame rfl id (fun ho => ⟨ho.1.some_eq h rfl, ho.2⟩)
   | poisonUpSkip => exact marks_frame rfl id id
   | cure h => exact marks_frame rfl (fun hc => ⟨hc.1.some_eq h rfl, hc.2⟩) id

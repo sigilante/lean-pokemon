@@ -164,6 +164,14 @@ theorem benchCardList_append (a b : List InPlay) :
   | nil => rfl
   | cons p ps ih => simp only [List.cons_append, benchCardList, ih, List.append_assoc]
 
+@[simp] theorem InPlay.inflictIf_top (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).top = p.top := by cases b <;> cases c <;> rfl
+@[simp] theorem InPlay.inflictIf_under (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).under = p.under := by cases b <;> cases c <;> rfl
+@[simp] theorem InPlay.inflictIf_energy (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).energy = p.energy := by cases b <;> cases c <;> rfl
+@[simp] theorem InPlay.inflictIf_tools (b : Bool) (c : Condition) (p : InPlay) :
+    (p.inflictIf b c).tools = p.tools := by cases b <;> cases c <;> rfl
 @[simp] theorem InPlay.inflict_top (c : Condition) (p : InPlay) : (p.inflict c).top = p.top := by
   cases c <;> rfl
 @[simp] theorem InPlay.inflict_under (c : Condition) (p : InPlay) :
@@ -199,7 +207,8 @@ macro "perm_count" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
     simp only [GameState.allCards, PlayerState.allCards, List.count_append, List.count_cons,
       List.count_nil, optCardList, benchCardList, benchCardList_append, InPlay.cardList,
       InPlay.ofBasic, InPlay.cure, InPlay.inflict_top, InPlay.inflict_under,
-      InPlay.inflict_energy, InPlay.inflict_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
+      InPlay.inflict_energy, InPlay.inflict_tools, InPlay.inflictIf_top, InPlay.inflictIf_under,
+      InPlay.inflictIf_energy, InPlay.inflictIf_tools, InPlay.cardList_moveUp, InPlay.moveUp, Whose.mover, id, stadiumCardList,
       GameState.noteBenched, Whose.noteBenched, optCardList_noteOwe, benchCardList_noteOwe,
       InPlay.unlock, InPlay.noteMove_top, InPlay.noteMove_under, InPlay.noteMove_energy,
       InPlay.noteMove_tools, Whose.noteUp, Whose.noteDown,

@@ -1637,7 +1637,7 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
           omega
       | opp => exact Nat.le_refl _
   | @heal g p n h =>
-      have e : ({ p with damage := p.damage - n } : InPlay).abW = p.abW := rfl
+      have e : ({ p with damage := p.damage - g.healAmt n } : InPlay).abW = p.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, h, abWo, optN, e]; omega
   | @cure g p h =>
       have e : p.cure.abW = p.abW := rfl
@@ -1646,10 +1646,10 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
       have e : ({ p with damage := p.damage + n } : InPlay).abW = p.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, h, abWo, optN, e]; omega
   | @healAll g p h =>
-      have e : ({ p with damage := 0 } : InPlay).abW = p.abW := rfl
+      have e : ({ p with damage := p.damage - g.healAmt p.damage } : InPlay).abW = p.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, h, abWo, optN, e]; omega
   | @drain g p q a n hv h hq =>
-      have e : ({ q with damage := q.damage - g.dealt n } : InPlay).abW = q.abW := rfl
+      have e : ({ q with damage := q.damage - g.healAmt (g.dealt n) } : InPlay).abW = q.abW := rfl
       simp only [GameState.abPot, PlayerState.abPot, hq, abWo, optN, e]; omega
   | linger w s m g => cases w <;> exact Nat.le_refl _
   | @touchActive e w f g p he h =>
@@ -1908,7 +1908,8 @@ theorem Run.oppAbPot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
       simp only [PlayerState.abPot, h, abWo, optN, e]; omega
   | @inflict g p c h =>
       intro _
-      have e : (p.inflict c).abW = p.abW := by cases c <;> rfl
+      have e : (p.inflictIf (g.condImmune .opp c p) c).abW = p.abW := by
+        unfold InPlay.inflictIf; split <;> cases c <;> rfl
       simp only [PlayerState.abPot, h, abWo, optN, e]; omega
   | @zone e w g s' hw hz =>
       intro _

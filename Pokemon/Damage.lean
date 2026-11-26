@@ -310,6 +310,16 @@ theorem InPlay.Agree.upd {c : Cap} {q p : InPlay} (h : Agree K c q p) :
         by first | rfl | exact h.poisoned, by first | rfl | exact h.burned, h.fresh, h.marks, h.used,
         hd, by first | exact h.poisonUp | simp only [InPlay.inflict, Nat.zero_min], h.movedUp, h.lk, h.owe⟩
 
+/-- A Special Condition unless immune (milestone MV13): agreement is kept when both sides read the same
+immunity. -/
+theorem InPlay.Agree.inflictIf {c : Cap} {q p : InPlay} (h : Agree K c q p) {b₁ b₂ : Bool}
+    (hb : b₁ = b₂) (k : Condition) : Agree K c (q.inflictIf b₁ k) (p.inflictIf b₂ k) := by
+  subst hb
+  unfold InPlay.inflictIf
+  split
+  · exact h
+  · exact h.upd.2.2.2.1 k
+
 /-- Agreement survives marking an Ability as used (milestone M8a). -/
 theorem InPlay.Agree.markUsed {c : Cap} {q p : InPlay} (h : Agree K c q p) :
     Agree K c q.markUsed p.markUsed :=

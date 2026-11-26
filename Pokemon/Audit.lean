@@ -70,6 +70,7 @@ import Pokemon.EnergyMoves
 import Pokemon.Heals
 import Pokemon.Computed
 import Pokemon.BenchGuard
+import Pokemon.Immune
 
 /-! Axiom audit. `#audit_namespace` checks every theorem declared in the `Pokemon` modules
 (private and generated ones included) and fails the build unless each depends only on
