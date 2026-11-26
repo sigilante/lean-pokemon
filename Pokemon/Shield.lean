@@ -20,7 +20,7 @@ lingering text is the existing `Mod.prevent`; the importer writes the text as
 **When the flag is written and cleared.** Written by the owner's attack in the `next` slot of the
 owner's store (`Run.linger`): not in effect during the owner's own turn. The end of that turn
 (`Move.endTurn`, `Store.shift`) moves it to `now`: in effect during the opponent's next turn. The end
-of the opponent's turn shifts again, and the slot `now` becomes the old `next`, which no attack of
+of the opponent's turn shifts again (`Move.endTurn` shifts both players' stores), and the slot `now` becomes the old `next`, which no attack of
 the opponent writes for the owner: the flag is gone when the owner's next turn starts. `round`
 follows all three steps by legal moves; the general fact is `Store.shift_live_shield`. Like every
 lingering modifier it belongs to the player, not to the Pokémon (Known gaps: it protects whichever
@@ -164,9 +164,12 @@ theorem static_filter :
 
 A general fact about `Effect.shielded`, for every effect, not only for the witnesses' attack: a
 resolution (`Run`) of a shielded effect leaves the Special Conditions and the Poison strength of the
-opponent's Active Pokémon as they were, and does not change which Pokémon that is in a way that would
-(the switch of the opponent's Active Pokémon is removed). Existing effects stay: nothing is cured
-either. -/
+Pokémon in the opponent's Active Spot as they were (that it is the same Pokémon is not proved here:
+it holds because the switch of the opponent's Active Pokémon is removed). It is a fact about `Run`,
+not about `Move` (triggers are outside it). Existing effects stay: nothing is cured either. That no
+damage counter is placed, no Energy or Tool discarded and no lock or modifier written on the
+Defending Pokémon is shown by the witnesses above for their attack only, not proved for every
+effect. -/
 
 /-- The Special Conditions and the Poison strength of a Pokémon in play. -/
 def _root_.Pokemon.InPlay.conds (p : InPlay) : Rot × Bool × Bool × Nat :=

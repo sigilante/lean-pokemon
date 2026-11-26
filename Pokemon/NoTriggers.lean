@@ -13,7 +13,8 @@ triggered Ability (`GameState.TrigFree`, kept by play) nothing changed:
 * `Move.knockOuts_of_trigFree`, `Move.batch_of_not_settled_trigFree`: the batch move is the batch
   Knock Out step, as before (the statement of `Move.batch_of_not_settled` before milestone M8b);
 * `Move.attack_of_trigFree`, `Move.attack_eq_of_trigFree`: an attack is what it was, the state
-  after its script with the attack recorded;
+  after its script with the attack recorded (since milestone MV10 stated for a Defending Pokémon
+  that is not protected, `g.shield = false`; there is no protected counterpart);
 * `Reach.trigFree`: play keeps the hypothesis.
 -/
 

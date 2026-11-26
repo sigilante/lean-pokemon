@@ -305,7 +305,7 @@ CAVEATS = {
                    "('attach … to your opponent's Pokémon in any way'), and locks on the player (Items) (Known gaps, "
                    "prevention of effects: a reading of 'done to this Pokémon'; no ruling was checked)",
     'shieldActive': "a static 'prevent all effects of attacks … done to this Pokémon' (`SEff.shield`, milestone MV10) is read "
-                    "for the holder in the Active Spot, at the start of the attack (`GameState.shield`): effects of attacks "
+                    "for the protected Pokémon (the holder, or the Pokémon the Ability names) in the Active Spot, at the start of the attack (`GameState.shield`): effects of attacks "
                     "on a Benched holder (damage counters on the Bench) are not prevented, and a holder that the attack "
                     "itself switches into the Active Spot is not protected from the rest of that attack (Known gaps, "
                     "prevention of effects)",
@@ -324,7 +324,7 @@ CAVEAT_DIRECTION = {
     # importer 0.17.0
     'shieldReach': 'both',         # a gust or a Bench-to-Bench Energy move print may allow is absent (forbids some); an
                                    # attachment onto the protected Pokémon from a window is kept (allows more)
-    'shieldActive': 'allows more', # effects on a Benched holder, and on a holder switched in by the attack, happen
+    'shieldActive': 'both',        # a forced effect lands on a Benched or switched-in holder: print's outcome absent, another present
     # importer 0.16.0
     'usedLastBench': 'both',       # after a trip to the Bench: no bonus in the model, the bonus in print
     'usedLastBenchUse': 'forbids some',  # after a trip to the Bench the attack cannot be used in the model

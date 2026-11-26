@@ -419,19 +419,27 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   some, if print lets the gust through), the Defending Pokémon's locks and damage modifiers
   (`linger .opp` with `lock .attack`, `lock .retreat`, `weaken`, `expose`), Energy and Tools discarded
   from or attached to it, every move of Energy between the opponent's Pokémon (Bench to Bench too:
-  forbids some), and markers on the opponent's Pokémon; it keeps the damage step (damage is not an
+  forbids some), and markers and the Coloring counter put on any of the opponent's Pokémon (Bench
+  included: forbids some); it keeps the damage step (damage is not an
   effect; the damage half is `Mod.prevent`/`SEff.prevent`), everything on the Bench, an attachment
-  from a looked-at window onto it (allows more), and the Item lock on the player (an effect on the
-  player, not on the Pokémon); no ruling was checked (importer caveat `shieldReach`, both). (b) The
+  from a looked-at window onto it (allows more), the removal of markers from it (`unmark .opp`:
+  allows more), and the Item lock on the player (an effect on the
+  player, not on the Pokémon); a removed primitive becomes `skip`, so what follows it in a `seq` still
+  runs, also where print makes it depend on the removed part ("A. If you do, B" with A prevented:
+  allows more; no imported card has this shape); no ruling was checked (importer caveat `shieldReach`, both). (b) The
   lingering flag belongs to the player, as every lingering modifier (item below): it protects
   whichever Pokémon the player has Active in the opponent's turn and survives its evolution, where
-  print protects the one Pokémon until it moves to the Bench or evolves (forbids some: effects on a
-  replacement are prevented; caveat `perPokemon`). Its timing is print's: written by the owner's
+  print protects the one Pokémon until it moves to the Bench or evolves (effects on a replacement
+  are prevented where print lets them through; with the damage half the caveat `perPokemon` is
+  both). Its timing is print's: written by the owner's
   attack in the `next` slot, in effect during the opponent's next turn, gone when the owner's next
   turn starts (`Shield.round`). (c) The static effect is read for the holder in the Active Spot, at
   the start of the attack: effects of attacks on a Benched holder (damage counters on the Bench) are
   not prevented, and a holder that the attack switches into the Active Spot is not protected from the
-  rest of it (allows more; caveat `shieldActive`). (d) Existing effects are not removed (print's
+  rest of it (a forced effect then lands where print prevents it, so the printed outcome is absent
+  and another present: both; caveat `shieldActive`). The flag is read once, before the attack, while
+  damage prevention is read at the damage step: a source that left play during the attack would
+  still protect (no imported source can leave so). (d) Existing effects are not removed (print's
   reminder): the flag changes only what an attack resolves. (e) Absent: prevention of effects of
   Abilities ("attacks and Abilities", 4 cards; "Abilities", 1), protection of Benched Pokémon only
   (4 cards), and the filtered or chosen lingering form (Acerola's Mischief); Trainer cards are not
