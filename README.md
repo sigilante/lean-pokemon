@@ -454,7 +454,9 @@ invert an attack on a parametric state (`Promoted.attack_inv`, `Gust.attack_inv`
 attack and not in effect in the owner's turn, in effect in the opponent's turn, where the opponent's
 attack does neither its damage nor its Paralysis but writes its Item lock, and gone when the owner's
 next turn starts; without the flag the same attack Paralyzes; a static protection blocks the
-Paralysis but not the damage).
+Paralysis but not the damage), and one general theorem, `Shield.shielded_keeps_conds`: for every
+effect, a shielded resolution neither gives nor removes a Special Condition or Poison strength of
+the opponent's Active Pokémon.
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,

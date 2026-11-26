@@ -160,4 +160,141 @@ theorem static_filter :
     Static.shieldsFrom mon ⟨.self, .any, none, none, none, .shield .ex⟩ = false ∧
     Static.shieldsFrom mon ⟨.self, .any, none, none, none, .shield .any⟩ = true := ⟨rfl, rfl⟩
 
+/-! ## Under the protection, no Special Condition reaches the Defending Pokémon
+
+A general fact about `Effect.shielded`, for every effect, not only for the witnesses' attack: a
+resolution (`Run`) of a shielded effect leaves the Special Conditions and the Poison strength of the
+opponent's Active Pokémon as they were, and does not change which Pokémon that is in a way that would
+(the switch of the opponent's Active Pokémon is removed). Existing effects stay: nothing is cured
+either. -/
+
+/-- The Special Conditions and the Poison strength of a Pokémon in play. -/
+def _root_.Pokemon.InPlay.conds (p : InPlay) : Rot × Bool × Bool × Nat :=
+  (p.rot, p.poisoned, p.burned, p.poisonUp)
+
+/-- No primitive that gives a Special Condition, raises Poison strength, or switches the opponent's
+Active Pokémon. -/
+def _root_.Pokemon.Effect.spares : Effect → Bool
+  | .inflict _ => false
+  | .poisonUp _ => false
+  | .switch .opp => false
+  | .ite _ a b => a.spares && b.spares
+  | .seq a b => a.spares && b.spares
+  | .choice a b => a.spares && b.spares
+  | .iter a => a.spares
+  | _ => true
+
+theorem _root_.Pokemon.Effect.shielded_spares (e : Effect) : e.shielded.spares = true := by
+  induction e with
+  | ite t a b iha ihb => simp only [Effect.shielded, Effect.spares, iha, ihb, Bool.and_self]
+  | seq a b iha ihb => simp only [Effect.shielded, Effect.spares, iha, ihb, Bool.and_self]
+  | choice a b iha ihb => simp only [Effect.shielded, Effect.spares, iha, ihb, Bool.and_self]
+  | iter a iha => simp only [Effect.shielded, Effect.spares, iha]
+  | _ => unfold Effect.shielded; (try split) <;> simp_all [Effect.spares]
+
+theorem _root_.Pokemon.Put.active {d : Dst} {t : List Card} {s s' : PlayerState} (h : Put d t s s') : s'.active = s.active := by
+  cases h <;> rfl
+
+theorem _root_.Pokemon.Deal.conds {tf : Filter} {t : List Card} {a : Option InPlay} {b : List InPlay}
+    {a' : Option InPlay} {b' : List InPlay} (h : Deal tf t a b a' b') :
+    a'.map InPlay.conds = a.map InPlay.conds := by
+  induction h with
+  | nil => rfl
+  | active _ _ _ ih => exact ih
+  | bench _ _ _ ih => exact ih
+
+theorem _root_.Pokemon.Place.conds {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s') :
+    s'.active.map InPlay.conds = s.active.map InPlay.conds := by
+  cases h with
+  | put h => rw [h.active]
+  | bench => rfl
+  | attach h => exact h.conds
+
+/-- A zone move keeps the Special Conditions of the Active Pokémon (it moves only cards). -/
+theorem _root_.Pokemon.ZStep.conds {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
+    s'.active.map InPlay.conds = s.active.map InPlay.conds := by
+  cases h with
+  | move _ _ hp => rw [hp.active, Src.set_active]
+  | drawTo => rfl
+  | attachActive _ ha => rw [ha]; rfl
+  | attachBench => simp only [Src.set_active]
+  | attachNone => rfl
+  | putBench => simp only [Src.set_active]
+  | putBenchNone => rfl
+  | discardActive ha => rw [ha]; rfl
+  | discardBench => rfl
+  | discardNone => rfl
+  | moveAB ha => rw [ha]; rfl
+  | moveBA ha => rw [ha]; rfl
+  | moveBB => rfl
+  | moveNone => rfl
+  | toolsActive ha => rw [ha]; rfl
+  | toolsBench => rfl
+  | toolsNone => rfl
+  | look _ _ hr hp => rw [hp.conds, hr.active, Src.set_active]
+
+/-- **A spared resolution keeps the opponent's Active Pokémon's Special Conditions and Poison
+strength.** -/
+theorem _root_.Pokemon.Run.conds {e : Effect} {g g' : GameState} (h : Run e g g') (hs : e.spares = true) :
+    g'.opp.active.map InPlay.conds = g.opp.active.map InPlay.conds := by
+  induction h with
+  | inflict => simp [Effect.spares] at hs
+  | poisonUp => simp [Effect.spares] at hs
+  | iteT _ _ _ ih => simp only [Effect.spares, Bool.and_eq_true] at hs; exact ih hs.1
+  | iteF _ _ _ ih => simp only [Effect.spares, Bool.and_eq_true] at hs; exact ih hs.2
+  | seq _ _ ih₁ ih₂ =>
+      simp only [Effect.spares, Bool.and_eq_true] at hs; rw [ih₂ hs.2, ih₁ hs.1]
+  | choiceL _ ih => simp only [Effect.spares, Bool.and_eq_true] at hs; exact ih hs.1
+  | choiceR _ ih => simp only [Effect.spares, Bool.and_eq_true] at hs; exact ih hs.2
+  | iterNil => rfl
+  | iterCons _ _ ih₁ ih₂ =>
+      have h' : _ := hs; simp only [Effect.spares] at h'; rw [ih₂ hs, ih₁ h']
+  | counters _ h => rw [h]; rfl
+  | scale _ _ _ h => rw [h]; rfl
+  | damage _ h => rw [h]; rfl
+  | drain _ h => rw [h]; rfl
+  | @touchActive _ w _ _ _ _ h =>
+      cases w with
+      | own => rfl
+      | opp => simp only [GameState.updSide]; simp only [GameState.side] at h; rw [h]; rfl
+  | @touchBench _ w => cases w <;> rfl
+  | unmark w =>
+      cases w with
+      | own => rfl
+      | opp =>
+          simp only [GameState.updSide, PlayerState.unmark, Option.map_map]
+          cases g.opp.active <;> rfl
+  | linger w => cases w <;> rfl
+  | benchCounters w => cases w <;> rfl
+  | benchCountersNone w => cases w <;> rfl
+  | spreadCounters w => cases w <;> rfl
+  | @switch _ _ _ _ _ w =>
+      cases w with
+      | own =>
+          simp only [Whose.noteBenched, GameState.noteBenched, GameState.updSide, Option.map_map]
+          cases g.opp.active <;> rfl
+      | opp => simp [Effect.spares] at hs
+  | benchDamage w => cases w <;> rfl
+  | benchDamageNone w => cases w <;> rfl
+  | spreadDamage w => cases w <;> rfl
+  | benchSome w => cases w <;> rfl
+  | @zone _ w _ _ _ h =>
+      cases w with
+      | own => rfl
+      | opp => exact h.conds
+  | _ => rfl
+
+/-- **Under the protection, the opponent's attack gives no Special Condition and no Poison strength
+to the Defending Pokémon, and removes none**: for every effect `e`, every resolution of
+`e.shielded` keeps them. -/
+theorem shielded_keeps_conds {e : Effect} {g g' : GameState} (h : Run e.shielded g g') :
+    g'.opp.active.map InPlay.conds = g.opp.active.map InPlay.conds :=
+  h.conds (Effect.shielded_spares e)
+
+/-- **The same for an attack against a protected Pokémon** (`Move.attack` with `g.shield = true`). -/
+theorem against_keeps_conds {atk : Attack} {g g' : GameState} (h : Run (atk.against true).script g g') :
+    g'.opp.active.map InPlay.conds = g.opp.active.map InPlay.conds := by
+  rw [Attack.against_script] at h
+  exact shielded_keeps_conds h
+
 end Pokemon.Shield
