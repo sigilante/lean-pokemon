@@ -85,6 +85,9 @@ c('M', 'heal several Pokémon, heal filtered, heal all of a Benched Pokémon, he
   r'^Stadium: activated effect not expressible: unhandled', r'heal 10 damage from each of their Pokémon')
 c('M', 'switch with filters (by type, Basic, HP)', r'^Stadium: activated', r'Water Pokémon')
 c('M', 'history: per-attack lock, attack used last turn, Supporter played, healed, counted, next-turn trigger', r'MV2\): history')
+# importer 0.19.0 (milestone MV12, survey S26): computed spread and targets filtered by damage are imported (`hitBy`);
+# left here: amounts from cards discarded in this way (Wugtrio ex), a count of damaged Benched Pokémon as an attack
+# amount (Gourgeist ex), and cards with another gap
 c('M', 'spread: amount computed by the text or target filtered by damage', r'MV2\): spread')
 c('M', 'several cards attached to one chosen Pokémon', r'^several cards to one chosen')
 c('M', 'attach a non-Energy card (Tool by effect)', r'^attach a non-Energy card')
@@ -220,6 +223,11 @@ c('M', 'copy an attack or a Supporter\'s effect', UH, r'use it as this attack|as
 c('M', 'Prize cards (taken, moved, face up)', UH, r'Prize card|Prize cards')
 c('M', 'look or reveal and choose from a fixed set (top/bottom of a deck, the opponent\'s hand), "the other cards"', UH,
   r'^Look at|^Reveal|reveals their hand|^Then, shuffle any revealed|^Then, discard those|^Shuffle the other cards and put them on the bottom|^Shuffle the revealed|^Your opponent shuffles the other cards|^Put the other cards back|^You may reveal|you find there|^Discard a card you find|^Discard all Item cards and Pokémon Tool cards you find|^For each heads, choose a card you find|Your opponent reveals those cards|^Your opponent reveals that card\.$|^Draw 3 cards from the bottom|from your hand with the top card|in any order|^Shuffle your deck, then put that card on top|^Search your deck for a card\.$|bottom \d+ cards')
+# importer 0.19.0 (milestone MV12, survey S26): "until its remaining HP is N", doubling and quadrupling, counters from a
+# count, damage to each damaged Pokémon, damage to own named Pokémon, recoil per counter and moves of all damage counters
+# from a Benched Pokémon are imported (`hitBy`, `dumpCounters`); left here: moves of the opponent's damage counters
+# (refused: not clamp-safe, S26 §2), "choose 1 of your opponent's Pokémon 6 times", coin amounts on a chosen Pokémon,
+# and the sentences of cards with another gap
 c('M', 'damage counters or damage spread with computed amounts, on several chosen, "until remaining HP", doubling, damage to own named Pokémon', UH,
   r'damage counters on (each|your opponent\'s Active Pokémon until|this Pokémon\.$)|until its remaining HP|Double the number|Put up to \d+ damage counters on this|Choose \d+ of your opponent\'s|Choose 1 of your opponent\'s (Pokémon|Benched)|For each time you chose|damage counters from|to each Pokémon that has any damage|to each of your Drifloon|for each card in your hand|for each damage counter on it|Prize card your opponent has taken|damage to the chosen Pokémon|also does 10 damage to itself for each|Pokémon that has any Special Energy|isn\'t affected by Weakness or Resistance, or by any effects on those|This damage isn\'t affected')
 c('M', 'coins counted by the state ("Flip a coin for each …") and their amounts', UH, r'^Flip a coin for each|for each heads|for each tails|^For each heads|^For each of your opponent\'s Pokémon, flip|flips a coin for each')

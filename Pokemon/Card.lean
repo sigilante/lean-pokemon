@@ -899,7 +899,7 @@ def Effect.hitFree : Effect → Bool
   | _ => true
 
 /-- No attack damage to a Benched Pokémon anywhere in the effect (`benchDamage`,
-`spreadDamage`): Item and Supporter effects must satisfy it, as they must `hitFree` (printed
+`spreadDamage`, the damage forms of `benchSome` and, milestone MV12, `hitBy … .bench`): Item and Supporter effects must satisfy it, as they must `hitFree` (printed
 Trainer cards place damage counters, not attack damage). -/
 def Effect.benchHitFree : Effect → Bool
   | .benchDamage _ _ => false
@@ -936,7 +936,7 @@ def Test.onOwn : Test → Bool
 `selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
 moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
 milestone MV; `look .own … (.attach _)`, milestone MV6; `returnEnergy .own .active` and every
-`shiftEnergy .own`, milestone MV11), no test on the player's own Active Pokémon,
+`shiftEnergy .own`, milestone MV11; `hitBy .own .active`, milestone MV12), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/
@@ -1082,7 +1082,8 @@ discarded from it or attached to it (`discardEnergy .opp .active`, `discardTools
 `attach .opp _ _ .active _`), Energy attached to it put into the opponent's hand or deck
 (`returnEnergy .opp .active`, milestone MV11), Energy moved between the opponent's Pokémon
 (`moveEnergy .opp`, which may take from it; `shiftEnergy .opp`, milestone MV11, which takes from it or
-puts on it), and markers or a Coloring counter placed on one of the opponent's Pokémon
+puts on it), computed damage counters on it and counters moved onto it (`hitBy .opp .active`,
+`dumpCounters _ .active`, milestone MV12: the player's Benched Pokémon then keeps its counters), and markers or a Coloring counter placed on one of the opponent's Pokémon
 (`mark .opp`, `color .opp`, which may choose it). Kept: the damage step (prevented, if at all, by
 `Mod.prevent` and `SEff.prevent`; damage is not an effect), everything on the opponent's Bench, zones,
 hand and deck, the Item lock on the opponent (`linger .opp _ (.lock .item)`: a lock on the player, not
