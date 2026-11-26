@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -695,6 +695,20 @@ def sv5_23 : Card := .pokemon
     attacks := [
       { name := "Slight Intrusion", cost := [.colorless], damage := 3,
         effect := .selfDamage 1,
+        gx := false }] }
+
+/-- Rabsca (sv5-24). Records: sv5-24. Caveats: energyUnitsCount, shieldBench. -/
+def sv5_24 : Card := .pokemon
+  { name := "Rabsca", stage := .stage1, evolvesFrom := some "Rellor",
+    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Spherical Shield", use := .static [{ sel := .own, filt := .any, tgt := some .bench, src := none, need := none, eff := .prevent .any }, { sel := .own, filt := .any, tgt := some .bench, src := none, need := none, eff := .shield .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Psychic", cost := [.grass], damage := 0,
+        effect := .damage (.add (.const 1) (.count (.energy .opp .energy) 3)),
         gx := false }] }
 
 /-- Ponyta (sv5-26). Records: sv5-26. -/
@@ -1510,7 +1524,7 @@ def sv5_106 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Farigiraf ex (sv5-108). Records: sv5-108, sv5-194. Caveats: benchMods, staticPreventBench. -/
+/-- Farigiraf ex (sv5-108). Records: sv5-108, sv5-194. Caveats: benchMods. -/
 def sv5_108 : Card := .pokemon
   { name := "Farigiraf ex", stage := .stage1, evolvesFrom := some "Girafarig",
     hp := 26, type := .darkness, retreat := 2, weakness := some .grass,
@@ -1825,11 +1839,6 @@ def sv5_146 : Card := .trainer "Eri" .supporter
 def sv5_147 : Card := .trainer "Explorer's Guidance" .supporter
     (.seq (.ite (.countGe (.pile .own .deck .any) 2) (.move .own (.top 6) .hand .any (.exactly 2)) (.ite (.countGe (.pile .own .deck .any) 1) (.move .own (.top 6) .hand .any .all) (.move .own (.top 6) .hand .any (.exactly 1)))) (.move .own (.top 4) .discard .any .all))
 
-/-- Full Metal Lab (sv5-148). Records: sv5-148. Caveats: staticBench. -/
-def sv5_148 : Card := .trainer "Full Metal Lab" .stadium
-    .skip [
-      { sel := .all, filt := .ptype .metal, tgt := none, src := none, need := none, eff := .reduce 3 .any }]
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1892,6 +1901,7 @@ def cards : List Card := [
   sv5_20,
   sv5_22,
   sv5_23,
+  sv5_24,
   sv5_26,
   sv5_27,
   sv5_28,
@@ -1980,8 +1990,7 @@ def cards : List Card := [
   sv5_144,
   sv5_145,
   sv5_146,
-  sv5_147,
-  sv5_148]
+  sv5_147]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2000,7 +2009,7 @@ theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.la
 theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
-theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig", "Full Metal Lab"] := by decide +kernel
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
 theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Paradise Resort"] := by decide +kernel

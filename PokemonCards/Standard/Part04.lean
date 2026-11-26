@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 4 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,34 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part04
 open Pokemon
+
+/-- Rotom (sv8-61). Records: sv8-61. Caveats: energyUnitsCount. -/
+def sv8_61 : Card := .pokemon
+  { name := "Rotom", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Crushing Pulse", cost := [.lightning], damage := 0,
+        effect := .move .opp .hand .discard (.or (.kind .item) .tool) .all,
+        gx := false },
+      { name := "Energy Short", cost := [.lightning], damage := 0,
+        effect := .damage (.count (.energy .opp .energy) 2),
+        gx := false }] }
+
+/-- Blitzle (sv8-62). Records: sv8-62. -/
+def sv8_62 : Card := .pokemon
+  { name := "Blitzle", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Add On", cost := [.colorless], damage := 0,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false },
+      { name := "Static Shock", cost := [.lightning, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
 
 /-- Zebstrika (sv8-63). Records: sv8-63. -/
 def sv8_63 : Card := .pokemon
@@ -1134,7 +1162,7 @@ def sv8pt5_39 : Card := .pokemon
         effect := .inflict .confused,
         gx := false }] }
 
-/-- Sylveon (sv8pt5-40). Records: sv8pt5-40. Caveats: staticPreventBench. -/
+/-- Sylveon (sv8pt5-40). Records: sv8pt5-40. -/
 def sv8pt5_40 : Card := .pokemon
   { name := "Sylveon", stage := .stage1, evolvesFrom := some "Eevee",
     hp := 12, type := .psychic, retreat := 1, weakness := some .metal,
@@ -1324,6 +1352,20 @@ def sv8pt5_76 : Card := .pokemon
         gx := false },
       { name := "Toss-and-Turn Press", cost := [.colorless, .colorless, .colorless, .colorless], damage := 0,
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 12)) (.choice (.damage (.const 24)) (.damage (.const 36)))),
+        gx := false }] }
+
+/-- Hoothoot (sv8pt5-77). Records: sv8pt5-77. -/
+def sv8pt5_77 : Card := .pokemon
+  { name := "Hoothoot", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .colorless, retreat := 2, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Insomnia", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .noCond .asleep }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Tackle", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
         gx := false }] }
 
 /-- Miltank (sv8pt5-81). Records: sv8pt5-81. Caveats: usedLastBenchUse. -/
@@ -1692,44 +1734,10 @@ def sv9_20 : Card := .pokemon
         effect := .choice (.inflict .burned) .skip,
         gx := false }] }
 
-/-- Magmortar (sv9-21). Records: sv9-21. -/
-def sv9_21 : Card := .pokemon
-  { name := "Magmortar", stage := .stage1, evolvesFrom := some "Magmar",
-    hp := 13, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Magma Surge", use := .static [{ sel := .opp, filt := .any, tgt := none, src := none, need := none, eff := .condMore .burned 3 }],
-        spot := none, cond := none,
-        effect := .fx .skip }],
-    attacks := [
-      { name := "Searing Flame", cost := [.fire, .fire, .colorless], damage := 9,
-        effect := .choice (.inflict .burned) .skip,
-        gx := false }] }
-
-/-- Torchic (sv9-22). Records: sv9-22. -/
-def sv9_22 : Card := .pokemon
-  { name := "Torchic", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Scratch", cost := [.fire, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Combusken (sv9-23). Records: sv9-23. -/
-def sv9_23 : Card := .pokemon
-  { name := "Combusken", stage := .stage1, evolvesFrom := some "Torchic",
-    hp := 9, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Slash", cost := [.fire, .colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv8_61,
+  sv8_62,
   sv8_63,
   sv8_64,
   sv8_66,
@@ -1843,6 +1851,7 @@ def cards : List Card := [
   sv8pt5_67,
   sv8pt5_68,
   sv8pt5_76,
+  sv8pt5_77,
   sv8pt5_81,
   sv8pt5_82,
   sv8pt5_83,
@@ -1876,10 +1885,7 @@ def cards : List Card := [
   sv9_17,
   sv9_18,
   sv9_19,
-  sv9_20,
-  sv9_21,
-  sv9_22,
-  sv9_23]
+  sv9_20]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

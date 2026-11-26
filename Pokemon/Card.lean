@@ -708,8 +708,10 @@ inductive Effect where
   Resistance ("Don't apply Weakness and Resistance for Benched Pokémon!", rulebook 2023 p. 14);
   in the model no other modifier applies either: no bonus (a departure: the rulebook's example
   bonus, "this Pokémon's attacks do 40 more damage", p. 20, names no target), and no reduction
-  or prevention (a departure the other way: the model's modifiers protect a player's Active
-  Pokémon only; Known gaps), and a Tera Pokémon on the Bench takes none (`InPlay.hitBench`). The amount is a printed number. Not a damage step of the Active
+  or stored prevention (a departure the other way: the model's stored modifiers protect a player's
+  Active Pokémon only; Known gaps), and a Tera Pokémon on the Bench takes none (`InPlay.hitBench`).
+  Since milestone MV13 a static `SEff.prevent` in force on the target against the attacker is read:
+  the target then takes none (`GameState.bAmt`, `GameState.benchSafe`). The amount is a printed number. Not a damage step of the Active
   Pokémon (`hitFree`, `oneHit` ignore it); only attacks may use it (`benchHitFree`, required by
   `Move.item` and `Move.supporter`). Milestone M3 -/
   | benchDamage (w : Whose) (n : Nat)
@@ -1232,7 +1234,9 @@ inductive SAmt where
 * `prevent fr` (milestone MV3): "Prevent all damage done to this Pokémon by attacks from your
   opponent's Pokémon ex" (Sylveon sv8pt5-40: `fr = ex`); damage to the affected Pokémon in the
   Active Spot from attacks of Pokémon whose top card passes `fr` is 0 (step 5 of the damage
-  calculation, with the defender's other effects; `GameState.sPrevent`). A flag, not an amount: it
+  calculation, with the defender's other effects; `GameState.sPrevent`), and since milestone MV13
+  attack damage to the affected Pokémon on the Bench from such an attacker is 0 too
+  (`GameState.benchSafe`). A flag, not an amount: it
   is read, never stored, and an attack whose damage "isn't affected by any effects on your
   opponent's Active Pokémon" (`Ign.fx`) is not prevented.
 * `condMore c n` (milestone MV7b, survey S20 §a T1): during Pokémon Checkup, `n` more damage

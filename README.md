@@ -495,6 +495,25 @@ opponent's damage are not in the language (a cap does not commute with them; sur
 `Pokemon/Computed.lean` (Item cards with the counters forms from a well-formed, settled start, and
 general theorems on every resolution: "until its remaining HP is `n`" adds nothing below that HP; with
 `hurt` only damaged Pokémon change; with no eligible Benched Pokémon `dumpCounters` changes nothing).
+Milestone MV13 (static prevention and immunity; survey S27) added no state and no effect constructor:
+two static effects, `SEff.noCond c` ("This Pokémon can't be Asleep") and `SEff.noHeal` ("Your opponent's
+Active Pokémon can't be healed"), and three reads added to existing rules of `Run`. The damage forms of
+the Bench primitives (`benchDamage`, `spreadDamage`, `benchSome … true`, `hitBy … .bench … true`, which
+only attacks use) place nothing on a Benched Pokémon of the opponent on which a static `SEff.prevent`
+against the attacker is in force (`GameState.benchSafe`, `GameState.bAmt`): every static damage
+prevention is now read on the Bench as well as at the Active Spot. `Run.inflict` leaves an immune
+Pokémon as it was (`GameState.condImmune`, `InPlay.inflictIf`); `Run.heal`, `Run.healAll` and the heal
+of `Run.drain` heal nothing under a heal block (`GameState.healBlocked`, `GameState.healAmt`). Each read
+is a function of the field, which both clamps keep, so `Run.cap_sim`, `Run.xcap_sim` and every headline
+statement kept their text. With no such static in force each rule is its old form, proved per rule
+(`Run.benchDamage_old`, `Run.spreadDamage_old`, `Run.benchSome_old`, `Run.hitByBench_old`,
+`Run.inflict_old`, `Run.heal_old`, `Run.healAll_old`; with no static effects at all,
+`GameState.benchOpen_noStatics`, `GameState.immune_heal_noStatics`). Damage counters and other effects
+of attacks on a protected Benched Pokémon are still not prevented, and neither are effects of the
+opponent's Abilities (Known gaps). Witnesses: `Pokemon/BenchGuard.lean` (an attack's spread against a
+protected and an unprotected Benched Pokémon, against an attacker outside the filter, and without the
+Ability) and `Pokemon/Immune.lean` (Item cards against an immune and a plain Active Pokémon, and Potion
+with and without the opponent's heal block).
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
@@ -966,9 +985,12 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,604 are imported (1,089 exactly, 515 with
-caveats) as 1,595 distinct terms, and 557 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.19.0, which since 0.19.0 translates computed spread
+damage reduction). Of the pool's 2,161 cards, 1,612 are imported (1,093 exactly, 519 with
+caveats) as 1,603 distinct terms, and 549 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.20.0, which since 0.20.0 translates static damage
+prevention on the Bench ("As long as this Pokémon is on your Bench, prevent all damage …", "… done to
+your Benched Pokémon", Shadowy Darkness Energy), "This Pokémon can't be Asleep" and "Your opponent's
+Active Pokémon can't be healed"; since 0.19.0 it translates computed spread
 ("N damage to 1 of your opponent's Pokémon for each …", "for each damage counter on that Pokémon"),
 targets filtered by damage ("… that has any damage counters on it"), "until its remaining HP is N",
 doubling and quadrupling of damage counters, counters computed from a count, damage to the player's

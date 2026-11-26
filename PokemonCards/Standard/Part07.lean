@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 7 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,70 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part07
 open Pokemon
+
+/-- Trubbish (rsv10pt5-59). Records: rsv10pt5-59, rsv10pt5-140. -/
+def rsv10pt5_59 : Card := .pokemon
+  { name := "Trubbish", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Drool", cost := [.darkness], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Sludge Bomb", cost := [.darkness, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Garbodor (rsv10pt5-60). Records: rsv10pt5-60, rsv10pt5-141. -/
+def rsv10pt5_60 : Card := .pokemon
+  { name := "Garbodor", stage := .stage1, evolvesFrom := some "Trubbish",
+    hp := 14, type := .darkness, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Suffocating Gas", cost := [.darkness], damage := 4,
+        effect := .skip,
+        gx := false },
+      { name := "Gunk Shot", cost := [.darkness, .darkness, .colorless], damage := 12,
+        effect := .inflict .poisoned,
+        gx := false }] }
+
+/-- Zorua (rsv10pt5-61). Records: rsv10pt5-61, rsv10pt5-142. Caveats: recoil. -/
+def rsv10pt5_61 : Card := .pokemon
+  { name := "Zorua", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Take Down", cost := [.darkness], damage := 3,
+        effect := .selfDamage 1,
+        gx := false }] }
+
+/-- Vullaby (rsv10pt5-63). Records: rsv10pt5-63, rsv10pt5-144. -/
+def rsv10pt5_63 : Card := .pokemon
+  { name := "Vullaby", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Playful Kick", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Mandibuzz (rsv10pt5-64). Records: rsv10pt5-64, rsv10pt5-145. Caveats: oppBenchFresh. -/
+def rsv10pt5_64 : Card := .pokemon
+  { name := "Mandibuzz", stage := .stage1, evolvesFrom := some "Vullaby",
+    hp := 11, type := .darkness, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Look for Prey", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.seq (.ite (.countGe (.pile .opp .hand .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.bench .opp .pokemon) 5) (.look .opp .hand .any (.exactly 0) (.put .hand) .hand) (.look .opp .hand (.and .basic (.hpLe 7)) (.most 1) .bench .hand))) }],
+    attacks := [
+      { name := "Cutting Wind", cost := [.colorless, .colorless, .colorless], damage := 9,
+        effect := .skip,
+        gx := false }] }
 
 /-- Deino (rsv10pt5-65). Records: rsv10pt5-65, rsv10pt5-146. -/
 def rsv10pt5_65 : Card := .pokemon
@@ -1788,72 +1852,13 @@ def me1_71 : Card := .pokemon
         effect := .damage (.add (.const 1) (.many (.const 3))),
         gx := false }] }
 
-/-- Makuhita (me1-72). Records: me1-72. -/
-def me1_72 : Card := .pokemon
-  { name := "Makuhita", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fighting, retreat := 2, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Corkscrew Punch", cost := [.fighting], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Confront", cost := [.fighting, .fighting], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Hariyama (me1-73). Records: me1-73. Caveats: recoil. -/
-def me1_73 : Card := .pokemon
-  { name := "Hariyama", stage := .stage1, evolvesFrom := some "Makuhita",
-    hp := 15, type := .fighting, retreat := 3, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Heave-Ho Catcher", use := .onPlay .evolve,
-        spot := none, cond := none,
-        effect := .fx (.switch .opp) }],
-    attacks := [
-      { name := "Wild Press", cost := [.fighting, .fighting, .fighting], damage := 21,
-        effect := .selfDamage 7,
-        gx := false }] }
-
-/-- Lunatone (me1-74). Records: me1-74, me2pt5-105. Caveats: onePerName. -/
-def me1_74 : Card := .pokemon
-  { name := "Lunatone", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Lunar Cycle", use := .once,
-        spot := none, cond := some (.countGe (.inPlay .own (.named "Solrock")) 1),
-        effect := .fx (.seq (.move .own .hand .discard (.energyOf .fighting) (.exactly 1)) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own (.top 3) .hand .any .all))) }],
-    attacks := [
-      { name := "Power Gem", cost := [.fighting, .fighting], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
-/-- Solrock (me1-75). Records: me1-75, me2pt5-106. -/
-def me1_75 : Card := .pokemon
-  { name := "Solrock", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Cosmic Beam", cost := [.fighting], damage := 0,
-        effect := .ite (.countGe (.bench .own (.named "Lunatone")) 1) (.damage (.const 7) { weak := true, resist := true }) .skip,
-        gx := false }] }
-
-/-- Riolu (me1-76). Records: me1-76, me2pt5-112. -/
-def me1_76 : Card := .pokemon
-  { name := "Riolu", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fighting, retreat := 2, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Accelerating Stab", cost := [.fighting], damage := 3,
-        effect := .skip,
-        gx := false, selfLock := .this }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  rsv10pt5_59,
+  rsv10pt5_60,
+  rsv10pt5_61,
+  rsv10pt5_63,
+  rsv10pt5_64,
   rsv10pt5_65,
   rsv10pt5_66,
   rsv10pt5_68,
@@ -1998,12 +2003,7 @@ def cards : List Card := [
   me1_67,
   me1_68,
   me1_70,
-  me1_71,
-  me1_72,
-  me1_73,
-  me1_74,
-  me1_75,
-  me1_76]
+  me1_71]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

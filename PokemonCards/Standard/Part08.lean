@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 8 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,70 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part08
 open Pokemon
+
+/-- Makuhita (me1-72). Records: me1-72. -/
+def me1_72 : Card := .pokemon
+  { name := "Makuhita", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Corkscrew Punch", cost := [.fighting], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Confront", cost := [.fighting, .fighting], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Hariyama (me1-73). Records: me1-73. Caveats: recoil. -/
+def me1_73 : Card := .pokemon
+  { name := "Hariyama", stage := .stage1, evolvesFrom := some "Makuhita",
+    hp := 15, type := .fighting, retreat := 3, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Heave-Ho Catcher", use := .onPlay .evolve,
+        spot := none, cond := none,
+        effect := .fx (.switch .opp) }],
+    attacks := [
+      { name := "Wild Press", cost := [.fighting, .fighting, .fighting], damage := 21,
+        effect := .selfDamage 7,
+        gx := false }] }
+
+/-- Lunatone (me1-74). Records: me1-74, me2pt5-105. Caveats: onePerName. -/
+def me1_74 : Card := .pokemon
+  { name := "Lunatone", stage := .basic, evolvesFrom := none,
+    hp := 11, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Lunar Cycle", use := .once,
+        spot := none, cond := some (.countGe (.inPlay .own (.named "Solrock")) 1),
+        effect := .fx (.seq (.move .own .hand .discard (.energyOf .fighting) (.exactly 1)) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own (.top 3) .hand .any .all))) }],
+    attacks := [
+      { name := "Power Gem", cost := [.fighting, .fighting], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
+/-- Solrock (me1-75). Records: me1-75, me2pt5-106. -/
+def me1_75 : Card := .pokemon
+  { name := "Solrock", stage := .basic, evolvesFrom := none,
+    hp := 11, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Cosmic Beam", cost := [.fighting], damage := 0,
+        effect := .ite (.countGe (.bench .own (.named "Lunatone")) 1) (.damage (.const 7) { weak := true, resist := true }) .skip,
+        gx := false }] }
+
+/-- Riolu (me1-76). Records: me1-76, me2pt5-112. -/
+def me1_76 : Card := .pokemon
+  { name := "Riolu", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fighting, retreat := 2, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Accelerating Stab", cost := [.fighting], damage := 3,
+        effect := .skip,
+        gx := false, selfLock := .this }] }
 
 /-- Mega Lucario ex (me1-77). Records: me1-77, me1-160, me1-179, me1-188. -/
 def me1_77 : Card := .pokemon
@@ -1717,69 +1781,13 @@ def me2pt5_54 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .this }] }
 
-/-- Pikachu (me2pt5-55). Records: me2pt5-55. -/
-def me2pt5_55 : Card := .pokemon
-  { name := "Pikachu", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tail Smack", cost := [.lightning], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Tiny Bolt", cost := [.lightning, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Raichu (me2pt5-56). Records: me2pt5-56. Caveats: energyOfBasic, energyOfCount. -/
-def me2pt5_56 : Card := .pokemon
-  { name := "Raichu", stage := .stage1, evolvesFrom := some "Pikachu",
-    hp := 13, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Quick Blow", cost := [.lightning], damage := 0,
-        effect := .choice (.damage (.const 7)) (.damage (.const 2)),
-        gx := false },
-      { name := "Strong Volt", cost := [.lightning, .lightning, .colorless], damage := 15,
-        effect := .ite (.countGe (.energy .own (.energyOf .lightning)) 1) (.discardEnergy .own .active (.energyOf .lightning) (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Voltorb ex (me2pt5-58). Records: me2pt5-58. -/
-def me2pt5_58 : Card := .pokemon
-  { name := "Voltorb ex", stage := .basic, evolvesFrom := none,
-    hp := 17, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .ex, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Hundred-Hitting Ball", cost := [.colorless, .colorless, .colorless], damage := 0,
-        effect := .damage (.add (.const 10) (.many (.const 10))),
-        gx := false }] }
-
-/-- Stunfisk (me2pt5-62). Records: me2pt5-62. Caveats: perPokemon. -/
-def me2pt5_62 : Card := .pokemon
-  { name := "Stunfisk", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .lightning, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Pouncing Trap", cost := [.lightning], damage := 3,
-        effect := .seq (.linger .opp .next (.lock .retreat)) (.linger .opp .after (.expose 10)),
-        gx := false }] }
-
-/-- Helioptile (me2pt5-63). Records: me2pt5-63. -/
-def me2pt5_63 : Card := .pokemon
-  { name := "Helioptile", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .lightning, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Zap Kick", cost := [.lightning, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_72,
+  me1_73,
+  me1_74,
+  me1_75,
+  me1_76,
   me1_77,
   me1_78,
   me1_79,
@@ -1924,12 +1932,7 @@ def cards : List Card := [
   me2pt5_51,
   me2pt5_52,
   me2pt5_53,
-  me2pt5_54,
-  me2pt5_55,
-  me2pt5_56,
-  me2pt5_58,
-  me2pt5_62,
-  me2pt5_63]
+  me2pt5_54]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1991,6 +1994,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Buneary", "Pawmi", "Empoleon ex", "Chikorita"] := by decide +kernel
 
 end PokemonCards.Standard.Part08

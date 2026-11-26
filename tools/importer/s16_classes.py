@@ -37,6 +37,7 @@ def c(cls, what, reason='', sent=''):
 
 # ---------------------------------------------------------------- card-level kinds
 # importer 0.15.0 (milestone MV8): the Special Energy cards whose riders the model does not express (S22 §1)
+# importer 0.20.0 (milestone MV13): Bench damage prevention (Shadowy Darkness Energy) is imported and left this row
 c('M', 'Special Energy riders (on-attach, end-of-turn discard, return after discard, effect prevention, Special Condition '
        'immunity, Bench damage prevention, Prize change)', r'^Special Energy: rider not modelled')
 c('M', 'Special Energy (cards and text)', r'^Special Energy$|card named in text is a Special Energy')
@@ -55,6 +56,11 @@ c('D', 'Count.retreat on a card whose own static effect changes the Retreat Cost
 c('M', 'draw by a count of the state', r'^revealed hand: clause not expressible', r'draw a card for each')
 c('M', "copy an attack or a Supporter's effect", r'^revealed hand: clause not expressible', r'effect of a Supporter card')
 c('M', 'data defect or out-of-range stage/Resistance (record)', r'^evolution card with no evolves-from|^stage not Basic|^Resistance not|^rule box kind without')
+# importer 0.20.0 (milestone MV13, survey S27): static damage prevention on the Bench, "can't be Asleep" and "can't be
+# healed" are imported; left in this row: effects of Abilities (Mega Clefable ex, the four "Hide 'n' Sneak" cards), Bench
+# counters by attacks and Abilities (Battle Cage), "recovers from all Special Conditions" (Festival Grounds), thresholds
+# (Drednaw), an attacker filter on attached Energy (Bastiodon), the static `Ign.fx` (Walking Wake ex), Dizzying Valley,
+# Neutralization Zone
 c('M', 'static effects: prevention or immunity (effects, Special Conditions, healing, thresholds, Bench)', r'static, prevent')
 c('M', 'static effects: Ability/Tool/Item/Stadium/attack locks', r'static, lock')
 c('M', 'static effects: cost changes and Energy provision', r'static, cost')
