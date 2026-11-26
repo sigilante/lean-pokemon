@@ -25,7 +25,8 @@ Survey S15 §3. What is implemented:
   latter as damage prevention alone would let the attack's effects through (more outcomes). (Since
   milestone MV10 the effect half is `Mod.shield`, `Pokemon/Shield.lean`; the filtered form is still
   absent.)
-* (c) thresholds ("if that damage is 60 or less", 3 cards) are not modelled.
+* (c) thresholds ("if that damage is 60 or less", 3 cards) were not modelled here; since milestone
+  MV14 they are (`SEff.preventGe`, `Mod.preventLe`; `Pokemon/Threshold.lean`, survey S28).
 
 Interaction with stage 1: an attack whose damage "isn't affected by any effects on your opponent's
 Active Pokémon" (`Ign.fx`) is not prevented, statically or by the store (`GameState.dealtI`).
