@@ -520,7 +520,7 @@ sv8-178	Jasmine's Gaze	Supporter	imported with caveats	benchMods	sv8-178 sv8-233
 sv8-180	Lively Stadium	Stadium	imported exactly		sv8-180	sv8_180	Hp	
 sv8-183	Miracle Headset	Item	imported with caveats	aceSpec,upTo0	sv8-183	sv8_183		
 sv8-185	Precious Trolley	Item	imported with caveats	aceSpec	sv8-185	sv8_185		
-sv8-186	Scramble Switch	Item	imported with caveats	aceSpec,anyAmount60,shiftFromMoved,upTo0	sv8-186	sv8_186		
+sv8-186	Scramble Switch	Item	imported with caveats	aceSpec,anyAmount60,shiftFromMoved	sv8-186	sv8_186		
 sv8-187	Surfer	Supporter	imported exactly		sv8-187 sv8-235 me2pt5-200 me2pt5-293	sv8_187		
 sv8-189	Tera Orb	Item	imported exactly		sv8-189	sv8_189		
 sv8pt5-1	Exeggcute	Pokémon	imported exactly		sv8pt5-1	sv8pt5_1		

@@ -107,7 +107,8 @@ inductive Pointwise (P : InPlay → InPlay → Prop) : List InPlay → List InPl
       Pointwise P (x :: b) (y :: b')
 
 /-- **General: what `Hits` does.** Each Pokémon of the new Bench is the old one at its place, or the
-old one passed the filter and is changed by `U`. -/
+old one passed the filter and is changed by `U`. This does not count the changed places: that
+exactly `k` are changed is in the definition of `Hits` and shown here only by the witnesses. -/
 theorem hits_pointwise {U : InPlay → InPlay} {f : Filter} {k : Nat} {b b' : List InPlay}
     (h : Hits U f k b b') :
     Pointwise (fun x y => y = x ∨ (f.eval (.pokemon x.top) = true ∧ y = U x)) b b' := by

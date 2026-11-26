@@ -819,7 +819,7 @@ def sv8_183 : Card := .trainer "Miracle Headset" .item
 def sv8_185 : Card := .trainer "Precious Trolley" .item
     (.seq (.ite (.countGe (.bench .own .pokemon) 5) (.move .own (.top 0) .hand .any (.exactly 1)) .skip) (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.putBench .own .deck .basic) (.seq (.putBench .own .deck .basic) (.seq (.putBench .own .deck .basic) (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic))))) .shuffle)))
 
-/-- Scramble Switch (sv8-186). Records: sv8-186. Caveats: aceSpec, anyAmount60, shiftFromMoved, upTo0. -/
+/-- Scramble Switch (sv8-186). Records: sv8-186. Caveats: aceSpec, anyAmount60, shiftFromMoved. -/
 def sv8_186 : Card := .trainer "Scramble Switch" .item
     (.seq (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .own) (.shiftEnergy .own .bench .energy (.upTo 60) .active true)))
 

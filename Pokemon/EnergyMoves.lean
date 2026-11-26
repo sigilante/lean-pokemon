@@ -22,15 +22,18 @@ clamp at any caps (`ZStep.sim`, which covers `clamp` and `xclamp`). No new state
 of `Enum` are lists of the same states. For the store bound (`StoreSafe`): neither takes a card out of
 a discard pile (`Run.disc_mono`; `Effect.recFilters` is `[]` for both), and neither raises the
 potential `abPot` (`ZStep.abPot_le`). `returnEnergy` returns a card from play to the hand or deck,
-where it can be played again; the cards it moves are the cards attached to a Pokémon as Energy,
-and playing a card from the hand writes a stored amount only if it is an Item (`Card.wAmt`), whose
-writes the per-turn invariant pays by its arrival in the discard pile. So the five clauses and their
+where it can be played again. In play only Energy cards are attached as Energy (every attach path
+admits `.energy` cards only), and an Energy card writes nothing (`Card.wAmt` is 0). On a hand-built
+start that attaches an Item as Energy the argument is the invariant's own: every Item write is
+charged to the sum `discW Card.wAmt` over the discard piles, which rises when a card arrives there,
+falls only through recyclers (`recFilters`) and is bounded (`Card.wAmt_le_P`); a return never
+lowers it. So the five clauses and their
 proofs are unchanged.
 
 **Witnesses** (Item cards, legal moves from well-formed, `Settled` starts) and **general facts**
 about every resolution:
 * `recall_hand`: a Fire Energy attached to the Active Pokémon goes to the hand (positive);
-  `recall_none_of_type`: a Water-only `returnEnergy` has no resolution there (negative: the filter is
+  `recall_none_of_type`: a Grass-only `returnEnergy` has no resolution there (negative: the filter is
   read); `returnEnergy_all_leaves`: for every resolution of a `.all` return from the Active Pokémon,
   no card passing the filter is left on it.
 * `shift_one`: both Energy cards of the Active Pokémon move to one Benched Pokémon (positive);
@@ -91,8 +94,8 @@ theorem recall_hand :
   exact ⟨start_wellFormed _, start_settled _, _, hm, rfl, rfl, rfl⟩
 
 /-- **The filter is read** (negative witness): a return of exactly one Grass Energy from the Active
-Pokémon, which has none (only Fire and Water), has no resolution from the start state, so an Item with
-that effect cannot be played there. -/
+Pokémon, which has none (only Fire and Water), has no resolution from the start state (the theorem is
+about the effect in that state; that an Item with it cannot be played there is not stated). -/
 theorem recall_none_of_type (c : Card) :
     ¬ ∃ g, Run (.returnEnergy .own .active (.energyOf .grass) (.exactly 1) .hand) (start c) g := by
   rintro ⟨g, h⟩

@@ -687,7 +687,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   card passes `f` (all that pass if fewer do; `m = 5 = benchLimit` is "each"), up to `n` counters from
   each or all of them (`n = none`): "Heal 30 damage from each of your Pokémon" is
   `seq (heal 3) (benchHealSome 5 .any (some 3))`, "each of your Lightning Pokémon" the same with the
-  Active half under `ite (top .own F)`. Exact for these printed forms. No effect heals the opponent's
+  Active half under `ite (top .own F)`. Exact for these printed forms on states whose Bench holds at
+  most `benchLimit` Pokémon, which moves keep but `WellFormed` does not ask of a start: with 6 or
+  more Benched Pokémon "each" heals 5 of the player's choice (forbids some and allows more: both).
+  Special Energy on-attach text is not modelled, so an Energy returned to the hand and attached
+  again does nothing on its return. No effect heals the opponent's
   Pokémon ("Heal 30 damage from each Pokémon (both yours and your opponent's)", Mega Floette ex
   me4-35, Grisham me6-93: refused): inside an attack the capped clamp caps the opponent's damage
   (`GameState.rclamp`), and a heal does not commute with a cap (`d ≥ k` and `k` have one image, `d - n`
@@ -1194,7 +1198,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   exact (each card moved once, from where it is to where it ends). "Move Energy from the Pokémon you
   moved to your Bench to the new Active Pokémon" (after a switch) takes it from a Benched Pokémon chosen
   when the move resolves: the model does not record which Pokémon the switch moved (allows more;
-  importer caveat `shiftFromMoved`). The existing "Move an Energy from this Pokémon to 1 of your Benched
+  importer caveat `shiftFromMoved`, both: a forced "move an Energy" whose only source holds a
+  holder-restricted Special Energy the new Active Pokémon may not hold has no resolution, so the card
+  cannot be played, where print plays it). The existing "Move an Energy from this Pokémon to 1 of your Benched
   Pokémon" cards keep `moveEnergy` (caveat `moveAnyPair`); `shiftEnergy` would make them exact, a
   change of imported terms left for a later importer. Simplifications and
   departures (since milestone MV6 also the bottom `n` cards of the deck, `Src.bottom`, and "`n`, or

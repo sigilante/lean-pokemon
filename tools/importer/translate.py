@@ -240,7 +240,10 @@ CAVEATS = {
                  "that provides 2 (MULTI_UNIT)",
     'shiftFromMoved': "'move Energy from the Pokémon you moved to your Bench to the new Active Pokémon' takes the Energy "
                       "from a Benched Pokémon chosen when the move resolves: the model does not record which Pokémon the "
-                      "switch moved (Known gaps, zone moves item, milestone MV11)",
+                      "switch moved, and may take it from a Benched Pokémon with none where the moved one has some; a forced move "
+                      "('move an Energy') whose only source holds an Energy the new Active Pokémon may not hold (a holder-"
+                      "restricted Special Energy) has no resolution, so the card cannot be played where print plays it "
+                      "(Known gaps, zone moves item, milestone MV11)",
     'discardUnits': "'discard N Energy' (N at least 2) is `discardEnergy … (Filter.energy)`, read by the Energy the cards "
                     "provide (`Qty.okE`): one card that provides 2 pays 2, a card providing more than still needed may be "
                     "discarded, no card the payment does not need may be (Known gaps, Energy item: readings, no rule found "
@@ -334,8 +337,8 @@ CAVEAT_DIRECTION = {
     # importer 0.18.0
     'moveUnits': 'both',           # by units a 2-unit card counts 2 (fewer cards than print by cards), and the steps
                                    # of 'up to N from your Benched Pokémon' may move N 2-unit cards (more than by units)
-    'shiftFromMoved': 'allows more',  # the Energy of another Benched Pokémon may move; the printed move is among the
-                                      # outcomes
+    'shiftFromMoved': 'both',  # the Energy of another Benched Pokémon may move (allows more); a forced move blocked
+                               # by a holder restriction blocks the play (forbids some)
     # importer 0.17.0
     'shieldReach': 'both',         # a gust or a Bench-to-Bench Energy move print may allow is absent (forbids some); an
                                    # attachment onto the protected Pokémon from a window is kept (allows more)
@@ -3113,7 +3116,7 @@ class Parser:
                           r'to the new Active Pokémon\.$', nxt)
             if mm:
                 q = ('upTo', 60) if mm.group(1).startswith('you may') else ('most', 1)
-                cv = {'shiftFromMoved'} | ({'anyAmount60', 'upTo0'} if q[0] == 'upTo' else set())
+                cv = {'shiftFromMoved'} | ({'anyAmount60'} if q[0] == 'upTo' else set())
                 self.used.append(('switch-then-move-energy', s + ' ' + nxt))
                 self.items.append((i, Eff(seq(('switch', OWN),
                                               ('shiftEnergy', OWN, ('bench',), ENERGY_F, q, ('active',), True)), cv)))

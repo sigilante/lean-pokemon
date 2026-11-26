@@ -659,7 +659,8 @@ inductive Effect where
   /-- (milestone MV11) heal `m` distinct Benched Pokémon of the player whose card passes `f`, chosen
   when the effect resolves, all of them if fewer pass: from each, up to `n` damage counters
   (`some n`), or all of them (`none`). "Heal 100 damage from each of your Benched Pokémon" (Leafeon ex
-  sv8pt5-6) is `benchHealSome 5 .any (some 10)` (5 = `benchLimit`: every Benched Pokémon); "Heal 120
+  sv8pt5-6) is `benchHealSome 5 .any (some 10)` (5 = `benchLimit`: every Benched Pokémon when the Bench holds at most 5, as
+  moves keep it); "Heal 120
   damage from 1 of your Benched Psychic Pokémon" (Meloetta me2-40), `benchHealSome 1 (.ptype .psychic)
   (some 12)`; "Heal all damage from 1 of your Benched Pokémon" (Ho-Oh me55-12), `benchHealSome 1 .any
   none`. Only the player's own Pokémon: a heal of the opponent's Pokémon inside an attack would not
