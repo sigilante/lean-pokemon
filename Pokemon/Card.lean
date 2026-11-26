@@ -220,6 +220,12 @@ inductive Mod where
   next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and
   Resistance)" (Vibrava sv8-105) is `linger .opp .after (.expose 5)`; repeated uses add up -/
   | expose (n : Nat)
+  /-- (milestone MV10) prevent all effects of attacks done to the player's Active Pokémon (not their
+  damage, which `prevent` prevents): an attack of the opponent resolves with its effects on that
+  Pokémon removed (`Effect.shielded`, `GameState.shield`, `Move.attack`). "During your opponent's
+  next turn, prevent all damage from and effects of attacks done to this Pokémon" (Elgyem sv5-73) is
+  `seq (linger .own .next .prevent) (linger .own .next .shield)`. A flag, as `prevent` -/
+  | shield
   deriving DecidableEq
 
 /-- A modifier the capped clamp can absorb (milestone MV6): every modifier but a damage reduction,
@@ -975,6 +981,52 @@ sets no lock (an under-model, Known gaps). -/
 def Attack.lockSet (atk : Attack) : AtkLock :=
   if atk.script.switchesOwn then .none else atk.selfLock
 
+/-- **The effect of an attack with its effects on the Defending Pokémon removed** (milestone MV10):
+what an attack resolves against an opponent's Active Pokémon protected by "prevent all effects of
+attacks done to this Pokémon" (`Mod.shield`, `SEff.shield`; `Attack.against`, `Move.attack`). Each
+primitive the model counts as done to the opponent's Active Pokémon becomes `skip`: damage counters
+on it (`counters`, `scale`), Special Conditions and Poison strength (`inflict`, `poisonUp`), switching
+it out or a Benched Pokémon in (`switch .opp`), lingering modifiers that print puts on the Defending
+Pokémon (`linger .opp _ (.lock .attack)`, `(.lock .retreat)`, `.weaken`, `.expose`), Energy and Tools
+discarded from it or attached to it (`discardEnergy .opp .active`, `discardTools .opp .active`,
+`attach .opp _ _ .active _`), Energy moved between the opponent's Pokémon (`moveEnergy .opp`, which
+may take from it), and markers or a Coloring counter placed on one of the opponent's Pokémon
+(`mark .opp`, `color .opp`, which may choose it). Kept: the damage step (prevented, if at all, by
+`Mod.prevent` and `SEff.prevent`; damage is not an effect), everything on the opponent's Bench, zones,
+hand and deck, the Item lock on the opponent (`linger .opp _ (.lock .item)`: a lock on the player, not
+on the Pokémon), and every effect on the attacker's own side. Tests are kept: reading the Defending
+Pokémon is not doing something to it. Which effects count as "done to" a Pokémon is a reading
+(Known gaps). -/
+def Effect.shielded : Effect → Effect
+  | .counters _ => .skip
+  | .inflict _ => .skip
+  | .poisonUp _ => .skip
+  | .scale _ _ => .skip
+  | .switch .opp => .skip
+  | .mark .opp _ => .skip
+  | .color .opp _ => .skip
+  | .linger .opp _ (.lock .attack) => .skip
+  | .linger .opp _ (.lock .retreat) => .skip
+  | .linger .opp _ (.weaken _) => .skip
+  | .linger .opp _ (.expose _) => .skip
+  | .discardEnergy .opp .active _ _ => .skip
+  | .discardTools .opp .active => .skip
+  | .attach .opp _ _ .active _ => .skip
+  | .moveEnergy .opp _ => .skip
+  | .ite t a b => .ite t a.shielded b.shielded
+  | .seq a b => .seq a.shielded b.shielded
+  | .choice a b => .choice a.shielded b.shielded
+  | .iter a => .iter a.shielded
+  | e => e
+
+/-- **The attack as it resolves** (milestone MV10): the attack itself, or with its effect
+`Effect.shielded` when `b` (the Defending Pokémon is protected from effects of attacks,
+`GameState.shield`). Name, cost, base damage, GX flag and lock are unchanged. -/
+def Attack.against (b : Bool) (atk : Attack) : Attack :=
+  if b then { atk with effect := atk.effect.shielded } else atk
+
+@[simp] theorem Attack.against_false (atk : Attack) : atk.against false = atk := rfl
+
 /-- An attack whose text sets no lock sets none. -/
 theorem Attack.lockSet_of_none {atk : Attack} (h : atk.selfLock = .none) : atk.lockSet = .none := by
   unfold Attack.lockSet; split
@@ -1091,7 +1143,12 @@ inductive SAmt where
   stored.
 * `noRetreat` (milestone MV8): "The Metal Pokémon this card is attached to has no Retreat Cost"
   (Magnetic Metal Energy me4-85): the affected Pokémon's Retreat Cost is 0, whatever else is in force
-  (`GameState.retreatOf`: a set, applied after the additions and subtractions). -/
+  (`GameState.retreatOf`: a set, applied after the additions and subtractions).
+* `shield fr` (milestone MV10): "Prevent all effects of attacks used by your opponent's Pokémon done
+  to this Pokémon. (Damage is not an effect.)" (Skeledirge sv8-31, Empoleon ex me2-70: `fr = any`):
+  an attack of a Pokémon whose top card passes `fr` against the affected Pokémon in the Active Spot
+  resolves with its effects on that Pokémon removed (`Effect.shielded`, `GameState.sShield`). Read,
+  never stored, at the start of the attack; damage is not prevented. -/
 inductive SEff where
   | hpPlus (a : SAmt)
   | hpMinus (n : Nat)
@@ -1102,6 +1159,7 @@ inductive SEff where
   | prevent (fr : Filter)
   | condMore (c : Condition) (n : Nat)
   | noRetreat
+  | shield (fr : Filter)
   deriving DecidableEq
 
 /-- **A static effect** (milestone M6): what it changes (`eff`), for which Pokémon (`sel`, relative
@@ -1998,6 +2056,52 @@ theorem Attack.script_tmax (atk : Attack) : atk.script.tmax = atk.effect.tmax :=
   split
   · rfl
   · simp only [Effect.tmax, Nat.zero_max]
+
+/-! ### `Effect.shielded` keeps what the clamps need (milestone MV10)
+
+`Effect.shielded` replaces primitives by `skip` and keeps the structure, so every property of an
+effect that holds of `skip` and is checked primitive by primitive holds of the shielded effect. -/
+
+theorem Effect.shielded_tame (e : Effect) : e.tame = true → e.shielded.tame = true := by
+  induction e with
+  | ite t a b iha ihb =>
+      simp only [Effect.tame, Effect.shielded, Bool.and_eq_true]; exact fun h => ⟨iha h.1, ihb h.2⟩
+  | seq a b iha ihb =>
+      simp only [Effect.tame, Effect.shielded, Bool.and_eq_true]; exact fun h => ⟨iha h.1, ihb h.2⟩
+  | choice a b iha ihb =>
+      simp only [Effect.tame, Effect.shielded, Bool.and_eq_true]; exact fun h => ⟨iha h.1, ihb h.2⟩
+  | iter a iha => simp only [Effect.tame, Effect.shielded]; exact iha
+  | _ => intro h; unfold Effect.shielded; (try split) <;> simp_all [Effect.tame]
+
+theorem Effect.shielded_tmax (e : Effect) : e.shielded.tmax ≤ e.tmax := by
+  induction e with
+  | ite t a b iha ihb => simp only [Effect.tmax, Effect.shielded]; omega
+  | seq a b iha ihb => simp only [Effect.tmax, Effect.shielded]; omega
+  | choice a b iha ihb => simp only [Effect.tmax, Effect.shielded]; omega
+  | iter a iha => simp only [Effect.tmax, Effect.shielded]; omega
+  | _ => unfold Effect.shielded; (try split) <;> simp_all [Effect.tmax]
+
+/-- The script of the attack as it resolves: the script, shielded when `b` (the base damage step
+is kept: damage is not an effect). -/
+theorem Attack.against_script (b : Bool) (atk : Attack) :
+    (atk.against b).script = cond b atk.script.shielded atk.script := by
+  cases b
+  · rfl
+  · unfold Attack.against Attack.script
+    simp only [ite_true, Bool.cond_true]
+    split <;> rfl
+
+theorem Attack.against_tame {b : Bool} {atk : Attack} (h : atk.script.tame = true) :
+    (atk.against b).script.tame = true := by
+  rw [Attack.against_script]; cases b
+  · exact h
+  · exact Effect.shielded_tame _ h
+
+theorem Attack.against_tmax (b : Bool) (atk : Attack) :
+    (atk.against b).script.tmax ≤ atk.script.tmax := by
+  rw [Attack.against_script]; cases b
+  · exact Nat.le_refl _
+  · exact Effect.shielded_tmax _
 
 def Card.tame : Card → Bool
   | .pokemon p => attacksTame p.attacks && abilitiesTame p.abilities

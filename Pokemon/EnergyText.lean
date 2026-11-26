@@ -156,7 +156,7 @@ def spStart : GameState :=
 gets 2 damage counters. -/
 theorem spiky_fires : ∃ g', Move spStart g' ∧ g'.cur.active.map InPlay.damage = some 2 ∧
     g'.opp.active.map InPlay.damage = some 5 :=
-  ⟨_, Move.attack (hlk := rfl) (atk := TriggerWitness.strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
+  ⟨_, Move.attackOpen (hlk := rfl) (atk := TriggerWitness.strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
       ((GameState.settled_iff _).2 (by decide)) (.seq (.damage (.const 5 _) rfl) (.skip _)) rfl
       (fun h => nomatch h) rfl (l := [spikyAb])
       (.fire (.seq (.hit (b := true) rfl (.damage (.const 5 _) rfl) rfl (fun _ => rfl))

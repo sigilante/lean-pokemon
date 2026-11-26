@@ -93,6 +93,7 @@ sv5-68	Bronzor	Pokémon	imported exactly		sv5-68 sv5-170	sv5_68
 sv5-70	Solosis	Pokémon	imported exactly		sv5-70	sv5_70		
 sv5-71	Duosion	Pokémon	imported exactly		sv5-71	sv5_71		
 sv5-72	Reuniclus	Pokémon	imported exactly		sv5-72 sv5-171	sv5_72		
+sv5-73	Elgyem	Pokémon	imported with caveats	perPokemon,shieldReach	sv5-73	sv5_73		
 sv5-74	Beheeyem	Pokémon	imported exactly		sv5-74	sv5_74		
 sv5-75	Cutiefly	Pokémon	imported exactly		sv5-75 sv5-172	sv5_75		
 sv5-79	Iron Valiant	Pokémon	imported with caveats	benchMods	sv5-79	sv5_79		
@@ -130,6 +131,7 @@ sv5-124	Lickitung	Pokémon	imported with caveats	oppBenchFresh	sv5-124 sv5-180	s
 sv5-125	Lickilicky	Pokémon	imported exactly		sv5-125	sv5_125		
 sv5-126	Hoothoot	Pokémon	imported with caveats	hiddenInfo	sv5-126	sv5_126		
 sv5-127	Noctowl	Pokémon	imported with caveats	searchAny	sv5-127	sv5_127		
+sv5-128	Dunsparce	Pokémon	imported with caveats	perPokemon,shieldReach	sv5-128 sv8pt5-79	sv5_128		
 sv5-130	Skitty	Pokémon	imported exactly		sv5-130	sv5_130		
 sv5-132	Chatot	Pokémon	imported exactly		sv5-132 sv5-181	sv5_132		
 sv5-134	Tranquill	Pokémon	imported exactly		sv5-134	sv5_134		
@@ -145,6 +147,7 @@ sv5-153	Master Ball	Item	imported with caveats	aceSpec	sv5-153	sv5_153
 sv5-154	Maximum Belt	Pokémon Tool	imported with caveats	aceSpec	sv5-154 sv8pt5-117	sv5_154	Bonus	
 sv5-156	Perilous Jungle	Stadium	imported exactly		sv5-156	sv5_156		
 sv5-157	Prime Catcher	Item	imported with caveats	aceSpec	sv5-157 sv8pt5-119	sv5_157		
+sv5-161	Mist Energy	Special Energy	imported with caveats	shieldActive,shieldReach	sv5-161	sv5_161		
 sv5-162	Neo Upper Energy	Special Energy	imported with caveats	aceSpec,unitsReading	sv5-162	sv5_162		
 sv6-1	Tangela	Pokémon	imported exactly		sv6-1	sv6_1		
 sv6-2	Tangrowth	Pokémon	imported with caveats	staticBench	sv6-2	sv6_2	Reduce	
@@ -249,6 +252,7 @@ sv6-161	Raifort	Supporter	imported exactly		sv6-161	sv6_161
 sv6-163	Secret Box	Item	imported with caveats	aceSpec	sv6-163	sv6_163		
 sv6-165	Unfair Stamp	Item	imported with caveats	aceSpec,koCheckup	sv6-165	sv6_165		
 sv6-226	Luminous Energy	Special Energy	imported exactly		sv6-226	sv6_226		
+sv6pt5-1	Joltik	Pokémon	imported with caveats	perPokemon,shieldReach	sv6pt5-1	sv6pt5_1		
 sv6pt5-3	Rowlet	Pokémon	imported exactly		sv6pt5-3	sv6pt5_3		
 sv6pt5-4	Dartrix	Pokémon	imported exactly		sv6pt5-4	sv6pt5_4		
 sv6pt5-5	Decidueye	Pokémon	imported exactly		sv6pt5-5	sv6pt5_5		
@@ -369,6 +373,7 @@ sv7-112	Tauros	Pokémon	imported exactly		sv7-112	sv7_112
 sv7-113	Eevee	Pokémon	imported exactly		sv7-113	sv7_113		
 sv7-114	Hoothoot	Pokémon	imported exactly		sv7-114	sv7_114		
 sv7-116	Glameow	Pokémon	imported exactly		sv7-116	sv7_116		
+sv7-117	Purugly	Pokémon	imported with caveats	perPokemon,shieldReach	sv7-117	sv7_117		
 sv7-120	Tornadus	Pokémon	imported with caveats	perPokemon	sv7-120	sv7_120		
 sv7-121	Fletchling	Pokémon	imported exactly		sv7-121	sv7_121		
 sv7-122	Fletchinder	Pokémon	imported exactly		sv7-122	sv7_122		
@@ -404,12 +409,14 @@ sv8-27	Sizzlipede	Pokémon	imported exactly		sv8-27	sv8_27
 sv8-28	Centiskorch	Pokémon	imported with caveats	benchMods	sv8-28	sv8_28		
 sv8-29	Fuecoco	Pokémon	imported exactly		sv8-29	sv8_29		
 sv8-30	Crocalor	Pokémon	imported exactly		sv8-30	sv8_30		
+sv8-31	Skeledirge	Pokémon	imported with caveats	shieldActive,shieldReach	sv8-31	sv8_31		
 sv8-32	Charcadet	Pokémon	imported exactly		sv8-32	sv8_32		
 sv8-33	Charcadet	Pokémon	imported exactly		sv8-33	sv8_33		
 sv8-34	Armarouge	Pokémon	imported with caveats	benchMods,energyOfCount	sv8-34	sv8_34		
 sv8-36	Ceruledge ex	Pokémon	imported exactly		sv8-36 sv8pt5-147	sv8_36		
 sv8-40	Mantine	Pokémon	imported with caveats	benchMods	sv8-40	sv8_40		
 sv8-41	Feebas	Pokémon	imported exactly		sv8-41 sv8-198	sv8_41		
+sv8-42	Milotic ex	Pokémon	imported with caveats	shieldActive,shieldReach,staticPreventBench	sv8-42 sv8-217 sv8-237	sv8_42		
 sv8-43	Spheal	Pokémon	imported exactly		sv8-43 sv8-199	sv8_43		
 sv8-44	Sealeo	Pokémon	imported exactly		sv8-44	sv8_44		
 sv8-46	Shellos	Pokémon	imported exactly		sv8-46	sv8_46		
@@ -444,6 +451,7 @@ sv8-87	Dedenne	Pokémon	imported exactly		sv8-87	sv8_87
 sv8-88	Xerneas	Pokémon	imported exactly		sv8-88	sv8_88		
 sv8-90	Sandygast	Pokémon	imported exactly		sv8-90	sv8_90		
 sv8-92	Tapu Lele	Pokémon	imported exactly		sv8-92	sv8_92		
+sv8-94	Flittle	Pokémon	imported with caveats	perPokemon,shieldReach	sv8-94	sv8_94		
 sv8-97	Gimmighoul	Pokémon	imported exactly		sv8-97	sv8_97		
 sv8-98	Mankey	Pokémon	imported exactly		sv8-98	sv8_98		
 sv8-99	Primeape	Pokémon	imported exactly		sv8-99	sv8_99		
@@ -590,6 +598,7 @@ sv9-44	Alolan Geodude	Pokémon	imported exactly		sv9-44	sv9_44
 sv9-45	Alolan Graveler	Pokémon	imported exactly		sv9-45	sv9_45		
 sv9-46	Alolan Golem	Pokémon	imported with caveats	recoil	sv9-46	sv9_46		
 sv9-48	Iono's Electrode	Pokémon	imported with caveats	koCounters,recoil	sv9-48	sv9_48		
+sv9-50	Togedemaru	Pokémon	imported with caveats	perPokemon,shieldReach	sv9-50	sv9_50		
 sv9-51	Tapu Koko ex	Pokémon	imported exactly		sv9-51	sv9_51		
 sv9-52	Iono's Tadbulb	Pokémon	imported exactly		sv9-52 me2pt5-69	sv9_52		
 sv9-53	Iono's Bellibolt ex	Pokémon	imported with caveats	mayFail	sv9-53 sv9-172 sv9-183 sv9-188 me2pt5-70 me2pt5-279	sv9_53		
@@ -650,6 +659,7 @@ sv9-118	Sentret	Pokémon	imported exactly		sv9-118	sv9_118
 sv9-119	Furret	Pokémon	imported exactly		sv9-119 sv9-168	sv9_119		
 sv9-120	Dunsparce	Pokémon	imported exactly		sv9-120	sv9_120		
 sv9-121	Dudunsparce ex	Pokémon	imported with caveats	ignFxStadium	sv9-121 sv9-178	sv9_121		
+sv9-122	Kecleon	Pokémon	imported with caveats	perPokemon,shieldReach	sv9-122	sv9_122		
 sv9-123	Tropius	Pokémon	imported exactly		sv9-123	sv9_123		
 sv9-124	Audino	Pokémon	imported exactly		sv9-124	sv9_124		
 sv9-125	Minccino	Pokémon	imported exactly		sv9-125	sv9_125		
@@ -709,6 +719,8 @@ sv10-44	Hearthflame Mask Ogerpon	Pokémon	imported exactly		sv10-44	sv10_44
 sv10-46	Misty's Staryu	Pokémon	imported exactly		sv10-46	sv10_46		
 sv10-47	Misty's Starmie	Pokémon	imported exactly		sv10-47	sv10_47		
 sv10-50	Misty's Lapras	Pokémon	imported exactly		sv10-50 sv10-194	sv10_50		
+sv10-51	Team Rocket's Articuno	Pokémon	imported with caveats	shieldActive,shieldReach	sv10-51	sv10_51		Dark Frost
+sv10-52	Cynthia's Feebas	Pokémon	imported with caveats	perPokemon,shieldReach	sv10-52	sv10_52		
 sv10-53	Cynthia's Milotic	Pokémon	imported with caveats	benchMods	sv10-53	sv10_53		
 sv10-54	Clamperl	Pokémon	imported with caveats	perPokemon	sv10-54 sv10-195	sv10_54		
 sv10-57	Buizel	Pokémon	imported exactly		sv10-57	sv10_57		
@@ -716,6 +728,7 @@ sv10-58	Floatzel	Pokémon	imported exactly		sv10-58	sv10_58
 sv10-59	Snover	Pokémon	imported exactly		sv10-59	sv10_59		
 sv10-60	Abomasnow	Pokémon	imported with caveats	energyOfCount	sv10-60	sv10_60		
 sv10-62	Arrokuda	Pokémon	imported with caveats	recoil	sv10-62	sv10_62		
+sv10-63	Barraskewda	Pokémon	imported with caveats	perPokemon,shieldReach	sv10-63	sv10_63		
 sv10-64	Cetoddle	Pokémon	imported exactly		sv10-64	sv10_64		
 sv10-67	Wellspring Mask Ogerpon	Pokémon	imported exactly		sv10-67	sv10_67		
 sv10-68	Electabuzz	Pokémon	imported exactly		sv10-68	sv10_68		
@@ -876,6 +889,7 @@ zsv10pt5-2	Servine	Pokémon	imported exactly		zsv10pt5-2 zsv10pt5-88	zsv10pt5_2
 zsv10pt5-3	Serperior ex	Pokémon	imported with caveats	searchAny	zsv10pt5-3 zsv10pt5-156 zsv10pt5-164	zsv10pt5_3	Bonus	
 zsv10pt5-4	Pansage	Pokémon	imported exactly		zsv10pt5-4 zsv10pt5-89	zsv10pt5_4		
 zsv10pt5-5	Simisage	Pokémon	imported exactly		zsv10pt5-5 zsv10pt5-90	zsv10pt5_5		
+zsv10pt5-6	Petilil	Pokémon	imported with caveats	perPokemon,shieldReach	zsv10pt5-6 zsv10pt5-91	zsv10pt5_6		
 zsv10pt5-7	Lilligant	Pokémon	imported exactly		zsv10pt5-7 zsv10pt5-92	zsv10pt5_7		
 zsv10pt5-10	Foongus	Pokémon	imported exactly		zsv10pt5-10 zsv10pt5-95	zsv10pt5_10		
 zsv10pt5-11	Amoonguss	Pokémon	imported exactly		zsv10pt5-11 zsv10pt5-96	zsv10pt5_11		
@@ -929,6 +943,8 @@ zsv10pt5-68	Axew	Pokémon	imported exactly		zsv10pt5-68 zsv10pt5-145	zsv10pt5_68
 zsv10pt5-69	Fraxure	Pokémon	imported exactly		zsv10pt5-69 zsv10pt5-146	zsv10pt5_69		
 zsv10pt5-70	Haxorus	Pokémon	imported with caveats	koCounters	zsv10pt5-70 zsv10pt5-147	zsv10pt5_70		
 zsv10pt5-71	Pidove	Pokémon	imported with caveats	hiddenInfo	zsv10pt5-71 zsv10pt5-148	zsv10pt5_71		
+zsv10pt5-72	Tranquill	Pokémon	imported with caveats	perPokemon,shieldReach	zsv10pt5-72 zsv10pt5-149	zsv10pt5_72		
+zsv10pt5-73	Unfezant	Pokémon	imported with caveats	perPokemon,shieldReach	zsv10pt5-73 zsv10pt5-150	zsv10pt5_73		
 zsv10pt5-74	Audino	Pokémon	imported exactly		zsv10pt5-74 zsv10pt5-151	zsv10pt5_74		
 zsv10pt5-75	Minccino	Pokémon	imported exactly		zsv10pt5-75 zsv10pt5-152	zsv10pt5_75		
 zsv10pt5-76	Cinccino	Pokémon	imported exactly		zsv10pt5-76 zsv10pt5-153	zsv10pt5_76		
@@ -966,6 +982,7 @@ me1-37	Clauncher	Pokémon	imported exactly		me1-37	me1_37
 me1-38	Clawitzer	Pokémon	imported with caveats	movedOnce,selfBench	me1-38 me1-141	me1_38		
 me1-39	Sobble	Pokémon	imported exactly		me1-39	me1_39		
 me1-40	Drizzile	Pokémon	imported exactly		me1-40	me1_40		
+me1-42	Snom	Pokémon	imported with caveats	perPokemon,shieldReach	me1-42	me1_42		
 me1-43	Frosmoth	Pokémon	imported with caveats	benchMods	me1-43	me1_43		
 me1-44	Eiscue	Pokémon	imported exactly		me1-44	me1_44		
 me1-45	Magnemite	Pokémon	imported exactly		me1-45	me1_45		
@@ -1082,6 +1099,7 @@ me2-65	Krokorok	Pokémon	imported exactly		me2-65	me2_65
 me2-66	Krookodile	Pokémon	imported with caveats	koAttackWide	me2-66	me2_66		
 me2-67	Toxel	Pokémon	imported exactly		me2-67	me2_67		
 me2-69	Eternatus	Pokémon	imported with caveats	perPokemon	me2-69	me2_69		
+me2-70	Empoleon ex	Pokémon	imported with caveats	perPokemon,shieldActive,shieldReach	me2-70 me2-114	me2_70		
 me2-71	Bronzor	Pokémon	imported with caveats	perPokemon	me2-71	me2_71		
 me2-72	Bronzong	Pokémon	imported exactly		me2-72	me2_72		
 me2-73	Togedemaru	Pokémon	imported exactly		me2-73 me2-104	me2_73		
@@ -1140,10 +1158,12 @@ me2pt5-68	Hop's Pincurchin ex	Pokémon	imported with caveats	trigAttacker,trigDa
 me2pt5-73	Miraidon ex	Pokémon	imported exactly		me2pt5-73	me2pt5_73		
 me2pt5-77	Team Rocket's Exeggcute	Pokémon	imported exactly		me2pt5-77	me2pt5_77		
 me2pt5-78	Team Rocket's Exeggutor	Pokémon	imported with caveats	koCounters,recoil	me2pt5-78	me2pt5_78		
+me2pt5-83	Marill	Pokémon	imported with caveats	perPokemon,shieldReach	me2pt5-83 me2pt5-232	me2pt5_83		
 me2pt5-84	Azumarill ex	Pokémon	imported with caveats	energyOfCount,moveAnyPair,moveMayFail	me2pt5-84	me2pt5_84		
 me2pt5-86	Mismagius	Pokémon	imported exactly		me2pt5-86	me2pt5_86		
 me2pt5-93	Swirlix	Pokémon	imported exactly		me2pt5-93	me2pt5_93		
 me2pt5-94	Slurpuff	Pokémon	imported exactly		me2pt5-94 me2pt5-236	me2pt5_94		
+me2pt5-95	Hop's Phantump	Pokémon	imported with caveats	perPokemon,shieldReach	me2pt5-95	me2pt5_95		
 me2pt5-100	Team Rocket's Diglett	Pokémon	imported exactly		me2pt5-100	me2pt5_100		
 me2pt5-102	Hitmontop	Pokémon	imported exactly		me2pt5-102 me2pt5-240	me2pt5_102		
 me2pt5-103	Meditite	Pokémon	imported exactly		me2pt5-103	me2pt5_103		
@@ -1176,6 +1196,7 @@ me2pt5-152	Mega Dragonite ex	Pokémon	imported with caveats	discardUnits	me2pt5-
 me2pt5-153	Rayquaza	Pokémon	imported with caveats	movedUpPromotion	me2pt5-153	me2pt5_153		
 me2pt5-155	N's Zekrom	Pokémon	imported with caveats	ignFxStadium	me2pt5-155	me2pt5_155		
 me2pt5-156	Noibat	Pokémon	imported exactly		me2pt5-156	me2pt5_156		
+me2pt5-157	Noivern	Pokémon	imported with caveats	perPokemon,shieldReach	me2pt5-157	me2pt5_157		
 me2pt5-162	Team Rocket's Kangaskhan ex	Pokémon	imported exactly		me2pt5-162	me2pt5_162		
 me2pt5-163	Larry's Dunsparce	Pokémon	imported exactly		me2pt5-163	me2pt5_163		
 me2pt5-164	Larry's Dudunsparce ex	Pokémon	imported exactly		me2pt5-164	me2pt5_164		
@@ -1204,6 +1225,7 @@ me3-4	Snivy	Pokémon	imported with caveats	recoil	me3-4	me3_4
 me3-5	Servine	Pokémon	imported exactly		me3-5	me3_5		
 me3-6	Serperior	Pokémon	imported exactly		me3-6	me3_6		
 me3-7	Scatterbug	Pokémon	imported exactly		me3-7	me3_7		
+me3-8	Spewpa	Pokémon	imported with caveats	perPokemon,shieldReach	me3-8 me3-89	me3_8		
 me3-10	Rowlet	Pokémon	imported exactly		me3-10 me3-90	me3_10		
 me3-11	Dartrix	Pokémon	imported with caveats	benchMods	me3-11	me3_11		
 me3-13	Fletchinder	Pokémon	imported exactly		me3-13	me3_13		
@@ -1255,6 +1277,7 @@ me3-82	Pokémon Catcher	Item	imported exactly		me3-82 me6-129	me3_82
 me3-83	Potion	Item	imported with caveats	noopPlay	me3-83	me3_83		
 me3-85	Tarragon	Supporter	imported with caveats	upTo0	me3-85 me3-116	me3_85		
 me3-86	Growing Grass Energy	Special Energy	imported exactly		me3-86	me3_86	Hp	
+me3-87	Rocky Fighting Energy	Special Energy	imported with caveats	shieldActive,shieldReach	me3-87	me3_87		
 me4-1	Weedle	Pokémon	imported exactly		me4-1	me4_1		
 me4-2	Kakuna	Pokémon	imported with caveats	staticBench	me4-2	me4_2	Reduce	
 me4-3	Beedrill ex	Pokémon	imported exactly		me4-3 me4-98	me4_3		
@@ -1344,6 +1367,7 @@ me5-61	Shieldon	Pokémon	imported exactly		me5-61	me5_61
 me5-63	Bronzor	Pokémon	imported exactly		me5-63	me5_63		
 me5-65	Mega Excadrill ex	Pokémon	imported exactly		me5-65 me5-103	me5_65		
 me5-66	Pikipek	Pokémon	imported exactly		me5-66	me5_66		
+me5-67	Trumbeak	Pokémon	imported with caveats	perPokemon,shieldReach	me5-67	me5_67		
 me5-68	Toucannon	Pokémon	imported exactly		me5-68 me5-94	me5_68		
 me5-69	Type: Null	Pokémon	imported exactly		me5-69	me5_69		
 me5-70	Silvally	Pokémon	imported exactly		me5-70 me5-95	me5_70		
@@ -1355,6 +1379,7 @@ me55-1	Exeggcute	Pokémon	imported exactly		me55-1	me55_1
 me55-2	Alolan Exeggutor	Pokémon	imported with caveats	energyOfCount	me55-2 me55-129	me55_2	Hp	
 me55-3	Volbeat	Pokémon	imported exactly		me55-3	me55_3		
 me55-5	Tropius	Pokémon	imported with caveats	koAttackWide	me55-5	me55_5		
+me55-6	Cherubi	Pokémon	imported with caveats	perPokemon,shieldReach	me55-6	me55_6		
 me55-7	Cherrim	Pokémon	imported exactly		me55-7	me55_7		
 me55-8	Vivillon	Pokémon	imported exactly		me55-8	me55_8		
 me55-9	Vulpix	Pokémon	imported exactly		me55-9	me55_9		
@@ -1362,6 +1387,7 @@ me55-10	Ninetales	Pokémon	imported exactly		me55-10	me55_10
 me55-13	Victini	Pokémon	imported exactly		me55-13	me55_13		
 me55-14	Reshiram	Pokémon	imported with caveats	energyOfCount	me55-14	me55_14		
 me55-15	Fuecoco ex	Pokémon	imported with caveats	prizes6	me55-15 me55-147	me55_15		
+me55-16	Slowpoke	Pokémon	imported with caveats	perPokemon,shieldReach	me55-16	me55_16		
 me55-17	Lapras	Pokémon	imported exactly		me55-17 me55-131	me55_17		
 me55-19	Kyogre	Pokémon	imported with caveats	energyOfCount	me55-19	me55_19		
 me55-20	Palkia	Pokémon	imported exactly		me55-20	me55_20		
@@ -1381,6 +1407,7 @@ me55-37	Pikachu	Pokémon	imported exactly		me55-37	me55_37
 me55-38	Pikachu	Pokémon	imported with caveats	benchMods	me55-38	me55_38		
 me55-39	Pikachu	Pokémon	imported exactly		me55-39	me55_39		
 me55-41	Pikachu	Pokémon	imported exactly		me55-41	me55_41		
+me55-44	Pikachu	Pokémon	imported with caveats	perPokemon,shieldReach	me55-44	me55_44		
 me55-45	Pikachu	Pokémon	imported exactly		me55-45	me55_45		
 me55-46	Pikachu	Pokémon	imported exactly		me55-46	me55_46		
 me55-47	Pikachu	Pokémon	imported exactly		me55-47	me55_47		
@@ -1472,6 +1499,7 @@ me6-36	Pincurchin	Pokémon	imported with caveats	energyUnitsCount	me6-36 me6-109
 me6-37	Pawmi	Pokémon	imported exactly		me6-37	me6_37		
 me6-38	Pawmo	Pokémon	imported exactly		me6-38	me6_38		
 me6-39	Pawmot	Pokémon	imported with caveats	mayFail	me6-39	me6_39		
+me6-40	Wattrel	Pokémon	imported with caveats	perPokemon,shieldReach	me6-40	me6_40		
 me6-41	Kilowattrel	Pokémon	imported exactly		me6-41	me6_41		
 me6-42	Miraidon	Pokémon	imported exactly		me6-42	me6_42		
 me6-43	Drowzee	Pokémon	imported exactly		me6-43	me6_43		

@@ -379,7 +379,7 @@ def haltMarks : Marks := Marks.set .imprison true Marks.empty
 
 /-- A store with only a rest-of-game damage bonus `b` and damage reduction `r`. -/
 def storeOf (b r : Nat) : Store :=
-  ⟨Mods.empty, Mods.empty, Mods.empty, ⟨b, r, false, false, false, false, 0, 0⟩⟩
+  ⟨Mods.empty, Mods.empty, Mods.empty, ⟨b, r, false, false, false, false, 0, 0, false⟩⟩
 
 def isEnergy : Card → Bool
   | .energy _ => true
@@ -1186,6 +1186,9 @@ theorem move_shape {kc ko : Pk} {g g' : GameState} (hm : Move g g') (hs : Shape 
       | bench hb => rw [hC.bench] at hb; exact absurd hb.symm (by simp)
   | @attack g'' a atk ha hm' _ _ _ _ _ _ hr _ _ _ l g''' hd ht =>
       rw [hp] at ha; cases ha
+      have hsh : g.shield = false := GameState.shield_of_noStatics hts.noStatics
+        (by rw [hO.mods]; rfl)
+      rw [hsh, Attack.against_false] at hr hd
       have hl := hd.nil_of ((hts.trigFree.of_perm hr.perm).optTrigs_opp _)
       subst hl
       cases ht
@@ -1250,9 +1253,11 @@ theorem attack_move {kc ko kc' ko' : Pk} {g : GameState} {atk : Attack} (hs : Sh
   obtain ⟨p, hp, h1, h2, -, -, -, -, h7⟩ := hs.cur.active
   obtain ⟨⟨g'', hr⟩, hsh⟩ := hD g hs hns
   have hfl := Run.flags hr
+  have hsh0 : g.shield = false := GameState.shield_of_noStatics hns (by rw [hs.opp.mods]; rfl)
+  have hr0 : Run (atk.against g.shield).script g g'' := by rw [hsh0]; exact hr
   refine ⟨_, .attack hp (List.mem_append_left _ (List.mem_append_left _ (h1 ▸ hatk))) (by rw [hcost]; exact .nil _) (by rw [h2]; rfl) hn hf
-    hbt (hs.settled hns hc ho) hr (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw
-    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
+    hbt (hs.settled hns hc ho) hr0 (by rw [hs.cur.mods]; rfl) (fun h => by rw [hgx] at h; cases h) hw
+    (HitTrig.exists_nil hr0 ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _)
     (by rw [h7]; rfl),
     ⟨(hsh _ hr).cur.afterAttack _ (Attack.lockSet_of_none hsl), (hsh _ hr).opp, (hsh _ hr).pend⟩,
     hfl.2.2.1.trans hbt, hfl.1.trans hf, hfl.2.2.2⟩

@@ -95,7 +95,7 @@ theorem spikes_fire (opt : Bool) (pz : List Card) (hz : pz = two ∨ pz = one) :
       (hit opt pz).cur.active.map InPlay.damage = some 3 ∧
       (hit opt pz).opp.active.map InPlay.damage = some 5 := by
   refine ⟨?_, fun hk => ?_, rfl, rfl⟩
-  · have hm := Move.attack (hlk := rfl) (g := start opt pz) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
+  · have hm := Move.attackOpen (hlk := rfl) (g := start opt pz) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
       (start_settled opt pz hz) (.seq (.damage (.const 5 _) rfl) (.skip _)) rfl
       (fun h => nomatch h) rfl (l := [spikes])
       (.fire (.seq (.hit (b := true) rfl (.damage (.const 5 _) rfl) rfl (fun _ => by cases opt <;> rfl))

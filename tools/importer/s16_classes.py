@@ -129,6 +129,8 @@ c('M', 'coins counted by the state, or flips decided per target', r'condition no
 c('M', 'own Special Conditions as attack cost changes', r'condition not expressible: this Pokémon is affected by a Special')
 c('M', 'name prefix', r'condition not expressible: .*(Legendary|Community Center)')
 c('M', 'comparisons between two counts (hand sizes, Prize cards, Energy)', r'condition not expressible: any of your Pokémon in play are the same type')
+# importer 0.17.0 (milestone MV10, survey S24): the coin forms (Tranquill, Trumbeak) are imported; the entry is kept for
+# a heads condition on another effect-prevention sentence
 c('M', 'prevention of effects of attacks (lingering and static)', r'condition not expressible: heads$', r'effects of attacks')
 
 # ---------------------------------------------------------------- counts
@@ -191,6 +193,9 @@ c('D', 'look at the top N and attach / bench "any number" from it: repeated prim
 
 # ---------------------------------------------------------------- unhandled sentences: class M
 c('M', 'own Special Conditions (effects that affect the attacker)', UH, r'^This Pokémon is now (Asleep|Confused)|^Both Active Pokémon are now|^Both Active non-Darkness')
+# importer 0.17.0 (milestone MV10, survey S24): "During your opponent's next turn, prevent all damage from and effects of
+# attacks done to this Pokémon" is imported (`Mod.shield`); what is left here is the filtered or chosen form ("done to
+# that Pokémon by your opponent's Pokémon ex", Acerola's Mischief), which needs a per-Pokémon, filtered flag
 c('M', 'prevention of effects of attacks (lingering and static)', UH, r'prevent all damage from and effects of|effects of attacks')
 c('M', 'filtered lingering modifiers (prevention, reduction, bonus by attacker or holder kind; thresholds)', UH,
   r'prevent all damage (done to this Pokémon by attacks (from|if)|done to each of your)|takes \d+ less damage from attacks from|attacks used by your (Fighting|Pokémon that don\'t|Pokémon do \d+ more damage to your opponent\'s Active Pokémon ex)|all of your Metal Pokémon take|Active Pokémon ex and Active Pokémon V')

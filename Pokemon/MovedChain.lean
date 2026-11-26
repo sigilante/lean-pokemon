@@ -116,7 +116,7 @@ theorem damaged_ko_promotion_fires :
       Move g₂ g₃ ∧ g₃.cur.active.map InPlay.top = some yanC ∧
       g₃.cur.active.map InPlay.energy = some [.energy .grass] ∧ Settled g₃ := by
   refine ⟨_, _, _,
-    Move.attack (hlk := rfl) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl a0_settled_yan
+    Move.attackOpen (hlk := rfl) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl a0_settled_yan
       (.seq (.damage (.const 5 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl (l := [spikes])
       (.fire (.seq (.hit (b := true) rfl (.damage (.const 5 _) rfl) rfl (fun _ => rfl))
         (.plain rfl (.skip _))) (.refl _))
@@ -167,7 +167,7 @@ theorem tool_chain :
       Card.pokemon fragileC ∈ g₄.cur.discard ∧
       g₅.cur.active.map InPlay.energy = some [.energy .grass] ∧ Settled g₅ := by
   refine ⟨_, _, _, _, _,
-    Move.attack (hlk := rfl) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
+    Move.attackOpen (hlk := rfl) (atk := strike) rfl (.head _) (.nil _) rfl rfl rfl rfl
       a0_settled_chain
       (.seq (.damage (.const 5 _) rfl) (.skip _)) rfl (fun h => nomatch h) rfl (l := [spikes])
       (.fire (.seq (.hit (b := true) rfl (.damage (.const 5 _) rfl) rfl (fun _ => rfl))

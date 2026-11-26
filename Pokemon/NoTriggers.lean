@@ -13,7 +13,8 @@ triggered Ability (`GameState.TrigFree`, kept by play) nothing changed:
 * `Move.knockOuts_of_trigFree`, `Move.batch_of_not_settled_trigFree`: the batch move is the batch
   Knock Out step, as before (the statement of `Move.batch_of_not_settled` before milestone M8b);
 * `Move.attack_of_trigFree`, `Move.attack_eq_of_trigFree`: an attack is what it was, the state
-  after its script with the attack recorded;
+  after its script with the attack recorded (since milestone MV10 stated for a Defending Pokémon
+  that is not protected, `g.shield = false`; there is no protected counterpart);
 * `Reach.trigFree`: play keeps the hypothesis.
 -/
 
@@ -47,10 +48,10 @@ theorem Move.attack_of_trigFree {g g' : GameState} {a : InPlay} {atk : Attack}
     (hn : g.attacked = false) (hf : g.firstTurn = false) (hbt : g.between = false)
     (hst : Settled g) (hr : Run atk.script g g') (hl : g.cur.mods.live.noAttack = false)
     (hgx : atk.gx = true → g.cur.gxUsed = false) (hw : atk.wf = true) (htf : g.TrigFree)
-    (hlk : a.lk.on.allows atk = true) :
+    (hlk : a.lk.on.allows atk = true) (hsh : g.shield = false := by first | rfl | decide) :
     Move g (g'.afterAttack atk.lockSet atk.gx) :=
-  .attack ha hm hc hs hn hf hbt hst hr hl hgx hw
-    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _) hlk
+  Move.attackOpen ha hm hc hs hn hf hbt hst hr hl hgx hw
+    (HitTrig.exists_nil hr ((htf.of_perm hr.perm).optTrigs_opp _)) (.nil _) hlk hsh
 
 /-- With no triggered Ability, an attack fires no trigger: its result is the state after its
 script with the attack recorded. -/

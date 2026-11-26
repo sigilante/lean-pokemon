@@ -411,7 +411,7 @@ def rA : GameState :=
   { g₃ with attacked := true, cur := { g₃.cur with gxUsed := blast.gx || g₃.cur.gxUsed } }
 
 theorem move_r0_rA : Move r0 rA :=
-  .attack (hlk := rfl) (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
+  Move.attackOpen (hlk := rfl) (atk := blast) rfl (.head _) (.nil _) rfl rfl rfl rfl r0_settled
     (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl (fun h => nomatch h) rfl
     (HitTrig.exists_nil (.seq (.counters 3 rfl) (.benchCounters (b₁ := []) .opp 3 rfl)) rfl) (.nil _)
 
@@ -586,7 +586,7 @@ def mA : GameState :=
   { g₃ with attacked := true, cur := { g₃.cur with gxUsed := hit2.gx || g₃.cur.gxUsed } }
 
 theorem move_m0_mA : Move m0 mA :=
-  .attack (hlk := rfl) (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
+  Move.attackOpen (hlk := rfl) (atk := hit2) rfl (.head _) (.nil _) rfl rfl rfl rfl m0_settled
     (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl (fun h => nomatch h) rfl
     (HitTrig.exists_nil (.seq (.counters 2 rfl) (.benchCounters (b₁ := []) .opp 2 rfl)) rfl) (.nil _)
 

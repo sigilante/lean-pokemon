@@ -63,7 +63,7 @@ theorem exPunish_ex :
     WellFormed (duel exMon) ∧ Settled (duel exMon) ∧ ∃ g, Move (duel exMon) g ∧
       g.opp.active = some { InPlay.ofBasic exMon with damage := 3 } :=
   ⟨duel_wellFormed exMon, duel_settled_ex, _,
-    .attack (hlk := rfl) (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_ex
+    Move.attackOpen (hlk := rfl) (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_ex
       (.iteT (p := InPlay.ofBasic exMon) rfl (by decide) (.counters 3 rfl)) rfl
       (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.iteT (p := InPlay.ofBasic exMon) rfl (by decide) (.counters 3 rfl)) rfl)
@@ -75,7 +75,7 @@ theorem exPunish_plain :
     WellFormed (duel big) ∧ Settled (duel big) ∧ ∃ g, Move (duel big) g ∧
       g.opp.active = some (InPlay.ofBasic big) :=
   ⟨duel_wellFormed big, duel_settled_plain, _,
-    .attack (hlk := rfl) (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_plain
+    Move.attackOpen (hlk := rfl) (atk := punish) rfl (.head _) (.nil _) rfl rfl rfl rfl duel_settled_plain
       (.iteF (p := InPlay.ofBasic big) rfl (by decide) (.skip _)) rfl
       (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.iteF (p := InPlay.ofBasic big) rfl (by decide) (.skip _)) rfl)

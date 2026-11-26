@@ -272,6 +272,26 @@ def GameState.sPrevent (g : GameState) : Bool :=
   | some a, some d => (g.inForce .opp .active d.sv).any (Static.preventsFrom a.top)
   | _, _ => false
 
+/-- Does a static effect on a defender prevent the effects of an attack of an attacker whose top
+card is `a`? (milestone MV10, `SEff.shield`) -/
+def Static.shieldsFrom (a : PokemonCard) (s : Static) : Bool :=
+  match s.eff with
+  | .shield fr => fr.eval (.pokemon a)
+  | _ => false
+
+/-- **Static effect prevention** (milestone MV10): some `shield` effect in force on the opponent's
+Active Pokémon passes the player's Active Pokémon's top card; false if either Active Spot is empty. -/
+def GameState.sShield (g : GameState) : Bool :=
+  match g.cur.active, g.opp.active with
+  | some a, some d => (g.inForce .opp .active d.sv).any (Static.shieldsFrom a.top)
+  | _, _ => false
+
+/-- **Is the opponent's Active Pokémon protected from the effects of the player's attack?**
+(milestone MV10): a lingering `Mod.shield` in effect on the opponent (`Mods.shield`), or a static
+`SEff.shield` in force on it against the attacker (`GameState.sShield`). Read by `Move.attack` in the
+state before the attack. -/
+def GameState.shield (g : GameState) : Bool := g.opp.mods.live.shield || g.sShield
+
 /-- **The Retreat Cost** (milestone M6) of the player's Active Pokémon `a`: printed, plus every
 `retreatPlus` in force, less every `retreatMinus` in force (stopping at 0); 0 if a `noRetreat`
 effect is in force (milestone MV8: "has no Retreat Cost", a set applied last). It reads no HP, so the
@@ -399,6 +419,18 @@ theorem GameState.SameField.sPrevent {g₁ g₂ : GameState} (h : GameState.Same
   have hc := fieldOf_active h.cur
   have ho := fieldOf_active h.opp
   unfold GameState.sPrevent
+  cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;> cases h3 : g₁.opp.active <;>
+    cases h4 : g₂.opp.active <;>
+    simp only [h1, h2, h3, h4, Option.map_none, Option.map_some,
+      reduceCtorEq, Option.some.injEq] at hc ho ⊢
+  next a₁ a₂ d₁ d₂ =>
+    rw [h.inForce, ho, show a₂.top = a₁.top from congrArg SView.top hc]
+
+theorem GameState.SameField.sShield {g₁ g₂ : GameState} (h : GameState.SameField g₁ g₂) :
+    g₂.sShield = g₁.sShield := by
+  have hc := fieldOf_active h.cur
+  have ho := fieldOf_active h.opp
+  unfold GameState.sShield
   cases h1 : g₁.cur.active <;> cases h2 : g₂.cur.active <;> cases h3 : g₁.opp.active <;>
     cases h4 : g₂.opp.active <;>
     simp only [h1, h2, h3, h4, Option.map_none, Option.map_some,
@@ -827,6 +859,21 @@ theorem GameState.sPrevent_noStatics {g : GameState} (hn : g.NoStatics) : g.sPre
       rw [g.inForce_noStatics (w := .opp) (sp := .active) hn hd]
       rfl
   · rfl
+
+/-- With no static effects, there is no static effect prevention (milestone MV10). -/
+theorem GameState.sShield_noStatics {g : GameState} (hn : g.NoStatics) : g.sShield = false := by
+  unfold GameState.sShield
+  split
+  · next a d ha hd =>
+      rw [g.inForce_noStatics (w := .opp) (sp := .active) hn hd]
+      rfl
+  · rfl
+
+/-- With no static effects and no stored effect prevention on the opponent, an attack resolves as
+printed (milestone MV10). -/
+theorem GameState.shield_of_noStatics {g : GameState} (hn : g.NoStatics)
+    (hs : g.opp.mods.live.shield = false) : g.shield = false := by
+  unfold GameState.shield; rw [hs, GameState.sShield_noStatics hn]; rfl
 
 /-! ## The HP bound -/
 

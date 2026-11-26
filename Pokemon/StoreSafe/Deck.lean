@@ -74,6 +74,69 @@ theorem Attack.script_amtAt (atk : Attack) (s : Slot) :
   · rfl
   · simp only [Effect.amtAt, Nat.zero_add]
 
+/-! ### The attack as it resolves against a protected Pokémon (milestone MV10)
+
+`Effect.shielded` only replaces primitives by `skip`: it writes no more, loops no more and recycles
+exactly as the effect does. -/
+
+theorem Effect.shielded_writes (e : Effect) : e.shielded.writes = true → e.writes = true := by
+  induction e with
+  | ite t a b iha ihb =>
+      simp only [Effect.writes, Effect.shielded, Bool.or_eq_true]
+      exact fun h => h.elim (fun h => .inl (iha h)) (fun h => .inr (ihb h))
+  | seq a b iha ihb =>
+      simp only [Effect.writes, Effect.shielded, Bool.or_eq_true]
+      exact fun h => h.elim (fun h => .inl (iha h)) (fun h => .inr (ihb h))
+  | choice a b iha ihb =>
+      simp only [Effect.writes, Effect.shielded, Bool.or_eq_true]
+      exact fun h => h.elim (fun h => .inl (iha h)) (fun h => .inr (ihb h))
+  | iter a iha => simp only [Effect.writes, Effect.shielded]; exact iha
+  | _ => intro h; unfold Effect.shielded at h; (try split at h) <;> simp_all [Effect.writes]
+
+theorem Effect.shielded_loopFree (e : Effect) : e.loopFree = true → e.shielded.loopFree = true := by
+  induction e with
+  | ite t a b iha ihb =>
+      simp only [Effect.loopFree, Effect.shielded, Bool.and_eq_true]; exact fun h => ⟨iha h.1, ihb h.2⟩
+  | seq a b iha ihb =>
+      simp only [Effect.loopFree, Effect.shielded, Bool.and_eq_true]; exact fun h => ⟨iha h.1, ihb h.2⟩
+  | choice a b iha ihb =>
+      simp only [Effect.loopFree, Effect.shielded, Bool.and_eq_true]; exact fun h => ⟨iha h.1, ihb h.2⟩
+  | iter a _ =>
+      simp only [Effect.loopFree, Effect.shielded, Bool.not_eq_true']
+      intro h
+      cases hw : a.shielded.writes
+      · rfl
+      · rw [Effect.shielded_writes a hw] at h; cases h
+  | _ => intro h; unfold Effect.shielded; (try split) <;> simp_all [Effect.loopFree]
+
+theorem Effect.shielded_amtAt (e : Effect) (s : Slot) : e.shielded.amtAt s ≤ e.amtAt s := by
+  induction e with
+  | ite t a b iha ihb => simp only [Effect.amtAt, Effect.shielded]; omega
+  | seq a b iha ihb => simp only [Effect.amtAt, Effect.shielded]; omega
+  | choice a b iha ihb => simp only [Effect.amtAt, Effect.shielded]; omega
+  | iter a _ => simp only [Effect.amtAt, Effect.shielded]; omega
+  | _ => unfold Effect.shielded; (try split) <;> simp_all [Effect.amtAt]
+
+theorem Effect.shielded_recFilters (e : Effect) : e.shielded.recFilters = e.recFilters := by
+  induction e with
+  | ite t a b iha ihb => simp only [Effect.recFilters, Effect.shielded, iha, ihb]
+  | seq a b iha ihb => simp only [Effect.recFilters, Effect.shielded, iha, ihb]
+  | choice a b iha ihb => simp only [Effect.recFilters, Effect.shielded, iha, ihb]
+  | iter a iha => simp only [Effect.recFilters, Effect.shielded, iha]
+  | _ => unfold Effect.shielded; (try split) <;> simp_all [Effect.recFilters]
+
+theorem Attack.against_loopFree (b : Bool) {atk : Attack} (h : atk.effect.loopFree = true) :
+    (atk.against b).script.loopFree = true := by
+  cases b
+  · rw [Attack.against_false, Attack.script_loopFree]; exact h
+  · rw [Attack.script_loopFree]; exact Effect.shielded_loopFree _ h
+
+theorem Attack.against_amtAt_le (b : Bool) (atk : Attack) (s : Slot) :
+    (atk.against b).script.amtAt s ≤ atk.effect.amtAt s := by
+  cases b
+  · rw [Attack.against_false, Attack.script_amtAt]; exact Nat.le_refl _
+  · rw [Attack.script_amtAt]; exact Effect.shielded_amtAt _ s
+
 theorem Effect.amtAt_le_amt (e : Effect) (s : Slot) : e.amtAt s ≤ e.amt := by
   cases s <;> simp only [Effect.amt] <;> omega
 
@@ -104,6 +167,7 @@ theorem Mods.amt_addMod (m : Mods) (x : Mod) : (m.addMod x).amt = m.amt + x.amt 
   | reduce n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
   | prevent => rfl
   | lock l => cases l <;> rfl
+  | shield => rfl
   | weaken n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
   | expose n => simp only [Mods.addMod, Mods.amt, Mod.amt]; omega
 
@@ -822,6 +886,12 @@ theorem Attack.script_recFilters (atk : Attack) :
   split
   · rfl
   · simp only [Effect.recFilters, List.nil_append]
+
+theorem Attack.against_recFilters (b : Bool) (atk : Attack) :
+    (atk.against b).script.recFilters = atk.effect.recFilters := by
+  cases b
+  · rw [Attack.against_false, Attack.script_recFilters]
+  · rw [Attack.script_recFilters]; exact Effect.shielded_recFilters _
 
 /-- The recycling filters of a list of Abilities (milestone M8a). -/
 def abilitiesRec : List Ability → List Filter

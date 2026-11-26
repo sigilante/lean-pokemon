@@ -151,7 +151,7 @@ theorem plain_reduced :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { InPlay.ofBasic rock with damage := 1 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := plain) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
+    Move.attackOpen (hlk := rfl) (atk := plain) rfl (.head _) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.const 6 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.const 6 _) rfl) rfl) (.nil _), rfl⟩
 
@@ -161,7 +161,7 @@ theorem pierce_ignores :
     WellFormed start ∧ Settled start ∧ ∃ g, Move start g ∧
       g.opp.active = some { InPlay.ofBasic rock with damage := 6 } :=
   ⟨start_wellFormed, start_settled, _,
-    .attack (hlk := rfl) (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
+    Move.attackOpen (hlk := rfl) (atk := pierce) rfl (.tail _ (.head _)) (.nil _) rfl rfl rfl rfl start_settled
       (.damage (.const 6 _) rfl) rfl (fun h => absurd h (by decide)) rfl
       (HitTrig.exists_nil (.damage (.const 6 _) rfl) rfl) (.nil _), rfl⟩
 

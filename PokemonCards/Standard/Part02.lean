@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.17.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,45 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Tangela (sv6-1). Records: sv6-1. -/
+def sv6_1 : Card := .pokemon
+  { name := "Tangela", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gentle Slap", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Vine Slap", cost := [.grass, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Tangrowth (sv6-2). Records: sv6-2. Caveats: staticBench. -/
+def sv6_2 : Card := .pokemon
+  { name := "Tangrowth", stage := .stage1, evolvesFrom := some "Tangela",
+    hp := 15, type := .grass, retreat := 4, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Thicket Body", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 3 .any }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Loom Over", cost := [.grass, .colorless, .colorless], damage := 0,
+        effect := .damage (.sub (.const 15) (.per .own 1)),
+        gx := false }] }
+
+/-- Spinarak (sv6-4). Records: sv6-4. -/
+def sv6_4 : Card := .pokemon
+  { name := "Spinarak", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bug Bite", cost := [.grass], damage := 2,
+        effect := .skip,
+        gx := false }] }
 
 /-- Sunkern (sv6-6). Records: sv6-6. -/
 def sv6_6 : Card := .pokemon
@@ -1217,6 +1256,17 @@ def sv6_165 : Card := .trainer "Unfair Stamp" .item
 /-- Luminous Energy (sv6-226). Records: sv6-226. -/
 def sv6_226 : Card := .energy (.special "Luminous Energy" [[.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless]] { alt := some (.otherSpecial, [[.colorless]]) })
 
+/-- Joltik (sv6pt5-1). Records: sv6pt5-1. Caveats: perPokemon, shieldReach. -/
+def sv6pt5_1 : Card := .pokemon
+  { name := "Joltik", stage := .basic, evolvesFrom := none,
+    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Splashing Dodge", cost := [.grass], damage := 1,
+        effect := .choice (.seq (.linger .own .next .prevent) (.linger .own .next .shield)) .skip,
+        gx := false }] }
+
 /-- Rowlet (sv6pt5-3). Records: sv6pt5-3. -/
 def sv6pt5_3 : Card := .pokemon
   { name := "Rowlet", stage := .basic, evolvesFrom := none,
@@ -1785,58 +1835,11 @@ def sv7_12 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Nymble (sv7-15). Records: sv7-15. -/
-def sv7_15 : Card := .pokemon
-  { name := "Nymble", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tackle", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Lokix (sv7-16). Records: sv7-16. -/
-def sv7_16 : Card := .pokemon
-  { name := "Lokix", stage := .stage1, evolvesFrom := some "Nymble",
-    hp := 11, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Spiral Kick", cost := [.colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
-/-- Toedscool (sv7-17). Records: sv7-17. -/
-def sv7_17 : Card := .pokemon
-  { name := "Toedscool", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ram", cost := [.grass], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Gentle Slap", cost := [.grass, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Toedscruel (sv7-18). Records: sv7-18. -/
-def sv7_18 : Card := .pokemon
-  { name := "Toedscruel", stage := .stage1, evolvesFrom := some "Toedscool",
-    hp := 14, type := .grass, retreat := 3, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Mega Drain", cost := [.grass, .colorless], damage := 3,
-        effect := .heal 3,
-        gx := false },
-      { name := "Whip Smash", cost := [.grass, .colorless, .colorless], damage := 9,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv6_1,
+  sv6_2,
+  sv6_4,
   sv6_6,
   sv6_7,
   sv6_8,
@@ -1937,6 +1940,7 @@ def cards : List Card := [
   sv6_163,
   sv6_165,
   sv6_226,
+  sv6pt5_1,
   sv6pt5_3,
   sv6pt5_4,
   sv6pt5_5,
@@ -1982,11 +1986,7 @@ def cards : List Card := [
   sv7_8,
   sv7_9,
   sv7_10,
-  sv7_12,
-  sv7_15,
-  sv7_16,
-  sv7_17,
-  sv7_18]
+  sv7_12]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2005,7 +2005,7 @@ theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.la
 theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Okidogi"] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
-theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = [] := by decide +kernel
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Tangrowth"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
 theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = [] := by decide +kernel

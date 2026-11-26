@@ -122,6 +122,14 @@ theorem GameState.sameField_of_xclampAt {K : Nat} {co cp cb : Cap} {g₁ g₂ : 
   exact ⟨by simp only [PlayerState.field]; exact e1.symm, by simp only [PlayerState.field]; exact e2.symm,
     (congrArg GameState.stadium h).symm, (congrArg GameState.curIsFirst h).symm⟩
 
+/-- **The exact clamp keeps the protection from effects of attacks** (milestone MV10). -/
+theorem GameState.shield_of_xclampAt {K : Nat} {co cp cb : Cap} {g₁ g₂ : GameState}
+    (h : g₁.xclampAt K co cp cb = g₂.xclampAt K co cp cb) : g₂.shield = g₁.shield := by
+  have hs := (GameState.sameField_of_xclampAt h).sShield
+  have hm : g₁.opp.mods = g₂.opp.mods := congrArg (fun g => g.opp.mods) h
+  unfold GameState.shield
+  rw [hs, hm]
+
 /-- The clamp with exact stores keeps every count (milestone MV). -/
 theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState) :
     c.val (g.xclampAt K co cp cb) = c.val g := by
@@ -1296,7 +1304,8 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
       have hs' := hs₂ hst
       have hb := hF.attack ha hm
       have hxr := GameState.xrclamp_of_xclamp hc hst.1 hH
-      obtain ⟨g₂', hd', hc''⟩ := hd.xclamp_sim hb hxr
+      obtain ⟨g₂', hd', hc''⟩ := hd.xclamp_sim (Nat.lt_of_le_of_lt (Attack.against_tmax _ _) hb) hxr
+      rw [← GameState.shield_of_xclampAt hc] at hd'
       have hr' := hd'.run
       obtain ⟨g₂'', ht₂, hc'''⟩ := ht'.xclamp_sim (co := .exact) (cp := .exact) (cb := .exact) hc''
       subst hg

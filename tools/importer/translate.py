@@ -36,7 +36,15 @@ damage for each card you discarded in this way" and "Discard all F Energy from t
 for each card you discarded in this way." as an unfolded `Effect.forUpTo` (`Parser.mv3_step`); static "Prevent all
 damage done to this Pokémon by attacks from your opponent's F" as `SEff.prevent` (`static_ability_sentence`). Not
 written: `Effect.mayDo`, consequences of `attach` / `putBench` / `moveEnergy` (which may do nothing in the model),
-"damage from and effects of attacks" (prevention of effects), filtered lingering prevention.
+filtered lingering prevention.
+
+Milestone MV10 (importer 0.17.0, survey S24): "During your opponent's next turn, prevent all damage from and effects of
+attacks done to this Pokémon" as `linger own next prevent; linger own next shield` (rule 'ling-shield-self'; caveats
+perPokemon, shieldReach); the static "Prevent all effects of attacks used by your opponent's F done to this Pokémon /
+to your G / to the G this card is attached to" and "Prevent all damage from and effects of attacks from your opponent's
+F done to this Pokémon" as `SEff.shield` (with `SEff.prevent` for the second; caveats shieldActive, shieldReach), their
+reminders "(Existing effects are not removed. Damage is not an effect.)" dropped; a source in force only on the Bench is
+refused. "Flip a coin. If tails, this attack does nothing. If heads, X." as the attack on heads with X.
 """
 import re
 
@@ -287,6 +295,20 @@ CAVEATS = {
     'usedLastBenchUse': "'You can use this attack only if this Pokémon used X during your last turn' reads the use record "
                         "of X (as usedLastBench): a Pokémon that used X, moved to the Bench and came back cannot use the "
                         "attack in the model, where print allows it; a failed Confused attempt of X writes no record, also a reading",
+    # importer 0.17.0 (milestone MV10, survey S24)
+    'shieldReach': "'prevent all effects of attacks done to this Pokémon' removes from the opponent's attack the primitives "
+                   "the model counts as done to the Defending Pokémon (`Effect.shielded`): damage counters, Special Conditions, "
+                   "Poison strength, a switch of the Defending Pokémon in either direction (a gust from the Bench included), "
+                   "the Defending Pokémon's attack and retreat locks and damage modifiers, Energy and Tools discarded from "
+                   "or attached to it, every move of Energy between the opponent's Pokémon (Bench to Bench included), and "
+                   "markers on the opponent's Pokémon; it keeps everything on the Bench, attachments from a looked-at window "
+                   "('attach … to your opponent's Pokémon in any way'), and locks on the player (Items) (Known gaps, "
+                   "prevention of effects: a reading of 'done to this Pokémon'; no ruling was checked)",
+    'shieldActive': "a static 'prevent all effects of attacks … done to this Pokémon' (`SEff.shield`, milestone MV10) is read "
+                    "for the protected Pokémon (the holder, or the Pokémon the Ability names) in the Active Spot, at the start of the attack (`GameState.shield`): effects of attacks "
+                    "on a Benched holder (damage counters on the Bench) are not prevented, and a holder that the attack "
+                    "itself switches into the Active Spot is not protected from the rest of that attack (Known gaps, "
+                    "prevention of effects)",
     'movedCheckup': "a promotion after Pokémon Checkup is read as in no player's turn, so it never fires a 'during your "
                     "turn' `movedUp` trigger; under the reading of Checkup as part of the ending player's turn it would "
                     "(Known gaps, triggers of the player's own moves: reading, fewer outcomes). On no imported card in "
@@ -299,6 +321,10 @@ CAVEATS = {
 # ('allows more'), forbid outcomes the printed card allows ('forbids some'), or both? A card imported
 # with caveats is in general neither an over- nor an under-approximation of its printed card.
 CAVEAT_DIRECTION = {
+    # importer 0.17.0
+    'shieldReach': 'both',         # a gust or a Bench-to-Bench Energy move print may allow is absent (forbids some); an
+                                   # attachment onto the protected Pokémon from a window is kept (allows more)
+    'shieldActive': 'both',        # a forced effect lands on a Benched or switched-in holder: print's outcome absent, another present
     # importer 0.16.0
     'usedLastBench': 'both',       # after a trip to the Bench: no bonus in the model, the bonus in print
     'usedLastBenchUse': 'forbids some',  # after a trip to the Bench the attack cannot be used in the model
@@ -1852,6 +1878,15 @@ def _(m, ctx):
     return Eff(('linger', OWN, ('next',), ('prevent',)), {'perPokemon'})
 
 
+# importer 0.17.0 (milestone MV10, survey S24): the damage half is `Mod.prevent`, the effect half `Mod.shield`
+# (`Effect.shielded`, read by `Move.attack` through `GameState.shield`); both belong to the player (perPokemon).
+@rule('ling-shield-self', r"During your opponent's next turn, prevent all damage from and effects of attacks done to this "
+      r"Pokémon\.", 'A', 'linger own next prevent; linger own next shield')
+def _(m, ctx):
+    return Eff(seq(('linger', OWN, ('next',), ('prevent',)), ('linger', OWN, ('next',), ('shield',))),
+               {'perPokemon', 'shieldReach'})
+
+
 @rule('ling-lock-defending', r"During your opponent's next turn, (?:the Defending Pokémon|that Pokémon) can't (attack|use attacks|retreat)\.",
       'A', 'linger opp next (lock attack|retreat)')
 def _(m, ctx):
@@ -2759,6 +2794,11 @@ class Parser:
             if j < len(S) and S[j].startswith('If tails, '):
                 tails = S[j][len('If tails, '):]
                 j += 1
+            # importer 0.17.0: the two branches in the other order ("If tails, this attack does nothing. If heads, X.",
+            # Tranquill zsv10pt5-72, Trumbeak me5-67); the branches exclude each other, so the order is immaterial
+            if heads is None and tails is not None and j < len(S) and S[j].startswith('If heads, '):
+                heads = S[j][len('If heads, '):]
+                j += 1
             if heads is None and tails is None:
                 raise Refuse('coin flip with no consequence', s + ' ' + nxt)
             self.used.append(('flip-a-coin', s))
@@ -3232,6 +3272,12 @@ class Parser:
     def flip(self, H, Tl, i):
         if isinstance(Tl, Nothing) and H is None:
             self.items.append((i, ('wrapFlip',)))
+            return
+        # importer 0.17.0: "If tails, this attack does nothing. If heads, X." in an attack: the whole attack (its damage
+        # and X) on heads, nothing on tails (`wrapFlip` around the script, X unconditional inside it)
+        if isinstance(Tl, Nothing) and isinstance(H, Eff) and self.ctx['kind'] == 'attack':
+            self.items.append((i, ('wrapFlip',)))
+            self.items.append((i, H))
             return
         if isinstance(H, Dmg) and H.op == 'addx' and Tl is None:
             n, X = H.args
@@ -4269,7 +4315,6 @@ SE_INERT = [
     (r'^When you attach this card', 'on-attach effect (stage 4 of MV8, not done)'),
     (r'at the end of your turn', 'end-of-turn discard (stage 4 of MV8, not done)'),
     (r'If this card is discarded by an effect of an attack', 'return after a discard by the holder\'s attack (no machinery)'),
-    (r'Prevent all effects of attacks', 'prevention of effects of attacks (absent from the language)'),
     (r'Special Conditions', 'Special Condition recovery and immunity (no static form)'),
     (r'is on your Bench, prevent all damage', 'prevention of damage to a Benched holder (`SEff.prevent` is read in the '
                                               'Active Spot only)'),
@@ -4920,6 +4965,7 @@ STATIC_DESC['other'] = 'other static text'
 BWR = r' \(before applying Weakness and Resistance\)\.$'
 AWR = r' \(after applying Weakness and Resistance\)\.$'
 BOTH = r" \(both yours and your opponent's\)"
+SHIELD_REMINDER = re.compile(r'\s*\((?:Existing effects are not removed\. )?Damage is not an effect\.\)')
 RULEBOX_REMINDER = re.compile(r'^\(Pokémon ex, Pokémon V(?:_atk)?, etc\. have Rule Boxes\.\)$')
 
 
@@ -5060,6 +5106,25 @@ def static_ability_sentence(s, ctx, src=None, need=None):
     # ignores effects on the defender, `Ign.fx`, as print says of such attacks). Damage only: "damage from and effects
     # of attacks" is refused (no rule: its effect half would be dropped). On the Bench the model does not prevent it
     # (caveat staticPreventBench, `static_caveats`).
+    # importer 0.17.0 (milestone MV10): static prevention of effects of attacks (`SEff.shield fr`), alone ("Damage is
+    # not an effect") or with the damage (`SEff.prevent fr` too). Read in the Active Spot only (caveat shieldActive, from
+    # `static_caveats`); a source that is in force only on the Bench would protect nothing in the model: refused.
+    m = re.match(r"^Prevent all effects of attacks used by your opponent's (.+?) done to this Pokémon\.$", s)
+    if m:
+        if src == 'bench':
+            raise Refuse('other', s)
+        return S('self', ('shield', prevent_filter(m.group(1), ctx)))
+    m = re.match(r"^Prevent all effects of attacks used by your opponent's (.+?) done to your (.+?)\.$", s)
+    if m:
+        if src == 'bench':
+            raise Refuse('other', s)
+        return S('own', ('shield', prevent_filter(m.group(1), ctx)), filt=static_filter(m.group(2), ctx))
+    m = re.match(r"^Prevent all damage from and effects of attacks from your opponent's (.+?) done to this Pokémon\.$", s)
+    if m:
+        if src == 'bench':
+            raise Refuse('other', s)
+        fr = prevent_filter(m.group(1), ctx)
+        return S('self', ('prevent', fr)) + S('self', ('shield', fr))
     m = re.match(r"^Prevent all damage (?:done to this Pokémon by attacks from|from attacks done to this Pokémon by) your "
                  r"opponent's (.+?)\.$", s)
     if m:
@@ -5127,6 +5192,11 @@ def static_tool_sentence(s, ctx):
     m = re.match(r'^The Retreat Cost of the (.+?) this card is attached to is (\w+) (more|less)\.$', s)
     if m:
         return m.group(1), [mk_static('self', retreat_eff(m.group(2), m.group(3)))]
+    # importer 0.17.0 (milestone MV10): Mist Energy, Rocky Fighting Energy
+    m = re.match(r"^Prevent all effects of attacks used by your opponent's (.+?) done to the (.+?) this card is attached "
+                 r"to\.$", s)
+    if m:
+        return m.group(2), [mk_static('self', ('shield', prevent_filter(m.group(1), ctx)))]
     # importer 0.15.0 (milestone MV8): "The Metal Pokémon this card is attached to has no Retreat Cost." (`SEff.noRetreat`,
     # applied last: caveat noRetreatLast, added by the caller)
     m = re.match(r'^The (.+?) this card is attached to has no Retreat Cost\.$', s)
@@ -5173,6 +5243,10 @@ def static_caveats(ss):
             cv.add('staticBench')
         if s['eff'][0] == 'prevent' and s['tgt'] != ('some', ('active',)):
             cv.add('staticPreventBench')
+        if s['eff'][0] == 'shield':
+            # importer 0.17.0: read for the holder in the Active Spot, at the start of the attack
+            cv.add('shieldActive')
+            cv.add('shieldReach')
         if s['eff'] == ('noRetreat',):
             # importer 0.15.0: `SEff.noRetreat` is applied after the additions and subtractions (a reading)
             cv.add('noRetreatLast')
@@ -5209,6 +5283,10 @@ def parse_static(sents, kind, ctx):
     body = [x for x in sents if not RULEBOX_REMINDER.match(x)]
     if len(body) < len(sents) and 'Rule Box' not in ' '.join(body):
         raise Refuse('other', text)
+    # importer 0.17.0: the reminder of the prevention of effects ("Damage is not an effect.", "Existing effects are not
+    # removed."), which `SEff.shield` says by construction (it is read when an attack resolves and removes nothing)
+    if any(x.startswith('Prevent all effects of attacks') for x in body):
+        body = split_sentences(SHIELD_REMINDER.sub('', ' '.join(body)))
     if not body:
         raise Refuse('other', text)
     try:

@@ -206,19 +206,18 @@ theorem Inv.move {S A : Nat} {g g' : GameState} (hm : Move g g') (hi : Inv S A g
         have h2 := hA _ hmem
         simp only [Card.atkAmt] at h2
         omega
-      have hk := (hr.keeps (by rw [Attack.script_recFilters]; exact attacksRec_nil (hN _ hmem) hmc)).trans
+      have hk := (hr.keeps (by rw [Attack.against_recFilters]; exact attacksRec_nil (hN _ hmem) hmc)).trans
         hkf
-      have hsl := hr.slot_le (by rw [Attack.script_loopFree]; exact hlf)
+      have hsl := hr.slot_le (Attack.against_loopFree _ hlf)
       have hs' : ∀ s, (atkRes atk g'').slotAmt s ≤ g.slotAmt s + A := by
         intro s
-        have h1 := hsl s
+        have h1 := Nat.le_trans (hsl s) (Nat.add_le_add_left (Attack.against_amtAt_le _ atk s) _)
         have h2 := atk.effect.amtAt_le_amt s
-        rw [Attack.script_amtAt] at h1
         rw [atkRes_slotAmt, ht.slotAmt]
         omega
       refine hi.attack hn rfl hs' ?_ hk.disc
-      have hal := hsl .always
-      rw [Attack.script_amtAt] at hal
+      have hal := Nat.le_trans (hsl .always)
+        (Nat.add_le_add_left (Attack.against_amtAt_le _ atk .always) _)
       rw [atkRes_slotAmt, ht.slotAmt]
       cases hgv : atk.gx with
       | false =>
@@ -862,22 +861,21 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       have hAl : g.discW Card.alAmt ≤ (atkRes atk g'').discW Card.alAmt :=
         Nat.le_trans (hr.disc_mono Card.alAmt_tw (C := g.allCards)
           (fun f hf y hy hfy => hR.2 _ hmem f
-            (Card.allRec_of_attack hmc (by rw [Attack.script_recFilters] at hf; exact hf)) y hy hfy)
+            (Card.allRec_of_attack hmc (by rw [Attack.against_recFilters] at hf; exact hf)) y hy hfy)
           fun _ hy => hy) hAlf
-      have hsl := hr.slot_le (by rw [Attack.script_loopFree]; exact hlf)
+      have hsl := hr.slot_le (Attack.against_loopFree _ hlf)
       have hs' : ∀ s, (atkRes atk g'').slotAmt s ≤ g.slotAmt s + A := by
         intro s
-        have h1 := hsl s
+        have h1 := Nat.le_trans (hsl s) (Nat.add_le_add_left (Attack.against_amtAt_le _ atk s) _)
         have h2 := atk.effect.amtAt_le_amt s
-        rw [Attack.script_amtAt] at h1
         rw [atkRes_slotAmt, ht.slotAmt]
         omega
       have e0 : atkT A g = 0 := by simp only [atkT, hn]; rfl
       have e1 : atkT A (atkRes atk g'') = A := rfl
       have hal' : (atkRes atk g'').slotAmt .always + gxT A g ≤
           g.slotAmt .always + gxT A (atkRes atk g'') := by
-        have hal := hsl .always
-        rw [Attack.script_amtAt] at hal
+        have hal := Nat.le_trans (hsl .always)
+          (Nat.add_le_add_left (Attack.against_amtAt_le _ atk .always) _)
         rw [atkRes_slotAmt, ht.slotAmt]
         cases hgv : atk.gx with
         | false =>

@@ -218,7 +218,7 @@ theorem start2_wellFormed : WellFormed start2 := by
     intro p hp <;> cases hp
 
 theorem reach_after2 : Reach start2 after2 :=
-  .step (.refl _) rfl (.attack (hlk := rfl) (atk := ⟨"Hurt", [], 0, .selfDamage 9, false, .none⟩) rfl (.head _)
+  .step (.refl _) rfl (Move.attackOpen (hlk := rfl) (atk := ⟨"Hurt", [], 0, .selfDamage 9, false, .none⟩) rfl (.head _)
     (.nil _) rfl rfl rfl rfl
     ⟨start2_damageBounded, by simp [start2, side], by simp [start2, side]⟩
     (.selfDamage 9 rfl) rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil (.selfDamage 9 rfl) rfl) (.nil _))
