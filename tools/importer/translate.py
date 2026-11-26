@@ -240,7 +240,7 @@ CAVEATS = {
                  "that provides 2 (MULTI_UNIT)",
     'shiftFromMoved': "'move Energy from the Pokémon you moved to your Bench to the new Active Pokémon' takes the Energy "
                       "from a Benched Pokémon chosen when the move resolves: the model does not record which Pokémon the "
-                      "switch moved (Known gaps, Energy item: 'shiftEnergy … bench')",
+                      "switch moved (Known gaps, zone moves item, milestone MV11)",
     'discardUnits': "'discard N Energy' (N at least 2) is `discardEnergy … (Filter.energy)`, read by the Energy the cards "
                     "provide (`Qty.okE`): one card that provides 2 pays 2, a card providing more than still needed may be "
                     "discarded, no card the payment does not need may be (Known gaps, Energy item: readings, no rule found "

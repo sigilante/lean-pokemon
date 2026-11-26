@@ -457,6 +457,27 @@ next turn starts; without the flag the same attack Paralyzes; a static protectio
 Paralysis but not the damage), and one general theorem, `Shield.shielded_keeps_conds`: for every
 effect, a shielded resolution neither gives nor removes a Special Condition or Poison strength of
 the opponent's Active Pokémon.
+Milestone MV11 (attached Energy to the hand or deck, directed Energy moves, heals of several Benched
+Pokémon; survey S25) added three effect primitives and no state. Two are zone moves (`ZStep`):
+`Effect.returnEnergy w sp f q d` puts Energy attached to one of the `w` player's Pokémon into that
+player's hand or deck (the take of `discardEnergy`, the cards put at `d`), and `Effect.shiftEnergy w
+src f q dst one` moves Energy from the Active Pokémon to the Bench or from one Benched Pokémon to the
+Active one, all to one Pokémon or "in any way you like" (`ShiftTo`, `Deal`). The third,
+`Effect.benchHealSome m f n`, heals `m` distinct Benched Pokémon of the player passing `f` (all that
+pass if fewer; `m = 5` is "each"), `n` counters from each or all of them, with the relation `Hits` of
+`benchSome`. Each new case of conservation (`ZStep.count`, `Run.perm`), of both clamp simulations
+(`ZStep.sim` at any caps; `Run.cap_sim` and the exact simulation through `clampExact_healBy`: a heal
+commutes with the uncapped clamp, which both clamps apply to the player's own damage inside an
+effect), of the store invariant (`Run.disc_mono`, `ZStep.abPot_le`) and of well-formedness was proved;
+no headline statement changed in text. Returning attached Energy to the hand is a return from play,
+not a recycler of `StoreSafe` clause 3 (no card leaves a discard pile), and the returned cards write
+nothing when played unless they are Item cards, whose writes the per-turn invariant already pays. A
+heal of the opponent's Pokémon is not in the language: inside an attack the capped clamp caps the
+opponent's damage, and a heal does not commute with a cap. Witnesses: `Pokemon/EnergyMoves.lean`
+and `Pokemon/Heals.lean` (Item cards played from well-formed, settled starts, with a positive and a
+negative case each, and general theorems on every resolution: a `.all` take leaves nothing that
+passes the filter, "to 1 of your Benched Pokémon" changes one place of the Bench, a filtered heal
+changes only Pokémon that pass the filter).
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
@@ -928,9 +949,13 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,540 are imported (1,063 exactly, 477 with
-caveats) as 1,532 distinct terms, and 621 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.17.0, which since 0.17.0 translates prevention of
+damage reduction). Of the pool's 2,161 cards, 1,579 are imported (1,080 exactly, 499 with
+caveats) as 1,570 distinct terms, and 582 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.18.0, which since 0.18.0 translates attached Energy put
+into the hand or shuffled into the deck (`returnEnergy`), directed and any-way Energy moves
+(`shiftEnergy`, `iter moveEnergy`), "You may put / shuffle / discard Energy … to have this attack do N
+more damage", and heals of each, of one filtered or of all damage of a Benched Pokémon
+(`benchHealSome`); since 0.17.0 prevention of
 effects of attacks: the lingering "prevent all damage from and effects of attacks done to this
 Pokémon" as `Mod.prevent` with `Mod.shield`, the static form as `SEff.shield`, also on Mist and Rocky
 Fighting Energy, every such card with caveats; since 0.16.0 the MV9 vocabulary:
