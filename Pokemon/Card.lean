@@ -472,7 +472,8 @@ inductive Count where
   turn", Espurr me4-36, is `countGe (played .own (named "Emma")) 1`; "a Future Supporter card",
   Iron Valiant sv5-80; "a Supporter card that has \"Team Rocket\" in its name", Team Rocket's
   Kangaskhan ex me2pt5-162). Like `supporter`, for the player not to move it reads their last turn.
-  The record is a card of the game, so a count of it is kept by both clamps -/
+  Both clamps copy the record, so a count of it is kept by both; along play it is a card of the
+  start state or a record the start state had (`Reach.supCard_mem`) -/
   | played (w : Whose) (f : Filter)
   /-- the printed Retreat Cost of the `w` player's Active Pokémon, 0 with no Active Pokémon
   (milestone MV6: "This attack does 30 more damage for each Colorless in your opponent's Active

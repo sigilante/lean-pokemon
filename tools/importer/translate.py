@@ -279,13 +279,14 @@ CAVEATS = {
                      "`Test.usedLast`), which ends when the Pokémon moves to the Bench or evolves (`InPlay.unlock`); print "
                      "does not say that the history ends then (a reading, Known gaps: one-turn history, use records): a "
                      "Pokémon that used X, moved to the Bench during the opponent's turn and came back to the Active Spot "
-                     "does not get the bonus in the model, where print gives it",
+                     "does not get the bonus in the model, where print gives it; a failed Confused attempt of X writes no "
+                     "record, which is also a reading",
     'printedMaxHP': "'has a maximum HP of N' reads the printed HP of the card (`Filter.hpLe`, as every filter reads the "
                     "printed card), not the derived HP that static effects change (`GameState.hpOf`; Known gaps, filters: "
                     "maximum HP): a Pokémon whose HP an effect raises to N, or from N, is counted the other way",
     'usedLastBenchUse': "'You can use this attack only if this Pokémon used X during your last turn' reads the use record "
                         "of X (as usedLastBench): a Pokémon that used X, moved to the Bench and came back cannot use the "
-                        "attack in the model, where print allows it",
+                        "attack in the model, where print allows it; a failed Confused attempt of X writes no record, also a reading",
     'movedCheckup': "a promotion after Pokémon Checkup is read as in no player's turn, so it never fires a 'during your "
                     "turn' `movedUp` trigger; under the reading of Checkup as part of the ending player's turn it would "
                     "(Known gaps, triggers of the player's own moves: reading, fewer outcomes). On no imported card in "
@@ -300,8 +301,8 @@ CAVEATS = {
 CAVEAT_DIRECTION = {
     # importer 0.16.0
     'usedLastBench': 'both',       # after a trip to the Bench: no bonus in the model, the bonus in print
-    'usedLastBenchUse': 'forbids some',
-    'printedMaxHP': 'both',        # a derived HP of N not counted, or a printed N with a changed HP counted  # after a trip to the Bench the attack cannot be used in the model
+    'usedLastBenchUse': 'forbids some',  # after a trip to the Bench the attack cannot be used in the model
+    'printedMaxHP': 'both',        # a derived HP of N not counted, or a printed N with a changed HP counted
     # importer 0.15.0
     'energyOfBasic': 'forbids some',  # the Special Energy card providing the type cannot be chosen
     'energyOfCount': 'both',       # a smaller count or a false test: the printed amount or branch is absent, the

@@ -480,7 +480,7 @@ structure PlayerState where
   /-- the Supporter card this player played from the hand during their current or (for the player
   not to move) last turn (milestone MV9): written by `Move.supporter` when the card is played, at
   the time the card is played, and cleared with `supporterPlayed` when the player's next turn starts
-  (`Move.endTurn`). Read by `Count.played`. A card of the game: along play it is `none`, the record
+  (`Move.endTurn`). Read by `Count.played`. Along play it is `none`, the record
   the start state had, or a card of the start state (`Reach.supCard_mem`), which keeps the
   enumerations of `Reach.clamp_mem` and `StoreSafe.xfinite` finite -/
   supCard : Option Card := none

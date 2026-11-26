@@ -16,7 +16,7 @@ theorem changed.
 the player played from the hand this turn. `Move.supporter` writes it when the card is played,
 before its effect resolves, with the card it plays; `Move.endTurn` clears it for the player whose
 turn starts (with `supporterPlayed`), and keeps the other player's, which that player's opponent
-then reads as "during their last turn". It is a card of the game: along play every record is a card
+then reads as "during their last turn". Along play every record is a card
 of the start state or a record of the start state (`Reach.supCard_mem`, by `Move.supCard_mem`), so
 the finite list of `Reach.clamp_mem` enumerates it from the start's cards and records
 (`Enum.states C R`, `Reach.clamp_mem_states`), and `Reach.finite`, `Reach.clamp_mem` and
@@ -156,8 +156,12 @@ def r0 : GameState :=
 
 theorem r0_settled : Settled r0 := (GameState.settled_iff _).2 (by decide)
 
+theorem r0_wellFormed : WellFormed r0 := by
+  refine ⟨fun _ => ⟨by simp [r0, side], by simp [r0, side]⟩, ?_, ?_, .of_b rfl⟩ <;>
+    intro p hp <;> cases hp
+
 /-- **Witness: a use record written in the player's turn is in force in their next turn.** From a
-`Settled` start the player uses Ranks (10 damage; the attack ends the turn), the opponent's turn
+well-formed (`r0_wellFormed`), `Settled` start the player uses Ranks (10 damage; the attack ends the turn), the opponent's turn
 starts with the draw and ends, and the player's next turn starts with the draw; then All-Out does
 120, not 30: the opponent's Active Pokémon has 1 + 12 damage counters. Six legal moves. -/
 theorem usedLast_next_turn :

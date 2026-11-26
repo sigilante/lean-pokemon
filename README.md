@@ -412,7 +412,7 @@ model's cards do not carry, over the names of its pool; Known gaps; `Filter` now
 clamp theorem changed. The record: `PlayerState.supCard`, the Supporter card the player played from
 the hand this turn, written by `Move.supporter` when the card is played and cleared, with
 `supporterPlayed`, when the player's next turn starts (`Move.endTurn`); `Count.played w f` reads it
-("If you played Emma from your hand during this turn"). It is a card of the game: every record of a
+("If you played Emma from your hand during this turn"). Every record of a
 reachable state is a card of the start state or a record the start state had (`Reach.supCard_mem`),
 so the finite list of `Reach.clamp_mem` enumerates it (`Enum.states C R`, `Reach.clamp_mem_states`),
 both clamps copy it, and `Reach.finite`, `Reach.clamp_mem`, `Move.clamp_sim`, the exact-store clamp

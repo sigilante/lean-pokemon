@@ -695,7 +695,7 @@ theorem HitTrig.exists_nil {atk : Attack} {g g' : GameState} (hr : Run atk.scrip
   | true => exact .fire h (hf ▸ List.Perm.refl [])
 
 
-/-! ## The Supporter record is a card of the game (milestone MV9)
+/-! ## The Supporter record is a card or a record of the start state (milestone MV9)
 
 `PlayerState.supCard`, the Supporter card a player played from the hand this turn, is written only
 by `Move.supporter`, with the card it plays from the hand; every other move keeps both players'
@@ -789,7 +789,7 @@ theorem GameState.SameRec.mem {g g' : GameState} (h : g.SameRec g') {c : Card}
     (hc : g'.cur.supCard = some c ∨ g'.opp.supCard = some c) : c ∈ g.recCards ∨ c ∈ g.allCards :=
   .inl (GameState.mem_recCards (by rw [h.1, h.2] at hc; exact hc))
 
-/-- **A move writes a Supporter record only with a card of the game**: every record after a move
+/-- **A move writes a Supporter record only with a card of the state before it**: every record after a move
 is a record before it or a card of the state before it. -/
 theorem Move.supCard_mem {g g' : GameState} (h : Move g g') {c : Card}
     (hc : g'.cur.supCard = some c ∨ g'.opp.supCard = some c) : c ∈ g.recCards ∨ c ∈ g.allCards := by

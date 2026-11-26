@@ -1234,11 +1234,14 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `PlayerState.supCard`: written by `Move.supporter` when the card is played (before its effect
   resolves), cleared when the player's next turn starts (`Move.endTurn`, with `supporterPlayed`), so
   for the player to move it holds this turn's Supporter (the rulebook allows one a turn, 2026 p. 12)
-  and for the other player their last turn's; it is a card of the game (`Reach.supCard_mem`), which is
+  and for the other player their last turn's; along play it is a card of the start state or a record
+  the start state had (`Reach.supCard_mem`), which is
   the reachability invariant the enumerations now carry (`Enum.states C R`). Since MV9 the importer
   also writes "if this Pokémon used X during your last turn" (X an attack of the same card) with the
   use record of milestone MV6 (`AtkLock.note`, `Test.usedLast`), which X writes on every use
-  (`GameState.afterAttack`; a failed Confused attempt writes nothing), the end of its owner's turn
+  (`GameState.afterAttack`; a failed Confused attempt writes nothing, reading the rulebook's "the
+  attack doesn't happen" as no use; if print counts the attempt as a use the bonus cards differ both
+  ways and the use condition forbids some, the directions their caveats carry), the end of its owner's turn
   brings into force for the owner's next turn, and moving to the Bench or evolving ends
   (`InPlay.unlock`). Print says that effects of attacks end then (2026 pp. 11, 20); it does not say
   that the history "this Pokémon used X" ends, so the end on the Bench is a reading, caveated
@@ -1247,7 +1250,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   so `Move.attack` cannot use the attack; `Move.attackConfused` does not read the effect and allows
   the Confused attempt, whose outcome (3 counters on the attacker, the turn's attack made) is that of a
   Confused attempt of X, an attack of the same card whose cost is a sub-multiset (the importer's one
-  case, Miltank sv8pt5-81: Rollout [C] and Moomoo Rolling [C, C]). Absent, with the refused cards of
+  case, Miltank sv8pt5-81: Rollout [C] and Moomoo Rolling [C, C]). This equality of outcomes is
+  argued here, not proved in Lean; the model allows a Confused attempt of an attack whose use
+  condition fails, which the rulebook does not (allows more in general, argued harmless for this
+  card). The record survives the Supporter card's later return from the discard pile, as "played
+  this turn" is history. Absent, with the refused cards of
   today's Standard that need them (S13 §A, S23; cards can need several): "if 1 of your [other
   Ancient] Pokémon used [X / an attack] during your last turn" (3: a player-level record of an
   attack name or of another Pokémon, finite only under a reachability invariant like the
