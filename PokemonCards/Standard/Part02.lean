@@ -11,6 +11,11 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part02
 open Pokemon
 
+/-- Perilous Jungle (sv5-156). Records: sv5-156. -/
+def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
+    .skip [
+      { sel := .all, filt := .not (.ptype .darkness), tgt := none, src := none, need := none, eff := .condMore .poisoned 2 }]
+
 /-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec. -/
 def sv5_157 : Card := .trainer "Prime Catcher" .item
     (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
@@ -1236,6 +1241,10 @@ def sv6_142 : Card := .trainer "Accompanying Flute" .item
 def sv6_143 : Card := .trainer "Bug Catching Set" .item
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 7) .hand (.or (.ptype .grass) (.energyOf .grass)) (.upTo 2)) .shuffle))
 
+/-- Community Center (sv6-146). Records: sv6-146. Caveats: noopPlay. -/
+def sv6_146 : Card := .trainer "Community Center" .stadium
+    (.ite (.countGe (.played .own (.kind .supporter)) 1) (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.heal 1) (.benchHealSome 5 .any (some 1)))) (.move .own (.top 0) .hand .any (.exactly 1)))
+
 /-- Cook (sv6-147). Records: sv6-147. -/
 def sv6_147 : Card := .trainer "Cook" .supporter
     (.seq (.ite (.atLeast .own 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.heal 7))
@@ -1790,33 +1799,9 @@ def sv7_4 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Lileep (sv7-5). Records: sv7-5, sv7-145. Caveats: perPokemon. -/
-def sv7_5 : Card := .pokemon
-  { name := "Lileep", stage := .stage1, evolvesFrom := some "Antique Root Fossil",
-    hp := 10, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bind Down", cost := [.grass], damage := 5,
-        effect := .linger .opp .next (.lock .retreat),
-        gx := false }] }
-
-/-- Carnivine (sv7-7). Records: sv7-7. -/
-def sv7_7 : Card := .pokemon
-  { name := "Carnivine", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Nosh", cost := [.colorless], damage := 0,
-        effect := .heal 4,
-        gx := false },
-      { name := "Loom Over", cost := [.grass, .colorless, .colorless], damage := 0,
-        effect := .damage (.sub (.const 13) (.per .own 1)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv5_156,
   sv5_157,
   sv5_161,
   sv5_162,
@@ -1914,6 +1899,7 @@ def cards : List Card := [
   sv6_140,
   sv6_142,
   sv6_143,
+  sv6_146,
   sv6_147,
   sv6_148,
   sv6_151,
@@ -1964,9 +1950,7 @@ def cards : List Card := [
   sv6pt5_58,
   sv6pt5_61,
   sv7_2,
-  sv7_4,
-  sv7_5,
-  sv7_7]
+  sv7_4]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

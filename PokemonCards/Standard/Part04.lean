@@ -11,6 +11,34 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part04
 open Pokemon
 
+/-- Latias ex (sv8-76). Records: sv8-76, sv8-220, sv8-239. Caveats: noRetreatLast. -/
+def sv8_76 : Card := .pokemon
+  { name := "Latias ex", stage := .basic, evolvesFrom := none,
+    hp := 21, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
+    abilities := [
+      { name := "Skyliner", use := .static [{ sel := .own, filt := .basic, tgt := none, src := none, need := none, eff := .noRetreat }],
+        spot := none, cond := none,
+        effect := .fx .skip }],
+    attacks := [
+      { name := "Eon Blade", cost := [.psychic, .psychic, .colorless], damage := 20,
+        effect := .skip,
+        gx := false, selfLock := .all }] }
+
+/-- Latios (sv8-77). Records: sv8-77, sv8-203. Caveats: benchMods. -/
+def sv8_77 : Card := .pokemon
+  { name := "Latios", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Skill Dive", cost := [.psychic, .colorless], damage := 0,
+        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 5)) (.benchDamage .opp 5)) (.damage (.const 5)),
+        gx := false },
+      { name := "Jet Headbutt", cost := [.psychic, .psychic, .colorless], damage := 11,
+        effect := .skip,
+        gx := false }] }
+
 /-- Uxie (sv8-78). Records: sv8-78. -/
 def sv8_78 : Card := .pokemon
   { name := "Uxie", stage := .basic, evolvesFrom := none,
@@ -745,6 +773,10 @@ def sv8_162 : Card := .tool "Amulet of Hope"
 def sv8_164 : Card := .trainer "Brilliant Blender" .item
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .discard .any (.upTo 5)) .shuffle))
 
+/-- Clemont's Quick Wit (sv8-167). Records: sv8-167, sv8-229, sv8-243. Caveats: noopPlay. -/
+def sv8_167 : Card := .trainer "Clemont's Quick Wit" .supporter
+    (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own (.ptype .lightning)) 1) .skip (.ite (.top .own (.ptype .lightning)) (.move .own (.top 0) .hand .any (.exactly 1)) .skip))) (.seq (.ite (.countGe (.bench .own (.ptype .lightning)) 1) .skip (.ite (.top .own (.ptype .lightning)) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.ite (.top .own (.ptype .lightning)) (.heal 6) .skip) (.benchHealSome 5 (.ptype .lightning) (some 6)))))
+
 /-- Cyrano (sv8-170). Records: sv8-170, sv8-230. Caveats: upTo0. -/
 def sv8_170 : Card := .trainer "Cyrano" .supporter
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand (.and .pokemon (.not .noRuleBox)) (.upTo 3)) .shuffle))
@@ -752,6 +784,10 @@ def sv8_170 : Card := .trainer "Cyrano" .supporter
 /-- Deduction Kit (sv8-171). Records: sv8-171. -/
 def sv8_171 : Card := .trainer "Deduction Kit" .item
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.choice (.look .own (.top 3) .any (.exactly 0) (.put .top) .top) (.look .own (.top 3) .any (.exactly 0) (.put .top) .bottom)))
+
+/-- Dragon Elixir (sv8-172). Records: sv8-172. -/
+def sv8_172 : Card := .trainer "Dragon Elixir" .item
+    (.seq (.ite (.atLeast .own 1) .skip (.ite (.top .own (.ptype .dragon)) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.ite (.top .own (.ptype .dragon)) (.heal 6) (.move .own (.top 0) .hand .any (.exactly 1))))
 
 /-- Drasna (sv8-173). Records: sv8-173, sv8-231. -/
 def sv8_173 : Card := .trainer "Drasna" .supporter
@@ -840,6 +876,20 @@ def sv8pt5_4 : Card := .pokemon
     attacks := [
       { name := "Itchy Pollen", cost := [], damage := 1,
         effect := .linger .opp .next (.lock .item),
+        gx := false }] }
+
+/-- Leafeon ex (sv8pt5-6). Records: sv8pt5-6, sv8pt5-144. Caveats: energyUnitsCount. -/
+def sv8pt5_6 : Card := .pokemon
+  { name := "Leafeon ex", stage := .stage1, evolvesFrom := some "Eevee",
+    hp := 27, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .ex, tera := true,
+    abilities := [],
+    attacks := [
+      { name := "Verdant Storm", cost := [.grass, .colorless], damage := 0,
+        effect := .damage (.count (.energyAll .opp .energy) 6),
+        gx := false },
+      { name := "Moss Agate", cost := [.grass, .fire, .water], damage := 23,
+        effect := .benchHealSome 5 .any (some 10),
         gx := false }] }
 
 /-- Litleo (sv8pt5-15). Records: sv8pt5-15. -/
@@ -1687,69 +1737,10 @@ def sv9_33 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Octillery (sv9-34). Records: sv9-34. -/
-def sv9_34 : Card := .pokemon
-  { name := "Octillery", stage := .stage1, evolvesFrom := some "Remoraid",
-    hp := 11, type := .water, retreat := 2, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Aqua Wash", cost := [.water], damage := 2,
-        effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.returnEnergy .opp .active .energy (.exactly 1) .hand) .skip) .skip,
-        gx := false },
-      { name := "Octo Beatdown", cost := [.water, .colorless, .colorless], damage := 0,
-        effect := .damage (.many (.const 9)),
-        gx := false }] }
-
-/-- Lotad (sv9-35). Records: sv9-35. -/
-def sv9_35 : Card := .pokemon
-  { name := "Lotad", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Water Gun", cost := [.water], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Lombre (sv9-36). Records: sv9-36. -/
-def sv9_36 : Card := .pokemon
-  { name := "Lombre", stage := .stage1, evolvesFrom := some "Lotad",
-    hp := 9, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Aqua Slash", cost := [.water, .water], damage := 7,
-        effect := .skip,
-        gx := false, selfLock := .all }] }
-
-/-- Wingull (sv9-38). Records: sv9-38. -/
-def sv9_38 : Card := .pokemon
-  { name := "Wingull", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flap", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Pelipper (sv9-39). Records: sv9-39. -/
-def sv9_39 : Card := .pokemon
-  { name := "Pelipper", stage := .stage1, evolvesFrom := some "Wingull",
-    hp := 12, type := .water, retreat := 2, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Spit Up", cost := [.colorless], damage := 3,
-        effect := .skip,
-        gx := false },
-      { name := "Speed Dive", cost := [.water, .colorless], damage := 7,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv8_76,
+  sv8_77,
   sv8_78,
   sv8_79,
   sv8_81,
@@ -1808,8 +1799,10 @@ def cards : List Card := [
   sv8_159,
   sv8_162,
   sv8_164,
+  sv8_167,
   sv8_170,
   sv8_171,
+  sv8_172,
   sv8_173,
   sv8_175,
   sv8_177,
@@ -1824,6 +1817,7 @@ def cards : List Card := [
   sv8pt5_2,
   sv8pt5_3,
   sv8pt5_4,
+  sv8pt5_6,
   sv8pt5_15,
   sv8pt5_16,
   sv8pt5_18,
@@ -1894,12 +1888,7 @@ def cards : List Card := [
   sv9_30,
   sv9_31,
   sv9_32,
-  sv9_33,
-  sv9_34,
-  sv9_35,
-  sv9_36,
-  sv9_38,
-  sv9_39]
+  sv9_33]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1921,7 +1910,7 @@ theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map C
 theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Bronzong", "Furfrou"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
-theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = [] := by decide +kernel
+theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Latias ex"] := by decide +kernel
 
 /-- Every printed HP in this part is at most 38 counters (the largest over the imported pool). -/
 theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ 38)) = true := by decide +kernel

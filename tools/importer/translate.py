@@ -1627,6 +1627,86 @@ def _(m, ctx):
     return Eff(('benchHeal', counters(m.group(1))), noop(ctx))
 
 
+# importer 0.18.0 (milestone MV11, survey S25): heals of several, filtered or all-damage Benched Pokémon
+# (`Effect.benchHealSome m f n`: m distinct Benched Pokémon passing f, all if fewer pass; n = None heals all damage).
+# m = 5 = `benchLimit` takes every Benched Pokémon that passes. Only the player's own Pokémon: a heal of the opponent's
+# Pokémon is refused (it would not commute with the capped clamp inside an attack; S25).
+BENCH_ALL = 5
+
+
+def heal_filter(np, ctx):
+    """The filter of "your [F] Pokémon" (np = "F Pokémon" or "Pokémon")."""
+    if np == 'Pokémon':
+        return ('any',)
+    f = parse_filter(np, ctx)
+    if not is_pokemon_filter(f):
+        raise Refuse('card kind with no filter: ' + np)
+    return f
+
+
+def one_of_f(f, active, bench, ctx):
+    """'1 of your F Pokémon': the Active Pokémon if it passes f, or one Benched Pokémon that passes f; with no Benched
+    Pokémon passing f, the Active one if it passes, and otherwise nothing (an attack) or no resolution (a Trainer,
+    `min_take`'s convention). The Active branch of the choice has no resolution when the Active Pokémon fails f."""
+    if f == ('any',):
+        return one_of(OWN, active, bench)
+    act = ite(('top', OWN, f), active, NO_PLAY)
+    none = NO_PLAY if ctx['kind'] == 'trainer' else SKIP
+    return ite(('countGe', ('bench', OWN, f), 1), choice(act, bench), ite(('top', OWN, f), active, none))
+
+
+@rule('heal-each', r'Heal (\d+) damage from each of your ((?:.+ )?Pokémon)\.', 'B',
+      'seq (ite (top own F) (heal n) skip) (benchHealSome 5 F (some n)); F any: seq (heal n) (benchHealSome 5 any (some n))')
+def _(m, ctx):
+    n = counters(m.group(1))
+    np = m.group(2)
+    if np == 'Benched Pokémon':
+        return Eff(('benchHealSome', BENCH_ALL, ('any',), ('some', n)), noop(ctx))
+    if np.startswith('Benched '):
+        raise Refuse('wording')
+    f = heal_filter(np, ctx)
+    act = ('heal', n) if f == ('any',) else ite(('top', OWN, f), ('heal', n), SKIP)
+    return Eff(seq(act, ('benchHealSome', BENCH_ALL, f, ('some', n))), noop(ctx))
+
+
+@rule('heal-1-bench-f', r'Heal (\d+|all) damage from 1 of your Benched (.+ )?Pokémon\.', 'B',
+      'benchHealSome 1 F (some n | none)')
+def _(m, ctx):
+    n = None if m.group(1) == 'all' else ('some', counters(m.group(1)))
+    f = heal_filter((m.group(2) or '') + 'Pokémon', ctx)
+    return Eff(('benchHealSome', 1, f, n), noop(ctx))
+
+
+@rule('heal-1-of-your-f', r'Heal (\d+|all) damage from 1 of your (.+ )?Pokémon\.', 'B',
+      'one of: (heal n | healAll) on the Active Pokémon if it passes F, or benchHealSome 1 F')
+def _(m, ctx):
+    a = m.group(1)
+    f = heal_filter((m.group(2) or '') + 'Pokémon', ctx)
+    act = ('healAll',) if a == 'all' else ('heal', counters(a))
+    bench = ('benchHealSome', 1, f, None if a == 'all' else ('some', counters(a)))
+    return Eff(one_of_f(f, act, bench, ctx), noop(ctx))
+
+
+@rule('heal-1-cure', r'Heal (\d+) damage from 1 of your Pokémon, and it recovers from all Special Conditions\.', 'T',
+      'ite (countGe (bench own pokemon) 1) (choice (seq (heal n) cure) (benchHeal n)) (seq (heal n) cure)')
+def _(m, ctx):
+    # a Benched Pokémon has no Special Condition (`Benched`, kept by every move: `Move.wellFormed`), so the cure is
+    # written on the Active branch only
+    n = counters(m.group(1))
+    return Eff(one_of(OWN, seq(('heal', n), ('cure',)), ('benchHeal', n)), noop(ctx))
+
+
+@rule('heal-active-f', r'Heal (\d+) damage from your Active (.+ Pokémon|Pokémon that has (\d+) or more Energy attached)\.',
+      'T', 'ite (top own F | countGe (energy own energy) k) (heal n) (no resolution)')
+def _(m, ctx):
+    n = counters(m.group(1))
+    if m.group(3):
+        t = ('countGe', ('energy', OWN, ENERGY_F), num(m.group(3)))
+    else:
+        t = ('top', OWN, heal_filter(m.group(2), ctx))
+    return Eff(ite(t, ('heal', n), NO_PLAY), noop(ctx))
+
+
 COND_RE = r'(?:Asleep|Burned|Confused|Paralyzed|Poisoned)'
 
 

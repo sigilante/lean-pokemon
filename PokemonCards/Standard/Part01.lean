@@ -1175,6 +1175,20 @@ def sv5_75 : Card := .pokemon
         effect := .heal 1,
         gx := false }] }
 
+/-- Scream Tail (sv5-77). Records: sv5-77. -/
+def sv5_77 : Card := .pokemon
+  { name := "Scream Tail", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Supportive Singing", cost := [.colorless], damage := 0,
+        effect := .benchHealSome 1 (.and .pokemon (.or (.or (.or (.nameIn ["Ancient Booster Energy Capsule", "Awakening Drum", "Brute Bonnet", "Explorer's Guidance", "Flutter Mane", "Gouging Fire", "Gouging Fire ex", "Great Tusk", "Raging Bolt", "Raging Bolt ex", "Roaring Moon", "Sandy Shocks", "Scream Tail", "Scream Tail ex", "Slither Wing", "Walking Wake", "Walking Wake ex"]) (.and (.named "Koraidon") (.hasAttack "Primordial Beatdown"))) (.and (.named "Koraidon") (.hasAttack "Unrelenting Onslaught"))) (.and (.named "Koraidon ex") (.hasAttack "Retribution Strike")))) (some 10),
+        gx := false },
+      { name := "Hyper Voice", cost := [.colorless, .colorless], damage := 4,
+        effect := .skip,
+        gx := false }] }
+
 /-- Iron Valiant (sv5-79). Records: sv5-79. Caveats: benchMods. -/
 def sv5_79 : Card := .pokemon
   { name := "Iron Valiant", stage := .basic, evolvesFrom := none,
@@ -1797,11 +1811,6 @@ def sv5_154 : Card := .tool "Maximum Belt"
     statics := [
       { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
 
-/-- Perilous Jungle (sv5-156). Records: sv5-156. -/
-def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
-    .skip [
-      { sel := .all, filt := .not (.ptype .darkness), tgt := none, src := none, need := none, eff := .condMore .poisoned 2 }]
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1902,6 +1911,7 @@ def cards : List Card := [
   sv5_73,
   sv5_74,
   sv5_75,
+  sv5_77,
   sv5_79,
   sv5_80,
   sv5_82,
@@ -1952,8 +1962,7 @@ def cards : List Card := [
   sv5_148,
   sv5_152,
   sv5_153,
-  sv5_154,
-  sv5_156]
+  sv5_154]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

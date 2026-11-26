@@ -4,16 +4,16 @@ Pool: 3402 records, 2161 cards (S9 identities: 2164), 11 Lean files.
 
 | kind | cards | imported exactly | with caveats | not imported |
 |---|---|---|---|---|
-| Pokémon | 1881 | 993 (52.8%) | 437 (23.2%) | 451 (24.0%) |
-| Item | 86 | 25 (29.1%) | 23 (26.7%) | 38 (44.2%) |
-| Supporter | 83 | 24 (28.9%) | 14 (16.9%) | 45 (54.2%) |
+| Pokémon | 1881 | 999 (53.1%) | 439 (23.3%) | 443 (23.6%) |
+| Item | 86 | 26 (30.2%) | 24 (27.9%) | 36 (41.9%) |
+| Supporter | 83 | 24 (28.9%) | 18 (21.7%) | 41 (49.4%) |
 | Pokémon Tool | 44 | 8 (18.2%) | 8 (18.2%) | 28 (63.6%) |
-| Stadium | 36 | 9 (25.0%) | 3 (8.3%) | 24 (66.7%) |
+| Stadium | 36 | 9 (25.0%) | 4 (11.1%) | 23 (63.9%) |
 | Basic Energy | 9 | 9 (100.0%) | 0 (0.0%) | 0 (0.0%) |
 | Special Energy | 22 | 5 (22.7%) | 6 (27.3%) | 11 (50.0%) |
-| **all** | **2161** | **1073 (49.7%)** | **491 (22.7%)** | **597 (27.6%)** |
+| **all** | **2161** | **1080 (50.0%)** | **499 (23.1%)** | **582 (26.9%)** |
 
-By records: imported exactly 1622, with caveats 744, not imported 1036 (of 3402).
+By records: imported exactly 1630, with caveats 759, not imported 1013 (of 3402).
 
 Readers of Special Energy cards (column `special_parts` of imported.tsv, `vacuous_parts` until importer 0.14.0): 11 imported cards have a part that reads Special Energy cards by kind or name. Until 0.14.0 no imported card was a Special Energy card and these parts were vacuous in a game of imported cards (S11 §15); since 0.15.0 the imported Special Energy cards make them live, each read by card (`Filter.weight`: a filter other than `Filter.energy` counts and discards cards): sv5-30 Victini (Singe Off, imported exactly); sv5-137 Cinccino (Special Roll, imported exactly); sv6-148 Enhanced Hammer ((card), imported exactly); sv6pt5-46 Haxorus (Bring Down the Axe, imported with caveats); sv7-8 Mow Rotom (Reaping Dash, imported exactly); sv7-86 Diancie (Diffuse Reflection, imported with caveats); sv9-85 Lycanroc (Spike-Clad, imported with caveats); sv10-51 Team Rocket's Articuno (Dark Frost, imported with caveats); sv10-70 Team Rocket's Zapdos (Wicked Thunder, imported with caveats); zsv10pt5-66 Cobalion (Righteous Edge, imported exactly); me3-45 Tyrantrum (Tyrannically Gutsy, imported exactly).
 
@@ -28,12 +28,12 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `moveMayFail` | allows more | 11 | a move of Energy is `moveEnergy`, which may move nothing (`moveNone`; Known gaps, zone moves item: 'attach, putBench and moveEnergy may always do nothing, a superset of "if you can"'), where print moves one Energy if one can be moved |
 | `moveAnyPair` | allows more | 9 | a move of Energy printed between particular Pokémon ('to this Pokémon', 'from 1 of your Benched Pokémon to your Active Pokémon') is a move between any two of the player's Pokémon (moveEnergy) |
 | `searchAny` | allows more | 8 | a deck search for 'a card' (any card) may find nothing in the model, where print must take at least 1 (2026 rulebook p. 21: 'for any effect that allows you to search your deck or discard pile for any card you want and doesn't specify what kind, you must choose at least 1'; Known gaps, zone moves item: 'a superset elsewhere and for an attack that searches for any card') |
+| `noopPlay` | allows more | 7 | a Trainer (an Item, a Supporter, a Stadium's use) whose effect may do nothing in the model in a state where it could do something (heal 30 damage from 1 of your Pokémon: the model may heal an undamaged one, as it has no test of a Benched Pokémon's damage) can be played to no effect there. The importer reads the usual ruling, not in the rulebook (2026 p. 12 says only 'When you play any Trainer card, do what it says'): a card may not be played when its effect cannot do anything, except that a search of a hidden zone may find nothing; where public information decides it the term states the precondition instead (noop.py; Known gaps, item on plays to no effect) |
 | `hiddenInfo` | allows more | 6 | a sentence that only reveals or looks at cards is a no-op (hidden information is not modelled, Known gaps) |
 | `trigKO` | allows more | 4 | 'is Knocked Out by damage from an attack' is read as 'Knocked Out by a Knock Out check while the turn's attack has been made': Knock Outs by damage counters the attack placed, by later rounds of the check, and in the check after a failed Confused attempt also fire it (Known gaps, triggered Abilities, M8b) |
+| `noopUse` | allows more | 3 | an activated Ability whose effect may do nothing in the model in a state where it could do something (as noopPlay) can be used to no effect there, marking its Pokémon as used; the importer reads the ruling of noopPlay for Abilities too, and states the precondition where public information decides it (noop.py; Known gaps, item on plays to no effect) |
 | `onePerName` | allows more | 3 | 'You can't use more than 1 X Ability each turn' is not modelled: the use flag is per Pokémon, so each of several Pokémon with that Ability can use it in the same turn |
 | `selfKOBench` | allows more | 3 | used from the Bench, 'this Pokémon is Knocked Out' is 9999 damage counters on one Benched Pokémon chosen at resolution (`SelfOp.counters` on the Bench, `benchCounters .own`): another Benched Pokémon may be Knocked Out instead, so this Pokémon survives (and can use the Ability again next turn) and the opponent takes the Prize cards of the other Pokémon (2 or 3 for a Pokémon ex or Mega Evolution Pokémon ex) (Known gaps, self-Knock-Out Abilities: 'on the Bench SelfOp.counters may choose another Benched Pokémon (a superset)') |
-| `noopPlay` | allows more | 2 | a Trainer (an Item, a Supporter, a Stadium's use) whose effect may do nothing in the model in a state where it could do something (heal 30 damage from 1 of your Pokémon: the model may heal an undamaged one, as it has no test of a Benched Pokémon's damage) can be played to no effect there. The importer reads the usual ruling, not in the rulebook (2026 p. 12 says only 'When you play any Trainer card, do what it says'): a card may not be played when its effect cannot do anything, except that a search of a hidden zone may find nothing; where public information decides it the term states the precondition instead (noop.py; Known gaps, item on plays to no effect) |
-| `noopUse` | allows more | 2 | an activated Ability whose effect may do nothing in the model in a state where it could do something (as noopPlay) can be used to no effect there, marking its Pokémon as used; the importer reads the ruling of noopPlay for Abilities too, and states the precondition where public information decides it (noop.py; Known gaps, item on plays to no effect) |
 | `shiftFromMoved` | allows more | 2 | 'move Energy from the Pokémon you moved to your Bench to the new Active Pokémon' takes the Energy from a Benched Pokémon chosen when the move resolves: the model does not record which Pokémon the switch moved (Known gaps, Energy item: 'shiftEnergy … bench') |
 | `energyOfBasic` | forbids some | 15 | 'a [T] Energy' attached to a Pokémon, chosen to be discarded or moved, is `Filter.energyOf t`, which passes Basic Energy cards only: a Special Energy card that provides T (Prism, Neo Upper, Luminous, Team Rocket's Energy; the typed Special Energy cards) cannot be chosen where print lets it be (Known gaps, Energy item: 'Filter.energyOf t reads Basic Energy only … fewer than print in counts, tests and discards'); written only where the printed sentence does not say 'Basic' |
 | `anyAmount60` | forbids some | 5 | 'discard any amount / all … for each card you discarded in this way' is `forUpTo` with the bound 60, the cards of a legal deck (2026 rulebook p. 21): exact for every state in which the player has at most 60 cards that could be discarded (`Run.forUpTo_complete`, `discardActive_le`); the model does not require this of a start state, and beyond it a larger discard is forbidden (Known gaps, zone moves item: 'exact for "any amount" once the bound covers the cards that can be taken'); for 'discard all' with more than 60 the attack has no resolution |
@@ -52,7 +52,7 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `recoil` | both | 69 | self-damage ('also does N damage to itself') is written as damage counters (selfDamage): no Weakness, Resistance or modifier applies to it (Known gaps) |
 | `energyOfCount` | both | 42 | '[T] Energy attached' in a count or a test is `Filter.energyOf t` (Basic Energy cards only) or a static count (`SAmt.perEnergy`, `Static.need`) of Basic cards: a Special Energy card that provides T is not counted, so the count or test reads less than print; likewise 'discard all [T] Energy' leaves such a card attached (Known gaps, Energy item); a different amount, branch or discard, so outcomes differ either way |
 | `shieldReach` | both | 28 | 'prevent all effects of attacks done to this Pokémon' removes from the opponent's attack the primitives the model counts as done to the Defending Pokémon (`Effect.shielded`): damage counters, Special Conditions, Poison strength, a switch of the Defending Pokémon in either direction (a gust from the Bench included), the Defending Pokémon's attack and retreat locks and damage modifiers, Energy and Tools discarded from or attached to it, every move of Energy between the opponent's Pokémon (Bench to Bench included), and markers on the opponent's Pokémon; it keeps everything on the Bench, attachments from a looked-at window ('attach … to your opponent's Pokémon in any way'), and locks on the player (Items) (Known gaps, prevention of effects: a reading of 'done to this Pokémon'; no ruling was checked) |
-| `energyUnitsCount` | both | 18 | 'for each Energy attached' or 'N or more Energy attached' (N at least 2) is `Count.energy` / `Count.energyAll` under `Filter.energy`, which counts the Energy the cards provide (`Filter.weight`): a card that provides 2 counts 2, where print may count cards (Known gaps, Energy item: a reading, no rule found in the 2026 rulebook). Written only where the Pokémon read can hold a card that provides 2 (a Stage 2 or Team Rocket's Pokémon, read on its top card); a different amount or branch, so outcomes differ either way |
+| `energyUnitsCount` | both | 20 | 'for each Energy attached' or 'N or more Energy attached' (N at least 2) is `Count.energy` / `Count.energyAll` under `Filter.energy`, which counts the Energy the cards provide (`Filter.weight`): a card that provides 2 counts 2, where print may count cards (Known gaps, Energy item: a reading, no rule found in the 2026 rulebook). Written only where the Pokémon read can hold a card that provides 2 (a Stage 2 or Team Rocket's Pokémon, read on its top card); a different amount or branch, so outcomes differ either way |
 | `staticBench` | both | 17 | a static damage reduction ('takes N less damage from attacks') is subtracted at step 5 of the damage calculation, which only damage to the Active Pokémon passes through: attack damage to a Benched Pokémon takes no reduction in the model (Known gaps, milestone M3: Bench damage takes no bonus, reduction or prevention; milestone M6) |
 | `trigDamaged` | both | 17 | 'is in the Active Spot and is damaged by an attack' is decided on the attack's damage step (HitRun, HitTrig): a Pokémon damaged and then switched to the Bench by the same attack fires nothing, and when the Defending Pokémon was already at or above its HP before the damage step the trigger may fire or not (Known gaps, triggered Abilities, M8b: the two departures, one in each direction) |
 | `trigAttacker` | both | 16 | 'the Attacking Pokémon' is the opponent's Active Pokémon when the trigger resolves: if the attack switched its attacker out ('damaged'), or the attacker was Knocked Out by the same check ('Knocked Out'), the effect falls on the new Active Pokémon instead of the attacker or nothing (Known gaps, triggered Abilities, M8b) |
@@ -75,22 +75,22 @@ Caveats (cards may carry several), with their direction: does the term allow out
 | `printedMaxHP` | both | 1 | 'has a maximum HP of N' reads the printed HP of the card (`Filter.hpLe`, as every filter reads the printed card), not the derived HP that static effects change (`GameState.hpOf`; Known gaps, filters: maximum HP): a Pokémon whose HP an effect raises to N, or from N, is counted the other way |
 | `specialCountCards` | both | 1 | 'for each Special Energy attached' (no 'card') is `Count.energy … specialEnergy`, which counts cards (`Filter.weight`: under a filter other than `Filter.energy`, cards; Known gaps, Energy item): a Special Energy card that provides 2 (Team Rocket's Energy) counts 1, where print, read as 'for each Energy attached' is (by the Energy provided), may count 2; a reading either way |
 
-Blocking mechanisms of the 597 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
+Blocking mechanisms of the 582 cards not imported (keyword classification of each refusal; "alone": the only mechanism blocking the card, so the card would be imported once it is handled and its sentences are translated; "any": among its blockers):
 
 | mechanism | blocks alone | blocks (any) |
 |---|---|---|
-| other | 72 | 129 |
+| other | 64 | 120 |
 | triggered Ability of other shapes (another Pokémon's Knock Out, replacement, Checkup, opponent's action, move between spots) | 28 | 31 |
 | "If you do" / "in this way" consequences | 22 | 51 |
 | a condition the model cannot test | 18 | 23 |
 | static text (Ability, Tool or Stadium): prevention or immunity (damage, effects, Special Conditions, healing) | 17 | 21 |
 | damage or counters spread "in any way you like" / to several chosen | 16 | 26 |
+| return from play to hand or deck | 14 | 21 |
 | evolution or devolution by effect | 14 | 19 |
-| return from play to hand or deck | 13 | 21 |
 | Ability: self Knock Out, from the hand, untestable condition or cost (other activated-Ability forms) | 13 | 20 |
+| several cards to one chosen Pokémon, or one to each | 13 | 15 |
 | static text (Ability, Tool or Stadium): a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters) | 12 | 20 |
 | history (this turn, last turn, Knock Outs) | 12 | 19 |
-| several cards to one chosen Pokémon, or one to each | 12 | 15 |
 | effect prevention, threshold or typed prevention | 11 | 14 |
 | Special Energy card: a rider the model does not express (on-attach effect, end-of-turn discard, return after a discard, prevention of effects, Special Condition immunity, Bench damage prevention, Prize change) | 11 | 11 |
 | Stadium in other card text | 10 | 12 |
@@ -101,10 +101,9 @@ Blocking mechanisms of the 597 cards not imported (keyword classification of eac
 | Prize cards (taken, compared, moved) | 7 | 13 |
 | Pokémon Tool in other card text | 7 | 8 |
 | copy an attack | 7 | 8 |
-| Stadium card: activated effect the model cannot express | 7 | 7 |
-| heal several Pokémon | 6 | 10 |
 | spread: amount computed by the text (not modelled, Known gaps MV2) | 6 | 8 |
 | a count the model cannot read | 6 | 7 |
+| Stadium card: activated effect the model cannot express | 6 | 6 |
 | Pokémon Tool card: other (attack grant not expressible, end-of-turn discard, Mega rule, unclassified record) | 5 | 5 |
 | static Ability: first-turn rule | 5 | 5 |
 | static text (Ability, Tool or Stadium): a condition the model cannot test statically (Prize cards, the hand, other Pokémon in play, Special Conditions, Special Energy, Tools, damage) | 4 | 26 |
@@ -152,25 +151,26 @@ Blocking mechanisms of the 597 cards not imported (keyword classification of eac
 | triggered text of the M8b shapes: opening misprinted in the data | 1 | 1 |
 | data defect: a Stage 1 or Stage 2 record with no evolves-from field | 1 | 1 |
 | Trainer played as a Pokémon | 0 | 7 |
+| heal several Pokémon | 0 | 1 |
 | static text (Ability, Tool or Stadium): Bench size | 0 | 1 |
 
-Pokémon with an Ability (315 cards): imported exactly 44, imported with caveats 97, not imported 174. Not imported, by the first reason the Ability was refused (or "translated; card blocked elsewhere"):
+Pokémon with an Ability (315 cards): imported exactly 44, imported with caveats 98, not imported 173. Not imported, by the first reason the Ability was refused (or "translated; card blocked elsewhere"):
 
 | status or reason | cards |
 |---|---|
-| imported with caveats | 97 |
+| imported with caveats | 98 |
 | imported exactly | 44 |
 | Ability: triggered (Knock Out, damage, Checkup, an opponent's action or a move between spots) | 31 |
-| Ability translated; card blocked elsewhere | 22 |
+| Ability translated; card blocked elsewhere | 23 |
 | Ability: static, prevent | 16 |
 | Ability: static, lock | 15 |
 | Ability: static, cost | 12 |
-| Ability effect: a sentence has no rule | 6 |
 | Ability effect: condition not expressible | 6 |
 | Ability: condition not expressible | 6 |
 | Ability: static, stack | 6 |
 | Ability: static (first-turn rule) | 5 |
 | Ability: static, typeWeak | 5 |
+| Ability effect: a sentence has no rule | 4 |
 | Ability: condition on this Pokémon, which may be on the Bench | 4 |
 | Ability: static, cond | 4 |
 | Ability: returns its Pokémon from play | 3 |
@@ -196,7 +196,7 @@ Pokémon with an Ability (315 cards): imported exactly 44, imported with caveats
 | Ability: triggered (MV7 oppBenched), 'that Pokémon' (the Pokémon moved to the Bench) has no target in the model's language (Known gaps) | 1 |
 | Ability: triggered (MV7c movedUp), effect sentence not translated (unhandled sentence) | 1 |
 
-Imported Abilities by use limit: onPlay-bench 5, onPlay-evolve 13, once 61, static 39, triggered 19, unlimited 5.
+Imported Abilities by use limit: onPlay-bench 5, onPlay-evolve 13, once 62, static 39, triggered 19, unlimited 5.
 
 Cards whose Ability says "You can't use more than 1 … Ability each turn" (6): Fezandipiti ex (sv6pt5-38), Pecharunt ex (sv6pt5-39), Fan Rotom (sv7-118), Lunatone (me1-74), Mega Kangaskhan ex (me1-104), Meowth ex (me3-62). Imported with the caveat `onePerName` (allows more): Fezandipiti ex (sv6pt5-38), Lunatone (me1-74), Mega Kangaskhan ex (me1-104).
 
@@ -208,11 +208,12 @@ Imported "as often as you like" Abilities (5):
 - Azumarill ex (me2pt5-84), Bubble Gathering: `.seq (.fx (.seq (.ite (.countGe (.energyAll .own .energy) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))))) (.self (.energyTo .energy))`
 - Dewgong (me3-19), Wash Out: `.fx (.seq (.seq (.ite (.countGe (.energyAll .own (.energyOf .water)) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.moveEnergy .own (.energyOf .water)))`
 
-Stadium cards (36): imported 12, refused 24.
+Stadium cards (36): imported 13, refused 23.
 
 - imported: Paradise Resort (svp-150): `.trainer "Paradise Resort" .stadium .skip [ { sel := .all, filt := .named "Psyduck", tgt := none, src := none, need := none, eff := .retreatMinus 1 }]`
 - imported: Full Metal Lab (sv5-148) [caveats: staticBench]: `.trainer "Full Metal Lab" .stadium .skip [ { sel := .all, filt := .ptype .metal, tgt := none, src := none, need := none, eff := .reduce 3 .any }]`
 - imported: Perilous Jungle (sv5-156): `.trainer "Perilous Jungle" .stadium .skip [ { sel := .all, filt := .not (.ptype .darkness), tgt := none, src := none, need := none, eff := .condMore .poisoned 2 }]`
+- imported: Community Center (sv6-146) [caveats: noopPlay]: `.trainer "Community Center" .stadium (.ite (.countGe (.played .own (.kind .supporter)) 1) (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.heal 1) (.benchHealSome 5 .any (some 1)))) (.move .own (.top 0) .hand .any (.exactly 1)))`
 - imported: Academy at Night (sv6pt5-54): `.trainer "Academy at Night" .stadium (.move .own .hand .top .any (.exactly 1))`
 - imported: Gravity Mountain (sv8-177, sv8-250): `.trainer "Gravity Mountain" .stadium .skip [ { sel := .all, filt := .stage .stage2, tgt := none, src := none, need := none, eff := .hpMinus 3 }]`
 - imported: Lively Stadium (sv8-180): `.trainer "Lively Stadium" .stadium .skip [ { sel := .all, filt := .basic, tgt := none, src := none, need := none, eff := .hpPlus (.const 3) }]`
@@ -225,7 +226,7 @@ Stadium cards (36): imported 12, refused 24.
 
 | refused by reason | cards |
 |---|---|
-| Stadium: activated effect not expressible | 7 |
+| Stadium: activated effect not expressible | 6 |
 | Stadium: static, prevent | 5 |
 | Stadium: static, lock | 4 |
 | Stadium: triggered | 3 |
@@ -427,7 +428,6 @@ Top unhandled sentences (templates: numbers N, own name SELF, types TYPE) in car
 
 | count | template | example |
 |---|---|---|
-| 6 | Heal N damage from each of your Pokémon. | sv6-23 |
 | 6 | Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. | sv6-135 |
 | 6 | This Pokémon is now Asleep. | zsv10pt5-35 |
 | 5 | If you go first, you can use this attack during your first turn. | sv6-9 |
@@ -467,6 +467,7 @@ Top unhandled sentences (templates: numbers N, own name SELF, types TYPE) in car
 | 2 | Blood Moon used by this Pokémon costs TYPE less for each Prize card your opponent has taken. | sv6-141 |
 | 2 | If you go first, you may use this card during your first turn. | sv6-145 |
 | 2 | If you do, this attack does N more damage. | sv6pt5-21 |
+| 2 | (That Prize card remains face up for the rest of the game.) | sv6pt5-21 |
 
 Imported cards that write a stored amount (a damage bonus or reduction, or since milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`; `Mod.isAmt`) (40): Feraligatr (svp-89), Seedot (sv5-3), Grotle (sv5-11), Torkoal (sv6-30), Kilowattrel (sv6-76), Houndoom (sv6pt5-8), Varoom (sv6pt5-43), Drifloon (sv7-60), Tornadus (sv7-120), Donphan (sv8-103), Vibrava (sv8-105), Skarmory (sv8-124), Jasmine's Gaze (sv8-178), Hop's Corviknight (sv9-108), Shelgon (sv9-113), Hop's Rookidee (sv9-133), Clamperl (sv10-54), Sigilyph (rsv10pt5-38), Klink (zsv10pt5-61), Klang (zsv10pt5-62), Genesect ex (zsv10pt5-67), Exeggutor (me1-5), Buneary (me1-107), Pawmi (me2-32), Empoleon ex (me2-70), Chikorita (me2pt5-8), Stunfisk (me2pt5-62), Carkol (me2pt5-119), Registeel ex (me2pt5-145), Mega Pyroar ex (me4-15), Donphan (me4-45), Metang (me4-60), Rampardos ex (me5-45), Mabosstiff (me5-58), Cosmoem (me55-79), Nidoran ♀ (me55-87), Zamazenta (me55-107), Jangmo-o (me55-110), Onix (me6-51), Jangmo-o (me6-73).
 

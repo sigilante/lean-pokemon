@@ -305,6 +305,13 @@ def prim(e, coin):
     if h == 'benchHeal':
         f_ = [lit(bench(OWN), False), conj((bench(OWN), True), notest('damage on a Benched Pokémon'))]
         return f_, f_
+    if h == 'benchHealSome':
+        # importer 0.18.0 (milestone MV11): nothing with no Benched Pokémon passing the filter; otherwise the damage on
+        # the Benched Pokémon decides, which no test reads
+        _, m_, f, n = e
+        nb = ge(('bench', OWN, ('pokemon',) if f == ('any',) else f))
+        f_ = [lit(nb, False), conj((nb, True), notest('damage on a Benched Pokémon'))]
+        return f_, f_
     if h == 'cure':
         f_ = [lit(ge(('conds', OWN)), False)]
         return f_, f_

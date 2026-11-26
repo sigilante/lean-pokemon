@@ -11,6 +11,31 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part03
 open Pokemon
 
+/-- Lileep (sv7-5). Records: sv7-5, sv7-145. Caveats: perPokemon. -/
+def sv7_5 : Card := .pokemon
+  { name := "Lileep", stage := .stage1, evolvesFrom := some "Antique Root Fossil",
+    hp := 10, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bind Down", cost := [.grass], damage := 5,
+        effect := .linger .opp .next (.lock .retreat),
+        gx := false }] }
+
+/-- Carnivine (sv7-7). Records: sv7-7. -/
+def sv7_7 : Card := .pokemon
+  { name := "Carnivine", stage := .basic, evolvesFrom := none,
+    hp := 11, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Nosh", cost := [.colorless], damage := 0,
+        effect := .heal 4,
+        gx := false },
+      { name := "Loom Over", cost := [.grass, .colorless, .colorless], damage := 0,
+        effect := .damage (.sub (.const 13) (.per .own 1)),
+        gx := false }] }
+
 /-- Mow Rotom (sv7-8). Records: sv7-8. -/
 def sv7_8 : Card := .pokemon
   { name := "Mow Rotom", stage := .basic, evolvesFrom := none,
@@ -1834,36 +1859,10 @@ def sv8_73 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Latias ex (sv8-76). Records: sv8-76, sv8-220, sv8-239. Caveats: noRetreatLast. -/
-def sv8_76 : Card := .pokemon
-  { name := "Latias ex", stage := .basic, evolvesFrom := none,
-    hp := 21, type := .psychic, retreat := 2, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
-    abilities := [
-      { name := "Skyliner", use := .static [{ sel := .own, filt := .basic, tgt := none, src := none, need := none, eff := .noRetreat }],
-        spot := none, cond := none,
-        effect := .fx .skip }],
-    attacks := [
-      { name := "Eon Blade", cost := [.psychic, .psychic, .colorless], damage := 20,
-        effect := .skip,
-        gx := false, selfLock := .all }] }
-
-/-- Latios (sv8-77). Records: sv8-77, sv8-203. Caveats: benchMods. -/
-def sv8_77 : Card := .pokemon
-  { name := "Latios", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .psychic, retreat := 2, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Skill Dive", cost := [.psychic, .colorless], damage := 0,
-        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 5)) (.benchDamage .opp 5)) (.damage (.const 5)),
-        gx := false },
-      { name := "Jet Headbutt", cost := [.psychic, .psychic, .colorless], damage := 11,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv7_5,
+  sv7_7,
   sv7_8,
   sv7_9,
   sv7_10,
@@ -2011,9 +2010,7 @@ def cards : List Card := [
   sv8_67,
   sv8_70,
   sv8_71,
-  sv8_73,
-  sv8_76,
-  sv8_77]
+  sv8_73]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -2035,7 +2032,7 @@ theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map C
 theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Dubwool", "Cetitan"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
-theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Archaludon", "Gravity Gemstone", "Latias ex"] := by decide +kernel
+theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Archaludon", "Gravity Gemstone"] := by decide +kernel
 
 /-- Every printed HP in this part is at most 38 counters (the largest over the imported pool). -/
 theorem cards_printedHp : cards.all (fun c => decide (c.printedHp ≤ 38)) = true := by decide +kernel

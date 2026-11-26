@@ -11,6 +11,126 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part08
 open Pokemon
 
+/-- Mega Latias ex (me1-100). Records: me1-100, me1-163, me1-181. -/
+def me1_100 : Card := .pokemon
+  { name := "Mega Latias ex", stage := .basic, evolvesFrom := none,
+    hp := 28, type := .dragon, retreat := 1, weakness := none,
+    resistance := none, ruleBox := .megaEx, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Strafe", cost := [.colorless], damage := 4,
+        effect := .choice (.switch .own) .skip,
+        gx := false },
+      { name := "Illusory Impulse", cost := [.fire, .psychic, .colorless], damage := 30,
+        effect := .discardEnergy .own .active .energy .all,
+        gx := false }] }
+
+/-- Spearow (me1-102). Records: me1-102, me1-151. -/
+def me1_102 : Card := .pokemon
+  { name := "Spearow", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .colorless, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pluck", cost := [.colorless], damage := 0,
+        effect := .seq (.discardTools .opp .active) (.damage (.const 1)),
+        gx := false }] }
+
+/-- Fearow (me1-103). Records: me1-103. -/
+def me1_103 : Card := .pokemon
+  { name := "Fearow", stage := .stage1, evolvesFrom := some "Spearow",
+    hp := 10, type := .colorless, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Repeating Drill", cost := [.colorless], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 3)) (.choice (.damage (.const 6)) (.choice (.damage (.const 9)) (.choice (.damage (.const 12)) (.damage (.const 15)))))),
+        gx := false }] }
+
+/-- Mega Kangaskhan ex (me1-104). Records: me1-104, me1-164, me1-182. Caveats: onePerName. -/
+def me1_104 : Card := .pokemon
+  { name := "Mega Kangaskhan ex", stage := .basic, evolvesFrom := none,
+    hp := 30, type := .colorless, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .megaEx, tera := false,
+    abilities := [
+      { name := "Run Errand", use := .once,
+        spot := some .active, cond := none,
+        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own (.top 2) .hand .any .all)) }],
+    attacks := [
+      { name := "Rapid-Fire Combo", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .damage (.add (.const 20) (.many (.const 5))),
+        gx := false }] }
+
+/-- Miltank (me1-106). Records: me1-106. -/
+def me1_106 : Card := .pokemon
+  { name := "Miltank", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .colorless, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bellyful of Milk", cost := [.colorless, .colorless], damage := 0,
+        effect := .choice (.ite (.countGe (.bench .own .pokemon) 1) (.choice .healAll (.benchHealSome 1 .any none)) .healAll) .skip,
+        gx := false },
+      { name := "Tackle", cost := [.colorless, .colorless, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
+/-- Buneary (me1-107). Records: me1-107. Caveats: benchMods, perPokemon. -/
+def me1_107 : Card := .pokemon
+  { name := "Buneary", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Charm", cost := [.colorless], damage := 0,
+        effect := .linger .opp .next (.weaken 2),
+        gx := false },
+      { name := "Skip", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Lopunny (me1-108). Records: me1-108. Caveats: benchMods. -/
+def me1_108 : Card := .pokemon
+  { name := "Lopunny", stage := .stage1, evolvesFrom := some "Buneary",
+    hp := 11, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Dashing Kick", cost := [.colorless], damage := 0,
+        effect := .benchDamage .opp 5,
+        gx := false },
+      { name := "Spiral Kick", cost := [.colorless, .colorless], damage := 6,
+        effect := .skip,
+        gx := false }] }
+
+/-- Yungoos (me1-109). Records: me1-109. -/
+def me1_109 : Card := .pokemon
+  { name := "Yungoos", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Collect", cost := [.colorless], damage := 0,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false },
+      { name := "Gnaw", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Stufful (me1-111). Records: me1-111, me1-154. -/
+def me1_111 : Card := .pokemon
+  { name := "Stufful", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .colorless, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Light Punch", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Flop", cost := [.colorless, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
 /-- Bewear (me1-112). Records: me1-112. -/
 def me1_112 : Card := .pokemon
   { name := "Bewear", stage := .stage1, evolvesFrom := some "Stufful",
@@ -44,6 +164,10 @@ def me1_119 : Card := .trainer "Lillie's Determination" .supporter
 /-- Mega Signal (me1-121). Records: me1-121, me1-171, me2pt5-193. -/
 def me1_121 : Card := .trainer "Mega Signal" .item
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand (.and .pokemon .megaEx) (.upTo 1)) .shuffle))
+
+/-- Pokémon Center Lady (me1-123). Records: me1-123. Caveats: noopPlay. -/
+def me1_123 : Card := .trainer "Pokémon Center Lady" .supporter
+    (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own .pokemon) 1) .skip (.ite (.countGe (.conds .own) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))))) (.ite (.countGe (.bench .own .pokemon) 1) (.choice (.seq (.heal 6) .cure) (.benchHeal 6)) (.seq (.heal 6) .cure)))
 
 /-- Repel (me1-126). Records: me1-126. -/
 def me1_126 : Card := .trainer "Repel" .item
@@ -406,6 +530,20 @@ def me2_39 : Card := .pokemon
         effect := .seq (.seq (.attach .own .deck (.energyOf .psychic) .active .any) (.attach .own .deck (.energyOf .psychic) .active .any)) .shuffle,
         gx := false },
       { name := "Aurora Beam", cost := [.psychic, .psychic, .colorless], damage := 9,
+        effect := .skip,
+        gx := false }] }
+
+/-- Meloetta (me2-40). Records: me2-40. -/
+def me2_40 : Card := .pokemon
+  { name := "Meloetta", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Soothing Melody", cost := [.psychic], damage := 0,
+        effect := .benchHealSome 1 (.ptype .psychic) (some 12),
+        gx := false },
+      { name := "Magical Shot", cost := [.psychic, .colorless], damage := 5,
         effect := .skip,
         gx := false }] }
 
@@ -901,6 +1039,10 @@ def me2_87 : Card := .trainer "Dawn" .supporter
 def me2_89 : Card := .trainer "Firebreather" .supporter
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand (.energyOf .fire) (.upTo 7)) .shuffle))
 
+/-- Jumbo Ice Cream (me2-91). Records: me2-91, me4-109. Caveats: energyUnitsCount. -/
+def me2_91 : Card := .trainer "Jumbo Ice Cream" .item
+    (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.energy .own .energy) 3) (.move .own (.top 0) .hand .any (.exactly 1)) .skip)) (.ite (.countGe (.energy .own .energy) 3) (.heal 8) (.move .own (.top 0) .hand .any (.exactly 1))))
+
 /-- Punk Helmet (me2-92). Records: me2-92, me2-121. Caveats: trigAttached, trigAttacker, trigDamaged. -/
 def me2_92 : Card := .tool "Punk Helmet"
   { holder := .ptype .darkness,
@@ -934,6 +1076,20 @@ def me2pt5_2 : Card := .pokemon
     attacks := [
       { name := "Poison Spray", cost := [.grass, .colorless], damage := 5,
         effect := .inflict .poisoned,
+        gx := false }] }
+
+/-- Erika's Vileplume ex (me2pt5-3). Records: me2pt5-3. Caveats: noopUse. -/
+def me2pt5_3 : Card := .pokemon
+  { name := "Erika's Vileplume ex", stage := .stage2, evolvesFrom := some "Erika's Gloom",
+    hp := 31, type := .grass, retreat := 2, weakness := some .fire,
+    resistance := none, ruleBox := .ex, tera := false,
+    abilities := [
+      { name := "Lovely Fragrance", use := .once,
+        spot := none, cond := none,
+        effect := .fx (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.heal 3) (.benchHealSome 5 .any (some 3)))) }],
+    attacks := [
+      { name := "Bloom Powder", cost := [.grass, .grass, .colorless], damage := 16,
+        effect := .seq (.inflict .asleep) (.inflict .poisoned),
         gx := false }] }
 
 /-- Erika's Bellsprout (me2pt5-4). Records: me2pt5-4. -/
@@ -1622,187 +1778,24 @@ def me2pt5_118 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Carkol (me2pt5-119). Records: me2pt5-119. Caveats: perPokemon. -/
-def me2pt5_119 : Card := .pokemon
-  { name := "Carkol", stage := .stage1, evolvesFrom := some "Rolycoly",
-    hp := 11, type := .fighting, retreat := 3, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Guard Press", cost := [.fighting], damage := 2,
-        effect := .linger .own .next (.reduce 2),
-        gx := false },
-      { name := "Power Gem", cost := [.fighting, .colorless, .colorless], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
-/-- Coalossal (me2pt5-120). Records: me2pt5-120. Caveats: benchMods, discardUnits. -/
-def me2pt5_120 : Card := .pokemon
-  { name := "Coalossal", stage := .stage2, evolvesFrom := some "Carkol",
-    hp := 18, type := .fighting, retreat := 4, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tar Cannon", cost := [.fighting], damage := 0,
-        effect := .ite (.countGe (.pile .own .discard (.energyOf .fighting)) 10) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 14)) (.benchDamage .opp 14)) (.damage (.const 14))) .skip,
-        gx := false },
-      { name := "Bulky Bump", cost := [.fighting, .colorless, .colorless, .colorless], damage := 22,
-        effect := .ite (.countGe (.energy .own .energy) 3) (.discardEnergy .own .active .energy (.exactly 3)) (.discardEnergy .own .active .energy .all),
-        gx := false }] }
-
-/-- Koraidon ex (me2pt5-121). Records: me2pt5-121. Caveats: koAttackWide. -/
-def me2pt5_121 : Card := .pokemon
-  { name := "Koraidon ex", stage := .basic, evolvesFrom := none,
-    hp := 23, type := .fighting, retreat := 2, weakness := some .psychic,
-    resistance := none, ruleBox := .ex, tera := true,
-    abilities := [],
-    attacks := [
-      { name := "Orichalcum Fang", cost := [.fighting, .colorless], damage := 0,
-        effect := .ite (.countGe (.koLast .own true) 1) (.damage (.const 17)) (.damage (.const 5)),
-        gx := false },
-      { name := "Impact Blow", cost := [.fighting, .fighting, .colorless], damage := 20,
-        effect := .skip,
-        gx := false, selfLock := .this }] }
-
-/-- Team Rocket's Honchkrow (me2pt5-127). Records: me2pt5-127. Caveats: anyAmount60. -/
-def me2pt5_127 : Card := .pokemon
-  { name := "Team Rocket's Honchkrow", stage := .stage1, evolvesFrom := some "Team Rocket's Murkrow",
-    hp := 13, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rocket Feathers", cost := [.colorless, .colorless], damage := 0,
-        effect := .choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.choice (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 0)) (.damage (.const 0))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 1)) (.damage (.const 6)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 2)) (.damage (.const 12)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 3)) (.damage (.const 18)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 4)) (.damage (.const 24)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 5)) (.damage (.const 30)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 6)) (.damage (.const 36)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 7)) (.damage (.const 42)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 8)) (.damage (.const 48)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 9)) (.damage (.const 54)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 10)) (.damage (.const 60)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 11)) (.damage (.const 66)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 12)) (.damage (.const 72)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 13)) (.damage (.const 78)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 14)) (.damage (.const 84)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 15)) (.damage (.const 90)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 16)) (.damage (.const 96)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 17)) (.damage (.const 102)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 18)) (.damage (.const 108)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 19)) (.damage (.const 114)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 20)) (.damage (.const 120)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 21)) (.damage (.const 126)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 22)) (.damage (.const 132)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 23)) (.damage (.const 138)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 24)) (.damage (.const 144)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 25)) (.damage (.const 150)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 26)) (.damage (.const 156)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 27)) (.damage (.const 162)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 28)) (.damage (.const 168)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 29)) (.damage (.const 174)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 30)) (.damage (.const 180)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 31)) (.damage (.const 186)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 32)) (.damage (.const 192)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 33)) (.damage (.const 198)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 34)) (.damage (.const 204)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 35)) (.damage (.const 210)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 36)) (.damage (.const 216)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 37)) (.damage (.const 222)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 38)) (.damage (.const 228)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 39)) (.damage (.const 234)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 40)) (.damage (.const 240)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 41)) (.damage (.const 246)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 42)) (.damage (.const 252)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 43)) (.damage (.const 258)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 44)) (.damage (.const 264)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 45)) (.damage (.const 270)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 46)) (.damage (.const 276)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 47)) (.damage (.const 282)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 48)) (.damage (.const 288)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 49)) (.damage (.const 294)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 50)) (.damage (.const 300)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 51)) (.damage (.const 306)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 52)) (.damage (.const 312)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 53)) (.damage (.const 318)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 54)) (.damage (.const 324)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 55)) (.damage (.const 330)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 56)) (.damage (.const 336)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 57)) (.damage (.const 342)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 58)) (.damage (.const 348)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 59)) (.damage (.const 354)))) (.seq (.move .own .hand .discard (.and (.kind .supporter) (.nameHas "Team Rocket")) (.exactly 60)) (.damage (.const 360))),
-        gx := false },
-      { name := "Hammer In", cost := [.darkness, .colorless, .colorless], damage := 10,
-        effect := .skip,
-        gx := false }] }
-
-/-- Galarian Zigzagoon (me2pt5-130). Records: me2pt5-130. -/
-def me2pt5_130 : Card := .pokemon
-  { name := "Galarian Zigzagoon", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gnaw", cost := [.darkness], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Galarian Linoone (me2pt5-131). Records: me2pt5-131. -/
-def me2pt5_131 : Card := .pokemon
-  { name := "Galarian Linoone", stage := .stage1, evolvesFrom := some "Galarian Zigzagoon",
-    hp := 9, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gnaw", cost := [.darkness], damage := 2,
-        effect := .skip,
-        gx := false },
-      { name := "Claw Slash", cost := [.darkness, .colorless], damage := 5,
-        effect := .skip,
-        gx := false }] }
-
-/-- Galarian Obstagoon (me2pt5-132). Records: me2pt5-132, me2pt5-245. -/
-def me2pt5_132 : Card := .pokemon
-  { name := "Galarian Obstagoon", stage := .stage2, evolvesFrom := some "Galarian Linoone",
-    hp := 17, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Scarring Shout", cost := [.darkness, .colorless], damage := 0,
-        effect := .damage (.per .opp 7),
-        gx := false },
-      { name := "Punk Smash", cost := [.darkness, .colorless, .colorless], damage := 16,
-        effect := .ite (.countGe (.energy .own .energy) 1) (.discardEnergy .own .active .energy (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Scraggy (me2pt5-134). Records: me2pt5-134. -/
-def me2pt5_134 : Card := .pokemon
-  { name := "Scraggy", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Knock Off", cost := [.darkness, .colorless], damage := 2,
-        effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Mega Scrafty ex (me2pt5-135). Records: me2pt5-135, me2pt5-270, me2pt5-285. Caveats: trigAttacker, trigDamaged. -/
-def me2pt5_135 : Card := .pokemon
-  { name := "Mega Scrafty ex", stage := .stage1, evolvesFrom := some "Scraggy",
-    hp := 33, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .megaEx, tera := false,
-    abilities := [
-      { name := "Counterattacking Crest", use := .triggered .damaged false,
-        spot := some .active, cond := none,
-        effect := .fx (.counters 5) }],
-    attacks := [
-      { name := "Outlaw Leg", cost := [.darkness, .darkness, .colorless], damage := 16,
-        effect := .seq (.ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip) (.move .opp (.top 1) .discard .any .all),
-        gx := false }] }
-
-/-- Vullaby (me2pt5-138). Records: me2pt5-138. -/
-def me2pt5_138 : Card := .pokemon
-  { name := "Vullaby", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flap", cost := [.colorless, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Mandibuzz ex (me2pt5-139). Records: me2pt5-139. Caveats: benchMods. -/
-def me2pt5_139 : Card := .pokemon
-  { name := "Mandibuzz ex", stage := .stage1, evolvesFrom := some "Vullaby",
-    hp := 26, type := .darkness, retreat := 1, weakness := some .lightning,
-    resistance := some (.fighting, 3), ruleBox := .ex, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bone Shot", cost := [.colorless, .colorless], damage := 0,
-        effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 5)) (.benchDamage .opp 5)) (.damage (.const 5)),
-        gx := false },
-      { name := "Vulture Claw", cost := [.darkness, .colorless, .colorless], damage := 16,
-        effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
-        gx := false }] }
-
-/-- Hoopa (me2pt5-141). Records: me2pt5-141. -/
-def me2pt5_141 : Card := .pokemon
-  { name := "Hoopa", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Filch", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 2) .hand .any .all,
-        gx := false },
-      { name := "Knuckle Impact", cost := [.darkness, .darkness, .colorless], damage := 13,
-        effect := .skip,
-        gx := false, selfLock := .all }] }
-
-/-- Pecharunt (me2pt5-143). Records: me2pt5-143. Caveats: searchAny, trigKO. -/
-def me2pt5_143 : Card := .pokemon
-  { name := "Pecharunt", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .darkness, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Final Chain", use := .triggered .koByAttack false,
-        spot := none, cond := none,
-        effect := .fx (.seq (.move .own .deck .hand .any (.upTo 1)) .shuffle) }],
-    attacks := [
-      { name := "Mochi Rush", cost := [.darkness], damage := 0,
-        effect := .ite (.usedLast .own) (.damage (.const 7)) (.damage (.const 2)),
-        gx := false, selfLock := .note }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_100,
+  me1_102,
+  me1_103,
+  me1_104,
+  me1_106,
+  me1_107,
+  me1_108,
+  me1_109,
+  me1_111,
   me1_112,
   me1_114,
   me1_115,
   me1_116,
   me1_119,
   me1_121,
+  me1_123,
   me1_126,
   me1_130,
   me1_131,
@@ -1835,6 +1828,7 @@ def cards : List Card := [
   me2_37,
   me2_38,
   me2_39,
+  me2_40,
   me2_41,
   me2_42,
   me2_43,
@@ -1875,10 +1869,12 @@ def cards : List Card := [
   me2_84,
   me2_87,
   me2_89,
+  me2_91,
   me2_92,
   me2_94,
   me2pt5_1,
   me2pt5_2,
+  me2pt5_3,
   me2pt5_4,
   me2pt5_5,
   me2pt5_6,
@@ -1933,20 +1929,7 @@ def cards : List Card := [
   me2pt5_108,
   me2pt5_114,
   me2pt5_115,
-  me2pt5_118,
-  me2pt5_119,
-  me2pt5_120,
-  me2pt5_121,
-  me2pt5_127,
-  me2pt5_130,
-  me2pt5_131,
-  me2pt5_132,
-  me2pt5_134,
-  me2pt5_135,
-  me2pt5_138,
-  me2pt5_139,
-  me2pt5_141,
-  me2pt5_143]
+  me2pt5_118]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1982,10 +1965,10 @@ counters (the largest over the imported pool). -/
 theorem cards_reduceGain : cards.all (fun c => decide (c.reduceGain ≤ 5)) = true := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name. -/
-theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Punk Helmet", "Numel", "Hop's Pincurchin ex", "Mega Scrafty ex"] := by decide +kernel
+theorem cards_trigDamaged : (cards.filter (Card.hasTrig .damaged)).map Card.label = ["Punk Helmet", "Numel", "Hop's Pincurchin ex"] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.koByAttack` (milestone M8b), by name. -/
-theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = ["Flygon", "Pecharunt"] := by decide +kernel
+theorem cards_trigKO : (cards.filter (Card.hasTrig .koByAttack)).map Card.label = ["Flygon"] := by decide +kernel
 
 /-- The cards of this part with or giving a triggered Ability on `TrigEvent.oppBenched` (milestone MV7) (milestone M8b), by name. -/
 theorem cards_trigBenched : (cards.filter (Card.hasTrig .oppBenched)).map Card.label = ["Mismagius ex"] := by decide +kernel
@@ -2008,6 +1991,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Pawmi", "Empoleon ex", "Chikorita", "Stunfisk", "Carkol"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk"] := by decide +kernel
 
 end PokemonCards.Standard.Part08

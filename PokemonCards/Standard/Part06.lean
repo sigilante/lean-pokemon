@@ -11,6 +11,84 @@ import PokemonCards.Props
 namespace PokemonCards.Standard.Part06
 open Pokemon
 
+/-- Team Rocket's Zapdos (sv10-70). Records: sv10-70. Caveats: moveAnyPair. -/
+def sv10_70 : Card := .pokemon
+  { name := "Team Rocket's Zapdos", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .lightning, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Jamming Wing", cost := [.colorless, .colorless], damage := 3,
+        effect := .choice (.moveEnergy .opp .energy) .skip,
+        gx := false },
+      { name := "Wicked Thunder", cost := [.lightning, .colorless, .colorless], damage := 0,
+        effect := .ite (.countGe (.energy .own (.named "Team Rocket's Energy")) 1) (.damage (.const 12)) (.damage (.const 6)),
+        gx := false }] }
+
+/-- Ethan's Pichu (sv10-71). Records: sv10-71. -/
+def sv10_71 : Card := .pokemon
+  { name := "Ethan's Pichu", stage := .basic, evolvesFrom := none,
+    hp := 3, type := .lightning, retreat := 0, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Zapping Draw", cost := [], damage := 3,
+        effect := .move .own (.top 1) .hand .any .all,
+        gx := false }] }
+
+/-- Team Rocket's Mareep (sv10-72). Records: sv10-72. -/
+def sv10_72 : Card := .pokemon
+  { name := "Team Rocket's Mareep", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Procurement", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand (.kind .item) (.upTo 1)) .shuffle,
+        gx := false },
+      { name := "Tiny Bolt", cost := [.lightning], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Team Rocket's Flaaffy (sv10-73). Records: sv10-73. -/
+def sv10_73 : Card := .pokemon
+  { name := "Team Rocket's Flaaffy", stage := .stage1, evolvesFrom := some "Team Rocket's Mareep",
+    hp := 9, type := .lightning, retreat := 2, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Thunder Shock", cost := [.lightning, .colorless], damage := 5,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false }] }
+
+/-- Electrike (sv10-75). Records: sv10-75, sv10-196. -/
+def sv10_75 : Card := .pokemon
+  { name := "Electrike", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Rear Kick", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Tiny Bolt", cost := [.lightning, .colorless], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Manectric (sv10-76). Records: sv10-76. Caveats: benchMods. -/
+def sv10_76 : Card := .pokemon
+  { name := "Manectric", stage := .stage1, evolvesFrom := some "Electrike",
+    hp := 12, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Zap Kick", cost := [.colorless], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Flash Impact", cost := [.lightning, .colorless], damage := 12,
+        effect := .benchDamage .own 4,
+        gx := false }] }
+
 /-- Rotom (sv10-77). Records: sv10-77, sv10-197. -/
 def sv10_77 : Card := .pokemon
   { name := "Rotom", stage := .basic, evolvesFrom := none,
@@ -873,6 +951,20 @@ def rsv10pt5_2 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Leavanny (rsv10pt5-3). Records: rsv10pt5-3, rsv10pt5-89. -/
+def rsv10pt5_3 : Card := .pokemon
+  { name := "Leavanny", stage := .stage2, evolvesFrom := some "Swadloon",
+    hp := 13, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Healing Wrapping", cost := [.colorless], damage := 0,
+        effect := .seq (.ite (.top .own .basic) (.heal 10) .skip) (.benchHealSome 5 .basic (some 10)),
+        gx := false },
+      { name := "X-Scissor", cost := [.grass, .colorless], damage := 0,
+        effect := .choice (.damage (.const 13)) (.damage (.const 9)),
+        gx := false }] }
+
 /-- Cottonee (rsv10pt5-4). Records: rsv10pt5-4, rsv10pt5-90. -/
 def rsv10pt5_4 : Card := .pokemon
   { name := "Cottonee", stage := .basic, evolvesFrom := none,
@@ -1694,83 +1786,14 @@ def rsv10pt5_81 : Card := .trainer "Cheren" .supporter
 def rsv10pt5_82 : Card := .trainer "Energy Retrieval" .item
     (.seq (.ite (.countGe (.pile .own .discard .basicEnergy) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.move .own .discard .hand .basicEnergy (.upTo 2)))
 
-/-- Harlequin (rsv10pt5-83). Records: rsv10pt5-83, rsv10pt5-163. -/
-def rsv10pt5_83 : Card := .trainer "Harlequin" .supporter
-    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.ite (.countGe (.pile .own .hand .any) 1) .skip (.ite (.countGe (.pile .opp .deck .any) 1) .skip (.ite (.countGe (.pile .opp .hand .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))))) (.seq (.seq (.move .own .hand .shuffle .any .all) (.move .opp .hand .shuffle .any .all)) (.choice (.seq (.move .own (.top 5) .hand .any .all) (.move .opp (.top 3) .hand .any .all)) (.seq (.move .own (.top 3) .hand .any .all) (.move .opp (.top 5) .hand .any .all)))))
-
-/-- Hilda (rsv10pt5-84). Records: rsv10pt5-84, rsv10pt5-164, rsv10pt5-171. -/
-def rsv10pt5_84 : Card := .trainer "Hilda" .supporter
-    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.move .own .deck .hand (.and .pokemon (.not .basic)) (.upTo 1)) (.move .own .deck .hand .energy (.upTo 1))) .shuffle))
-
-/-- Victini (rsv10pt5-172). Records: rsv10pt5-172, zsv10pt5-12, zsv10pt5-171. -/
-def rsv10pt5_172 : Card := .pokemon
-  { name := "Victini", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fire, retreat := 1, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "V-Force", cost := [.fire, .fire], damage := 0,
-        effect := .ite (.countGe (.bench .own .pokemon) 5) (.damage (.const 12)) .skip,
-        gx := false }] }
-
-/-- Snivy (zsv10pt5-1). Records: zsv10pt5-1, zsv10pt5-87. -/
-def zsv10pt5_1 : Card := .pokemon
-  { name := "Snivy", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tackle", cost := [.grass], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Vine Whip", cost := [.grass, .grass], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Servine (zsv10pt5-2). Records: zsv10pt5-2, zsv10pt5-88. -/
-def zsv10pt5_2 : Card := .pokemon
-  { name := "Servine", stage := .stage1, evolvesFrom := some "Snivy",
-    hp := 10, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Wrap", cost := [.grass], damage := 2,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false },
-      { name := "Vine Whip", cost := [.grass, .colorless, .colorless], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
-/-- Serperior ex (zsv10pt5-3). Records: zsv10pt5-3, zsv10pt5-156, zsv10pt5-164. Caveats: searchAny. -/
-def zsv10pt5_3 : Card := .pokemon
-  { name := "Serperior ex", stage := .stage2, evolvesFrom := some "Servine",
-    hp := 32, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .ex, tera := false,
-    abilities := [
-      { name := "Regal Cheer", use := .static [{ sel := .own, filt := .any, tgt := none, src := none, need := none, eff := .bonus 2 .any }],
-        spot := none, cond := none,
-        effect := .fx .skip }],
-    attacks := [
-      { name := "Command the Grass", cost := [.grass, .colorless, .colorless, .colorless], damage := 15,
-        effect := .seq (.move .own .deck .hand .any (.upTo 3)) .shuffle,
-        gx := false }] }
-
-/-- Pansage (zsv10pt5-4). Records: zsv10pt5-4, zsv10pt5-89. -/
-def zsv10pt5_4 : Card := .pokemon
-  { name := "Pansage", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Collect", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Scratch", cost := [.colorless, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv10_70,
+  sv10_71,
+  sv10_72,
+  sv10_73,
+  sv10_75,
+  sv10_76,
   sv10_77,
   sv10_78,
   sv10_79,
@@ -1849,6 +1872,7 @@ def cards : List Card := [
   sv10_182,
   rsv10pt5_1,
   rsv10pt5_2,
+  rsv10pt5_3,
   rsv10pt5_4,
   rsv10pt5_5,
   rsv10pt5_6,
@@ -1913,14 +1937,7 @@ def cards : List Card := [
   rsv10pt5_78,
   rsv10pt5_80,
   rsv10pt5_81,
-  rsv10pt5_82,
-  rsv10pt5_83,
-  rsv10pt5_84,
-  rsv10pt5_172,
-  zsv10pt5_1,
-  zsv10pt5_2,
-  zsv10pt5_3,
-  zsv10pt5_4]
+  rsv10pt5_82]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1936,7 +1953,7 @@ theorem cards_nodup : nodupFp cards = true := by decide +kernel
 theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.label = ["Cynthia's Power Weight"] := by decide +kernel
 
 /-- The cards of this part with a static damage bonus effect (milestone M6), by name. -/
-theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Brave Bangle", "Serperior ex"] := by decide +kernel
+theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Brave Bangle"] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
 theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Mudsdale", "Granite Cave", "Bouffalant ex"] := by decide +kernel
