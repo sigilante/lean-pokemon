@@ -886,7 +886,8 @@ def Test.onOwn : Test → Bool
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
 `selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
 moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
-milestone MV; `look .own … (.attach _)`, milestone MV6), no test on the player's own Active Pokémon,
+milestone MV; `look .own … (.attach _)`, milestone MV6; `returnEnergy .own .active` and every
+`shiftEnergy .own`, milestone MV11), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/
@@ -1028,8 +1029,10 @@ on it (`counters`, `scale`), Special Conditions and Poison strength (`inflict`, 
 it out or a Benched Pokémon in (`switch .opp`), lingering modifiers that print puts on the Defending
 Pokémon (`linger .opp _ (.lock .attack)`, `(.lock .retreat)`, `.weaken`, `.expose`), Energy and Tools
 discarded from it or attached to it (`discardEnergy .opp .active`, `discardTools .opp .active`,
-`attach .opp _ _ .active _`), Energy moved between the opponent's Pokémon (`moveEnergy .opp`, which
-may take from it), and markers or a Coloring counter placed on one of the opponent's Pokémon
+`attach .opp _ _ .active _`), Energy attached to it put into the opponent's hand or deck
+(`returnEnergy .opp .active`, milestone MV11), Energy moved between the opponent's Pokémon
+(`moveEnergy .opp`, which may take from it; `shiftEnergy .opp`, milestone MV11, which takes from it or
+puts on it), and markers or a Coloring counter placed on one of the opponent's Pokémon
 (`mark .opp`, `color .opp`, which may choose it). Kept: the damage step (prevented, if at all, by
 `Mod.prevent` and `SEff.prevent`; damage is not an effect), everything on the opponent's Bench, zones,
 hand and deck, the Item lock on the opponent (`linger .opp _ (.lock .item)`: a lock on the player, not

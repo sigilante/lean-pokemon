@@ -319,8 +319,7 @@ theorem ZStep.count {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (x : Ca
   | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb hs hq hd =>
       have h3 := hs.count x
       have h4 := hd.count x
-      simp only [optCardList, benchCardList, List.count_append, List.count_nil,
-        InPlay.count_cardList] at h4
+      simp only [optCardList, benchCardList, List.count_nil, InPlay.count_cardList] at h4
       simp only [PlayerState.allCards, List.count_append, optCardList, ha, hb,
         count_benchCardList_append, benchCardList, InPlay.count_cardList]
       omega
