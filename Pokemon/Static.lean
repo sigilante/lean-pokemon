@@ -296,7 +296,10 @@ player to move has no Active Pokémon. Read by the damage forms of the Bench pri
 Benched Pokémon … by attacks from your opponent's Pokémon" (Shaymin sv10-10), "As long as this Pokémon
 is on your Bench, prevent all damage … done to this Pokémon" (Poltchageist sv6-20), and every
 `SEff.prevent` that is not limited to the Active Spot ("Prevent all damage done to this Pokémon by
-attacks from your opponent's Pokémon ex", Sylveon sv8pt5-40, now on the Bench too). -/
+attacks from your opponent's Pokémon ex", Sylveon sv8pt5-40, now on the Bench too). The attacker is
+read as the mover's Active Pokémon in the state the Bench step starts in: after the attack's own
+`switch .own` it is the Pokémon switched in, not the one that attacked (a departure for filtered
+preventions only; Known gaps, the item on static damage prevention, milestone MV13). -/
 def GameState.benchSafe (g : GameState) (w : Whose) (q : InPlay) : Bool :=
   match w, g.cur.active with
   | .opp, some a => (g.inForce .opp .bench q.sv).any (Static.preventsFrom a.top)

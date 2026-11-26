@@ -617,7 +617,8 @@ inductive Effect where
   | skip
   /-- the player to move draws one card (no-op on an empty deck) -/
   | draw
-  /-- remove up to `n` damage counters from the player's Active Pokémon -/
+  /-- remove up to `n` damage counters from the player's Active Pokémon; none under a heal block
+  (milestone MV13, `SEff.noHeal`: the rule removes `GameState.healAmt n`) -/
   | heal (n : Nat)
   /-- place `n` damage counters on the opponent's Active Pokémon -/
   | counters (n : Nat)
@@ -645,7 +646,8 @@ inductive Effect where
   | scale (w : Whose) (k : Nat)
   /-- place `n` damage counters on the player's own Active Pokémon -/
   | selfDamage (n : Nat)
-  /-- remove all damage counters from the player's own Active Pokémon -/
+  /-- remove all damage counters from the player's own Active Pokémon; none under a heal block
+  (milestone MV13: the rule removes `GameState.healAmt` of its damage) -/
   | healAll
   /-- put the marker `m` on one of the `w` player's Pokémon in play, Active or Benched (the
   player chooses). A Pokémon has the marker or not: placing it again changes nothing. -/
@@ -669,7 +671,8 @@ inductive Effect where
   `damage a {}`, the full calculation -/
   | damage (a : Amt) (ig : Ign := {})
   /-- as `damage a`, and heal the player's Active Pokémon by the damage done ("heal from this
-  Pokémon the same amount of damage you did to your opponent's Active Pokémon") -/
+  Pokémon the same amount of damage you did to your opponent's Active Pokémon"); the heal is none
+  under a heal block (milestone MV13: `GameState.healAmt` of the damage done), the damage is done -/
   | drain (a : Amt)
   /-- place `n` damage counters on one of the `w` player's Benched Pokémon, chosen when the effect
   resolves ("Put 2 damage counters on 1 of your opponent's Benched Pokémon"); nothing if that

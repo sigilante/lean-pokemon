@@ -151,6 +151,41 @@ theorem Run.hitByBench_old {g g' : GameState} {w : Whose} {m : Nat} {f : Filter}
   · rintro ⟨b', hh, rfl⟩
     exact .hitByBench w m f hurt dmg a (hh.congr_upd fun x hx => by simp only [ho.amt dmg _ hx])
 
+/-- **The counters form of `benchSome` is unchanged by milestone MV13**, with no hypothesis: damage
+counters are never prevented by `bAmt` (`GameState.bAmt_counters`). -/
+theorem Run.benchSome_counters {g g' : GameState} {w : Whose} {m n : Nat} {f : Filter} :
+    Run (.benchSome w m f false n) g g' ↔
+      ∃ b', Hits (InPlay.hitWith false n) f (min m (benchElig f (g.side w).bench)) (g.side w).bench b' ∧
+        g' = g.updSide w fun s => { s with bench := b' } := by
+  constructor
+  · intro h
+    cases h with
+    | @benchSome _ b' _ _ _ _ _ hh =>
+        exact ⟨b', hh.congr_upd fun x _ => by simp only [GameState.bAmt_counters], rfl⟩
+    | touchActive he _ => simp [Effect.touch] at he
+    | touchBench he _ => simp [Effect.touch] at he
+    | zone hw _ => simp [Effect.zSide] at hw
+  · rintro ⟨b', hh, rfl⟩
+    exact .benchSome w m f false n (hh.congr_upd fun x _ => by simp only [GameState.bAmt_counters])
+
+/-- **The counters form of `hitBy` on the Bench is unchanged by milestone MV13**, with no hypothesis. -/
+theorem Run.hitByBench_counters {g g' : GameState} {w : Whose} {m : Nat} {f : Filter} {hurt : Bool}
+    {a : HAmt} :
+    Run (.hitBy w .bench m f hurt false a) g g' ↔
+      ∃ b', HitsP (InPlay.hitOk f hurt) (fun q => q.hitWith false (a.at g w .bench q))
+          (min m (benchEligP (InPlay.hitOk f hurt) (g.side w).bench)) (g.side w).bench b' ∧
+        g' = g.updSide w fun s => { s with bench := b' } := by
+  constructor
+  · intro h
+    cases h with
+    | @hitByBench _ b' _ _ _ _ _ _ hh =>
+        exact ⟨b', hh.congr_upd fun x _ => by simp only [GameState.bAmt_counters], rfl⟩
+    | touchActive he _ => simp [Effect.touch] at he
+    | touchBench he _ => simp [Effect.touch] at he
+    | zone hw _ => simp [Effect.zSide] at hw
+  · rintro ⟨b', hh, rfl⟩
+    exact .hitByBench w m f hurt false a (hh.congr_upd fun x _ => by simp only [GameState.bAmt_counters])
+
 /-- **What a protected Pokémon gets: nothing** (milestone MV13), for every amount: a Benched Pokémon
 with `benchSafe` keeps its damage under every damage form. -/
 theorem GameState.hitBench_safe {g : GameState} {w : Whose} {q : InPlay} (h : g.benchSafe w q = true)
@@ -207,6 +242,19 @@ theorem blocks :
     Move.attackOpen (hlk := rfl) (atk := spray) rfl (.head _) (.nil _) rfl rfl rfl rfl
       r0_settled_any hr rfl (fun h => absurd h (by decide)) rfl (HitTrig.exists_nil hr rfl) (.nil _),
     by decide⟩
+
+/-- **Every resolution of Spray from that start protects** (universal form of `blocks`): a fact about
+`Run` of the attack's script from the start `r0 [hider .any, plain]`, not about `Move` (no trigger,
+Knock Out step or end of the attack is covered). -/
+theorem blocks_all :
+    ∀ g', Run spray.script (r0 [hider .any, plain]) g' → g'.opp.bench.map InPlay.damage = [0, 3] := by
+  intro g' h
+  have h' : Run (.spreadDamage .opp 3) (r0 [hider .any, plain]) g' := h
+  cases h' with
+  | spreadDamage => decide
+  | touchActive he _ => simp [Effect.touch] at he
+  | touchBench he _ => simp [Effect.touch] at he
+  | zone hw _ => simp [Effect.zSide] at hw
 
 /-- **Witness: against an attacker outside the filter the damage lands** (negative). The same start,
 with the prevention limited to attacks from Pokémon ex (the attacker has no rule box): Spray is a

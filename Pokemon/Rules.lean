@@ -450,9 +450,11 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Outs between the steps of an activated Ability), the effect half of protection of Benched Pokémon
   (since milestone MV13 the damage half is read on the Bench, item on static damage prevention below;
   the `shield` half of "As long as this Pokémon is on your Bench, prevent all damage from and effects of
-  attacks …" and of "… done to your Benched Pokémon" is never read: damage counters and other effects
-  of attacks land on the protected Benched Pokémon, where print prevents them — a forced effect present
-  where print has none, so both directions; importer caveat `shieldBench`; the obstacle is that `Run`
+  attacks …" and of "… done to your Benched Pokémon" is never read: an opponent's attack still places
+  damage counters on the protected Benched Pokémon (`benchCounters`, `spreadCounters`, `benchSome` and
+  `hitBy` with counters, `dumpCounters` to the Bench), still switches it into the Active Spot (a gust,
+  `switch .opp`), and still discards Energy or Tools from it or puts markers on it, where print prevents
+  them — a forced effect present where print has none, so both directions; importer caveat `shieldBench`; the obstacle is that `Run`
   does not know whether it resolves an attack, and the counter primitives are also used by Trainers
   and Abilities, which these texts do not prevent), Battle Cage's "Prevent all damage counters from
   being placed on Benched Pokémon … by effects of attacks and Abilities" (same obstacle), and the

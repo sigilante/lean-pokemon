@@ -313,9 +313,12 @@ CAVEATS = {
     'shieldBench': "a static 'prevent all damage from and effects of attacks … done to' a Benched Pokémon (in force on "
                    "the Bench only: 'As long as this Pokémon is on your Bench', 'done to your Benched Pokémon') prevents "
                    "the damage (`SEff.prevent`, read by the Bench damage primitives, `GameState.benchSafe`) but not the "
-                   "effects: damage counters and other effects of attacks on the protected Benched Pokémon land in the "
-                   "model, because `Run` does not know whether it resolves an attack (Known gaps, prevention of effects; "
-                   "survey S27 §2)",
+                   "effects: in the model an opponent's attack still places damage counters on the protected Benched "
+                   "Pokémon (`benchCounters`, `spreadCounters`, `benchSome` and `hitBy` with counters, `dumpCounters` "
+                   "to the Bench), still switches it into the Active Spot (a gust, `switch .opp`), and still discards "
+                   "Energy or Tools from it or puts markers on it, none of which print allows if the printed protection "
+                   "covers them, because `Run` does not know whether it resolves an attack (Known gaps, prevention of "
+                   "effects (e); survey S27 §2)",
     'healMove': "'can't be healed' (`SEff.noHeal`) is read by the heals of the Active Pokémon (`heal`, `healAll`, the "
                 "heal of `drain`); moving damage counters off it (`moveCounter`) is not read as healing, a reading with "
                 "no ruling checked (Known gaps, heal block)",

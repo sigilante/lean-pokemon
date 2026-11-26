@@ -18,7 +18,8 @@ import Pokemon.BenchGuard
 so `Run.cap_sim`, `Run.xcap_sim`, `Run.clamp_sim` (ZoneSim) kept their statements; heals act on the
 player's own Active Pokémon, exact under both clamps inside an effect, as before.
 
-**The old step.** `InPlay.inflictIf_false`, `GameState.healAmt_of` and the `noStatics` corollaries:
+**The old step.** `Run.inflict_old`, `Run.heal_old`, `Run.healAll_old`, `Run.drain_old` (each an `↔`
+with the pre-MV13 rule), and `GameState.immune_heal_noStatics` for states with no static effect:
 without such an effect in force each rule is its pre-MV13 form.
 -/
 
@@ -82,12 +83,33 @@ theorem Run.healAll_old {g g' : GameState} {p : InPlay} (hp : g.cur.active = som
     rw [GameState.healAmt_of hb, Nat.sub_self] at r
     exact r
 
+/-- **The old step: drain** (milestone MV13). Without a heal block, `drain a` has exactly the
+resolutions of its pre-MV13 rule (as at `master` c1ea6fb): the damage step, and the player's Active
+Pokémon healed by the damage done. -/
+theorem Run.drain_old {g g' : GameState} {a : Amt} (hb : g.healBlocked = false) :
+    Run (.drain a) g g' ↔ ∃ (p q : InPlay) (n : Nat), a.Val g n ∧ g.opp.active = some p ∧
+      g.cur.active = some q ∧
+      g' = { g with cur := { g.cur with active := some { q with damage := q.damage - g.dealt n } },
+                    opp := { g.opp with active := some { p with damage := p.damage + g.dealt n } } } := by
+  constructor
+  · intro h
+    cases h with
+    | @drain _ p q _ n hv hp hq => exact ⟨p, q, n, hv, hp, hq, by rw [GameState.healAmt_of hb]⟩
+    | touchActive he _ => simp [Effect.touch] at he
+    | touchBench he _ => simp [Effect.touch] at he
+    | zone hw _ => simp [Effect.zSide] at hw
+  · rintro ⟨p, q, n, hv, hp, hq, rfl⟩
+    have r := Run.drain hv hp hq
+    rw [GameState.healAmt_of hb] at r
+    exact r
+
 /-- The heal of `drain` without a heal block is the damage dealt (milestone MV13). -/
 theorem GameState.drainHeal_of {g : GameState} (hb : g.healBlocked = false) (n : Nat) :
     g.healAmt (g.dealt n) = g.dealt n := GameState.healAmt_of hb _
 
 /-- With no static effects, nothing is immune and nothing blocks a heal: `inflict` and every heal
-resolve as before milestone MV13 (`Run.inflict_old`, `Run.heal_old`, `Run.healAll_old`). -/
+resolve as before milestone MV13 (`Run.inflict_old`, `Run.heal_old`, `Run.healAll_old`,
+`Run.drain_old`). -/
 theorem GameState.immune_heal_noStatics {g : GameState} (hn : g.NoStatics) {p : InPlay}
     (hp : g.opp.active = some p) (c : Condition) :
     g.condImmune .opp c p = false ∧ g.healBlocked = false :=
@@ -152,6 +174,19 @@ theorem sleep_blocked :
       (.prim rfl rfl (.inflict .asleep rfl) (.done (.inl ((GameState.settled_iff _).2 (by decide)))))
       rfl rfl rfl rfl, by decide⟩
 
+/-- **Every resolution of the Item's effect from that start leaves the immune Pokémon not Asleep**
+(universal form of `sleep_blocked`): a fact about `Run` of `inflict .asleep` from the start
+`st sleepy plain owl []`, not about `Move`. -/
+theorem sleep_blocked_all :
+    ∀ g', Run (.inflict .asleep) (st sleepy plain owl []) g' →
+      g'.opp.active.map (InPlay.has .asleep) = some false := by
+  intro g' h
+  cases h with
+  | inflict _ h' => cases h'; decide
+  | touchActive he _ => simp [Effect.touch] at he
+  | touchBench he _ => simp [Effect.touch] at he
+  | zone hw _ => simp [Effect.zSide] at hw
+
 /-- **Witness: the immunity is to Asleep only** (negative, outside the filter): the same opponent is
 Confused by Dizzy. -/
 theorem confusion_lands :
@@ -184,6 +219,18 @@ theorem heal_blocked :
     .item (l₁ := []) (l₂ := []) (n := "Potion") rfl rfl hs
       (.prim rfl rfl (.heal 3 rfl) (.done (.inl ((GameState.settled_iff _).2 (by decide)))))
       rfl rfl rfl rfl, by decide⟩
+
+/-- **Every resolution of Potion's effect from that start heals nothing** (universal form of
+`heal_blocked`): a fact about `Run` of `heal 3` from the start `st potion hurt plain [locker]`, not about
+`Move`. -/
+theorem heal_blocked_all :
+    ∀ g', Run (.heal 3) (st potion hurt plain [locker]) g' → g'.cur.active.map InPlay.damage = some 5 := by
+  intro g' h
+  cases h with
+  | heal _ h' => cases h'; decide
+  | touchActive he _ => simp [Effect.touch] at he
+  | touchBench he _ => simp [Effect.touch] at he
+  | zone hw _ => simp [Effect.zSide] at hw
 
 /-- **Witness: without the heal block Potion heals** (negative): the Active Pokémon has 2 damage
 counters left. -/
