@@ -1,7 +1,7 @@
 rule	lean_fragment	sentences_in_imported_cards	sentences_in_pool	example_card	example_sentence
 flip-a-coin	choice (heads) (tails), or a choice of damage, or choice (whole attack) skip	159	176	svp-114 Picnicker	Flip a coin.
 shuffle	shuffle	134	197	svp-123 Teal Mask Ogerpon	Then, shuffle your deck.
-if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	128	144	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
+if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	129	144	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
 inflict	inflict c [; inflict c' ...]	126	152	svp-129 Pecharunt	Your opponent's Active Pokémon is now Poisoned.
 discard-energy	ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip); in a Trainer no fallback when none (min_take)	97	121	svp-105 Armarouge ex	Discard a Fire Energy from this Pokémon.
 reminder	skip (the model never applies Weakness or Resistance to the Bench)	86	105	svp-135 Drifblim	(Don't apply Weakness and Resistance for Benched Pokémon.)
@@ -11,7 +11,7 @@ search-to-hand	move own deck hand F (upTo n)	69	78	svp-123 Teal Mask Ogerpon	Sea
 recoil	selfDamage n	69	82	sv5-23 Rellor	This Pokémon also does 10 damage to itself.
 flip-n-coins-damage	choice over 0..N heads of damage (const (h * k)) [+ base]	49	51	sv5-4 Nuzleaf	Flip 3 coins. This attack does 30 damage for each heads.
 more-damage-for-each	damage (add (const B) (count C k))	48	63	svp-123 Teal Mask Ogerpon	This attack does 20 more damage for each of your opponent's Benched Pokémon.
-static-ability		46	50	svp-129 Pecharunt	As long as this Pokémon is in the Active Spot, put 5 more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup.
+static-ability		47	51	svp-129 Pecharunt	As long as this Pokémon is in the Active Spot, put 5 more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup.
 heal-self	heal n	41	43	svp-87 Sprigatito ex	Heal 30 damage from this Pokémon.
 ling-lock-defending	linger opp next (lock attack|retreat)	40	49	svp-129 Pecharunt	During your opponent's next turn, that Pokémon can't retreat.
 damage-ignores	damage a {weak/resist/fx := true} on every damage step to the opponent's Active Pokémon	31	37	svp-91 Koraidon	This attack's damage isn't affected by any effects on your opponent's Active Pokémon.
@@ -131,6 +131,7 @@ if-not-exactly-hand-nothing		2	2	sv8-123 Alolan Dugtrio	If you don't have exactl
 heal-active-f	ite (top own F | countGe (energy own energy) k) (heal n) (no resolution)	2	2	sv8-172 Dragon Elixir	Heal 60 damage from your Active Dragon Pokémon.
 bench-any-number-basic	putBench own deck basic (5 times)	2	2	sv8-185 Precious Trolley	Search your deck for any number of Basic Pokémon and put them onto your Bench.
 switch-then-move-energy		2	2	sv8-186 Scramble Switch	Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, you may move any amount of Energy from the Pokémon you moved to your Bench to the new Active Pokémon.
+ling-prevent-self-le	linger own next (preventLe n)	2	2	sv9-2 Metapod	During your opponent's next turn, prevent all damage done to this Pokémon by attacks if that damage is 60 or less.
 ab-switch-in-self	self switchIn	2	2	sv9-18 Meowscarada	Switch it with your Active Pokémon.
 look-top-may-discard		2	2	sv9-84 Rockruff	Look at the top card of your deck. You may discard that card.
 damage-to-each-opp	damage (const n); spreadDamage opp n	2	4	me1-43 Frosmoth	This attack does 20 damage to each of your opponent's Pokémon.

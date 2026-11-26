@@ -191,8 +191,9 @@ def attack_wf(damage, effect):
 
 
 def mod_is_amt(m):
-    # `Mod.isAmt`; milestone MV6 adds the step-2 penalty `weaken` and the step-5 increase `expose`
-    return m[0] in ('bonus', 'reduce', 'weaken', 'expose')
+    # `Mod.isAmt`; milestone MV6 adds the step-2 penalty `weaken` and the step-5 increase `expose`; milestone MV14 the
+    # lingering damage threshold `preventLe` (its constant bounds what a write adds to `Mods.amt`)
+    return m[0] in ('bonus', 'reduce', 'weaken', 'expose', 'preventLe')
 
 
 def writes(e):

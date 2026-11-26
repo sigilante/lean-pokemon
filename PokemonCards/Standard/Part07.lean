@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 7 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,42 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part07
 open Pokemon
+
+/-- Liepard (rsv10pt5-56). Records: rsv10pt5-56, rsv10pt5-137. -/
+def rsv10pt5_56 : Card := .pokemon
+  { name := "Liepard", stage := .stage1, evolvesFrom := some "Purrloin",
+    hp := 11, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Knock Off", cost := [.darkness], damage := 5,
+        effect := .ite (.countGe (.pile .opp .hand .any) 1) (.move .opp .hand .discard .any (.exactly 1)) .skip,
+        gx := false }] }
+
+/-- Scraggy (rsv10pt5-57). Records: rsv10pt5-57, rsv10pt5-138. -/
+def rsv10pt5_57 : Card := .pokemon
+  { name := "Scraggy", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Headbutt", cost := [.darkness], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Invade", cost := [.darkness, .darkness], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Scrafty (rsv10pt5-58). Records: rsv10pt5-58, rsv10pt5-139. -/
+def rsv10pt5_58 : Card := .pokemon
+  { name := "Scrafty", stage := .stage1, evolvesFrom := some "Scraggy",
+    hp := 12, type := .darkness, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Ruffians Attack", cost := [.darkness, .darkness], damage := 0,
+        effect := .damage (.heads (.count (.inPlay .own (.ptype .darkness)) 1) 6),
+        gx := false }] }
 
 /-- Trubbish (rsv10pt5-59). Records: rsv10pt5-59, rsv10pt5-140. -/
 def rsv10pt5_59 : Card := .pokemon
@@ -1813,47 +1849,11 @@ def me1_67 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Sandshrew (me1-68). Records: me1-68. -/
-def me1_68 : Card := .pokemon
-  { name := "Sandshrew", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Dig Claws", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Mud-Slap", cost := [.fighting, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Onix (me1-70). Records: me1-70. -/
-def me1_70 : Card := .pokemon
-  { name := "Onix", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .fighting, retreat := 4, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bind", cost := [.colorless, .colorless], damage := 3,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false },
-      { name := "Strength", cost := [.colorless, .colorless, .colorless, .colorless], damage := 10,
-        effect := .skip,
-        gx := false }] }
-
-/-- Tyrogue (me1-71). Records: me1-71. -/
-def me1_71 : Card := .pokemon
-  { name := "Tyrogue", stage := .basic, evolvesFrom := none,
-    hp := 3, type := .fighting, retreat := 0, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Pow-Pow Punching", cost := [], damage := 0,
-        effect := .damage (.add (.const 1) (.many (.const 3))),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  rsv10pt5_56,
+  rsv10pt5_57,
+  rsv10pt5_58,
   rsv10pt5_59,
   rsv10pt5_60,
   rsv10pt5_61,
@@ -2000,10 +2000,7 @@ def cards : List Card := [
   me1_64,
   me1_65,
   me1_66,
-  me1_67,
-  me1_68,
-  me1_70,
-  me1_71]
+  me1_67]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

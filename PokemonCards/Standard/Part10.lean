@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 10 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,48 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part10
 open Pokemon
+
+/-- Frogadier (me4-21). Records: me4-21, me4-89. -/
+def me4_21 : Card := .pokemon
+  { name := "Frogadier", stage := .stage1, evolvesFrom := some "Froakie",
+    hp := 10, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Summoning Jutsu", cost := [.water], damage := 0,
+        effect := .seq (.move .own .deck .hand .pokemon (.upTo 3)) .shuffle,
+        gx := false },
+      { name := "Aqua Edge", cost := [.water, .water], damage := 5,
+        effect := .skip,
+        gx := false }] }
+
+/-- Mega Greninja ex (me4-22). Records: me4-22, me4-100, me4-116, me4-122. Caveats: energyOfBasic. -/
+def me4_22 : Card := .pokemon
+  { name := "Mega Greninja ex", stage := .stage2, evolvesFrom := some "Frogadier",
+    hp := 35, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .megaEx, tera := false,
+    abilities := [
+      { name := "Mortal Shuriken", use := .once,
+        spot := some .active, cond := none,
+        effect := .fx (.seq (.move .own .hand .discard (.energyOf .water) (.exactly 1)) (.ite (.countGe (.bench .opp .pokemon) 1) (.choice (.counters 6) (.benchCounters .opp 6)) (.counters 6))) }],
+    attacks := [
+      { name := "Ninja Spinner", cost := [.water, .water], damage := 0,
+        effect := .choice (.damage (.const 12)) (.seq (.returnEnergy .own .active (.energyOf .water) (.exactly 1) .hand) (.damage (.const 20))),
+        gx := false }] }
+
+/-- Bergmite (me4-23). Records: me4-23. -/
+def me4_23 : Card := .pokemon
+  { name := "Bergmite", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .water, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Chilly", cost := [.water], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Frost Breath", cost := [.water, .colorless, .colorless], damage := 5,
+        effect := .skip,
+        gx := false }] }
 
 /-- Wimpod (me4-25). Records: me4-25. -/
 def me4_25 : Card := .pokemon
@@ -1768,41 +1810,11 @@ def me55_80 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Gimmighoul (me55-81). Records: me55-81. Caveats: searchAny. -/
-def me55_81 : Card := .pokemon
-  { name := "Gimmighoul", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Strolls So Much", cost := [.colorless], damage := 0,
-        effect := .choice (.seq (.move .own .deck .hand .any (.upTo 1)) .shuffle) .skip,
-        gx := false }] }
-
-/-- Groudon (me55-82). Records: me55-82. Caveats: benchMods. -/
-def me55_82 : Card := .pokemon
-  { name := "Groudon", stage := .basic, evolvesFrom := none,
-    hp := 14, type := .fighting, retreat := 4, weakness := some .grass,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Break Ground", cost := [.fighting, .fighting, .fighting, .fighting, .fighting], damage := 25,
-        effect := .spreadDamage .own 2,
-        gx := false }] }
-
-/-- Lucario (me55-83). Records: me55-83. Caveats: benchMods. -/
-def me55_83 : Card := .pokemon
-  { name := "Lucario", stage := .stage1, evolvesFrom := some "Riolu",
-    hp := 12, type := .fighting, retreat := 2, weakness := some .psychic,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Aura Sphere", cost := [.fighting, .fighting, .colorless], damage := 10,
-        effect := .benchDamage .opp 6,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me4_21,
+  me4_22,
+  me4_23,
   me4_25,
   me4_27,
   me4_28,
@@ -1949,10 +1961,7 @@ def cards : List Card := [
   me55_77,
   me55_78,
   me55_79,
-  me55_80,
-  me55_81,
-  me55_82,
-  me55_83]
+  me55_80]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

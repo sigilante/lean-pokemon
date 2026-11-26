@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 8 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,45 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part08
 open Pokemon
+
+/-- Sandshrew (me1-68). Records: me1-68. -/
+def me1_68 : Card := .pokemon
+  { name := "Sandshrew", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .fighting, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Dig Claws", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Mud-Slap", cost := [.fighting, .colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Onix (me1-70). Records: me1-70. -/
+def me1_70 : Card := .pokemon
+  { name := "Onix", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .fighting, retreat := 4, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Bind", cost := [.colorless, .colorless], damage := 3,
+        effect := .choice (.inflict .paralyzed) .skip,
+        gx := false },
+      { name := "Strength", cost := [.colorless, .colorless, .colorless, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Tyrogue (me1-71). Records: me1-71. -/
+def me1_71 : Card := .pokemon
+  { name := "Tyrogue", stage := .basic, evolvesFrom := none,
+    hp := 3, type := .fighting, retreat := 0, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Pow-Pow Punching", cost := [], damage := 0,
+        effect := .damage (.add (.const 1) (.many (.const 3))),
+        gx := false }] }
 
 /-- Makuhita (me1-72). Records: me1-72. -/
 def me1_72 : Card := .pokemon
@@ -1742,47 +1781,11 @@ def me2pt5_51 : Card := .pokemon
         effect := .spreadDamage .opp 1,
         gx := false }] }
 
-/-- Snom (me2pt5-52). Records: me2pt5-52. -/
-def me2pt5_52 : Card := .pokemon
-  { name := "Snom", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .water, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Icicle", cost := [.water], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Frosmoth (me2pt5-53). Records: me2pt5-53. Caveats: energyOfBasic, moveAnyPair, moveMayFail. -/
-def me2pt5_53 : Card := .pokemon
-  { name := "Frosmoth", stage := .stage1, evolvesFrom := some "Snom",
-    hp := 11, type := .water, retreat := 2, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Alluring Wings", use := .once,
-        spot := some .active, cond := none,
-        effect := .fx (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.ite (.countGe (.pile .opp .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.move .own (.top 1) .hand .any .all) (.move .opp (.top 1) .hand .any .all))) }],
-    attacks := [
-      { name := "Cold Cyclone", cost := [.water, .water], damage := 9,
-        effect := .moveEnergy .own (.energyOf .water),
-        gx := false }] }
-
-/-- Glastrier (me2pt5-54). Records: me2pt5-54. Caveats: benchMods. -/
-def me2pt5_54 : Card := .pokemon
-  { name := "Glastrier", stage := .basic, evolvesFrom := none,
-    hp := 13, type := .water, retreat := 2, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ice Shot", cost := [.water], damage := 2,
-        effect := .benchDamage .opp 2,
-        gx := false },
-      { name := "Frosty Typhoon", cost := [.water, .water, .water], damage := 13,
-        effect := .skip,
-        gx := false, selfLock := .this }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_68,
+  me1_70,
+  me1_71,
   me1_72,
   me1_73,
   me1_74,
@@ -1929,10 +1932,7 @@ def cards : List Card := [
   me2pt5_48,
   me2pt5_49,
   me2pt5_50,
-  me2pt5_51,
-  me2pt5_52,
-  me2pt5_53,
-  me2pt5_54]
+  me2pt5_51]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

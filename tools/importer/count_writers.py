@@ -191,8 +191,8 @@ def ev(f, c):
     raise ValueError('filter not mirrored: %r' % (f,))
 
 
-LIN = re.compile(r'linger \.(own|opp) \.(now|next|after|always) \(?\.(bonus|reduce|weaken|expose|prevent|lock)')
-AMT = ('bonus', 'reduce', 'weaken', 'expose')
+LIN = re.compile(r'linger \.(own|opp) \.(now|next|after|always) \(?\.(bonus|reduce|weaken|expose|preventLe|prevent|lock)')
+AMT = ('bonus', 'reduce', 'weaken', 'expose', 'preventLe')  # milestone MV14: preventLe
 REC = re.compile(r'move \.(own|opp) \.discard \.(\w+) ')
 LOOK = re.compile(r'look \.(own|opp) \.discard ')
 TRIG = re.compile(r'use := \.triggered \.(\w+) ')
@@ -216,7 +216,7 @@ def main(d):
                 hits.append((w, slot, mod, sec))
         if hits:
             writers.append((t, hits))
-    print('terms writing a stored amount (bonus, reduce, weaken, expose):', len(writers),
+    print('terms writing a stored amount (bonus, reduce, weaken, expose, preventLe):', len(writers),
           dict(sorted(collections.Counter(t['kind'] for t, _ in writers).items())))
     print('  by modifier (terms):', dict(sorted(collections.Counter(m for _, hs in writers for m in {h[2] for h in hs}).items())))
     print('  by (store, slot, modifier):', dict(sorted(collections.Counter((h[0], h[1], h[2]) for _, hs in writers for h in hs).items())))

@@ -1,7 +1,7 @@
 /-
 The imported Standard cards: the list, the cards not imported, and the set-level checks.
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -22,7 +22,7 @@ import PokemonCards.Props
 namespace PokemonCards.Standard
 open Pokemon
 
-/-- Every imported card (1603 terms, for 1612 of the pool's 2161 cards: 9 cards share the term of another,
+/-- Every imported card (1606 terms, for 1615 of the pool's 2161 cards: 9 cards share the term of another,
 `sameTerm`). -/
 def all : List Card :=
   Part01.cards ++
@@ -179,7 +179,6 @@ def notImported : List (String × String × String) := [
   ("sv7-11", "Eldegoss", "unhandled sentence: Put this Pokémon and all attached cards into your deck."),
   ("sv7-13", "Dipplin", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Basic Pokémon."),
   ("sv7-14", "Hydrapple ex", "condition not expressible: you attached Energy to a Pokémon in this way: If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon."),
-  ("sv7-44", "Drednaw", "Ability: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon if that damage is 200 or more."),
   ("sv7-45", "Veluza", "Ability: static, cost (attack cost or Energy provision): Attacks used by this Pokémon cost Colorless less for each Kofu card in your discard pile."),
   ("sv7-49", "Lanturn", "unhandled sentence: Put 8 damage counters instead of 3 on that Pokémon for this Special Condition."),
   ("sv7-50", "Joltik", "card kind with no filter: Basic Grass Energy cards and up to 2 Basic Lightning Energy: Search your deck for up to 2 Basic Grass Energy cards and up to 2 Basic Lightning Energy cards and attach them to your Pokémon in any way you like."),
@@ -274,7 +273,6 @@ def notImported : List (String × String × String) := [
   ("sv8pt5-96", "Black Belt's Training", "unhandled sentence: During this turn, attacks used by your Pokémon do 40 more damage to your opponent's Active Pokémon ex (before applying Weakness and Resistance)."),
   ("sv8pt5-108", "Festival Grounds", "Stadium: static, prevent (prevention or immunity (damage, effects, Special Conditions, healing)): Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions."),
   ("sv8pt5-111", "Haban Berry", "Pokémon Tool: triggered: If the Pokémon this card is attached to is damaged by an attack from your opponent's Dragon Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."),
-  ("sv9-2", "Metapod", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks if that damage is 60 or less."),
   ("sv9-37", "Ludicolo", "Ability: static, stack (stacking rule (\"doesn't stack\"): the model adds every effect in force): All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn't stack."),
   ("sv9-43", "Veluza ex", "unhandled sentence: You may discard your hand."),
   ("sv9-47", "Iono's Voltorb", "count not expressible: Lightning Energy attached to all of your Iono's Pokémon: This attack does 20 more damage for each Lightning Energy attached to all of your Iono's Pokémon."),
@@ -346,7 +344,6 @@ def notImported : List (String × String × String) := [
   ("rsv10pt5-37", "Swoobat", "unhandled sentence: Put 1 of your Benched Pokémon and all attached cards into your hand."),
   ("rsv10pt5-43", "Gothitelle", "condition not expressible: you have the same number of cards in your hand as your opponent: If you have the same number of cards in your hand as your opponent, this attack does 90 more damage."),
   ("rsv10pt5-45", "Jellicent ex", "Ability: static, lock (a lock (Abilities, Tools, Items, Stadiums, attacks, moving damage counters)): As long as this Pokémon is in the Active Spot, your opponent can't play any Item cards or Pokémon Tool cards from their hand."),
-  ("rsv10pt5-46", "Roggenrola", "unhandled sentence: During your opponent's next turn, prevent all damage done to this Pokémon by attacks if that damage is 40 or less."),
   ("rsv10pt5-48", "Gigalith", "count not expressible: damage counter on all of your Benched Fighting Pokémon: This attack does 20 damage for each damage counter on all of your Benched Fighting Pokémon."),
   ("rsv10pt5-51", "Archeops", "unhandled sentence: Devolve 1 of your opponent's evolved Pokémon by putting the highest Stage Evolution card on it into your opponent's hand."),
   ("rsv10pt5-62", "Zoroark", "unhandled sentence: Choose 1 of your opponent's Active Pokémon's attacks and use it as this attack."),
@@ -595,13 +592,13 @@ Each Mega Floette ex in play (both yours and your opponent's) gets +150 HP."),
   ("me6-132", "Bubbly Water Energy", "Special Energy: rider not modelled: Special Condition recovery and immunity (no static form): The Water Pokémon this card is attached to recovers from all Special Conditions and can't be affected by any Special Conditions."),
   ("me6-134", "Nitro Fire Energy", "Special Energy: rider not modelled: return after a discard by the holder's attack (no machinery): If this card is discarded by an effect of an attack used by the Fire Pokémon this card is attached to, put this card into your hand after attack damage and effects.")]
 
-/-- **The count.** `all` has 1603 entries. -/
-theorem all_length : all.length = 1603 := by decide +kernel
+/-- **The count.** `all` has 1606 entries. -/
+theorem all_length : all.length = 1606 := by decide +kernel
 
-/-- `notImported` has 549 entries. -/
-theorem notImported_length : notImported.length = 549 := by decide +kernel
+/-- `notImported` has 546 entries. -/
+theorem notImported_length : notImported.length = 546 := by decide +kernel
 
-/-- Arithmetic on the three lengths, and nothing more: 1603 + 9 + 549 = 2161. That the three lists partition
+/-- Arithmetic on the three lengths, and nothing more: 1606 + 9 + 546 = 2161. That the three lists partition
 the pool's 2161 cards (every card of the pool in exactly one of them, once) is established outside Lean, by
 the importer (`tools/importer/importer.py`, which asserts it when it writes this file); the pool itself
 is not a Lean object. -/
@@ -789,7 +786,7 @@ theorem cross_9_11 : crossOk Part09.cards Part11.cards = true := by decide +kern
 /-- No card of part 10 is the same term as a card of part 11. -/
 theorem cross_10_11 : crossOk Part10.cards Part11.cards = true := by decide +kernel
 
-/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1603 distinct
+/-- **No duplicates.** No two entries of `all` are the same `Card` term, so `all` counts 1606 distinct
 cards. (Checked by `nodupFp`, part by part and pair of parts by pair of parts, to keep each kernel check
 small.) -/
 theorem all_nodup : all.Nodup :=
@@ -799,10 +796,10 @@ theorem all_nodup : all.Nodup :=
 
 /-- The imported cards that write a stored amount (`Effect.writes`, `Mod.isAmt`: a damage bonus or reduction, and since
 milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`), by name. -/
-theorem writers : (all.filter Card.writesAmt).map Card.label = ["Feraligatr", "Seedot", "Grotle", "Torkoal", "Kilowattrel", "Houndoom", "Varoom", "Drifloon", "Tornadus", "Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Hop's Corviknight", "Shelgon", "Hop's Rookidee", "Clamperl", "Sigilyph", "Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk", "Carkol", "Registeel ex", "Mega Pyroar ex", "Donphan", "Metang", "Rampardos ex", "Mabosstiff", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
+theorem writers : (all.filter Card.writesAmt).map Card.label = ["Feraligatr", "Seedot", "Grotle", "Torkoal", "Kilowattrel", "Houndoom", "Varoom", "Drifloon", "Tornadus", "Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Metapod", "Hop's Corviknight", "Shelgon", "Hop's Rookidee", "Clamperl", "Sigilyph", "Roggenrola", "Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk", "Carkol", "Registeel ex", "Mega Pyroar ex", "Donphan", "Metang", "Rampardos ex", "Mabosstiff", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
 
 /-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/
-theorem lingerers : (all.filter Card.lingers).map Card.label = ["Feraligatr", "Pecharunt", "Seedot", "Roserade", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Elgyem", "Golett", "Golurk", "Dunsparce", "Torkoal", "Wellspring Mask Ogerpon ex", "Luxio", "Kilowattrel", "Nosepass", "Mightyena", "Whirlipede", "Joltik", "Houndoom", "Sneasel", "Dusknoir", "Varoom", "Lileep", "Turtonator", "Electivire", "Galvantula ex", "Drifloon", "Purugly", "Tornadus", "Bruxish", "Magnezone", "Palossand ex", "Flittle", "Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Maractus", "Shelmet", "Togedemaru", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Hop's Corviknight", "Shelgon", "Kecleon", "Hop's Rookidee", "Oinkologne", "Cynthia's Feebas", "Clamperl", "Barraskewda", "Team Rocket's Muk", "Skarmory", "Sigilyph", "Frillish", "Petilil", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Genesect ex", "Tranquill", "Unfezant", "Bulbasaur", "Exeggutor", "Snom", "Yveltal", "Buneary", "Pawmi", "Gliscor", "Eternatus", "Empoleon ex", "Bronzor", "Chikorita", "N's Vanillish", "Stunfisk", "Marill", "Hop's Phantump", "Stunfisk ex", "Carkol", "Registeel ex", "Noivern", "Larry's Braviary", "Spinarak", "Ariados", "Spewpa", "Mega Pyroar ex", "Flaaffy", "Donphan", "Krookodile ex", "Metang", "Rampardos ex", "Mabosstiff", "Trumbeak", "Cherubi", "Slowpoke", "Pikachu", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Masquerain", "Mega Golisopod ex", "Wattrel", "Onix", "Jangmo-o", "Fletchinder"] := by decide +kernel
+theorem lingerers : (all.filter Card.lingers).map Card.label = ["Feraligatr", "Pecharunt", "Seedot", "Roserade", "Grotle", "Scovillain ex", "Totodile", "Frosmoth", "Elgyem", "Golett", "Golurk", "Dunsparce", "Torkoal", "Wellspring Mask Ogerpon ex", "Luxio", "Kilowattrel", "Nosepass", "Mightyena", "Whirlipede", "Joltik", "Houndoom", "Sneasel", "Dusknoir", "Varoom", "Lileep", "Turtonator", "Electivire", "Galvantula ex", "Drifloon", "Purugly", "Tornadus", "Bruxish", "Magnezone", "Palossand ex", "Flittle", "Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Altaria", "Appletun", "Slakoth", "Jasmine's Gaze", "Budew", "Metapod", "Maractus", "Shelmet", "Togedemaru", "Dhelmise", "Hop's Sandaconda", "Paldean Clodsire ex", "Hop's Corviknight", "Shelgon", "Kecleon", "Hop's Rookidee", "Oinkologne", "Cynthia's Feebas", "Clamperl", "Barraskewda", "Team Rocket's Muk", "Skarmory", "Sigilyph", "Frillish", "Roggenrola", "Petilil", "Cubchoo", "Beartic", "Klink", "Klang", "Pawniard", "Genesect ex", "Tranquill", "Unfezant", "Bulbasaur", "Exeggutor", "Snom", "Yveltal", "Buneary", "Pawmi", "Gliscor", "Eternatus", "Empoleon ex", "Bronzor", "Chikorita", "N's Vanillish", "Stunfisk", "Marill", "Hop's Phantump", "Stunfisk ex", "Carkol", "Registeel ex", "Noivern", "Larry's Braviary", "Spinarak", "Ariados", "Spewpa", "Mega Pyroar ex", "Flaaffy", "Donphan", "Krookodile ex", "Metang", "Rampardos ex", "Mabosstiff", "Trumbeak", "Cherubi", "Slowpoke", "Pikachu", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Masquerain", "Mega Golisopod ex", "Wattrel", "Onix", "Jangmo-o", "Fletchinder"] := by decide +kernel
 
 /-- The imported Items that write a bonus or reduction (`Card.wAmt`), the cards clause 3 (a) of
 `StoreSafe` forbids Items, Supporters and "as often as you like" Abilities to recycle, by name. -/
@@ -941,14 +938,14 @@ theorem sReduce_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : N
     g.sReduce ≤ sReduceBound g.allCards ∧ sReduceBound g.allCards ≤ 2 * (N * 5) :=
   sReduce_le_of reduceGain_le hg hn
 
-/-- **The imported cards that are not tame** (41), by name. Checked part by part. The tame-deck theorem
+/-- **The imported cards that are not tame** (43), by name. Checked part by part. The tame-deck theorem
 `Reach.finite` asks, through `GameState.Fit`, that every card of the game be `Card.tame` (no `drain`, no
 stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`
 (Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game
 (`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards
 is not covered by `Reach.finite`; every game of imported cards is `StoreSafe` (`storeSafe`), and
 `StoreSafe.xfinite` (`xfinite`) applies to all of them. -/
-theorem untame : (all.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle", "Trevenant", "Torkoal", "Houndoom", "Varoom", "Drifloon", "Tornadus", "Volcarona", "Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Paras", "Hop's Corviknight", "Shelgon", "Hop's Rookidee", "Clamperl", "Virizion", "Sigilyph", "Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk", "Carkol", "Registeel ex", "Mega Pyroar ex", "Metang", "Mabosstiff", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by
+theorem untame : (all.filter (fun c => !c.tame)).map Card.label = ["Seedot", "Grotle", "Trevenant", "Torkoal", "Houndoom", "Varoom", "Drifloon", "Tornadus", "Volcarona", "Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Metapod", "Paras", "Hop's Corviknight", "Shelgon", "Hop's Rookidee", "Clamperl", "Virizion", "Sigilyph", "Roggenrola", "Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk", "Carkol", "Registeel ex", "Mega Pyroar ex", "Metang", "Mabosstiff", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by
   simp only [all, List.filter_append, List.map_append, Part01.cards_untame, Part02.cards_untame, Part03.cards_untame, Part04.cards_untame, Part05.cards_untame, Part06.cards_untame, Part07.cards_untame, Part08.cards_untame, Part09.cards_untame, Part10.cards_untame, Part11.cards_untame, List.cons_append, List.nil_append]
 
 /-- The imported cards with or giving a triggered Ability on `TrigEvent.damaged` (milestone M8b), by name (17). Checked part by part. -/

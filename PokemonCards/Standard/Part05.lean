@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 5 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,28 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part05
 open Pokemon
+
+/-- Nymble (sv9-19). Records: sv9-19. -/
+def sv9_19 : Card := .pokemon
+  { name := "Nymble", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Rear Kick", cost := [.colorless], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Magmar (sv9-20). Records: sv9-20. -/
+def sv9_20 : Card := .pokemon
+  { name := "Magmar", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .fire, retreat := 2, weakness := some .water,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Searing Flame", cost := [.fire, .colorless], damage := 3,
+        effect := .choice (.inflict .burned) .skip,
+        gx := false }] }
 
 /-- Magmortar (sv9-21). Records: sv9-21. -/
 def sv9_21 : Card := .pokemon
@@ -1873,36 +1895,10 @@ def sv10_47 : Card := .pokemon
         effect := .ite (.evolved .own) (.damage (.const 14)) (.damage (.const 6)),
         gx := false }] }
 
-/-- Misty's Magikarp (sv10-48). Records: sv10-48. Caveats: shieldBench. -/
-def sv10_48 : Card := .pokemon
-  { name := "Misty's Magikarp", stage := .basic, evolvesFrom := none,
-    hp := 3, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "So Submerged", use := .static [{ sel := .self, filt := .any, tgt := none, src := some .bench, need := none, eff := .prevent .any }, { sel := .self, filt := .any, tgt := none, src := some .bench, need := none, eff := .shield .any }],
-        spot := none, cond := none,
-        effect := .fx .skip }],
-    attacks := [
-      { name := "Splash", cost := [.water], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
-/-- Misty's Lapras (sv10-50). Records: sv10-50, sv10-194. -/
-def sv10_50 : Card := .pokemon
-  { name := "Misty's Lapras", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .water, retreat := 1, weakness := some .lightning,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Swim Together", cost := [.water], damage := 0,
-        effect := .seq (.move .own .deck .hand (.and .pokemon (.namePrefix "Misty's ")) (.upTo 3)) .shuffle,
-        gx := false },
-      { name := "Surf", cost := [.water, .colorless], damage := 6,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv9_19,
+  sv9_20,
   sv9_21,
   sv9_22,
   sv9_23,
@@ -2050,9 +2046,7 @@ def cards : List Card := [
   sv10_43,
   sv10_44,
   sv10_46,
-  sv10_47,
-  sv10_48,
-  sv10_50]
+  sv10_47]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

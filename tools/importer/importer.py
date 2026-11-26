@@ -28,7 +28,7 @@ import pool  # noqa: E402
 import terms as T  # noqa: E402
 import translate as TR  # noqa: E402
 
-VERSION = '0.20.0'
+VERSION = '0.21.0'
 PART_SIZE = 150
 
 CARD_LEVEL = ('Ability', 'Ancient Trait', 'Pokémon Tool', 'Stadium', 'Special Energy',
@@ -1009,7 +1009,7 @@ def special_parts(term):
 def effect_tame(e):
     """`Effect.tame`: no `drain` and no modifier that is not `Mod.plain` (a stored damage reduction, and since
     milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`)."""
-    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] in ('reduce', 'weaken', 'expose')):
+    if e[0] == 'drain' or (e[0] == 'linger' and e[3][0] in ('reduce', 'weaken', 'expose', 'preventLe')):
         return False
     return all(effect_tame(x) for x in T.subs(e))
 

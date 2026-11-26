@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 4 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.20.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,20 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part04
 open Pokemon
+
+/-- Magnezone (sv8-60). Records: sv8-60. Caveats: perPokemon. -/
+def sv8_60 : Card := .pokemon
+  { name := "Magnezone", stage := .stage2, evolvesFrom := some "Magneton",
+    hp := 17, type := .lightning, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Mighty Magnetism", cost := [.lightning, .colorless, .colorless], damage := 8,
+        effect := .seq (.inflict .confused) (.linger .opp .next (.lock .retreat)),
+        gx := false },
+      { name := "Zap Cannon", cost := [.lightning, .colorless, .colorless, .colorless], damage := 18,
+        effect := .skip,
+        gx := false, selfLock := .this }] }
 
 /-- Rotom (sv8-61). Records: sv8-61. Caveats: energyUnitsCount. -/
 def sv8_61 : Card := .pokemon
@@ -1518,6 +1532,17 @@ def sv9_1 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Metapod (sv9-2). Records: sv9-2. Caveats: perPokemon, thresholdRead. -/
+def sv9_2 : Card := .pokemon
+  { name := "Metapod", stage := .stage1, evolvesFrom := some "Caterpie",
+    hp := 9, type := .grass, retreat := 3, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Harden", cost := [.grass], damage := 0,
+        effect := .linger .own .next (.preventLe 6),
+        gx := false }] }
+
 /-- Butterfree (sv9-3). Records: sv9-3. -/
 def sv9_3 : Card := .pokemon
   { name := "Butterfree", stage := .stage2, evolvesFrom := some "Metapod",
@@ -1712,30 +1737,9 @@ def sv9_18 : Card := .pokemon
         effect := .ite (.top .opp .ex) (.damage (.const 18)) (.damage (.const 9)),
         gx := false }] }
 
-/-- Nymble (sv9-19). Records: sv9-19. -/
-def sv9_19 : Card := .pokemon
-  { name := "Nymble", stage := .basic, evolvesFrom := none,
-    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Rear Kick", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- Magmar (sv9-20). Records: sv9-20. -/
-def sv9_20 : Card := .pokemon
-  { name := "Magmar", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .fire, retreat := 2, weakness := some .water,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Searing Flame", cost := [.fire, .colorless], damage := 3,
-        effect := .choice (.inflict .burned) .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv8_60,
   sv8_61,
   sv8_62,
   sv8_63,
@@ -1868,6 +1872,7 @@ def cards : List Card := [
   sv8pt5_127,
   sv8pt5_131,
   sv9_1,
+  sv9_2,
   sv9_3,
   sv9_4,
   sv9_5,
@@ -1883,9 +1888,7 @@ def cards : List Card := [
   sv9_15,
   sv9_16,
   sv9_17,
-  sv9_18,
-  sv9_19,
-  sv9_20]
+  sv9_18]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1947,6 +1950,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Paras"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Metapod", "Paras"] := by decide +kernel
 
 end PokemonCards.Standard.Part04

@@ -309,6 +309,13 @@ CAVEATS = {
     'usedLastBenchUse': "'You can use this attack only if this Pokémon used X during your last turn' reads the use record "
                         "of X (as usedLastBench): a Pokémon that used X, moved to the Bench and came back cannot use the "
                         "attack in the model, where print allows it; a failed Confused attempt of X writes no record, also a reading",
+    # importer 0.21.0 (milestone MV14, survey S28)
+    'thresholdRead': "a damage threshold ('prevent all damage … if that damage is N or more / N or less', `SEff.preventGe`, "
+                     "`Mod.preventLe`) compares N with the damage after every other effect of the calculation: Weakness, "
+                     "Resistance, the step-5 increase and every damage reduction, stored or static (`GameState.dealt`, "
+                     "`dealtBy`). The rulebook gives no order among step-5 effects (2026 p. 20) and no ruling was checked: "
+                     "a reading that compares before a reduction prevents a damage the model lets through, or the reverse "
+                     "(Known gaps, threshold prevention)",
     # importer 0.20.0 (milestone MV13, survey S27)
     'shieldBench': "a static 'prevent all damage from and effects of attacks … done to' a Benched Pokémon (in force on "
                    "the Bench only: 'As long as this Pokémon is on your Bench', 'done to your Benched Pokémon') prevents "
@@ -353,6 +360,9 @@ CAVEAT_DIRECTION = {
                                    # of 'up to N from your Benched Pokémon' may move N 2-unit cards (more than by units)
     'shiftFromMoved': 'both',  # the Energy of another Benched Pokémon may move (allows more); a forced move blocked
                                # by a holder restriction blocks the play (forbids some)
+    # importer 0.21.0
+    'thresholdRead': 'both',       # with a reduction in force, another order of step 5 prevents what the model lets
+                                   # through ('N or more' read before the reduction) or the reverse
     # importer 0.20.0
     'shieldBench': 'both',         # a forced effect of an attack lands on the protected Benched Pokémon: print's
                                    # outcome (nothing) absent, another present
@@ -2782,6 +2792,17 @@ def _(m, ctx):
 def _(m, ctx):
     return Eff(seq(('move', OWN, ('top', 1), ('discard',), ('any',), ('all',)),
                    ('move', OPP, ('top', 1), ('discard',), ('any',), ('all',))))
+
+
+# importer 0.21.0 (milestone MV14, survey S28): a lingering threshold, "During your opponent's next turn, prevent all
+# damage done to this Pokémon by attacks if that damage is N or less" (Metapod sv9-2, Roggenrola rsv10pt5-46):
+# `Mod.preventLe (N/10)`, stored for the player (`Mods.upto`, the largest in effect) and read at step 5 of the damage
+# calculation (`dealtBy`). Per player as every lingering modifier (perPokemon); "that damage" read after every other
+# step-5 effect (thresholdRead).
+@rule('ling-prevent-self-le', r"During your opponent's next turn, prevent all damage done to this Pokémon by attacks if "
+      r"that damage is (\d+) or less\.", 'A', 'linger own next (preventLe n)')
+def _(m, ctx):
+    return Eff(('linger', OWN, ('next',), ('preventLe', counters(m.group(1)))), {'perPokemon', 'thresholdRead'})
 
 
 @rule('ling-prevent-self-2', r"During your opponent's next turn, prevent all damage from attacks done to this Pokémon\.", 'A',
@@ -5586,6 +5607,14 @@ def static_ability_sentence(s, ctx, src=None, need=None):
         return S('self', ('noCond', (CONDS[m.group(1)],)))
     if s == "Your opponent's Active Pokémon can't be healed.":
         return S('opp', ('noHeal',), tgt='active')
+    # importer 0.21.0 (milestone MV14, survey S28): a static threshold, "Prevent all damage done to this Pokémon by attacks
+    # from your opponent's F if that damage is N or more" (Drednaw sv7-44): `SEff.preventGe (N/10) fr`, read in the Active
+    # Spot on the damage after every other effect of the calculation (`GameState.dealt`; caveat thresholdRead) and on the
+    # Bench on the amount placed (`GameState.benchThr`). Exact except for that reading.
+    m = re.match(r"^Prevent all damage done to this Pokémon by attacks from your opponent's (.+?) if that damage is "
+                 r"(\d+) or more\.$", s)
+    if m:
+        return S('self', ('preventGe', counters(m.group(2)), prevent_filter(m.group(1), ctx)))
     m = re.match(r"^Prevent all damage (?:done to this Pokémon by attacks from|from attacks done to this Pokémon by) your "
                  r"opponent's (.+?)\.$", s)
     if m:
@@ -5720,6 +5749,9 @@ def static_caveats(ss):
                 cv.add('shieldReach')
         if s['eff'] == ('noHeal',):
             cv.add('healMove')
+        if s['eff'][0] == 'preventGe':
+            # importer 0.21.0 (milestone MV14): "that damage" is read after every other effect of the calculation
+            cv.add('thresholdRead')
         if s['eff'] == ('noRetreat',):
             # importer 0.15.0: `SEff.noRetreat` is applied after the additions and subtractions (a reading)
             cv.add('noRetreatLast')
