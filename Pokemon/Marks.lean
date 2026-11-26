@@ -174,6 +174,15 @@ theorem Src.set_noMarks {src : Src} {r : List Card} {s : PlayerState} (hs : s.No
     (src.set r s).NoMarks := by
   cases src <;> exact hs
 
+theorem ShiftTo.noOwe {t : List Card} {one : Bool} {b b' : List InPlay} (h : ShiftTo t one b b')
+    (hb : ListNoOwe b) : ListNoOwe b' := by
+  cases h with
+  | @one q q' b₁ b₂ hd =>
+      have hq : ListNoOwe [q] := fun p hp => by
+        rw [List.mem_singleton] at hp; subst hp; exact hb.mem rfl
+      exact hb.upd rfl ((hd.noOwe OptNoOwe.none hq).2.mem (b₁ := []) (b₂ := []) rfl)
+  | many hd => exact (hd.noOwe OptNoOwe.none hb).2
+
 theorem ZStep.noMarks {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hs : s.NoMarks) :
     s'.NoMarks := by
   cases h with
@@ -210,6 +219,10 @@ theorem ZStep.noMarks {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hs :
   | retActive ha _ _ hp => exact hp.noMarks ⟨hs.1.some_eq ha rfl, hs.2⟩
   | retBench hb _ _ hp => exact hp.noMarks ⟨hs.1, hs.2.upd' hb rfl⟩
   | retNone => exact hs
+  | shiftAB ha _ _ hd => exact ⟨hs.1.some_eq ha rfl, hd.noOwe hs.2⟩
+  | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb _ _ hd =>
+      exact ⟨(hd.noOwe (hs.1.some_eq ha rfl) (fun _ h => nomatch h)).1, hs.2.upd' hb rfl⟩
+  | shiftNone => exact hs
 
 theorem CMove.noOwe {f : Filter} {noKO : Bool} {hp : Spot → InPlay → Nat} {a a' : Option InPlay}
     {b b' : List InPlay} (h : CMove f noKO hp a b a' b') (ha : OptNoOwe a) (hb : ListNoOwe b) :

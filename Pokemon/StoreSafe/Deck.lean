@@ -1448,6 +1448,19 @@ theorem Deal.abW {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' : Li
       simp only [List.length_append, List.length_cons] at ih ⊢
       exact ih
 
+/-- Attaching Energy cards to a Bench (milestone MV11, `ShiftTo`) keeps its weights and length. -/
+theorem ShiftTo.abW {t : List Card} {one : Bool} {b b' : List InPlay} (h : ShiftTo t one b b') :
+    abWs b' = abWs b ∧ b'.length = b.length := by
+  cases h with
+  | @one q q' b₁ b₂ hd =>
+      have h1 := hd.abW.1
+      simp only [abWo, abWs, Nat.add_zero, Nat.zero_add] at h1
+      exact ⟨abWs_split h1, by simp only [List.length_append, List.length_cons]⟩
+  | many hd =>
+      obtain ⟨h1, h2⟩ := hd.abW
+      simp only [abWo, optN, Nat.zero_add] at h1 h2
+      exact ⟨h1, h2⟩
+
 /-- Placing the cards taken from a window never raises the potential (milestone MV6): a Pokémon
 put onto the Bench fills a place with an unused Pokémon. -/
 theorem Place.abPot_le {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s') :
@@ -1558,6 +1571,19 @@ theorem ZStep.abPot_le {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
               (q' := { p with energy := r }) rfl])
         (by simp [ha', hb', hb]))
   | retNone => exact Nat.le_refl _
+  | @shiftAB w f q one s a t r b' ha hs hq hd =>
+      obtain ⟨h1, h2⟩ := hd.abW
+      have e : InPlay.abW { a with energy := r } = a.abW := rfl
+      exact Nat.le_of_eq (PlayerState.abPot_congr (by simp only [ha, abWo, e, h1])
+        (by simp only [ha, optN, h2]))
+  | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb hs hq hd =>
+      obtain ⟨h1, h2⟩ := hd.abW
+      simp only [abWo, optN, abWs, List.length_nil, Nat.add_zero] at h1 h2
+      exact Nat.le_of_eq (PlayerState.abPot_congr
+        (by simp only [ha, hb, abWo, abWs_split (b₁ := b₁) (b₂ := b₂) (q := p)
+              (q' := { p with energy := r }) rfl]; omega)
+        (by simp only [ha, hb, optN, List.length_append, List.length_cons] at h2 ⊢; omega))
+  | shiftNone => exact Nat.le_refl _
 
 /-- Moving a damage counter keeps the weights and the number of Pokémon in play. -/
 theorem CMove.abPot {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}

@@ -726,6 +726,18 @@ inductive Effect where
   moves are cards attached as Energy, which write nothing when played (`Card.wAmt`). With `bench`
   and an empty Bench, nothing -/
   | returnEnergy (w : Whose) (sp : Spot) (f : Filter) (q : Qty) (d : Dst)
+  /-- (milestone MV11) move Energy cards that pass `f`, as much as `q` says (counted as `discardEnergy`
+  counts, `Qty.okE`), from one of the `w` player's Pokémon at `src` to that player's Pokémon at `dst`:
+  all of them to one Pokémon there (`one = true`) or "in any way you like" (`one = false`). Only the
+  two directions between the Active Spot and the Bench have a resolution (`ZStep.shiftAB`,
+  `ZStep.shiftBA`); with an empty Bench, nothing (`ZStep.shiftNone`). "Move all Energy from this
+  Pokémon to 1 of your Benched Pokémon" (Castform Sunny Form sv8-20) is `shiftEnergy .own .active
+  .energy .all .bench true`; "… to your Benched Pokémon in any way you like" (Kilowattrel sv8-67), the
+  same with `false`; "Move up to 2 Energy from your Benched Pokémon to your Active Pokémon" (N's Plan
+  zsv10pt5-83), two steps `shiftEnergy .own .bench .energy (.upTo 1) .active true`. Unlike
+  `moveEnergy`, which moves one card between any two of the player's Pokémon, the source and the
+  targets are fixed by their spots -/
+  | shiftEnergy (w : Whose) (src : Spot) (f : Filter) (q : Qty) (dst : Spot) (one : Bool)
   /-- move one damage counter from one of the player's own Pokémon in play whose card passes `f`
   to another of the player's Pokémon (milestone M8a: "move 1 damage counter from 1 of your Team
   Rocket's Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an "as often as you
@@ -881,6 +893,7 @@ def Effect.ownFree : Effect → Bool
   | .discardEnergy .own .active _ _ => false
   | .moveEnergy .own _ => false
   | .returnEnergy .own .active _ _ _ => false
+  | .shiftEnergy .own _ _ _ _ _ => false
   | .moveCounter _ _ => false
   | .look .own _ _ _ (.attach _) _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
@@ -939,6 +952,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 
@@ -1028,6 +1042,7 @@ def Effect.shielded : Effect → Effect
   | .attach .opp _ _ .active _ => .skip
   | .moveEnergy .opp _ => .skip
   | .returnEnergy .opp .active _ _ _ => .skip
+  | .shiftEnergy .opp _ _ _ _ _ => .skip
   | .ite t a b => .ite t a.shielded b.shielded
   | .seq a b => .seq a.shielded b.shielded
   | .choice a b => .choice a.shielded b.shielded
@@ -1076,6 +1091,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
 

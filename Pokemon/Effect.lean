@@ -243,6 +243,7 @@ def Effect.zSide : Effect → Option Whose
   | .discardEnergy w _ _ _ => some w
   | .moveEnergy w _ => some w
   | .returnEnergy w _ _ _ _ => some w
+  | .shiftEnergy w _ _ _ _ _ => some w
   | .discardTools w _ => some w
   | .look w _ _ _ _ _ => some w
   | _ => none
@@ -287,6 +288,15 @@ inductive Place : Into → List Card → PlayerState → PlayerState → Prop wh
       Place .bench (ps.map Card.pokemon) s { s with bench := s.bench ++ ps.map InPlay.ofBasic }
   | attach {tf : Filter} {t : List Card} {s : PlayerState} {a : Option InPlay} {b : List InPlay}
       (h : Deal tf t s.active s.bench a b) : Place (.attach tf) t s { s with active := a, bench := b }
+
+/-- `ShiftTo one t b b'` (milestone MV11, `Effect.shiftEnergy`): the Energy cards `t` are attached to
+the Bench `b`, giving `b'`: all of them to one chosen Benched Pokémon (`one = true`), or one at a
+time to any Benched Pokémon, "in any way you like" (`one = false`), each as `Deal` attaches (an Energy
+card the target accepts, `Card.attachOk`). -/
+inductive ShiftTo (t : List Card) : Bool → List InPlay → List InPlay → Prop where
+  | one {q q' : InPlay} {b₁ b₂ : List InPlay} (h : Deal .any t none [q] none [q']) :
+      ShiftTo t true (b₁ ++ q :: b₂) (b₁ ++ q' :: b₂)
+  | many {b b' : List InPlay} (h : Deal .any t none b none b') : ShiftTo t false b b'
 
 /-- The semantics of the zone-move primitives on one player's state. -/
 inductive ZStep : Effect → PlayerState → PlayerState → Prop where
@@ -360,6 +370,22 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       (hs : Split f p.energy t r) (hq : q.okE (f.weightOn p.top p.energy) f t r)
       (hp : Put d t { s with bench := b₁ ++ { p with energy := r } :: b₂ } s') :
       ZStep (.returnEnergy w .bench f q d) s s'
+  /-- move Energy from the Active Pokémon to the Bench (milestone MV11) -/
+  | shiftAB {w : Whose} {f : Filter} {q : Qty} {one : Bool} {s : PlayerState} {a : InPlay}
+      {t r : List Card} {b' : List InPlay} (ha : s.active = some a) (hs : Split f a.energy t r)
+      (hq : q.okE (f.weightOn a.top a.energy) f t r) (hd : ShiftTo t one s.bench b') :
+      ZStep (.shiftEnergy w .active f q .bench one) s
+        { s with active := some { a with energy := r }, bench := b' }
+  /-- move Energy from one Benched Pokémon to the Active Pokémon (milestone MV11) -/
+  | shiftBA {w : Whose} {f : Filter} {q : Qty} {one : Bool} {s : PlayerState} {a p : InPlay}
+      {b₁ b₂ : List InPlay} {t r : List Card} {a' : Option InPlay} (ha : s.active = some a)
+      (hb : s.bench = b₁ ++ p :: b₂) (hs : Split f p.energy t r)
+      (hq : q.okE (f.weightOn p.top p.energy) f t r) (hd : Deal .any t (some a) [] a' []) :
+      ZStep (.shiftEnergy w .bench f q .active one) s
+        { s with active := a', bench := b₁ ++ { p with energy := r } :: b₂ }
+  /-- with an empty Bench, nothing (milestone MV11) -/
+  | shiftNone {w : Whose} {src : Spot} {f : Filter} {q : Qty} {dst : Spot} {one : Bool}
+      {s : PlayerState} (hb : s.bench = []) : ZStep (.shiftEnergy w src f q dst one) s s
   | retNone {w : Whose} {f : Filter} {q : Qty} {d : Dst} {s : PlayerState} (hb : s.bench = []) :
       ZStep (.returnEnergy w .bench f q d) s s
   /-- discard the Tools of the Active Pokémon (milestone M5) -/

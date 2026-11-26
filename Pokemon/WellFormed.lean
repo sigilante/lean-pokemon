@@ -73,6 +73,17 @@ theorem Deal.benchOk {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' 
       exact ih (benched_update rfl hb ((hb q (List.mem_append_right _ (.head _))).of_eq
         rfl rfl rfl rfl))
 
+/-- Attaching Energy cards to a Bench keeps every Benched Pokémon `Benched` (milestone MV11). -/
+theorem ShiftTo.benchOk {t : List Card} {one : Bool} {b b' : List InPlay} (h : ShiftTo t one b b')
+    (hb : BenchOk b) : BenchOk b' := by
+  cases h with
+  | @one q q' b₁ b₂ hd =>
+      have hq : BenchOk [q] := fun p hp => by
+        rw [List.mem_singleton] at hp; subst hp
+        exact hb _ (List.mem_append_right _ (.head _))
+      exact benched_update rfl hb (hd.benchOk hq q' (.head _))
+  | many hd => exact hd.benchOk hb
+
 /-- Placing the cards taken from a window keeps every Benched Pokémon `Benched` (milestone MV6). -/
 theorem Place.benchOk {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s')
     (hb : BenchOk s.bench) : BenchOk s'.bench := by
@@ -132,6 +143,10 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
       rw [hp.fields.2.2]
       exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
   | retNone => exact hb
+  | shiftAB _ _ _ hd => exact hd.benchOk hb
+  | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb' hs hq hd =>
+      exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
+  | shiftNone => exact hb
 
 /-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
 theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}

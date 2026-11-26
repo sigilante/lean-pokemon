@@ -82,6 +82,32 @@ theorem Deal.sim {c cb : Cap} {tf : Filter} {t : List Card} {a₁ a₁' : Option
           InPlay.clamp_of_agree (hq.addEnergy _)])
       exact ⟨a₃, b₃, .bench (by rw [hq.top]; exact ht) (by rw [hq.top]; exact hok) hd, k1, k2⟩
 
+/-- Attaching Energy cards to agreeing Benches (milestone MV11, `ShiftTo`) keeps them agreeing. -/
+theorem ShiftTo.sim {cb : Cap} {t : List Card} {one : Bool} {b b' : List InPlay}
+    (h : ShiftTo t one b b') {e : List InPlay}
+    (he : e.map (InPlay.clampWith K cb) = b.map (InPlay.clampWith K cb)) :
+    ∃ e', ShiftTo t one e e' ∧ e'.map (InPlay.clampWith K cb) = b'.map (InPlay.clampWith K cb) := by
+  cases h with
+  | @one q q' b₁ b₂ hd =>
+      obtain ⟨d₁, q₂, d₂, rfl, h1, h2, h3⟩ := map_eq_split he
+      obtain ⟨a₃, b₃, hd₃, ha₃, hb₃⟩ := hd.sim (K := K) (c := cb) (cb := cb) (a₂ := none) (b₂ := [q₂]) rfl
+        (by simp only [List.map_cons, List.map_nil, h2])
+      cases a₃ with
+      | some _ => simp at ha₃
+      | none =>
+          match b₃, hb₃, hd₃ with
+          | [x], hx, hd₃ =>
+              simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true] at hx
+              exact ⟨d₁ ++ x :: d₂, .one hd₃, by
+                simp only [List.map_append, List.map_cons, h1, h3, hx]⟩
+          | [], hx, _ => simp at hx
+          | _ :: _ :: _, hx, _ => simp at hx
+  | many hd =>
+      obtain ⟨a₃, b₃, hd₃, ha₃, hb₃⟩ := hd.sim (K := K) (c := cb) (cb := cb) (a₂ := none) (b₂ := e) rfl he
+      cases a₃ with
+      | some _ => simp at ha₃
+      | none => exact ⟨b₃, .many hd₃, hb₃⟩
+
 /-- Placing the cards taken from a window (milestone MV6) keeps agreeing states agreeing. -/
 theorem Place.sim {c cb : Cap} {i : Into} {t : List Card} {x₁ y₁ x₂ : PlayerState}
     (hp : Place i t x₁ y₁) (h : PlayerState.ZAgree K c cb x₁ x₂) :
@@ -228,6 +254,34 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
       have hm := ha.bench
       rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
       exact ⟨s₂, .retNone hm, ha⟩
+  | @shiftAB w f q one s a t r b' hac hs hq hd =>
+      have hm := ha.active
+      rw [hac] at hm
+      obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
+      obtain ⟨e', hd₂, he'⟩ := hd.sim ha.bench
+      exact ⟨_, .shiftAB ha₂ (by rw [hag.energy]; exact hs) (by rw [hag.top, hag.energy]; exact hq) hd₂,
+        ⟨ha.deck, ha.hand, ha.discard,
+          by simp only [Option.map_some, InPlay.clamp_of_agree (hag.setEnergy r)], he'⟩⟩
+  | @shiftBA w f q one s a p b₁ b₂ t r a' hac hb hs hq hd =>
+      have hm := ha.active
+      rw [hac] at hm
+      obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
+      obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
+      have hpa := InPlay.agree_of_clamp h2
+      obtain ⟨a₃, b₃, hd₃, ha₃, hb₃⟩ := hd.sim (c := c) (cb := cb) (a₂ := some a₂) (b₂ := [])
+        (by rw [ha₂] at hm; exact hm) rfl
+      cases b₃ with
+      | cons _ _ => simp at hb₃
+      | nil =>
+          exact ⟨_, .shiftBA ha₂ hb₂ (by rw [hpa.energy]; exact hs)
+            (by rw [hpa.top, hpa.energy]; exact hq) hd₃,
+            ⟨ha.deck, ha.hand, ha.discard, ha₃,
+              by simp only [List.map_append, List.map_cons, h1, h3,
+                InPlay.clamp_of_agree (hpa.setEnergy r)]⟩⟩
+  | shiftNone hb =>
+      have hm := ha.bench
+      rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
+      exact ⟨s₂, .shiftNone hm, ha⟩
 
 /-! ## Triggers (milestone M8b)
 
