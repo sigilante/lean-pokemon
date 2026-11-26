@@ -1722,6 +1722,12 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
           simp only [GameState.side] at e1 e2
           simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, e1, e2]; omega
       | opp => exact Nat.le_refl _
+  | benchHealSome m f n h =>
+      have hw : ∀ x : InPlay, (x.healBy n).abW = x.abW := fun x => by cases n <;> rfl
+      have e1 := h.congr abWs fun x y _ _ hy he => by
+        rcases hy with rfl | rfl <;> simp only [abWs, he, hw]
+      have e2 := h.congr List.length fun _ _ _ _ _ he => by simp only [List.length_cons, he]
+      simp only [GameState.abPot, PlayerState.abPot, e1, e2]; omega
   | moveCounter h =>
       obtain ⟨h1, h2⟩ := h.abPot
       simp only [GameState.abPot, PlayerState.abPot]

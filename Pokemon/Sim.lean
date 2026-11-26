@@ -554,6 +554,13 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       obtain ⟨a₂', b₂', hm, ha', hb'⟩ := h.sim (fun sp _ _ hxy => hsf.hpOf .own sp hxy) hc₂ he₁
       exact ⟨_, .moveCounter hm, by
         simp only [GameState.rclamp, GameState.clampAt, ha', hb', ha₂, hm₁, hm₂, he₂]⟩
+  | benchHealSome m f n h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      obtain ⟨e', h', he'⟩ := h.transfer (clampExact_healBy n) clampWith_top he₁
+      rw [← benchElig_congr clampWith_top f he₁] at h'
+      exact ⟨_, .benchHealSome m f n h', by
+        simp only [GameState.rclamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, he₂, he']⟩
   | @benchHeal g q b₁ b₂ n h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc

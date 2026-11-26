@@ -656,6 +656,16 @@ inductive Effect where
   the effect resolves ("Heal 30 damage from 1 of your Benched Pokémon"); nothing if the player has
   no Benched Pokémon -/
   | benchHeal (n : Nat)
+  /-- (milestone MV11) heal `m` distinct Benched Pokémon of the player whose card passes `f`, chosen
+  when the effect resolves, all of them if fewer pass: from each, up to `n` damage counters
+  (`some n`), or all of them (`none`). "Heal 100 damage from each of your Benched Pokémon" (Leafeon ex
+  sv8pt5-6) is `benchHealSome 5 .any (some 10)` (5 = `benchLimit`: every Benched Pokémon); "Heal 120
+  damage from 1 of your Benched Psychic Pokémon" (Meloetta me2-40), `benchHealSome 1 (.ptype .psychic)
+  (some 12)`; "Heal all damage from 1 of your Benched Pokémon" (Ho-Oh me55-12), `benchHealSome 1 .any
+  none`. Only the player's own Pokémon: a heal of the opponent's Pokémon inside an attack would not
+  commute with the capped clamp (the opponent's damage is capped during an attack, `GameState.rclamp`;
+  survey S25), and no form of it is in the language. Nothing with no Benched Pokémon passing `f` -/
+  | benchHealSome (m : Nat) (f : Filter) (n : Option Nat)
   /-- the `w` player's Active Pokémon switches with one of their Benched Pokémon, chosen when the
   effect resolves (`own`: "Switch your Active Pokémon with 1 of your Benched Pokémon", Switch;
   `opp`: "Switch in 1 of your opponent's Benched Pokémon to the Active Spot", Boss's Orders, or
@@ -954,7 +964,8 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
   | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
+  | .benchHealSome _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -1093,7 +1104,8 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
   | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
+  | .benchHealSome _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

@@ -430,6 +430,12 @@ inductive CMove (f : Filter) (noKO : Bool) (hp : Spot → InPlay → Nat) :
       (hne : c₁.length ≠ b₁.length) (hk : noKO = true → r.damage + 1 < hp .bench r) :
       CMove f noKO hp a (b₁ ++ q :: b₂) a (c₁ ++ r.addDamage 1 :: c₂)
 
+/-- What `Effect.benchHealSome` does to one chosen Pokémon (milestone MV11): remove up to `n` damage
+counters (`some n`), or all of them (`none`). -/
+def InPlay.healBy : Option Nat → InPlay → InPlay
+  | some n, p => { p with damage := p.damage - n }
+  | none, p => { p with damage := 0 }
+
 /-- What `Effect.benchSome` does to one chosen Pokémon: attack damage (`InPlay.hitBench`) or
 damage counters (`InPlay.addDamage`). -/
 def InPlay.hitWith (dmg : Bool) (n : Nat) (p : InPlay) : InPlay :=
@@ -780,6 +786,11 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.benchHeal n) g
         { g with cur := { g.cur with bench := b₁ ++ { q with damage := q.damage - n } :: b₂ } }
   | benchHealNone {g : GameState} (n : Nat) (h : g.cur.bench = []) : Run (.benchHeal n) g g
+  /-- heal `m` distinct Benched Pokémon of the player passing `f`, or all that pass if fewer do
+  (milestone MV11) -/
+  | benchHealSome {g : GameState} {b' : List InPlay} (m : Nat) (f : Filter) (n : Option Nat)
+      (h : Hits (InPlay.healBy n) f (min m (benchElig f g.cur.bench)) g.cur.bench b') :
+      Run (.benchHealSome m f n) g { g with cur := { g.cur with bench := b' } }
   /-- the `w` player's Active Pokémon `a` switches with the Benched `q`; `a` goes to the Bench
   cured of its Special Conditions ("When your Active Pokémon goes to your Bench (whether it
   retreated or got there some other way), some things do go away—Special Conditions and any

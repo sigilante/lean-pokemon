@@ -296,6 +296,10 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
       | own => exact ⟨fun hb => hz.benchOk hb, id, rfl, rfl, rfl, rfl, rfl⟩
       | opp => exact ⟨id, fun hb => hz.benchOk hb, rfl, rfl, rfl, rfl, rfl⟩
   | moveCounter h => exact ⟨fun hb => h.benchOk hb, id, rfl, rfl, rfl, rfl, rfl⟩
+  | benchHealSome m f n h =>
+      have hq : ∀ x, Benched x → Benched (x.healBy n) := fun x hx => by
+        cases n <;> exact hx.of_eq rfl rfl rfl rfl
+      exact ⟨fun hb => h.forall_of hq hb, id, rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/

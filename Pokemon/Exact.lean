@@ -692,6 +692,13 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       obtain ⟨a₂', b₂', hm, ha', hb'⟩ := h.sim (fun sp _ _ hxy => hsf.hpOf .own sp hxy) hc₂ he₁
       exact ⟨_, .moveCounter hm, by
         simp only [GameState.xrclamp, GameState.xclampAt, ha', hb', ha₂, he₂]⟩
+  | benchHealSome m f n h =>
+      intro _ g₂ hc
+      obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
+      obtain ⟨e', h', he'⟩ := h.transfer (clampExact_healBy n) clampWith_top he₁
+      rw [← benchElig_congr clampWith_top f he₁] at h'
+      exact ⟨_, .benchHealSome m f n h', by
+        simp only [GameState.xrclamp, GameState.xclampAt, hc₂, ha₂, he₂, he']⟩
   | @benchHeal g q b₁ b₂ n h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc

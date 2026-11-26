@@ -2118,6 +2118,7 @@ theorem Run.hitRun {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchDamageNone w n h => exact ⟨_, _, .plain rfl (.benchDamageNone w n h)⟩
   | spreadDamage w n g => exact ⟨_, _, .plain rfl (.spreadDamage w n g)⟩
   | benchSome w m f dmg n h => exact ⟨_, _, .plain rfl (.benchSome w m f dmg n h)⟩
+  | benchHealSome m f n h => exact ⟨_, _, .plain rfl (.benchHealSome m f n h)⟩
   | moveCounter h => exact ⟨_, _, .plain rfl (.moveCounter h)⟩
   | discardStadium g => exact ⟨_, _, .plain rfl (.discardStadium g)⟩
 

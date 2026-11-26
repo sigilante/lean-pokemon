@@ -125,6 +125,17 @@ theorem Hits.benchCardList {dmg : Bool} {n k : Nat} {f : Filter} {b b' : List In
     · simp only [Pokemon.benchCardList, he]
     · simp only [Pokemon.benchCardList, he, InPlay.cardList_hitWith]
 
+/-- Healing keeps a Pokémon's cards (milestone MV11). -/
+theorem InPlay.cardList_healBy (n : Option Nat) (p : InPlay) : (p.healBy n).cardList = p.cardList := by
+  cases n <;> rfl
+
+theorem Hits.benchCardList_heal {n : Option Nat} {k : Nat} {f : Filter} {b b' : List InPlay}
+    (h : Hits (InPlay.healBy n) f k b b') : Pokemon.benchCardList b' = Pokemon.benchCardList b :=
+  h.congr Pokemon.benchCardList fun x y _ _ hy he => by
+    rcases hy with rfl | rfl
+    · simp only [Pokemon.benchCardList, he]
+    · simp only [Pokemon.benchCardList, he, InPlay.cardList_healBy]
+
 theorem benchCardList_hitBench (n : Nat) (b : List InPlay) :
     benchCardList (b.map (InPlay.hitBench n)) = benchCardList b := by
   induction b with
@@ -252,6 +263,9 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
         perm_count [h, GameState.updSide, (q.hitBench_fields n).1, (q.hitBench_fields n).2.1,
           (q.hitBench_fields n).2.2.1, (q.hitBench_fields n).2.2.2.1]
   | benchDamageNone => exact .refl _
+  | benchHealSome m f n h =>
+      have hb := h.benchCardList_heal
+      simp only [GameState.allCards, PlayerState.allCards, hb]; exact .refl _
   | benchSome w m f dmg n h =>
       have hb := h.benchCardList
       cases w <;> simp only [GameState.side] at hb <;>

@@ -360,6 +360,10 @@ theorem Run.marks {e : Effect} {g g' : GameState} (h : Run e g g') :
       cases w with
       | own => exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.map hq⟩) id
       | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, ho.2.map hq⟩)
+  | benchHealSome m f n h =>
+      have hq : ∀ x : InPlay, x.owe = none → (x.healBy n).owe = none := fun x hx => by
+        cases n <;> exact hx
+      exact marks_frame rfl (fun hc => ⟨hc.1, h.forall_of hq hc.2⟩) id
   | benchSome w m f dmg n h =>
       have hq : ∀ x : InPlay, x.owe = none → (x.hitWith dmg n).owe = none := fun x hx => by
         cases dmg
