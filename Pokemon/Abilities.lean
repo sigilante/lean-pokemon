@@ -53,7 +53,7 @@ def wardenAt (u : Bool) : InPlay := { InPlay.ofBasic warden with used := u }
 
 def wpl (r : Nat) (u : Bool) : PlayerState :=
   ⟨[], [], [], [.energy .metal], [], some (wardenAt u), [], false, false, false,
-    false, false, store r, true, KOHist.empty⟩
+    false, false, store r, true, KOHist.empty, none⟩
 
 def wgs (r : Nat) (u : Bool) : GameState :=
   ⟨wpl r u, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false, false⟩
@@ -143,7 +143,7 @@ def kAt (u : AbilityUse) (b : Bool) : InPlay := { InPlay.ofBasic (keeper u) with
 
 def kpl (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : PlayerState :=
   ⟨[], hand, discard, [.energy .metal], [], some (kAt u b), [], false, false, false,
-    false, false, store r, true, KOHist.empty⟩
+    false, false, store r, true, KOHist.empty, none⟩
 
 def kgs (u : AbilityUse) (hand discard : List Card) (r : Nat) (b : Bool) : GameState :=
   ⟨kpl u hand discard r b, Recycle.pl [] [] 0, true, false, false, false, none, none, false, false, false⟩
@@ -267,11 +267,11 @@ def bonusStore (b : Nat) : Store := ⟨{ Mods.empty with bonus := b }, Mods.empt
 
 def cpl (u : Bool) (b : Nat) : PlayerState :=
   ⟨[.energy .grass], [], [], [.energy .grass], [], some (chargerAt u), [], false, false, false,
-    false, false, bonusStore b, true, KOHist.empty⟩
+    false, false, bonusStore b, true, KOHist.empty, none⟩
 
 def bpl : PlayerState :=
   ⟨[.energy .metal], [], [], [.energy .metal], [], some (InPlay.ofBasic Recycle.guard), [], false,
-    false, false, false, false, Store.empty, true, KOHist.empty⟩
+    false, false, false, false, Store.empty, true, KOHist.empty, none⟩
 
 /-- The charger's player to move, in the turn proper, `u` whether it has used its Ability. -/
 def cgs (u : Bool) (b : Nat) : GameState := ⟨cpl u b, bpl, true, false, false, false, none, none, false, false, false⟩
@@ -331,7 +331,7 @@ def scoutMon : PokemonCard :=
 
 def spl (hand deck : List Card) (bench : List InPlay) : PlayerState :=
   ⟨deck, hand, [], [.energy .grass], [], some (chargerAt false), bench, false, false, false,
-    false, false, Store.empty, true, KOHist.empty⟩
+    false, false, Store.empty, true, KOHist.empty, none⟩
 
 def sgs (hand deck : List Card) (bench : List InPlay) : GameState :=
   ⟨spl hand deck bench, bpl, true, false, false, false, none, none, false, false, false⟩
@@ -379,7 +379,7 @@ def vpl (u onV : Bool) : PlayerState :=
   ⟨[], [], [], [.energy .grass], [],
     some { InPlay.ofBasic venusaur with used := u, energy := if onV then [.energy .grass] else [] },
     [{ InPlay.ofBasic sprout with energy := if onV then [] else [.energy .grass] }], false, false,
-    false, false, false, Store.empty, true, KOHist.empty⟩
+    false, false, false, Store.empty, true, KOHist.empty, none⟩
 
 def vgs (u onV : Bool) : GameState := ⟨vpl u onV, bpl, true, false, false, false, none, none, false, false, false⟩
 
@@ -433,7 +433,7 @@ def opl (u onO : Bool) : PlayerState :=
   ⟨[], [], [], [.energy .grass], [],
     some { InPlay.ofBasic orbeetle with used := u, damage := if onO then 1 else 0 },
     [{ InPlay.ofBasic sprout with damage := if onO then 0 else 1 }], false, false,
-    false, false, false, Store.empty, true, KOHist.empty⟩
+    false, false, false, Store.empty, true, KOHist.empty, none⟩
 
 def ogs (u onO : Bool) : GameState := ⟨opl u onO, bpl, true, false, false, false, none, none, false, false, false⟩
 
@@ -493,7 +493,7 @@ def feraligatr : PokemonCard :=
 write a damage bonus. -/
 theorem feraligatr_storeSafe :
     (⟨⟨[], [ironDefender], [], [.energy .water], [], some (InPlay.ofBasic feraligatr), [], false,
-      false, false, false, false, Store.empty, true, KOHist.empty⟩, Recycle.pl [] [] 0, true, false, false,
+      false, false, false, false, Store.empty, true, KOHist.empty, none⟩, Recycle.pl [] [] 0, true, false, false,
       false, none, none, false, false, false⟩ : GameState).StoreSafe := by
   refine ⟨by unfold GameState.LoopFree; decide, GameState.GXOnly.of_noAttacks (by decide),
     by unfold GameState.RecycleSafe; decide, by unfold GameState.AbilitySafe; decide, by decide⟩

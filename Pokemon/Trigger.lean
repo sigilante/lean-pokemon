@@ -20,7 +20,7 @@ namespace Pokemon
 /-- Everything of a player but the five zones. -/
 def PlayerState.rest (s : PlayerState) :=
   (s.prizes, s.lost, s.energyAttached, s.supporterPlayed, s.retreated, s.gxUsed, s.vstarUsed,
-    s.mods, s.hadTurn)
+    s.mods, s.hadTurn, s.supCard)
 
 /-- Everything of the game but the players and `curIsFirst` (milestone MV7: with `pend`). -/
 def GameState.rest (g : GameState) :=
@@ -81,8 +81,11 @@ theorem cur_vstarUsed : g'.cur.vstarUsed = g.cur.vstarUsed := congrArg (·.2.2.2
 theorem opp_vstarUsed : g'.opp.vstarUsed = g.opp.vstarUsed := congrArg (·.2.2.2.2.2.2.1) h.opp
 theorem cur_mods : g'.cur.mods = g.cur.mods := congrArg (·.2.2.2.2.2.2.2.1) h.cur
 theorem opp_mods : g'.opp.mods = g.opp.mods := congrArg (·.2.2.2.2.2.2.2.1) h.opp
-theorem cur_hadTurn : g'.cur.hadTurn = g.cur.hadTurn := congrArg (·.2.2.2.2.2.2.2.2) h.cur
-theorem opp_hadTurn : g'.opp.hadTurn = g.opp.hadTurn := congrArg (·.2.2.2.2.2.2.2.2) h.opp
+theorem cur_hadTurn : g'.cur.hadTurn = g.cur.hadTurn := congrArg (·.2.2.2.2.2.2.2.2.1) h.cur
+theorem opp_hadTurn : g'.opp.hadTurn = g.opp.hadTurn := congrArg (·.2.2.2.2.2.2.2.2.1) h.opp
+/-- (milestone MV9) the Supporter record is in the frame -/
+theorem cur_supCard : g'.cur.supCard = g.cur.supCard := congrArg (·.2.2.2.2.2.2.2.2.2) h.cur
+theorem opp_supCard : g'.opp.supCard = g.opp.supCard := congrArg (·.2.2.2.2.2.2.2.2.2) h.opp
 
 end GameState.ZoneOnly
 

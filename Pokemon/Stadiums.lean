@@ -58,7 +58,7 @@ def mon : InPlay := { InPlay.ofBasic guard with fresh := false }
 
 def spl (b : Nat) (hand deck : List Card) : PlayerState :=
   ⟨deck, hand, [], [.energy .metal], [], some mon, [], false, false, false, false, false, ab b,
-    true, KOHist.empty⟩
+    true, KOHist.empty, none⟩
 
 /-- The player who went first to move, in the turn proper after the draw, both players with a
 rest-of-game bonus of `b`, the Stadium `gym` in play (owned by the first player), not yet used. -/
@@ -199,7 +199,7 @@ def mt : Card := .energy .metal
 pile. -/
 def wpl (hand deck discard : List Card) : PlayerState :=
   ⟨deck, hand, discard, [mt, mt], [], some mon, [], false, false, false, false, false,
-    Store.empty, true, KOHist.empty⟩
+    Store.empty, true, KOHist.empty, none⟩
 
 /-- A state in the turn proper (`bt = false`) or between turns, with the player to move `a`, the
 opponent `b`, whether the player to move went first, the Stadium slot and the two Stadium flags. -/

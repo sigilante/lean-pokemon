@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 1 of 10 (150 cards).
+Imported Standard cards, part 1 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.15.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -78,6 +78,20 @@ def svp_90 : Card := .pokemon
     attacks := [
       { name := "Beam", cost := [.metal, .colorless, .colorless], damage := 6,
         effect := .skip,
+        gx := false }] }
+
+/-- Koraidon (svp-91). Records: svp-91, sv5-119. Caveats: ignFxStadium. -/
+def svp_91 : Card := .pokemon
+  { name := "Koraidon", stage := .basic, evolvesFrom := none,
+    hp := 14, type := .dragon, retreat := 2, weakness := none,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Primordial Beatdown", cost := [.fighting, .colorless], damage := 0,
+        effect := .damage (.count (.inPlay .own (.and .pokemon (.or (.or (.or (.nameIn ["Ancient Booster Energy Capsule", "Awakening Drum", "Brute Bonnet", "Explorer's Guidance", "Flutter Mane", "Gouging Fire", "Gouging Fire ex", "Great Tusk", "Raging Bolt", "Raging Bolt ex", "Roaring Moon", "Sandy Shocks", "Scream Tail", "Scream Tail ex", "Slither Wing", "Walking Wake", "Walking Wake ex"]) (.and (.named "Koraidon") (.hasAttack "Primordial Beatdown"))) (.and (.named "Koraidon") (.hasAttack "Unrelenting Onslaught"))) (.and (.named "Koraidon ex") (.hasAttack "Retribution Strike"))))) 3),
+        gx := false },
+      { name := "Shred", cost := [.fire, .fighting, .colorless], damage := 0,
+        effect := .damage (.const 13) { fx := true },
         gx := false }] }
 
 /-- Armarouge ex (svp-105). Records: svp-105. Caveats: energyOfBasic, energyOfCount. -/
@@ -1150,6 +1164,20 @@ def sv5_79 : Card := .pokemon
         effect := .skip,
         gx := false, selfLock := .this }] }
 
+/-- Iron Valiant (sv5-80). Records: sv5-80. -/
+def sv5_80 : Card := .pokemon
+  { name := "Iron Valiant", stage := .basic, evolvesFrom := none,
+    hp := 13, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Calculation", cost := [.psychic], damage := 0,
+        effect := .look .own (.top 4) .any (.exactly 0) (.put .top) .top,
+        gx := false },
+      { name := "Majestic Sword", cost := [.psychic, .psychic, .colorless], damage := 0,
+        effect := .ite (.countGe (.played .own (.and (.kind .supporter) (.or (.or (.or (.nameIn ["Ciphermaniac's Codebreaking", "Future Booster Energy Capsule", "Iron Boulder", "Iron Boulder ex", "Iron Bundle", "Iron Crown", "Iron Crown ex", "Iron Hands", "Iron Jugulis", "Iron Leaves", "Iron Leaves ex", "Iron Moth", "Iron Thorns", "Iron Thorns ex", "Iron Treads", "Iron Valiant", "Reboot Pod"]) (.and (.named "Miraidon") (.hasAttack "Peak Acceleration"))) (.and (.named "Miraidon") (.hasAttack "C.O.D.E.: Protect"))) (.and (.named "Miraidon ex") (.hasAttack "Repulsion Bolt"))))) 1) (.damage (.const 20)) (.damage (.const 10)),
+        gx := false }] }
+
 /-- Meditite (sv5-82). Records: sv5-82. -/
 def sv5_82 : Card := .pokemon
   { name := "Meditite", stage := .basic, evolvesFrom := none,
@@ -1416,6 +1444,20 @@ def sv5_108 : Card := .pokemon
     attacks := [
       { name := "Dirty Beam", cost := [.psychic, .colorless, .colorless], damage := 16,
         effect := .benchDamage .opp 3,
+        gx := false }] }
+
+/-- Roaring Moon (sv5-109). Records: sv5-109, sv8pt5-65. -/
+def sv5_109 : Card := .pokemon
+  { name := "Roaring Moon", stage := .basic, evolvesFrom := none,
+    hp := 14, type := .darkness, retreat := 2, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Vengeance Fletching", cost := [.darkness, .darkness], damage := 0,
+        effect := .damage (.add (.const 7) (.count (.pile .own .discard (.and .any (.or (.or (.or (.nameIn ["Ancient Booster Energy Capsule", "Awakening Drum", "Brute Bonnet", "Explorer's Guidance", "Flutter Mane", "Gouging Fire", "Gouging Fire ex", "Great Tusk", "Raging Bolt", "Raging Bolt ex", "Roaring Moon", "Sandy Shocks", "Scream Tail", "Scream Tail ex", "Slither Wing", "Walking Wake", "Walking Wake ex"]) (.and (.named "Koraidon") (.hasAttack "Primordial Beatdown"))) (.and (.named "Koraidon") (.hasAttack "Unrelenting Onslaught"))) (.and (.named "Koraidon ex") (.hasAttack "Retribution Strike"))))) 1)),
+        gx := false },
+      { name := "Speed Wing", cost := [.darkness, .colorless, .colorless, .colorless], damage := 12,
+        effect := .skip,
         gx := false }] }
 
 /-- Forretress (sv5-110). Records: sv5-110. Caveats: recoil. -/
@@ -1739,45 +1781,6 @@ def sv6_4 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Sunkern (sv6-6). Records: sv6-6. -/
-def sv6_6 : Card := .pokemon
-  { name := "Sunkern", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bullet Seed", cost := [.grass], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.choice (.damage (.const 3)) (.damage (.const 4))))),
-        gx := false }] }
-
-/-- Sunflora (sv6-7). Records: sv6-7, sv6-169. Caveats: energyOfCount. -/
-def sv6_7 : Card := .pokemon
-  { name := "Sunflora", stage := .stage1, evolvesFrom := some "Sunkern",
-    hp := 10, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Redirected Sunlight", cost := [.grass], damage := 0,
-        effect := .damage (.count (.energyAll .opp (.energyOf .fire)) 6),
-        gx := false },
-      { name := "Mega Drain", cost := [.grass, .colorless], damage := 5,
-        effect := .heal 3,
-        gx := false }] }
-
-/-- Heracross (sv6-8). Records: sv6-8. -/
-def sv6_8 : Card := .pokemon
-  { name := "Heracross", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Body Slam", cost := [.grass, .colorless, .colorless], damage := 6,
-        effect := .choice (.inflict .paralyzed) .skip,
-        gx := false },
-      { name := "Seismic Toss", cost := [.grass, .colorless, .colorless, .colorless], damage := 13,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1792,6 +1795,7 @@ def cards : List Card := [
   svp_87,
   svp_89,
   svp_90,
+  svp_91,
   svp_105,
   svp_106,
   svp_107,
@@ -1876,6 +1880,7 @@ def cards : List Card := [
   sv5_74,
   sv5_75,
   sv5_79,
+  sv5_80,
   sv5_82,
   sv5_83,
   sv5_85,
@@ -1896,6 +1901,7 @@ def cards : List Card := [
   sv5_105,
   sv5_106,
   sv5_108,
+  sv5_109,
   sv5_110,
   sv5_112,
   sv5_113,
@@ -1926,10 +1932,7 @@ def cards : List Card := [
   sv5_162,
   sv6_1,
   sv6_2,
-  sv6_4,
-  sv6_6,
-  sv6_7,
-  sv6_8]
+  sv6_4]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -50,7 +50,7 @@ def nestCard : Card := .trainer "Nest" .item (.putBench .own .deck (.named "Runn
 
 def pl (hand deck : List Card) (a : InPlay) (b : List InPlay) : PlayerState :=
   ⟨deck, hand, [], [.energy .grass], [], some a, b, false, false, false, false, false, Store.empty,
-    true, KOHist.empty⟩
+    true, KOHist.empty, none⟩
 
 /-- The start: `runner` Active and `sitter` Benched, Switch and Nest in hand, a `runner` in the deck;
 the opponent has `watcher` Active and one card in the deck. -/

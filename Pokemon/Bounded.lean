@@ -55,8 +55,8 @@ theorem GameState.xclamp_eq (k : Nat) (g : GameState) :
 
 /-- The finite list: every state of `states C` with both stores replaced by stores whose
 amounts are at most `B`. -/
-def Enum.xstates (C : List Card) (B : Nat) : List GameState :=
-  (states C).flatMap fun s => (stores B).flatMap fun t₁ => (stores B).map fun t₂ =>
+def Enum.xstates (C R : List Card) (B : Nat) : List GameState :=
+  (states C R).flatMap fun s => (stores B).flatMap fun t₁ => (stores B).map fun t₂ =>
     { s with cur := { s.cur with mods := t₁ }, opp := { s.opp with mods := t₂ } }
 
 /-- **The exact-store clamps of reachable states with bounded stores lie in a finite list.**
@@ -65,9 +65,8 @@ the reachable state (it depends only on `g₀` and `B`), containing `g.xclamp K`
 `g` reachable from `g₀` that satisfies `BoundedStores B`. -/
 theorem Reach.xclamp_mem_bounded {g₀ : GameState} (B : Nat) :
     ∃ L : List GameState, ∀ g, Reach g₀ g → g.BoundedStores B → g.xclamp (bound g₀.allCards) ∈ L := by
-  refine ⟨xstates g₀.allCards B, fun g h hb => ?_⟩
-  have hm : g.clamp (bound g₀.allCards) ∈ states g₀.allCards :=
-    mem_states (by rw [GameState.allCards_clamp]; exact h.perm) h.clamp_bounded
+  refine ⟨xstates g₀.allCards (g₀.allCards ++ g₀.recCards) B, fun g h hb => ?_⟩
+  have hm := h.clamp_mem_states
   rw [GameState.xclamp_eq (bound g₀.allCards)]
   simp only [xstates, List.mem_flatMap, List.mem_map]
   exact ⟨_, hm, g.cur.mods, mem_stores hb.1, g.opp.mods, mem_stores hb.2, rfl⟩

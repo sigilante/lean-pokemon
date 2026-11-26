@@ -113,7 +113,7 @@ def after2End : GameState :=
       active := some (InPlay.checkup false false false false
         { InPlay.ofBasic big with damage := 0 + 5 }),
       energyAttached := false, supporterPlayed := false, retreated := false,
-      mods := after2.opp.mods.shift, ko := after2.opp.ko.shift },
+      mods := after2.opp.mods.shift, ko := after2.opp.ko.shift, supCard := none },
     opp := { after2.cur.unfresh with
       active := some ((InPlay.ofBasic big).unfresh.checkup true false false false), bench := [],
       mods := after2.cur.mods.shift, hadTurn := true, ko := after2.cur.ko.shift },

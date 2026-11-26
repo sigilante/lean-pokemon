@@ -403,6 +403,31 @@ S22). Changed statements: the premise of `Move.retreat` (and of `Markers.Move.re
 (`Card.energyGrantFree`); `Encodes`, `Shape`, `Counter.universal`, `Counter.simulate`,
 `Counter.halts_of_haltMarked` are unchanged in text. `InPlay.units_basic` and the other `_basic`
 lemmas are new, not changed.
+Milestone MV9 (counts and history; survey S23) added four filters on printed data and one record of
+the turn. The filters: `Filter.megaEx` (a Mega Evolution Pokémon ex), `Filter.resists t` (a printed
+Resistance to `t`), `Filter.abilityNamed n` (a printed Ability named `n`) and `Filter.nameIn ns` (a
+printed name in `ns`, with which the importer writes the subtypes "Ancient" and "Future" that the
+model's cards do not carry, over the names of its pool; Known gaps; `Filter` now 28 constructors,
+`Count` 14). They read printed cards, so no
+clamp theorem changed. The record: `PlayerState.supCard`, the Supporter card the player played from
+the hand this turn, written by `Move.supporter` when the card is played and cleared, with
+`supporterPlayed`, when the player's next turn starts (`Move.endTurn`); `Count.played w f` reads it
+("If you played Emma from your hand during this turn"). Every record of a
+reachable state is a card of the start state or a record the start state had (`Reach.supCard_mem`),
+so the finite list of `Reach.clamp_mem` enumerates it (`Enum.states C R`, `Reach.clamp_mem_states`),
+both clamps copy it, and `Reach.finite`, `Reach.clamp_mem`, `Move.clamp_sim`, the exact-store clamp
+bisimulation, `StoreSafe.xfinite` and its clauses, the negative theorems and `Counter.universal` are
+unchanged in text. Changed definitions: `Move.supporter` (writes the record), `Move.endTurn` (clears
+it for the new player to move; so the statement of `Move.endTurn_of_zero` names the cleared field),
+`PlayerState.rest` and so `GameState.ZoneOnly` (the record is in the frame), `Enum.players`,
+`Enum.states`, `Enum.xstates` (a second list `R`), and `Enum.mem_players`, `Enum.mem_states` (a
+hypothesis on the records). "If this Pokémon used X during your last turn" needs no new construct:
+the importer writes it with the use record of milestone MV6 (`AtkLock.note`, `Test.usedLast`), which
+ends when the Pokémon moves to the Bench or evolves; that end is a reading for this condition
+(Known gaps, caveats `usedLastBench`, `usedLastBenchUse`). Witnesses: `Pokemon/Played.lean`
+(the filters on test cards, the record written by a played Supporter and read by an attack in the
+same turn, cleared for the next player, and a use record written in one turn and read in the
+player's next turn, six legal moves).
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
@@ -874,9 +899,12 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,492 are imported (1,052 exactly, 440 with
-caveats) as 1,484 distinct terms, and 669 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.15.0, which since 0.15.0 translates the MV7c and MV8
+damage reduction). Of the pool's 2,161 cards, 1,512 are imported (1,063 exactly, 449 with
+caveats) as 1,504 distinct terms, and 649 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.16.0, which since 0.16.0 translates the MV9 vocabulary:
+the filters above, "Ancient" and "Future" as `Filter.nameIn` over the pool, the played-Supporter test
+`Count.played` in attacks, Abilities and a Stadium's use, and "if this Pokémon used X during your last
+turn" with the use record; since 0.15.0 the MV7c and MV8
 vocabulary: eight Special Energy cards as `EnergyCard.special` with an `EnergyText` payload (the other
 eleven, whose riders the model lacks, stay refused), `SEff.noRetreat`, and `TrigEvent.movedDown`
 (Clawitzer); and marks the readers of attached Energy that Special Energy cards make live

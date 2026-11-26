@@ -33,7 +33,7 @@ def nowB (b : Nat) : Store := ⟨{ Mods.empty with bonus := b }, Mods.empty, Mod
 
 def pl (hand discard : List Card) (t : Store) : PlayerState :=
   ⟨[], hand, discard, [.energy .metal], [], some mon, [], false, false, false, false, false, t,
-    true, KOHist.empty⟩
+    true, KOHist.empty, none⟩
 
 /-- The start: the player to move holds `pump`, both players have the guard Active and no
 modifiers. -/

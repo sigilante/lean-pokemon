@@ -50,7 +50,7 @@ def turnerC : PokemonCard := ⟨"Turner", .basic, none, 10, .grass, [uturn], 0, 
 /-- A side with `a` Active and `b` Benched, one card in the deck and two Prize cards. -/
 def side (a : InPlay) (b : List InPlay) : PlayerState :=
   ⟨[.energy .grass], [], [], [.energy .grass, .energy .grass], [], some a, b, false, false, false,
-    false, false, Store.empty, true, KOHist.empty⟩
+    false, false, Store.empty, true, KOHist.empty, none⟩
 
 /-- The mover has `turner` Active and `sitter` Benched; the opponent's side is `o`. -/
 def st (o : PlayerState) : GameState :=

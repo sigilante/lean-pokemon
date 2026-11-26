@@ -11,6 +11,7 @@ xy1-140	Fairy Energy	Basic Energy	imported exactly		xy1-140 g1-83 xy12-99 sm1-17
 svp-87	Sprigatito ex	Pokémon	imported exactly		svp-87 me2pt5-251	svp_87		
 svp-89	Feraligatr	Pokémon	imported with caveats	koBetweenSteps,perPokemon,selfBench	svp-89 sv5-41	svp_89		
 svp-90	Metang	Pokémon	imported exactly		svp-90 sv5-114	svp_90		
+svp-91	Koraidon	Pokémon	imported with caveats	ignFxStadium	svp-91 sv5-119	svp_91		
 svp-105	Armarouge ex	Pokémon	imported with caveats	energyOfBasic,energyOfCount	svp-105	svp_105		
 svp-106	Pikachu ex	Pokémon	imported exactly		svp-106 me2pt5-276	svp_106		
 svp-107	Mareep	Pokémon	imported exactly		svp-107	svp_107		
@@ -95,6 +96,7 @@ sv5-72	Reuniclus	Pokémon	imported exactly		sv5-72 sv5-171	sv5_72
 sv5-74	Beheeyem	Pokémon	imported exactly		sv5-74	sv5_74		
 sv5-75	Cutiefly	Pokémon	imported exactly		sv5-75 sv5-172	sv5_75		
 sv5-79	Iron Valiant	Pokémon	imported with caveats	benchMods	sv5-79	sv5_79		
+sv5-80	Iron Valiant	Pokémon	imported exactly		sv5-80	sv5_80		
 sv5-82	Meditite	Pokémon	imported exactly		sv5-82	sv5_82		
 sv5-83	Medicham	Pokémon	imported exactly		sv5-83	sv5_83		
 sv5-85	Drilbur	Pokémon	imported with caveats	upTo0	sv5-85	sv5_85		
@@ -115,6 +117,7 @@ sv5-103	Haunter	Pokémon	imported exactly		sv5-103	sv5_103
 sv5-105	Poochyena	Pokémon	imported exactly		sv5-105 me2pt5-128	sv5_105		
 sv5-106	Mightyena	Pokémon	imported exactly		sv5-106 me2pt5-129 me2pt5-243	sv5_106		
 sv5-108	Farigiraf ex	Pokémon	imported with caveats	benchMods,staticPreventBench	sv5-108 sv5-194	sv5_108		
+sv5-109	Roaring Moon	Pokémon	imported exactly		sv5-109 sv8pt5-65	sv5_109		
 sv5-110	Forretress	Pokémon	imported with caveats	recoil	sv5-110	sv5_110		
 sv5-112	Mawile	Pokémon	imported exactly		sv5-112	sv5_112		
 sv5-113	Beldum	Pokémon	imported with caveats	recoil	sv5-113	sv5_113		
@@ -263,8 +266,10 @@ sv6pt5-20	Dusknoir	Pokémon	imported with caveats	koCounters,perPokemon,selfBenc
 sv6pt5-23	Croagunk	Pokémon	imported exactly		sv6pt5-23	sv6pt5_23		
 sv6pt5-24	Toxicroak	Pokémon	imported exactly		sv6pt5-24	sv6pt5_24		
 sv6pt5-25	Bloodmoon Ursaluna	Pokémon	imported with caveats	selfBench,upTo0	sv6pt5-25 sv8pt5-54	sv6pt5_25		
+sv6pt5-26	Slither Wing	Pokémon	imported exactly		sv6pt5-26	sv6pt5_26		
 sv6pt5-27	Zubat	Pokémon	imported exactly		sv6pt5-27	sv6pt5_27		
 sv6pt5-28	Golbat	Pokémon	imported exactly		sv6pt5-28	sv6pt5_28		
+sv6pt5-29	Crobat	Pokémon	imported with caveats	poisonStrength	sv6pt5-29	sv6pt5_29		
 sv6pt5-30	Absol	Pokémon	imported with caveats	energyOfCount	sv6pt5-30	sv6pt5_30		
 sv6pt5-31	Zorua	Pokémon	imported exactly		sv6pt5-31 sv6pt5-75	sv6pt5_31		
 sv6pt5-32	Zoroark	Pokémon	imported exactly		sv6pt5-32	sv6pt5_32		
@@ -343,6 +348,7 @@ sv7-84	Mienshao	Pokémon	imported exactly		sv7-84	sv7_84
 sv7-85	Pancham	Pokémon	imported exactly		sv7-85	sv7_85		
 sv7-86	Diancie	Pokémon	imported with caveats	specialCountCards	sv7-86	sv7_86		Diffuse Reflection
 sv7-87	Crabrawler	Pokémon	imported exactly		sv7-87	sv7_87		
+sv7-88	Falinks	Pokémon	imported with caveats	usedLastBench	sv7-88	sv7_88		
 sv7-90	Koraidon	Pokémon	imported exactly		sv7-90	sv7_90		
 sv7-91	Gulpin	Pokémon	imported exactly		sv7-91 sv7-154	sv7_91		
 sv7-94	Impidimp	Pokémon	imported exactly		sv7-94	sv7_94		
@@ -526,6 +532,7 @@ sv8pt5-67	Bronzong	Pokémon	imported with caveats	staticBench	sv8pt5-67	sv8pt5_6
 sv8pt5-68	Heatran	Pokémon	imported exactly		sv8pt5-68	sv8pt5_68		
 sv8pt5-73	Dragapult ex	Pokémon	imported exactly		sv8pt5-73 sv8pt5-165 me2pt5-160	sv6_130		
 sv8pt5-76	Snorlax ex	Pokémon	imported exactly		sv8pt5-76	sv8pt5_76		
+sv8pt5-81	Miltank	Pokémon	imported with caveats	usedLastBenchUse	sv8pt5-81	sv8pt5_81		
 sv8pt5-82	Lugia ex	Pokémon	imported exactly		sv8pt5-82	sv8pt5_82		
 sv8pt5-83	Buneary	Pokémon	imported exactly		sv8pt5-83	sv8pt5_83		
 sv8pt5-84	Lopunny	Pokémon	imported exactly		sv8pt5-84	sv8pt5_84		
@@ -618,6 +625,7 @@ sv9-88	Toedscool	Pokémon	imported exactly		sv9-88	sv9_88
 sv9-89	Toedscruel	Pokémon	imported exactly		sv9-89	sv9_89	Retreat	
 sv9-90	Klawf	Pokémon	imported exactly		sv9-90	sv9_90		
 sv9-91	Koffing	Pokémon	imported exactly		sv9-91	sv9_91		
+sv9-92	Weezing	Pokémon	imported with caveats	usedLastBench	sv9-92	sv9_92		
 sv9-93	Paldean Wooper	Pokémon	imported exactly		sv9-93 me2-102	sv9_93		
 sv9-94	Paldean Clodsire ex	Pokémon	imported with caveats	perPokemon	sv9-94	sv9_94		
 sv9-96	N's Purrloin	Pokémon	imported exactly		sv9-96	sv9_96		
@@ -786,6 +794,7 @@ sv10-166	Granite Cave	Stadium	imported with caveats	staticBench	sv10-166	sv10_16
 sv10-168	Sacred Ash	Item	imported with caveats	upTo0	sv10-168 me3-115	sv10_168		
 sv10-169	Spikemuth Gym	Stadium	imported exactly		sv10-169	sv10_169		
 sv10-171	Team Rocket's Ariana	Supporter	imported exactly		sv10-171 sv10-224 sv10-237 me2pt5-202	sv10_171		
+sv10-173	Team Rocket's Factory	Stadium	imported exactly		sv10-173 me2pt5-203	sv10_173		
 sv10-175	Team Rocket's Great Ball	Item	imported exactly		sv10-175 me2pt5-205	sv10_175		
 sv10-176	Team Rocket's Petrel	Supporter	imported exactly		sv10-176 sv10-226 me2pt5-207	sv10_176		
 sv10-178	Team Rocket's Transceiver	Item	imported exactly		sv10-178 me2pt5-209 me2pt5-263	sv10_178		
@@ -830,6 +839,7 @@ rsv10pt5-39	Yamask	Pokémon	imported exactly		rsv10pt5-39 rsv10pt5-122	rsv10pt5_
 rsv10pt5-41	Gothita	Pokémon	imported exactly		rsv10pt5-41 rsv10pt5-124	rsv10pt5_41		
 rsv10pt5-42	Gothorita	Pokémon	imported exactly		rsv10pt5-42 rsv10pt5-125	rsv10pt5_42		
 rsv10pt5-44	Frillish	Pokémon	imported exactly		rsv10pt5-44 rsv10pt5-126	rsv10pt5_44		
+rsv10pt5-47	Boldore	Pokémon	imported exactly		rsv10pt5-47 rsv10pt5-128	rsv10pt5_47		
 rsv10pt5-49	Sawk	Pokémon	imported exactly		rsv10pt5-49 rsv10pt5-130	rsv10pt5_49		
 rsv10pt5-50	Archen	Pokémon	imported exactly		rsv10pt5-50 rsv10pt5-131	rsv10pt5_50		
 rsv10pt5-52	Mienfoo	Pokémon	imported exactly		rsv10pt5-52 rsv10pt5-133	rsv10pt5_52		
@@ -1013,6 +1023,7 @@ me1-114	Boss's Orders	Supporter	imported exactly		me1-114 me2pt5-183 me2pt5-256	
 me1-115	Energy Switch	Item	imported with caveats	moveMayFail	me1-115 me5-107	me1_115		
 me1-116	Fighting Gong	Item	imported exactly		me1-116 me1-168 me2pt5-187	me1_116		
 me1-119	Lillie's Determination	Supporter	imported exactly		me1-119 me1-169 me1-184 me2pt5-192	me1_119		
+me1-121	Mega Signal	Item	imported exactly		me1-121 me1-171 me2pt5-193	me1_121		
 me1-126	Repel	Item	imported exactly		me1-126	me1_126		
 me1-130	Switch	Item	imported exactly		me1-130 me2-123 me55-127	me1_130		
 me1-131	Ultra Ball	Item	imported exactly		me1-131 me2pt5-213 me2pt5-264 me55-128	me1_131		
@@ -1080,6 +1091,7 @@ me2-77	Wigglytuff	Pokémon	imported exactly		me2-77 me2-105	me2_77
 me2-78	Aipom	Pokémon	imported exactly		me2-78	me2_78		
 me2-79	Ambipom	Pokémon	imported with caveats	benchMods	me2-79 me2-107	me2_79		
 me2-81	Zigzagoon	Pokémon	imported exactly		me2-81	me2_81		
+me2-82	Linoone	Pokémon	imported with caveats	selfBench	me2-82	me2_82		
 me2-83	Buneary	Pokémon	imported exactly		me2-83	me2_83		
 me2-84	Mega Lopunny ex	Pokémon	imported with caveats	ignFxStadium,movedUpPromotion	me2-84 me2-115 me2-128	me2_84		
 me2-87	Dawn	Supporter	imported exactly		me2-87 me2-118 me2-129	me2_87		
@@ -1123,6 +1135,7 @@ me2pt5-56	Raichu	Pokémon	imported with caveats	energyOfBasic,energyOfCount	me2p
 me2pt5-58	Voltorb ex	Pokémon	imported exactly		me2pt5-58	me2pt5_58		
 me2pt5-62	Stunfisk	Pokémon	imported with caveats	perPokemon	me2pt5-62	me2pt5_62		
 me2pt5-63	Helioptile	Pokémon	imported exactly		me2pt5-63	me2pt5_63		
+me2pt5-64	Heliolisk	Pokémon	imported with caveats	selfBench,upTo0	me2pt5-64 me2pt5-229	me2pt5_64		
 me2pt5-68	Hop's Pincurchin ex	Pokémon	imported with caveats	trigAttacker,trigDamaged	me2pt5-68	me2pt5_68		
 me2pt5-73	Miraidon ex	Pokémon	imported exactly		me2pt5-73	me2pt5_73		
 me2pt5-77	Team Rocket's Exeggcute	Pokémon	imported exactly		me2pt5-77	me2pt5_77		
@@ -1157,11 +1170,13 @@ me2pt5-144	Mawile	Pokémon	imported exactly		me2pt5-144 me2pt5-246	me2pt5_144
 me2pt5-145	Registeel ex	Pokémon	imported with caveats	perPokemon	me2pt5-145	me2pt5_145		
 me2pt5-146	Pawniard	Pokémon	imported exactly		me2pt5-146	me2pt5_146		
 me2pt5-147	Bisharp	Pokémon	imported exactly		me2pt5-147	me2pt5_147		
+me2pt5-149	Togedemaru ex	Pokémon	imported with caveats	usedLastBench	me2pt5-149	me2pt5_149		
 me2pt5-150	Dratini	Pokémon	imported exactly		me2pt5-150	me2pt5_150		
 me2pt5-152	Mega Dragonite ex	Pokémon	imported with caveats	discardUnits	me2pt5-152 me2pt5-271 me2pt5-290 me2pt5-295	me2pt5_152		
 me2pt5-153	Rayquaza	Pokémon	imported with caveats	movedUpPromotion	me2pt5-153	me2pt5_153		
 me2pt5-155	N's Zekrom	Pokémon	imported with caveats	ignFxStadium	me2pt5-155	me2pt5_155		
 me2pt5-156	Noibat	Pokémon	imported exactly		me2pt5-156	me2pt5_156		
+me2pt5-162	Team Rocket's Kangaskhan ex	Pokémon	imported exactly		me2pt5-162	me2pt5_162		
 me2pt5-163	Larry's Dunsparce	Pokémon	imported exactly		me2pt5-163	me2pt5_163		
 me2pt5-164	Larry's Dudunsparce ex	Pokémon	imported exactly		me2pt5-164	me2pt5_164		
 me2pt5-165	Skitty	Pokémon	imported exactly		me2pt5-165	me2pt5_165		
@@ -1212,6 +1227,7 @@ me3-35	Spritzee	Pokémon	imported exactly		me3-35	me3_35
 me3-36	Aromatisse	Pokémon	imported with caveats	upTo0	me3-36	me3_36		
 me3-37	Nosepass	Pokémon	imported exactly		me3-37	me3_37		
 me3-38	Probopass	Pokémon	imported exactly		me3-38 me3-96	me3_38		
+me3-40	Hippowdon	Pokémon	imported exactly		me3-40	me3_40		
 me3-42	Binacle	Pokémon	imported exactly		me3-42	me3_42		
 me3-43	Barbaracle	Pokémon	imported with caveats	mayFail	me3-43	me3_43		
 me3-44	Tyrunt	Pokémon	imported exactly		me3-44	me3_44		
@@ -1227,6 +1243,7 @@ me3-58	Aegislash	Pokémon	imported exactly		me3-58	me3_58
 me3-60	Rattata	Pokémon	imported with caveats	recoil	me3-60	me3_60		
 me3-64	Bunnelby	Pokémon	imported exactly		me3-64	me3_64		
 me3-65	Diggersby	Pokémon	imported with caveats	benchMods	me3-65	me3_65		
+me3-66	Fletchling	Pokémon	imported exactly		me3-66	me3_66		
 me3-70	Core Memory	Pokémon Tool	imported exactly		me3-70	me3_70		
 me3-71	Crushing Hammer	Item	imported exactly		me3-71 me5-105	me3_71		
 me3-72	Energy Search	Item	imported exactly		me3-72	me3_72		
@@ -1261,6 +1278,7 @@ me4-28	Flaaffy	Pokémon	imported exactly		me4-28	me4_28
 me4-31	Deoxys	Pokémon	imported with caveats	energyUnitsCount	me4-31	me4_31		
 me4-32	Deoxys	Pokémon	imported with caveats	benchMods	me4-32	me4_32		
 me4-34	Deoxys	Pokémon	imported exactly		me4-34	me4_34		
+me4-36	Espurr	Pokémon	imported exactly		me4-36	me4_36		
 me4-37	Meowstic	Pokémon	imported with caveats	moveAnyPair	me4-37	me4_37		
 me4-40	Pumpkaboo	Pokémon	imported exactly		me4-40	me4_40		
 me4-42	Xerneas	Pokémon	imported with caveats	energyOfCount	me4-42 me4-91	me4_42		
@@ -1306,6 +1324,7 @@ me5-25	Charjabug	Pokémon	imported exactly		me5-25	me5_25
 me5-27	Mega Zeraora ex	Pokémon	imported with caveats	energyOfCount	me5-27 me5-98 me5-114	me5_27		
 me5-30	Slowbro	Pokémon	imported exactly		me5-30 me5-90	me5_30		
 me5-36	Litwick	Pokémon	imported exactly		me5-36	me5_36		
+me5-39	Dhelmise	Pokémon	imported exactly		me5-39 me5-91	me5_39		
 me5-40	Marshadow	Pokémon	imported with caveats	printedRetreat	me5-40	me5_40		
 me5-43	Primeape	Pokémon	imported exactly		me5-43	me5_43		
 me5-44	Cranidos	Pokémon	imported exactly		me5-44	me5_44		
@@ -1419,6 +1438,7 @@ me55-113	Meowth	Pokémon	imported exactly		me55-113 me55-144	me55_113
 me55-114	Kangaskhan	Pokémon	imported exactly		me55-114	me55_114		
 me55-116	Eevee	Pokémon	imported exactly		me55-116	me55_116		
 me55-117	Eevee	Pokémon	imported exactly		me55-117 me55-118	me55_117		
+me55-120	Igglybuff	Pokémon	imported with caveats	printedMaxHP	me55-120	me55_120		
 me55-122	Hisuian Zorua	Pokémon	imported exactly		me55-122 me55-145	me55_122		
 me55-124	Minior	Pokémon	imported with caveats	benchMods	me55-124	me55_124		
 me6-1	Heracross	Pokémon	imported with caveats	recoil	me6-1	me6_1		

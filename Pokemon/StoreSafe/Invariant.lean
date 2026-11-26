@@ -708,7 +708,7 @@ theorem TInv.move {S A P Q K R X₀ X₁ X₂ D E : Nat} {g g' : GameState} (hm 
       have hxC := GameState.mem_allCards_of_hand hx
       have hlf : e.loopFree = true := hL _ hxC
       have hp₁ : ({ g with cur := { g.cur with
-          hand := l₁ ++ l₂, supporterPlayed := true,
+          hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
           discard := Card.trainer n .supporter e :: g.cur.discard } } :
           GameState).allCards.Perm g.allCards := by perm_count [hh]
       have hW₀ := hr.disc_mono Card.wAmt_tw (C := g.allCards)

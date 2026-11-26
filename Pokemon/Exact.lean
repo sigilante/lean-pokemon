@@ -167,6 +167,7 @@ theorem Count.val_xclampAt (c : Count) (K : Nat) (co cp cb : Cap) (g : GameState
   | energyTypes w =>
       cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t2, t3]
   | supporter w => cases w <;> rfl
+  | played w f => cases w <;> rfl
   | retreat w => cases w <;> simp only [Count.val, GameState.side, GameState.xclampAt, t4]
 
 theorem GameState.count_of_xclampAt {co cp cb : Cap} {g₁ g₂ : GameState}
@@ -1279,12 +1280,12 @@ theorem Move.xclamp_sim {k : Nat} {g₁ g₁' g₂ : GameState} (hF : g₁.XFit 
         rw [hh]; exact List.mem_append_right _ (.head _)
       have hb := hF.2 _ (GameState.mem_allCards_of_hand hx)
       have hp : ({ g₁ with cur := { g₁.cur with
-          hand := l₁ ++ l₂, supporterPlayed := true,
+          hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
           discard := Card.trainer n .supporter e :: g₁.cur.discard } } :
           GameState).allCards.Perm g₁.allCards := by perm_count [hh]
       obtain ⟨g₂', hr', hc'⟩ := hr.xclamp_sim hb (hF.1.of_perm hp)
         (g₂ := { g₂ with cur := { g₂.cur with
-          hand := l₁ ++ l₂, supporterPlayed := true,
+          hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
           discard := Card.trainer n .supporter e :: g₂.cur.discard } })
         (by subst hg; simp only [GameState.xclamp, GameState.xclampAt, hc₂, ha₂, he₁, he₂])
         (.inl (hst.congr rfl rfl rfl rfl rfl rfl rfl))

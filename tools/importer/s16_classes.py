@@ -80,6 +80,9 @@ c('M', 'Pokémon Tool texts outside the grant (end-of-turn discard, Mega rule, u
 c('M', 'filters: name prefix', r'name prefix|^Stadium: activated effect not expressible: card kind with no filter: Item cards that have')
 c('M', 'Stadium: evolution by effect / turn end', r'^Stadium: activated effect not expressible: (condition not expressible|unhandled)', r'evolve|turn ends|Stage 1 Pokémon that evolves')
 c('M', 'Stadium: draw to a count of Pokémon in play', r'^Stadium: activated', r'draw cards until they have as many')
+# importer 0.16.0: Community Center's condition is expressible (`Count.played`); its healing is not
+c('M', 'heal several Pokémon, heal filtered, heal all of a Benched Pokémon, heal the opponent\'s Pokémon',
+  r'^Stadium: activated effect not expressible: unhandled', r'heal 10 damage from each of their Pokémon')
 c('M', 'switch with filters (by type, Basic, HP)', r'^Stadium: activated', r'Water Pokémon')
 c('M', 'history: per-attack lock, attack used last turn, Supporter played, healed, counted, next-turn trigger', r'MV2\): history')
 c('M', 'spread: amount computed by the text or target filtered by damage', r'MV2\): spread')

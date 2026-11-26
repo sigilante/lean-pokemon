@@ -153,7 +153,7 @@ def probe (k : Nat) : Effect := .ite (.atLeast .opp (k + 1)) .skip .draw
 /-- `rs k` after drawing a card. -/
 def drawn (k : Nat) : GameState :=
   ⟨⟨[.energy .grass], [.energy .grass], [], [.energy .fire], [], some (InPlay.ofBasic mon), [],
-    false, false, false, false, false, Store.empty, true, KOHist.empty⟩,
+    false, false, false, false, false, Store.empty, true, KOHist.empty, none⟩,
     side [] [] { InPlay.ofBasic mon with damage := k }, true, false, false, false, none, none, false,
     false, false⟩
 

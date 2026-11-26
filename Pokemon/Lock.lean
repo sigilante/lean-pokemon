@@ -69,7 +69,7 @@ def endT (g : GameState) : GameState :=
   { cur := { g.opp with
       active := g.opp.active.map (InPlay.checkup false false false false), bench := g.opp.bench,
       energyAttached := false, supporterPlayed := false, retreated := false,
-      mods := g.opp.mods.shift, ko := g.opp.ko.shift },
+      mods := g.opp.mods.shift, ko := g.opp.ko.shift, supCard := none },
     opp := { g.cur.unfresh with
       active := g.cur.active.map (fun b => b.unfresh.checkup true false false false),
       bench := g.cur.bench.map InPlay.unfresh,

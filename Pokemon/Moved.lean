@@ -71,7 +71,7 @@ def upC (opt : Bool) : PokemonCard :=
 /-- A player with the hand, deck, Active and Bench given and two Prize cards. -/
 def ps (hand deck : List Card) (a : InPlay) (b : List InPlay) : PlayerState :=
   ⟨deck, hand, [], [.energy .fire, .energy .fire], [], some a, b, false, false, false, false, false,
-    Store.empty, true, KOHist.empty⟩
+    Store.empty, true, KOHist.empty, none⟩
 
 /-- The opponent: `victim` Active, nothing else in play, one card in the deck. -/
 def foe : PlayerState := ps [] [.energy .fire] (InPlay.ofBasic victimC) []
