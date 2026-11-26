@@ -289,7 +289,10 @@ theorem Static.thrFrom_of_le {a : PokemonCard} {s : Static} {d₁ d₂ : Nat} (h
 /-- **The static threshold commutes with the cap** (milestone MV14): if every threshold of the cards
 is at most `k` (`ThrLe k`), two damages that agree under `min · k` are cut alike. Below `k` they are
 equal; at or above `k` every threshold in force is reached by both, so both are prevented or
-neither is. Without `ThrLe k` this fails (`Threshold.threshold_breaks_clamp`). -/
+neither is. The lemma itself is false for a threshold of `k + 1` (`d₁ = k`, `d₂ = k + 1` agree under
+`min · k`; only the second is cut), although inside an attack two related damages that differ are
+both at least `k + 1`, so the simulation is argued (not proved) to survive there; for `k = 3` and a
+threshold of 8 the clamp is not a simulation (`Threshold.threshold_breaks_clamp`). -/
 theorem GameState.thrCut_cap {k : Nat} {g : GameState} (hT : g.ThrLe k) {d₁ d₂ : Nat}
     (h : min d₂ k = min d₁ k) : min (g.thrCut d₂) k = min (g.thrCut d₁) k := by
   by_cases e : d₂ = d₁
@@ -971,8 +974,8 @@ theorem TRun.clamp_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameSt
 
 /-- The conditions under which the kernel of `clamp k` is a bisimulation for moves: `0 < k`;
 `HpLe k` (`hpBound` of the cards, which bounds every derived HP, and every Resistance at most `k`);
-every card is tame (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`)) and its test constants are below `k`;
-no damage reduction is stored; and `ReduceLe k` (every Resistance plus the static reduction bound
+every card is tame (no stored damage reduction, no `drain` (since milestone MV6 also no step-2 penalty or step-5 increase, `Mod.plain`; since milestone MV14 no lingering damage threshold, `Mod.preventLe`)) and its test constants, and since milestone MV14 its static damage thresholds (`Card.tmax`, `Card.thrMax`), are below `k`;
+no damage reduction (since milestone MV14 no lingering threshold, `Mods.upto`) is stored; and `ReduceLe k` (every Resistance plus the static reduction bound
 `sReduceBound` of the cards at most `k`; milestone M6). Static damage reductions are allowed: the
 one in force is a function of the cards in play, bounded by `sReduceBound`, not an amount that
 play can raise. -/

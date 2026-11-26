@@ -20,7 +20,9 @@ def Mod.amt : Mod → Nat
   | _ => 0
 
 /-- Does the modifier carry an amount (a damage bonus or reduction; since milestone MV6 also a
-step-2 penalty or a step-5 increase, which are stored and bounded like them)? -/
+step-2 penalty or a step-5 increase, which are stored and bounded like them; since milestone MV14 a
+lingering damage threshold `preventLe`, whose `Mod.amt` is its threshold, which bounds what a write adds
+to `Mods.amt`)? -/
 def Mod.isAmt : Mod → Bool
   | .bonus _ => true
   | .reduce _ => true

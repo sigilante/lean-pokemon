@@ -1774,7 +1774,8 @@ theorem resist_le_maxResist {p : PokemonCard} : ∀ {cs : List Card}, Card.pokem
           have := resist_le_maxResist h
           cases c <;> simp only [maxResist] <;> omega
 
-/-- The largest test constant in the effects of a list of cards. -/
+/-- The largest test constant in the effects of a list of cards, and since milestone MV14 the largest
+static damage threshold (`Card.tmax`, `Card.thrMax`). -/
 def cardsTmax : List Card → Nat
   | [] => 0
   | c :: cs => max c.tmax (cardsTmax cs)

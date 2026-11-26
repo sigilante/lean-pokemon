@@ -490,7 +490,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `GameState.dealt_le_dealtI` and `GameState.dealtI_le_dealt_weak` now assume no static threshold in
   force; and the capped clamp needs every static threshold at most its cap (`GameState.ThrLe`, part
   of `CapOk`; `GameState.Fit` gives it through `Card.tmax`, which now includes the thresholds,
-  `Card.thrMax`; without it the clamp is not a simulation, `Threshold.threshold_breaks_clamp`). A
+  `Card.thrMax`; without a bound on the thresholds the clamp need not be a simulation: for `k = 3` a
+threshold of 8 separates two states with the same clamp, and `Move.clamp_sim` with the pre-MV14
+premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_false`). A
   lingering threshold is not `Mod.plain` (like a reduction): a deck with one is not tame, and the
   exact-store clamp covers it. With no threshold the damage step is the old one
   (`GameState.dealt_old`, `Run.damage_old`). Not expressed: "can't be Knocked Out / its remaining HP

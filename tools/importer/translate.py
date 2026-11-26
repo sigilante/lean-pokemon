@@ -315,7 +315,8 @@ CAVEATS = {
                      "Resistance, the step-5 increase and every damage reduction, stored or static (`GameState.dealt`, "
                      "`dealtBy`). The rulebook gives no order among step-5 effects (2026 p. 20) and no ruling was checked: "
                      "a reading that compares before a reduction prevents a damage the model lets through, or the reverse "
-                     "(Known gaps, threshold prevention)",
+                     "(Known gaps, threshold prevention). On the Bench the static threshold compares N with the "
+                     "amount the Bench damage step places, with no modifiers (`GameState.benchThr`)",
     # importer 0.20.0 (milestone MV13, survey S27)
     'shieldBench': "a static 'prevent all damage from and effects of attacks … done to' a Benched Pokémon (in force on "
                    "the Bench only: 'As long as this Pokémon is on your Bench', 'done to your Benched Pokémon') prevents "

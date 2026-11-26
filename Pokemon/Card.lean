@@ -236,7 +236,8 @@ inductive Mod where
   deriving DecidableEq
 
 /-- A modifier the capped clamp can absorb (milestone MV6): every modifier but a damage reduction,
-a step-2 penalty (`weaken`) and a step-5 increase (`expose`). `Effect.tame` admits only these. -/
+a step-2 penalty (`weaken`) and a step-5 increase (`expose`), and since milestone MV14 a lingering damage
+threshold (`preventLe`). `Effect.tame` admits only these. -/
 def Mod.plain : Mod → Bool
   | .reduce _ => false
   | .weaken _ => false

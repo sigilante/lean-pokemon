@@ -795,7 +795,8 @@ theorem all_nodup : all.Nodup :=
       cross_1_2, cross_1_3, cross_2_3, cross_1_4, cross_2_4, cross_3_4, cross_1_5, cross_2_5, cross_3_5, cross_4_5, cross_1_6, cross_2_6, cross_3_6, cross_4_6, cross_5_6, cross_1_7, cross_2_7, cross_3_7, cross_4_7, cross_5_7, cross_6_7, cross_1_8, cross_2_8, cross_3_8, cross_4_8, cross_5_8, cross_6_8, cross_7_8, cross_1_9, cross_2_9, cross_3_9, cross_4_9, cross_5_9, cross_6_9, cross_7_9, cross_8_9, cross_1_10, cross_2_10, cross_3_10, cross_4_10, cross_5_10, cross_6_10, cross_7_10, cross_8_10, cross_9_10, cross_1_11, cross_2_11, cross_3_11, cross_4_11, cross_5_11, cross_6_11, cross_7_11, cross_8_11, cross_9_11, cross_10_11, Bool.and_self])
 
 /-- The imported cards that write a stored amount (`Effect.writes`, `Mod.isAmt`: a damage bonus or reduction, and since
-milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`), by name. -/
+milestone MV6 a step-2 penalty `weaken` or a step-5 increase `expose`, and since milestone MV14 a lingering damage
+threshold `preventLe`), by name. -/
 theorem writers : (all.filter Card.writesAmt).map Card.label = ["Feraligatr", "Seedot", "Grotle", "Torkoal", "Kilowattrel", "Houndoom", "Varoom", "Drifloon", "Tornadus", "Flutter Mane", "Donphan", "Vibrava", "Skarmory", "Jasmine's Gaze", "Metapod", "Hop's Corviknight", "Shelgon", "Hop's Rookidee", "Clamperl", "Sigilyph", "Roggenrola", "Klink", "Klang", "Genesect ex", "Exeggutor", "Buneary", "Pawmi", "Empoleon ex", "Chikorita", "Stunfisk", "Carkol", "Registeel ex", "Mega Pyroar ex", "Donphan", "Metang", "Rampardos ex", "Mabosstiff", "Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
 
 /-- The imported cards that write any lingering modifier (bonus, reduction, prevention, lock), by name. -/
@@ -940,7 +941,9 @@ theorem sReduce_le (g : GameState) (hg : ∀ x ∈ g.allCards, x ∈ all) {N : N
 
 /-- **The imported cards that are not tame** (43), by name. Checked part by part. The tame-deck theorem
 `Reach.finite` asks, through `GameState.Fit`, that every card of the game be `Card.tame` (no `drain`, no
-stored damage reduction) and that no damage reduction be stored at the start; its clause `ReduceLe`
+stored damage reduction, and since milestone MV14 no lingering damage threshold, `Mod.preventLe`) and
+that no damage reduction or lingering threshold be stored at the start, and since MV14 that every static
+damage threshold (`Card.thrMax`, part of `Card.tmax`) be below the cap; its clause `ReduceLe`
 (Resistance plus `sReduceBound`), new in milestone M6, holds at `Enum.bound` for every game
 (`reduceLe_bound`), so static damage reductions do not stand in the way. A deck with one of these cards
 is not covered by `Reach.finite`; every game of imported cards is `StoreSafe` (`storeSafe`), and

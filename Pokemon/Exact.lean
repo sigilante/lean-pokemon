@@ -1016,7 +1016,9 @@ theorem TRun.xclamp_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : TRu
 
 /-- The conditions under which the kernel of `xclamp` is a bisimulation for moves: `hpBound` of
 the cards, which bounds every derived HP, and every Resistance are at most `k` (`GameState.HpLe`;
-milestone M6: before it, every printed HP), and every card's test constants are below `k`. Nothing about modifiers, damage reduction or `drain`. (Since milestone
+milestone M6: before it, every printed HP), and every card's test constants are below `k` (since
+milestone MV14 also its static damage thresholds, `Card.tmax`; this clamp does not need them, since
+the damage it reads inside an attack is exact). Nothing about modifiers, damage reduction or `drain`. (Since milestone
 M4 damage inside an attack is kept exact, so the proof of `Move.xclamp_sim` no longer needs the
 bound on HP and Resistance; the definition keeps it, and the statements are unchanged.) -/
 def GameState.XFit (k : Nat) (g : GameState) : Prop :=

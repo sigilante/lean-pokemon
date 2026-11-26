@@ -529,8 +529,11 @@ every threshold to be below `k`, and `Enum.bound` is above every threshold of th
 (`Enum.thrMax_lt_bound`), exceeding the old bound by at most the largest threshold (`Enum.bound_le_old`).
 `Reach.finite`, `Move.clamp_sim`, `Move.xclamp_sim`, `StoreSafe.xfinite` and the pool theorems therefore
 mention a cap that, for a deck with Drednaw, is at least 21 counters (its threshold 20, plus one); for a
-deck without a static threshold the cap is what it was. The capped clamp needs this (`GameState.ThrLe`, now in `CapOk`; without it the
-clamp is not a simulation, `Threshold.threshold_breaks_clamp`); the exact-store clamp does not use it, but
+deck without a static threshold the cap is what it was. The capped clamp needs a bound on the thresholds (`GameState.ThrLe`, now in `CapOk`): without one it need not
+be a simulation; for `k = 3` a threshold of 8 separates two states with the same clamp, and since those
+states satisfy the pre-MV14 premise, `Move.clamp_sim` stated with the old `Fit` is false
+(`Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_false`); nothing is claimed for a threshold
+of `k + 1` or for other abstractions. The exact-store clamp does not use it, but
 `XFit` carries it since it reads `Card.tmax`. A lingering threshold is not `Mod.plain`: a deck with Metapod
 or Roggenrola is not tame (as with a damage reduction), and `Mods.NoReduce` now also asks `upto = 0`. With
 no threshold the damage step is the old one (`GameState.dealt_old`, `Run.damage_old`). Witnesses:
