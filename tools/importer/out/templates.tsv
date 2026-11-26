@@ -1,27 +1,28 @@
 rule	lean_fragment	sentences_in_imported_cards	sentences_in_pool	example_card	example_sentence
+flip-a-coin	choice (heads) (tails), or a choice of damage, or choice (whole attack) skip	156	176	svp-114 Picnicker	Flip a coin.
 shuffle	shuffle	134	197	svp-123 Teal Mask Ogerpon	Then, shuffle your deck.
-flip-a-coin	choice (heads) (tails), or a choice of damage, or choice (whole attack) skip	134	176	svp-114 Picnicker	Flip a coin.
-if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	125	143	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
-inflict	inflict c [; inflict c' ...]	119	152	svp-129 Pecharunt	Your opponent's Active Pokémon is now Poisoned.
+if-condition	ite test (consequence) (alternative); for damage, a test-dependent amount	127	143	svp-151 Gouging Fire	If your opponent has 4 or fewer Prize cards remaining, this attack does 70 more damage.
+inflict	inflict c [; inflict c' ...]	120	152	svp-129 Pecharunt	Your opponent's Active Pokémon is now Poisoned.
 discard-energy	ite (countGe (energy w F) n) (discardEnergy w active F (exactly n)) (... all | skip); in a Trainer no fallback when none (min_take)	95	121	svp-105 Armarouge ex	Discard a Fire Energy from this Pokémon.
 reminder	skip (the model never applies Weakness or Resistance to the Bench)	71	105	svp-163 Cinderace ex	(Don't apply Weakness and Resistance for Benched Pokémon.)
-draw	move own (top n) hand any all	69	80	svp-114 Picnicker	Draw 4 cards.
+draw	move own (top n) hand any all	70	80	svp-114 Picnicker	Draw 4 cards.
 search-to-hand	move own deck hand F (upTo n)	69	78	svp-123 Teal Mask Ogerpon	Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand.
 recoil	selfDamage n	69	82	sv5-23 Rellor	This Pokémon also does 10 damage to itself.
 damage-for-each	damage (count C k)	68	88	svp-91 Koraidon	This attack does 30 damage for each of your Ancient Pokémon in play.
+more-damage-for-each	damage (add (const B) (count C k))	47	63	svp-123 Teal Mask Ogerpon	This attack does 20 more damage for each of your opponent's Benched Pokémon.
 flip-n-coins-damage	choice over 0..N heads of damage (const (h * k)) [+ base]	47	51	sv5-4 Nuzleaf	Flip 3 coins. This attack does 30 damage for each heads.
-more-damage-for-each	damage (add (const B) (count C k))	46	63	svp-123 Teal Mask Ogerpon	This attack does 20 more damage for each of your opponent's Benched Pokémon.
 heal-self	heal n	40	43	svp-87 Sprigatito ex	Heal 30 damage from this Pokémon.
+static-ability		39	43	svp-129 Pecharunt	As long as this Pokémon is in the Active Spot, put 5 more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup.
 ling-lock-defending	linger opp next (lock attack|retreat)	37	49	svp-129 Pecharunt	During your opponent's next turn, that Pokémon can't retreat.
-static-ability		35	39	svp-129 Pecharunt	As long as this Pokémon is in the Active Spot, put 5 more damage counters on your opponent's Poisoned Pokémon during Pokémon Checkup.
 search-to-bench	putBench own deck F (n times)	31	34	sv5-18 Grubbin	Search your deck for up to 2 Grubbin and put them onto your Bench.
 self-lock-all		30	42	sv5-7 Breloom	During your next turn, this Pokémon can't attack.
 damage-ignores	damage a {weak/resist/fx := true} on every damage step to the opponent's Active Pokémon	28	37	svp-91 Koraidon	This attack's damage isn't affected by any effects on your opponent's Active Pokémon.
 mill	move w (top n) discard any all	25	32	sv5-22 Scovillain ex	Discard the top card of your opponent's deck.
-ling-reduce-self	linger own next (reduce n)	23	30	sv5-3 Seedot	During your opponent's next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).
+ling-reduce-self	linger own next (reduce n)	24	30	sv5-3 Seedot	During your opponent's next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).
 also-1-bench	benchDamage w n	23	26	sv5-79 Iron Valiant	This attack also does 20 damage to 1 of your opponent's Benched Pokémon.
 self-lock-this		22	27	svp-89 Feraligatr	During your next turn, this Pokémon can't use Giant Wave.
 search-attach	attach own deck F spot any (n times)	22	26	sv5-59 Boltund	Search your deck for up to 2 Basic Lightning Energy cards and attach them to your Benched Pokémon in any way you like.
+ling-shield-self	linger own next prevent; linger own next shield	22	22	sv5-73 Elgyem	During your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon.
 damage-to-1-opp	ite (countGe (bench opp pokemon) 1) (choice (damage (const n)) (benchDamage opp n)) (damage (const n))	19	21	svp-163 Cinderace ex	This attack does 180 damage to 1 of your opponent's Pokémon.
 attach-from-discard	attach own discard F spot any (n times)	18	19	svp-153 Magneton	Attach up to 3 Basic Energy cards from your discard pile to your Lightning Pokémon in any way you like.
 trigger-damaged		17	17	sv5-8 Roselia	If this Pokémon is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Poisoned.
@@ -31,10 +32,10 @@ switch-out-opp	switch opp	16	17	sv5-106 Mightyena	Switch out your opponent's Act
 recycle-to-hand	move own discard hand F (upTo n | exactly n, or as many as there are; in a Trainer at least 1, min_take)	16	16	sv6-19 Iron Leaves	Put up to 2 Pokémon from your discard pile into your hand.
 revealed-hand	move opp hand dst F (most 1 | upTo k | most 1 | … | most k | all), look opp hand F q bench hand, or damage (count (pile opp hand F) k)	12	12	sv5-124 Lickitung	Your opponent reveals their hand. Put up to 2 Basic Pokémon you find there onto your opponent's Bench.
 discard-random-opp-hand	ite (countGe (pile opp hand any) 1) (move opp hand discard any (exactly 1)) skip; in a Trainer move ... (exactly 1) (min_take)	11	13	sv5-22 Scovillain ex	Discard a random card from your opponent's hand.
+se-provides		11	11	sv5-161 Mist Energy	As long as this card is attached to a Pokémon, it provides Colorless Energy.
 discard-all-and	the two clauses as two sentences (discardEnergy own active energy all; the damage)	11	11	sv8-34 Armarouge	Discard all Fire Energy from this Pokémon, and this attack does 180 damage to 1 of your opponent's Benched Pokémon.
 static-tool		10	10	sv5-152 Hero's Cape	The Pokémon this card is attached to gets +100 HP.
 gust	switch opp	10	12	sv5-157 Prime Catcher	Switch in 1 of your opponent's Benched Pokémon to the Active Spot.
-se-provides		9	9	sv5-162 Neo Upper Energy	As long as this card is attached to a Pokémon, it provides Colorless Energy.
 draw-to	drawTo own n	8	10	sv6pt5-5 Decidueye	Draw cards until you have 7 cards in your hand.
 static-stadium		7	7	svp-150 Paradise Resort	The Retreat Cost of each Psyduck in play (both yours and your opponent's) is Colorless less.
 if-you-do		7	8	sv5-157 Prime Catcher	If you do, switch your Active Pokémon with 1 of your Benched Pokémon.
@@ -49,6 +50,7 @@ hand-into-deck	move own hand shuffle any all	6	7	sv5-30 Victini	Shuffle your han
 flip-n-coins-each	choice over 0..N heads of h copies of the effect	6	6	sv5-43 Sharpedo	Flip 3 coins. For each heads, discard a random card from your opponent's hand.
 gust-then-damage		6	6	sv5-112 Mawile	Switch in 1 of your opponent's Benched Pokémon to the Active Spot. This attack does 30 damage to the new Active Pokémon.
 reveal-hand	skip	6	6	sv5-126 Hoothoot	Your opponent reveals their hand.
+se-static		6	6	sv5-161 Mist Energy	Prevent all effects of attacks used by your opponent's Pokémon done to the Pokémon this card is attached to. (Existing effects are not removed. Damage is not an effect.)
 less-damage-for-each	damage (sub (const B) (per/count C k))	6	6	sv6-2 Tangrowth	This attack does 10 less damage for each damage counter on this Pokémon.
 pre-discard-tools-opp-active	discardTools opp active, before the damage step	6	8	sv6-45 Seaking	Before doing damage, discard all Pokémon Tools from your opponent's Active Pokémon.
 counters-opp-1	ite (countGe (bench opp pokemon) 1) (choice (counters n) (benchCounters opp n)) (counters n)	6	9	sv6pt5-19 Dusclops	Put 5 damage counters on 1 of your opponent's Pokémon.
@@ -83,7 +85,6 @@ ling-item-lock	linger opp next (lock item)	4	4	sv7-51 Galvantula ex	During your 
 used-last-turn		4	4	sv7-88 Falinks	If this Pokémon used Form Ranks during your last turn, this attack does 90 more damage.
 ab-inflict	inflict c	4	4	sv8-9 Shiinotic	Make your opponent's Active Pokémon Asleep.
 may-switch-self	choice (switch own) skip	4	5	sv8-106 Flygon ex	You may switch this Pokémon with 1 of your Benched Pokémon.
-se-static		4	4	me3-86 Growing Grass Energy	The Grass Pokémon this card is attached to gets +20 HP.
 ab-if-you-do		3	3	svp-89 Feraligatr	If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).
 ab-self-ko		3	3	svp-153 Magneton	If you use this Ability, this Pokémon is Knocked Out.
 look-reorder	look w (top n) any (exactly 0) (put top) top	3	3	sv5-80 Iron Valiant	Look at the top 4 cards of your deck and put them back in any order.

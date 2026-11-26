@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.16.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.17.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -1128,6 +1128,17 @@ def sv5_72 : Card := .pokemon
         effect := .inflict .confused,
         gx := false }] }
 
+/-- Elgyem (sv5-73). Records: sv5-73. Caveats: perPokemon, shieldReach. -/
+def sv5_73 : Card := .pokemon
+  { name := "Elgyem", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Hide", cost := [.psychic], damage := 0,
+        effect := .choice (.seq (.linger .own .next .prevent) (.linger .own .next .shield)) .skip,
+        gx := false }] }
+
 /-- Beheeyem (sv5-74). Records: sv5-74. -/
 def sv5_74 : Card := .pokemon
   { name := "Beheeyem", stage := .stage1, evolvesFrom := some "Elgyem",
@@ -1619,6 +1630,20 @@ def sv5_127 : Card := .pokemon
         effect := .seq (.move .own .deck .hand .any (.upTo 2)) .shuffle,
         gx := false }] }
 
+/-- Dunsparce (sv5-128). Records: sv5-128, sv8pt5-79. Caveats: perPokemon, shieldReach. -/
+def sv5_128 : Card := .pokemon
+  { name := "Dunsparce", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .colorless, retreat := 0, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gnaw", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Dig", cost := [.colorless, .colorless], damage := 3,
+        effect := .choice (.seq (.linger .own .next .prevent) (.linger .own .next .shield)) .skip,
+        gx := false }] }
+
 /-- Skitty (sv5-130). Records: sv5-130. -/
 def sv5_130 : Card := .pokemon
   { name := "Skitty", stage := .basic, evolvesFrom := none,
@@ -1739,47 +1764,11 @@ def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
 def sv5_157 : Card := .trainer "Prime Catcher" .item
     (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
 
+/-- Mist Energy (sv5-161). Records: sv5-161. Caveats: shieldActive, shieldReach. -/
+def sv5_161 : Card := .energy (.special "Mist Energy" [[.colorless]] { grant := { holder := .pokemon, attacks := [], abilities := [], statics := [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .shield .any }] } })
+
 /-- Neo Upper Energy (sv5-162). Records: sv5-162. Caveats: aceSpec, unitsReading. -/
 def sv5_162 : Card := .energy (.special "Neo Upper Energy" [[.colorless]] { alt := some (.holder (.stage .stage2), [[.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless], [.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless]]) })
-
-/-- Tangela (sv6-1). Records: sv6-1. -/
-def sv6_1 : Card := .pokemon
-  { name := "Tangela", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Gentle Slap", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Vine Slap", cost := [.grass, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Tangrowth (sv6-2). Records: sv6-2. Caveats: staticBench. -/
-def sv6_2 : Card := .pokemon
-  { name := "Tangrowth", stage := .stage1, evolvesFrom := some "Tangela",
-    hp := 15, type := .grass, retreat := 4, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Thicket Body", use := .static [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .reduce 3 .any }],
-        spot := none, cond := none,
-        effect := .fx .skip }],
-    attacks := [
-      { name := "Loom Over", cost := [.grass, .colorless, .colorless], damage := 0,
-        effect := .damage (.sub (.const 15) (.per .own 1)),
-        gx := false }] }
-
-/-- Spinarak (sv6-4). Records: sv6-4. -/
-def sv6_4 : Card := .pokemon
-  { name := "Spinarak", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bug Bite", cost := [.grass], damage := 2,
-        effect := .skip,
-        gx := false }] }
 
 /-- The cards of this part. -/
 def cards : List Card := [
@@ -1877,6 +1866,7 @@ def cards : List Card := [
   sv5_70,
   sv5_71,
   sv5_72,
+  sv5_73,
   sv5_74,
   sv5_75,
   sv5_79,
@@ -1914,6 +1904,7 @@ def cards : List Card := [
   sv5_125,
   sv5_126,
   sv5_127,
+  sv5_128,
   sv5_130,
   sv5_132,
   sv5_134,
@@ -1929,10 +1920,8 @@ def cards : List Card := [
   sv5_154,
   sv5_156,
   sv5_157,
-  sv5_162,
-  sv6_1,
-  sv6_2,
-  sv6_4]
+  sv5_161,
+  sv5_162]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1951,7 +1940,7 @@ theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.la
 theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Maximum Belt"] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
-theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig", "Full Metal Lab", "Tangrowth"] := by decide +kernel
+theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig", "Full Metal Lab"] := by decide +kernel
 
 /-- The cards of this part with a static Retreat Cost effect (milestone M6), by name. -/
 theorem cards_staticRetreat : (cards.filter (Card.hasStatic Static.isRetreat)).map Card.label = ["Paradise Resort"] := by decide +kernel
