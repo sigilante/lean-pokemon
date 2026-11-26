@@ -287,6 +287,12 @@ theorem _root_.Pokemon.Run.conds {e : Effect} {g g' : GameState} (h : Run e g g'
   | benchDamageNone w => cases w <;> rfl
   | spreadDamage w => cases w <;> rfl
   | benchSome w => cases w <;> rfl
+  | @hitByActive _ _ w _ _ _ _ _ h _ =>
+      cases w with
+      | own => rfl
+      | opp => simp only [GameState.updSide]; simp only [GameState.side] at h; rw [h]; rfl
+  | hitByBench w => cases w <;> rfl
+  | dumpActive _ _ _ h => rw [h]; rfl
   | @zone _ w _ _ _ h =>
       cases w with
       | own => rfl

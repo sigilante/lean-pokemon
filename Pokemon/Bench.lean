@@ -622,6 +622,11 @@ theorem Run.cardList_of_switchesOwn {e : Effect} {g g' : GameState} (h : Run e g
   | @benchCounters _ _ _ _ w _ _ => cases w <;> rfl
   | spreadCounters w _ _ => cases w <;> rfl
   | benchSome w _ _ _ _ _ => cases w <;> rfl
+  | hitByActive w _ _ _ _ _ h _ =>
+      cases w
+      · simp only [GameState.side] at h; simp only [GameState.updSide, h]; rfl
+      · rfl
+  | hitByBench w _ _ _ _ _ _ => cases w <;> rfl
   | @benchDamage _ _ _ _ w _ _ => cases w <;> rfl
   | spreadDamage w _ _ => cases w <;> rfl
   | moveCounter h => exact h.active_pokemonCards

@@ -111,6 +111,9 @@ def bench_hit_free(e):
     if e[0] == 'benchSome':
         # milestone MV2: `Effect.benchHitFree (.benchSome _ _ _ dmg _) = !dmg`
         return not e[4]
+    if e[0] == 'hitBy':
+        # importer 0.19.0 (milestone MV12): `Effect.benchHitFree (.hitBy _ .bench _ _ _ dmg _) = !dmg`
+        return not (e[2] == ('bench',) and e[6])
     return all(bench_hit_free(s) for s in subs(e))
 
 
@@ -153,6 +156,9 @@ def own_free(e):
     if h == 'moveEnergy' and e[1] == OWN:
         return False
     if h == 'moveCounter':
+        return False
+    if h == 'hitBy' and e[1] == OWN and e[2] == ('active',):
+        # importer 0.19.0 (milestone MV12)
         return False
     if h == 'look' and e[1] == OWN and e[5][0] == 'attach':
         # milestone MV6: a window attached to the player's Pokémon may attach to the Active Pokémon

@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.18.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -274,6 +274,17 @@ def svp_131 : Card := .pokemon
         gx := false },
       { name := "Hydro Pump", cost := [.colorless, .colorless], damage := 0,
         effect := .damage (.add (.const 5) (.count (.energy .own (.energyOf .water)) 5)),
+        gx := false }] }
+
+/-- Drifblim (svp-135). Records: svp-135, sv7-61. Caveats: benchMods, recoil. -/
+def svp_135 : Card := .pokemon
+  { name := "Drifblim", stage := .stage1, evolvesFrom := some "Drifloon",
+    hp := 13, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Everyone Explode Now", cost := [.psychic], damage := 0,
+        effect := .seq (.damage (.count (.inPlay .own (.or (.named "Drifloon") (.named "Drifblim"))) 5)) (.seq (.hitBy .own .active 1 (.or (.named "Drifloon") (.named "Drifblim")) false false (.const 3)) (.benchSome .own 5 (.or (.named "Drifloon") (.named "Drifblim")) true 3)),
         gx := false }] }
 
 /-- Noctowl (svp-141). Records: svp-141, sv7-115, sv8pt5-78. Caveats: upTo0. -/
@@ -928,6 +939,20 @@ def sv5_48 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Palafin (sv5-49). Records: sv5-49. Caveats: recoil. -/
+def sv5_49 : Card := .pokemon
+  { name := "Palafin", stage := .stage1, evolvesFrom := some "Finizen",
+    hp := 15, type := .water, retreat := 2, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Vanguard Punch", cost := [.water], damage := 13,
+        effect := .hitBy .own .active 1 .any false false (.per 1),
+        gx := false },
+      { name := "Double Hit", cost := [.water, .colorless, .colorless], damage := 0,
+        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 9)) (.damage (.const 18))),
+        gx := false }] }
+
 /-- Pikachu (sv5-51). Records: sv5-51. Caveats: benchMods. -/
 def sv5_51 : Card := .pokemon
   { name := "Pikachu", stage := .basic, evolvesFrom := none,
@@ -937,6 +962,20 @@ def sv5_51 : Card := .pokemon
     attacks := [
       { name := "Random Spark", cost := [.lightning], damage := 0,
         effect := .ite (.countGe (.bench .opp .pokemon) 1) (.choice (.damage (.const 1)) (.benchDamage .opp 1)) (.damage (.const 1)),
+        gx := false }] }
+
+/-- Raichu (sv5-52). Records: sv5-52. Caveats: benchMods. -/
+def sv5_52 : Card := .pokemon
+  { name := "Raichu", stage := .stage1, evolvesFrom := some "Pikachu",
+    hp := 13, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Collateral Bolts", cost := [.lightning, .colorless], damage := 0,
+        effect := .seq (.ite (.atLeast .opp 1) (.damage (.const 5)) .skip) (.seq (.hitBy .opp .bench 5 .any true true (.const 5)) (.hitBy .own .bench 5 .any true true (.const 5))),
+        gx := false },
+      { name := "Electric Ball", cost := [.lightning, .colorless, .colorless], damage := 12,
+        effect := .skip,
         gx := false }] }
 
 /-- Electabuzz (sv5-53). Records: sv5-53. -/
@@ -1791,26 +1830,6 @@ def sv5_148 : Card := .trainer "Full Metal Lab" .stadium
     .skip [
       { sel := .all, filt := .ptype .metal, tgt := none, src := none, need := none, eff := .reduce 3 .any }]
 
-/-- Hero's Cape (sv5-152). Records: sv5-152. Caveats: aceSpec. -/
-def sv5_152 : Card := .tool "Hero's Cape"
-  { holder := .pokemon,
-    attacks := [],
-    abilities := [],
-    statics := [
-      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .hpPlus (.const 10) }] }
-
-/-- Master Ball (sv5-153). Records: sv5-153. Caveats: aceSpec. -/
-def sv5_153 : Card := .trainer "Master Ball" .item
-    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle))
-
-/-- Maximum Belt (sv5-154). Records: sv5-154, sv8pt5-117. Caveats: aceSpec. -/
-def sv5_154 : Card := .tool "Maximum Belt"
-  { holder := .pokemon,
-    attacks := [],
-    abilities := [],
-    statics := [
-      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1841,6 +1860,7 @@ def cards : List Card := [
   svp_123,
   svp_129,
   svp_131,
+  svp_135,
   svp_141,
   svp_148,
   svp_150,
@@ -1891,7 +1911,9 @@ def cards : List Card := [
   sv5_46,
   sv5_47,
   sv5_48,
+  sv5_49,
   sv5_51,
+  sv5_52,
   sv5_53,
   sv5_54,
   sv5_55,
@@ -1959,10 +1981,7 @@ def cards : List Card := [
   sv5_145,
   sv5_146,
   sv5_147,
-  sv5_148,
-  sv5_152,
-  sv5_153,
-  sv5_154]
+  sv5_148]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1975,10 +1994,10 @@ theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kern
 theorem cards_nodup : nodupFp cards = true := by decide +kernel
 
 /-- The cards of this part with a static HP effect (milestone M6), by name. -/
-theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape"] := by decide +kernel
+theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with a static damage bonus effect (milestone M6), by name. -/
-theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Maximum Belt"] := by decide +kernel
+theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = [] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
 theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Turtwig", "Full Metal Lab"] := by decide +kernel

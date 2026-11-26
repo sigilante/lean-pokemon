@@ -342,6 +342,8 @@ theorem Run.slot_nowrite {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchCounters w n h => intro _ s; cases w <;> exact Nat.le_refl _
   | spreadCounters w n g => intro _ s; cases w <;> exact Nat.le_refl _
   | benchSome w _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_refl _
+  | hitByActive w _ _ _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_refl _
+  | hitByBench w _ _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_refl _
   | switch w ha hb => intro _ s; cases w <;> exact Nat.le_refl _
   | benchDamage w n h => intro _ s; cases w <;> exact Nat.le_refl _
   | spreadDamage w n g => intro _ s; cases w <;> exact Nat.le_refl _
@@ -384,6 +386,8 @@ theorem Run.slot_le {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchCounters w n h => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | spreadCounters w n g => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | benchSome w _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_add_right _ _
+  | hitByActive w _ _ _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_add_right _ _
+  | hitByBench w _ _ _ _ _ _ => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | switch w ha hb => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | benchDamage w n h => intro _ s; cases w <;> exact Nat.le_add_right _ _
   | spreadDamage w n g => intro _ s; cases w <;> exact Nat.le_add_right _ _
@@ -578,6 +582,8 @@ theorem Run.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card} 
   | benchCounters w n h => intro _ _; cases w <;> exact Nat.le_refl _
   | spreadCounters w n g => intro _ _; cases w <;> exact Nat.le_refl _
   | benchSome w _ _ _ _ _ => intro _ _; cases w <;> exact Nat.le_refl _
+  | hitByActive w _ _ _ _ _ _ _ => intro _ _; cases w <;> exact Nat.le_refl _
+  | hitByBench w _ _ _ _ _ _ => intro _ _; cases w <;> exact Nat.le_refl _
   | switch w ha hb => intro _ _; cases w <;> exact Nat.le_refl _
   | benchDamage w n h => intro _ _; cases w <;> exact Nat.le_refl _
   | spreadDamage w n g => intro _ _; cases w <;> exact Nat.le_refl _
@@ -706,6 +712,8 @@ theorem Run.flags_keep {e : Effect} {g g' : GameState} (h : Run e g g') : Flags 
   | benchCounters w n h => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | benchSome w _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl, rfl⟩
+  | hitByActive w _ _ _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl, rfl⟩
+  | hitByBench w _ _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | switch w ha hb => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | benchDamage w n h => cases w <;> exact ⟨rfl, rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl, rfl⟩
@@ -1728,6 +1736,34 @@ theorem Run.abPot_le {e : Effect} {g g' : GameState} (h : Run e g g') : g'.abPot
         rcases hy with rfl | rfl <;> simp only [abWs, he, hw]
       have e2 := h.congr List.length fun _ _ _ _ _ he => by simp only [List.length_cons, he]
       simp only [GameState.abPot, PlayerState.abPot, e1, e2]; omega
+  | @hitByActive g p w m f hurt dmg a h ho =>
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          have e : (p.addDamage (a.at g .own .active p)).abW = p.abW := rfl
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, h, abWo, optN, e]; omega
+      | opp => exact Nat.le_refl _
+  | @hitByBench g b' w m f hurt dmg a h =>
+      cases w with
+      | own =>
+          have hw : ∀ x : InPlay, (x.hitWith dmg (a.at g .own .bench x)).abW = x.abW := fun x => by
+            cases dmg
+            · rfl
+            · exact InPlay.abW_hitBench _ x
+          have e1 := h.congr abWs fun x y _ _ hy he => by
+            rcases hy with rfl | rfl <;> simp only [abWs, he, hw]
+          have e2 := h.congr List.length fun _ _ _ _ _ he => by simp only [List.length_cons, he]
+          simp only [GameState.side] at e1 e2
+          simp only [GameState.abPot, GameState.updSide, PlayerState.abPot, e1, e2]; omega
+      | opp => exact Nat.le_refl _
+  | @dumpActive g q p b₁ b₂ f h hf ho =>
+      simp only [GameState.abPot, PlayerState.abPot, h,
+        abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := { q with damage := 0 }) rfl,
+        List.length_append, List.length_cons]; omega
+  | @dumpBench g q r b₁ b₂ c₁ c₂ f h hf ho =>
+      simp only [GameState.abPot, PlayerState.abPot, h,
+        abWs_split (b₁ := b₁) (b₂ := b₂) (q := q) (q' := { q with damage := 0 }) rfl,
+        List.length_append, List.length_cons]; omega
   | moveCounter h =>
       obtain ⟨h1, h2⟩ := h.abPot
       simp only [GameState.abPot, PlayerState.abPot]

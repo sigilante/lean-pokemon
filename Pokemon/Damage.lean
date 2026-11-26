@@ -879,6 +879,114 @@ theorem clampExact_healBy (n : Option Nat) (x y : InPlay)
       rw [hr.damage_eq]; exact hr.setDamage _
   | none => exact hr.setDamage _
 
+/-- **An addition that only raises the damage commutes with every cap** (milestone MV12): if the
+amount added is a function `φ` of the damage, the same on both sides, two damages that agree under
+the cap agree after it. Below the cap they are equal; at or above it both sums are at or above it.
+This is what `HAmt` needs: `per k` (doubling, quadrupling), `toHp n` ("until its remaining HP is
+`n`": the new damage is the larger of the old one and `HP - n`) and the constants all add a quantity
+that depends on the old damage only through `φ`. -/
+theorem Cap.dmg_inflate {K : Nat} (c : Cap) {q p : InPlay} (hd : c.dmg K q = c.dmg K p)
+    (φ : Nat → Nat) :
+    c.dmg K { q with damage := q.damage + φ q.damage } =
+      c.dmg K { p with damage := p.damage + φ p.damage } := by
+  cases c with
+  | exact =>
+      simp only [Cap.dmg] at hd ⊢; rw [hd]
+  | hp =>
+      simp only [Cap.dmg] at hd ⊢
+      rcases Nat.lt_or_ge q.damage K with h | h
+      · have e : q.damage = p.damage := by omega
+        rw [e]
+      · have h2 : K ≤ p.damage := by omega
+        have h3 : K ≤ q.damage + φ q.damage := Nat.le_trans h (Nat.le_add_right _ _)
+        have h4 : K ≤ p.damage + φ p.damage := Nat.le_trans h2 (Nat.le_add_right _ _)
+        omega
+  | upto k =>
+      simp only [Cap.dmg] at hd ⊢
+      rcases Nat.lt_or_ge q.damage k with h | h
+      · have e : q.damage = p.damage := by omega
+        rw [e]
+      · have h2 : k ≤ p.damage := by omega
+        have h3 : k ≤ q.damage + φ q.damage := Nat.le_trans h (Nat.le_add_right _ _)
+        have h4 : k ≤ p.damage + φ p.damage := Nat.le_trans h2 (Nat.le_add_right _ _)
+        omega
+
+/-- Damage or counters of an amount that is a function of the target's damage preserve agreement
+(milestone MV12, `Effect.hitBy`). -/
+theorem InPlay.Agree.hitAmt {K : Nat} {c : Cap} {q p : InPlay} (h : InPlay.Agree K c q p)
+    (dmg : Bool) (φ : Nat → Nat) :
+    InPlay.Agree K c (q.hitWith dmg (φ q.damage)) (p.hitWith dmg (φ p.damage)) := by
+  have hadd : InPlay.Agree K c (q.addDamage (φ q.damage)) (p.addDamage (φ p.damage)) :=
+    ⟨h.top, h.under, h.energy, h.tools, h.rot, h.poisoned, h.burned, h.fresh, h.marks, h.used,
+      Cap.dmg_inflate c h.damage φ, h.poisonUp, h.movedUp, h.lk, h.owe⟩
+  cases dmg
+  · exact hadd
+  · show InPlay.Agree K c (q.hitBench _) (p.hitBench _)
+    unfold InPlay.hitBench
+    rw [h.top]
+    split
+    · exact h
+    · exact hadd
+
+/-- A cap that keeps "has a damage counter" (milestone MV12): exact, or a positive bound. -/
+def Cap.keepsPos (K : Nat) : Cap → Prop
+  | .exact => True
+  | .hp => 0 < K
+  | .upto k => 0 < k
+
+/-- Under such a cap, agreeing Pokémon are targets of the same `hitBy` (milestone MV12): the card is
+the same, and a damage capped at a positive bound is positive exactly when the damage is. -/
+theorem InPlay.Agree.hitOk {K : Nat} {c : Cap} (hc : c.keepsPos K) {q p : InPlay}
+    (h : InPlay.Agree K c q p) (f : Filter) (hurt : Bool) : q.hitOk f hurt = p.hitOk f hurt := by
+  have hd := h.damage
+  have pos : ∀ {a b k : Nat}, 0 < k → min a k = min b k →
+      decide (0 < a) = decide (0 < b) := by
+    intro a b k hk hab
+    cases ha : decide (0 < a) <;> cases hb : decide (0 < b)
+    · rfl
+    · have h1 : ¬ 0 < a := of_decide_eq_false ha
+      have h2 : 0 < b := of_decide_eq_true hb
+      exact absurd hab (by omega)
+    · have h1 : 0 < a := of_decide_eq_true ha
+      have h2 : ¬ 0 < b := of_decide_eq_false hb
+      exact absurd hab (by omega)
+    · rfl
+  have e : decide (0 < q.damage) = decide (0 < p.damage) := by
+    cases c with
+    | exact => simp only [Cap.dmg] at hd; rw [hd]
+    | hp => simp only [Cap.dmg, Cap.keepsPos] at hd hc; exact pos hc hd
+    | upto k => simp only [Cap.dmg, Cap.keepsPos] at hd hc; exact pos hc hd
+  simp only [InPlay.hitOk, h.top, e]
+
+/-- The amount of an `HAmt` read in two states with the same counts and field, on two agreeing
+Pokémon, is one function of their damage (milestone MV12). -/
+theorem HAmt.at_congr {K : Nat} {c : Cap} (a : HAmt) {g₁ g₂ : GameState}
+    (hcv : ∀ x : Count, x.val g₂ = x.val g₁) (hsf : GameState.SameField g₁ g₂) (w : Whose)
+    (sp : Spot) {q p : InPlay} (h : InPlay.Agree K c q p) :
+    a.at g₂ w sp q = a.amt (fun x => x.val g₁) (g₁.hpOf w sp p) q.damage := by
+  simp only [HAmt.at, hsf.hpOf w sp h.sv, hcv]
+
+/-- The `hitBy` update commutes with a clamp that keeps "has a damage counter", for two states with
+the same counts and field (milestone MV12). -/
+theorem clampWith_hitAmt {K : Nat} {c : Cap} (a : HAmt) {g₁ g₂ : GameState}
+    (hcv : ∀ x : Count, x.val g₂ = x.val g₁) (hsf : GameState.SameField g₁ g₂) (w : Whose)
+    (sp : Spot) (dmg : Bool) (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) :
+    InPlay.clampWith K c (y.hitWith dmg (a.at g₂ w sp y)) =
+      InPlay.clampWith K c (x.hitWith dmg (a.at g₁ w sp x)) := by
+  have hr := InPlay.agree_of_clamp h
+  rw [a.at_congr hcv hsf w sp hr]
+  exact InPlay.clamp_of_agree (hr.hitAmt dmg (fun d => a.amt (fun x => x.val g₁) (g₁.hpOf w sp x) d))
+
+/-- `clampWith_hitAmt` for damage counters, as `Effect.hitBy` places them on an Active Pokémon. -/
+theorem clampWith_addAmt {K : Nat} {c : Cap} (a : HAmt) {g₁ g₂ : GameState}
+    (hcv : ∀ x : Count, x.val g₂ = x.val g₁) (hsf : GameState.SameField g₁ g₂) (w : Whose)
+    (sp : Spot) (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) :
+    InPlay.clampWith K c (y.addDamage (a.at g₂ w sp y)) =
+      InPlay.clampWith K c (x.addDamage (a.at g₁ w sp x)) :=
+  clampWith_hitAmt a hcv hsf w sp false x y h
+
 theorem InPlay.clampWith_moveUp (c : Cap) (x : InPlay) :
     InPlay.clampWith K c x.moveUp = (InPlay.clampWith K c x).moveUp := by
   cases c <;> rfl

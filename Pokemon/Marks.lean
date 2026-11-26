@@ -360,6 +360,25 @@ theorem Run.marks {e : Effect} {g g' : GameState} (h : Run e g g') :
       cases w with
       | own => exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.map hq⟩) id
       | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, ho.2.map hq⟩)
+  | hitByActive w m f hurt dmg a h ho =>
+      cases w with
+      | own => exact marks_frame rfl (fun hc => ⟨hc.1.some_eq h rfl, hc.2⟩) id
+      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1.some_eq h rfl, ho.2⟩)
+  | hitByActiveSkip => exact marks_frame rfl id id
+  | hitByBench w m f hurt dmg a h =>
+      have hq : ∀ x : InPlay, ∀ n, x.owe = none → (x.hitWith dmg n).owe = none := fun x n hx => by
+        cases dmg
+        · exact hx
+        · show (x.hitBench n).owe = none
+          unfold InPlay.hitBench; split <;> exact hx
+      cases w with
+      | own => exact marks_frame rfl (fun hc => ⟨hc.1, h.forall_of (fun x => hq x _) hc.2⟩) id
+      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, h.forall_of (fun x => hq x _) ho.2⟩)
+  | dumpActive f h hf ho =>
+      exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.upd' h rfl⟩) (fun hc => ⟨hc.1.some_eq ho rfl, hc.2⟩)
+  | dumpBench f h hf ho =>
+      exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.upd' h rfl⟩) (fun hc => ⟨hc.1, hc.2.upd' ho rfl⟩)
+  | dumpNone => exact marks_frame rfl id id
   | benchHealSome m f n h =>
       have hq : ∀ x : InPlay, x.owe = none → (x.healBy n).owe = none := fun x hx => by
         cases n <;> exact hx

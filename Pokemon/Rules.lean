@@ -659,8 +659,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   `Effect.spreadAny`, each counter on the Active Pokémon when the Bench is empty, proved exact for `Run`,
   the semantics of an attack's effect, from a state with both Active Pokémon: every distribution of the counters is a resolution and nothing else is,
   `Spread.spreadAny_sound`, `Spread.spreadAny_complete`; inside a Trainer effect a Knock Out check
-  would follow each counter; `Pokemon/Spread.lean`; absent: spread whose amount the text computes, "for each Energy
-  attached to this Pokémon", 7 refused cards in survey S13 §B, a target filtered by its damage, 2,
+  would follow each counter; `Pokemon/Spread.lean`; absent until milestone MV12: spread whose amount the text computes, "for each Energy
+  attached to this Pokémon", 7 refused cards in survey S13 §B, a target filtered by its damage, 2 (since
+  MV12 expressible, `Effect.hitBy`, item below),
   moving Energy or counters "in any way you like", 4, and "any number" of attachments); recoil and
   other self-damage are written as damage counters
   (`selfDamage`), not as attack damage, so a printed recoil "This Pokémon also does 30 damage to
@@ -668,7 +669,8 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   damage reaches the opponent's Active Pokémon (the damage step, `dealtBy`) and, since M3, Benched
   Pokémon of either player (`benchDamage`, `spreadDamage`: a printed amount, with no Weakness,
   Resistance, bonus, reduction or prevention, and none on a Tera Pokémon; `InPlay.hitBench`;
-  amounts computed by the text, "30 damage for each Energy", are not expressible). Dropping the
+  amounts computed by the text, "30 damage for each Energy", were not expressible until milestone
+  MV12, `Effect.hitBy`, which takes no modifier either). Dropping the
   modifiers departs from the rulebook in both directions, so Bench damage in the model is not a
   superset of the printed outcomes: the defender's reduction and prevention protect only the
   Active Pokémon here, whereas a printed "all of your Metal Pokémon take 30 less damage" or
@@ -700,6 +702,40 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   amount the text computes ("for each Tasty Rice Ball card … heal 30 more damage"), a target filtered
   by its damage ("1 of your Pokémon that has 30 HP or less remaining"), "all damage from each of" a
   filtered set (Dachsbun ex), and the record "this Pokémon was healed this turn";
+* computed amounts on chosen or filtered Pokémon (milestone MV12, survey S26, `Pokemon/Computed.lean`):
+  `Effect.hitBy w sp m f hurt dmg a` puts on the `w` player's Active Pokémon (if it is a target) or on
+  `m` distinct Benched targets (all if fewer; a target's card passes `f` and, with `hurt`, it has a
+  damage counter) an amount computed for each target (`HAmt`: a constant, `k` per unit of a count, `k`
+  per damage counter on the target, or "until its remaining HP is `n`", read against the derived HP,
+  `GameState.hpOf`); `Effect.dumpCounters f sp` moves all damage counters of one of the player's
+  Benched Pokémon passing `f` to the opponent's Pokémon at `sp`. Readings and departures: (a) at the
+  Active Spot the amount is damage counters, never attack damage: "This Pokémon also does 10 damage to
+  itself for each damage counter on it" (Palafin sv5-49) and the attacker's part of "30 damage to
+  each of your Drifloon and Drifblim" (Drifblim svp-135) escape the attacker's Weakness, Resistance and
+  modifiers, as every recoil does (importer caveat `recoil`, both); on the Bench the damage form takes
+  no modifier, as `benchDamage` (caveat `benchMods`, both); (b) every amount is computed in the state
+  the step starts in, for all targets at once (print places them "on each" without an order; no
+  printed amount reads another target); (c) "the number of damage counters on each of them" is
+  doubled or quadrupled by adding `k` per counter, which is the printed outcome; (d) `Effect.shielded`
+  removes `hitBy .opp .active` and `dumpCounters _ .active` (counters on the protected Defending
+  Pokémon are an effect done to it; for the move, the player's Benched Pokémon then keeps its counters:
+  a reading, no ruling checked; the caveat for the shield's reach, `shieldReach`, is carried by the
+  protecting cards, not by the attackers);
+  (e) `Filter.hasAbility` reads the printed card, so "each Pokémon that has an Ability" misses an
+  Ability a Tool gives (caveat `abilityByTool`, both). What is not in the language, and why: an effect
+  that lowers a capped damage of the opponent's to a positive value or carries part of it to another
+  place (a partial move; "move any number of damage counters from your opponent's
+  Benched Pokémon to their Active Pokémon", Sableye sv5-107, Alakazam sv6-82): inside an attack the
+  capped clamp identifies a damage `d ≥ k` with `k`, and moving `j` counters off a Pokémon with `k`
+  and off one with `k + 5` leaves `k - j` and `k + 5 - j`, which the cap can tell apart (for "any
+  number" the other state may move `j + 5`, and then the destination, below the cap, tells them
+  apart), so
+  `Run.cap_sim` would fail on that state (survey S26 §2); a count of Pokémon filtered by damage as an
+  attack amount ("50 more damage for each of your Benched Pokémon that has any damage counters on it",
+  Gourgeist ex me4-41), which would break `Count.val_clampAt` as a `Count` for the opponent's side and
+  needs an `Amt` constructor (not attempted); coin-counted amounts on a chosen Benched Pokémon
+  (Tauros me4-69), and "choose 1 of your opponent's Pokémon 6 times" (Arboliva ex sv10-23: more than one
+  damage step on the Active Pokémon);
 * switching by effect (`Effect.switch`, milestone M3): the player's own Active Pokémon with one of
   their Benched Pokémon (Switch), or the opponent's ("gust": Boss's Orders, or the opponent's own
   choice; the nondeterministic choice covers whoever chooses); the Pokémon that goes to the Bench
@@ -2155,6 +2191,13 @@ theorem Run.hitRun {e : Effect} {g g' : GameState} (h : Run e g g') :
   | spreadDamage w n g => exact ⟨_, _, .plain rfl (.spreadDamage w n g)⟩
   | benchSome w m f dmg n h => exact ⟨_, _, .plain rfl (.benchSome w m f dmg n h)⟩
   | benchHealSome m f n h => exact ⟨_, _, .plain rfl (.benchHealSome m f n h)⟩
+  | hitByActive w m f hurt dmg a h ho => exact ⟨_, _, .plain rfl (.hitByActive w m f hurt dmg a h ho)⟩
+  | hitByActiveSkip w m f hurt dmg a h ho =>
+      exact ⟨_, _, .plain rfl (.hitByActiveSkip w m f hurt dmg a h ho)⟩
+  | hitByBench w m f hurt dmg a h => exact ⟨_, _, .plain rfl (.hitByBench w m f hurt dmg a h)⟩
+  | dumpActive f h hf ho => exact ⟨_, _, .plain rfl (.dumpActive f h hf ho)⟩
+  | dumpBench f h hf ho => exact ⟨_, _, .plain rfl (.dumpBench f h hf ho)⟩
+  | dumpNone f sp h => exact ⟨_, _, .plain rfl (.dumpNone f sp h)⟩
   | moveCounter h => exact ⟨_, _, .plain rfl (.moveCounter h)⟩
   | discardStadium g => exact ⟨_, _, .plain rfl (.discardStadium g)⟩
 

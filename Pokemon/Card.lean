@@ -567,6 +567,32 @@ inductive Amt where
   | heads (a : Amt) (k : Nat)
   deriving DecidableEq
 
+/-- **The amount `Effect.hitBy` puts on one Pokémon** (milestone MV12), in counters, computed for each
+target from the state the effect starts in and from the target itself (`HAmt.amt`):
+
+* `const n`: `n` ("This attack also does 40 damage to each Benched Pokémon that has any damage counters
+  on it", Hippowdon sv10-106);
+* `count c k`: `k` for each unit of the count `c` ("This attack does 30 damage to 1 of your opponent's
+  Pokémon for each Energy attached to this Pokémon", Raging Bolt sv7-111, on the Bench; "Place 2 damage
+  counters on your opponent's Active Pokémon for each card in your hand", Alakazam me1-56);
+* `per k`: `k` for each damage counter on the target itself ("20 damage … for each damage counter on
+  that Pokémon", Team Rocket's Sneasel sv10-128; "Double the number of damage counters on each of your
+  opponent's Pokémon", N's Vanilluxe me2pt5-51, is `per 1`);
+* `toHp n`: as many as bring the target's remaining HP (its derived HP, `GameState.hpOf`, less its
+  damage) down to `n`, none if it is already at or below `n` ("Put damage counters on your opponent's
+  Active Pokémon until its remaining HP is 50", Medicham ex sv7-80, is `toHp 5`).
+
+Each amount is added to the target's damage: the new damage is the old plus a function of it,
+the same function in both of two clamp-related states (it reads counts and derived HP, which the
+clamps keep), so it is at least the old one, which is why a cap on the damage commutes with it
+(`Cap.dmg_inflate`). -/
+inductive HAmt where
+  | const (n : Nat)
+  | count (c : Count) (k : Nat)
+  | per (k : Nat)
+  | toHp (n : Nat)
+  deriving DecidableEq
+
 /-- Which steps of the damage calculation an attack's damage step switches off (milestone MV3): the
 Defending Pokémon's Weakness (step 3), its Resistance (step 4), and every effect on it (step 5: its
 stored reduction and prevention and the static reductions and preventions in force on it). The
@@ -794,6 +820,28 @@ inductive Effect where
   .bottom`. Unlike a sequence of one-card primitives on `.top n`, each of which reads the top `n` of
   the deck as it is then, the window is read once (semantics `ZStep.look`; `Pokemon/Look.lean`) -/
   | look (w : Whose) (src : Src) (f : Filter) (q : Qty) (into : Into) (rest : Dst)
+  /-- (milestone MV12) **a computed amount on chosen or filtered Pokémon**: at `sp = .active`, damage
+  counters on the `w` player's Active Pokémon if its card passes `f` (and, with `hurt`, it has a damage
+  counter), nothing otherwise (no resolution if the Active Spot is empty); at `sp = .bench`, on each of `m` distinct Benched Pokémon of the `w`
+  player that pass the same test, chosen when the effect resolves, all of them if fewer pass (as
+  `benchSome`), attack damage (`dmg = true`: no modifier, none on a Tera Pokémon, `InPlay.hitBench`) or
+  damage counters (`dmg = false`). The amount is computed for each target (`HAmt`). At the Active Spot
+  the amount is always damage counters (`dmg` is read on the Bench only; attack damage to an Active
+  Pokémon goes through the damage step). "Put damage counters on your opponent's Active Pokémon until
+  its remaining HP is 10" (Scolipede sv6-117) is `hitBy .opp .active 1 .any false false (.toHp 1)`;
+  "This attack also does 120 damage to 1 of your opponent's Benched Pokémon that has any damage
+  counters on it" (Meowscarada ex me6-14), `hitBy .opp .bench 1 .any true true (.const 12)`; "This
+  Pokémon also does 10 damage to itself for each damage counter on it" (Palafin sv5-49), `hitBy .own
+  .active 1 .any false false (.per 1)`. Only attacks may use the damage form (`benchHitFree`) -/
+  | hitBy (w : Whose) (sp : Spot) (m : Nat) (f : Filter) (hurt : Bool) (dmg : Bool) (a : HAmt)
+  /-- (milestone MV12) **move all damage counters from one of the player's own Benched Pokémon whose
+  card passes `f`** (chosen when the effect resolves) to the opponent's Pokémon at `sp` (the Active
+  Pokémon, or one Benched Pokémon chosen when the effect resolves): the source has no damage left and
+  the target as many more counters as the source had. Damage counters, not damage: no modifier.
+  Nothing if no Benched Pokémon of the player passes `f`; no resolution if one does and the target
+  spot is empty. "Move all damage counters from 1 of your Benched Ancient Pokémon to your opponent's
+  Active Pokémon" (Flutter Mane sv8-96) is `dumpCounters (.nameIn […]) .active` -/
+  | dumpCounters (f : Filter) (sp : Spot)
   | seq (a b : Effect)
   | choice (a b : Effect)
   | iter (a : Effect)
@@ -852,12 +900,13 @@ def Effect.hitFree : Effect → Bool
   | _ => true
 
 /-- No attack damage to a Benched Pokémon anywhere in the effect (`benchDamage`,
-`spreadDamage`): Item and Supporter effects must satisfy it, as they must `hitFree` (printed
+`spreadDamage`, the damage forms of `benchSome` and, milestone MV12, `hitBy … .bench`): Item and Supporter effects must satisfy it, as they must `hitFree` (printed
 Trainer cards place damage counters, not attack damage). -/
 def Effect.benchHitFree : Effect → Bool
   | .benchDamage _ _ => false
   | .spreadDamage _ _ => false
   | .benchSome _ _ _ dmg _ => !dmg
+  | .hitBy _ .bench _ _ _ dmg _ => !dmg
   | .ite _ a b => a.benchHitFree && b.benchHitFree
   | .seq a b => a.benchHitFree && b.benchHitFree
   | .choice a b => a.benchHitFree && b.benchHitFree
@@ -888,7 +937,7 @@ def Test.onOwn : Test → Bool
 `selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
 moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
 milestone MV; `look .own … (.attach _)`, milestone MV6; `returnEnergy .own .active` and every
-`shiftEnergy .own`, milestone MV11), no test on the player's own Active Pokémon,
+`shiftEnergy .own`, milestone MV11; `hitBy .own .active`, milestone MV12), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/
@@ -908,6 +957,7 @@ def Effect.ownFree : Effect → Bool
   | .shiftEnergy .own _ _ _ _ _ => false
   | .moveCounter _ _ => false
   | .look .own _ _ _ (.attach _) _ => false
+  | .hitBy .own .active _ _ _ _ _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
   | .seq a b => a.ownFree && b.ownFree
   | .choice a b => a.ownFree && b.ownFree
@@ -967,7 +1017,7 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
-  | .benchHealSome _ _ _, _ => rfl
+  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -1033,7 +1083,8 @@ discarded from it or attached to it (`discardEnergy .opp .active`, `discardTools
 `attach .opp _ _ .active _`), Energy attached to it put into the opponent's hand or deck
 (`returnEnergy .opp .active`, milestone MV11), Energy moved between the opponent's Pokémon
 (`moveEnergy .opp`, which may take from it; `shiftEnergy .opp`, milestone MV11, which takes from it or
-puts on it), and markers or a Coloring counter placed on one of the opponent's Pokémon
+puts on it), computed damage counters on it and counters moved onto it (`hitBy .opp .active`,
+`dumpCounters _ .active`, milestone MV12: the player's Benched Pokémon then keeps its counters), and markers or a Coloring counter placed on one of the opponent's Pokémon
 (`mark .opp`, `color .opp`, which may choose it). Kept: the damage step (prevented, if at all, by
 `Mod.prevent` and `SEff.prevent`; damage is not an effect), everything on the opponent's Bench, zones,
 hand and deck, the Item lock on the opponent (`linger .opp _ (.lock .item)`: a lock on the player, not
@@ -1058,6 +1109,8 @@ def Effect.shielded : Effect → Effect
   | .moveEnergy .opp _ => .skip
   | .returnEnergy .opp .active _ _ _ => .skip
   | .shiftEnergy .opp _ _ _ _ _ => .skip
+  | .hitBy .opp .active _ _ _ _ _ => .skip
+  | .dumpCounters _ .active => .skip
   | .ite t a b => .ite t a.shielded b.shielded
   | .seq a b => .seq a.shielded b.shielded
   | .choice a b => .choice a.shielded b.shielded
@@ -1109,7 +1162,7 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .shiftEnergy _ _ _ _ _ _, _
   | .moveCounter _ _, _ | .discardStadium, _
   | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
-  | .benchHealSome _ _ _, _ => rfl
+  | .benchHealSome _ _ _, _ | .hitBy _ _ _ _ _ _ _, _ | .dumpCounters _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

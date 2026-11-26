@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.18.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.19.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,26 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Hero's Cape (sv5-152). Records: sv5-152. Caveats: aceSpec. -/
+def sv5_152 : Card := .tool "Hero's Cape"
+  { holder := .pokemon,
+    attacks := [],
+    abilities := [],
+    statics := [
+      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .hpPlus (.const 10) }] }
+
+/-- Master Ball (sv5-153). Records: sv5-153. Caveats: aceSpec. -/
+def sv5_153 : Card := .trainer "Master Ball" .item
+    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own .deck .hand .pokemon (.upTo 1)) .shuffle))
+
+/-- Maximum Belt (sv5-154). Records: sv5-154, sv8pt5-117. Caveats: aceSpec. -/
+def sv5_154 : Card := .tool "Maximum Belt"
+  { holder := .pokemon,
+    attacks := [],
+    abilities := [],
+    statics := [
+      { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
 
 /-- Perilous Jungle (sv5-156). Records: sv5-156. -/
 def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
@@ -987,6 +1007,20 @@ def sv6_116 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Scolipede (sv6-117). Records: sv6-117. -/
+def sv6_117 : Card := .pokemon
+  { name := "Scolipede", stage := .stage2, evolvesFrom := some "Whirlipede",
+    hp := 17, type := .darkness, retreat := 3, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Dastardly Jab", cost := [.darkness, .colorless], damage := 0,
+        effect := .hitBy .opp .active 1 .any false false (.toHp 1),
+        gx := false },
+      { name := "Sludge Bomb", cost := [.darkness, .colorless, .colorless], damage := 16,
+        effect := .skip,
+        gx := false }] }
+
 /-- Brute Bonnet (sv6-118). Records: sv6-118. -/
 def sv6_118 : Card := .pokemon
   { name := "Brute Bonnet", stage := .basic, evolvesFrom := none,
@@ -1627,6 +1661,20 @@ def sv6pt5_32 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Yveltal (sv6pt5-35). Records: sv6pt5-35. -/
+def sv6pt5_35 : Card := .pokemon
+  { name := "Yveltal", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .darkness, retreat := 1, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Corrosive Winds", cost := [.darkness], damage := 0,
+        effect := .seq (.hitBy .opp .active 1 .any true false (.const 2)) (.hitBy .opp .bench 5 .any true false (.const 2)),
+        gx := false },
+      { name := "Destructive Beam", cost := [.darkness, .darkness, .colorless], damage := 10,
+        effect := .choice (.ite (.countGe (.energy .opp .energy) 1) (.discardEnergy .opp .active .energy (.exactly 1)) .skip) .skip,
+        gx := false }] }
+
 /-- Fezandipiti ex (sv6pt5-38). Records: sv6pt5-38, sv6pt5-84, sv6pt5-92, me2pt5-142, me2pt5-288. Caveats: benchMods, koCheckup, onePerName. -/
 def sv6pt5_38 : Card := .pokemon
   { name := "Fezandipiti ex", stage := .basic, evolvesFrom := none,
@@ -1762,45 +1810,11 @@ def sv6pt5_53 : Card := .pokemon
 def sv6pt5_54 : Card := .trainer "Academy at Night" .stadium
     (.move .own .hand .top .any (.exactly 1))
 
-/-- Colress's Tenacity (sv6pt5-57). Records: sv6pt5-57, sv6pt5-87. -/
-def sv6pt5_57 : Card := .trainer "Colress's Tenacity" .supporter
-    (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.seq (.move .own .deck .hand (.kind .stadium) (.upTo 1)) (.move .own .deck .hand .energy (.upTo 1))) .shuffle))
-
-/-- Dangerous Laser (sv6pt5-58). Records: sv6pt5-58. Caveats: aceSpec. -/
-def sv6pt5_58 : Card := .trainer "Dangerous Laser" .item
-    (.seq (.ite (.cond .opp .burned) (.ite (.cond .opp .confused) (.move .own (.top 0) .hand .any (.exactly 1)) .skip) .skip) (.seq (.inflict .burned) (.inflict .confused)))
-
-/-- Night Stretcher (sv6pt5-61). Records: sv6pt5-61, sv8-251, me1-173, me2pt5-196. -/
-def sv6pt5_61 : Card := .trainer "Night Stretcher" .item
-    (.move .own .discard .hand (.or .pokemon .basicEnergy) (.exactly 1))
-
-/-- Ledyba (sv7-2). Records: sv7-2. -/
-def sv7_2 : Card := .pokemon
-  { name := "Ledyba", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Headbutt Bounce", cost := [.colorless, .colorless], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
-/-- Celebi (sv7-4). Records: sv7-4. -/
-def sv7_4 : Card := .pokemon
-  { name := "Celebi", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Collect", cost := [.colorless], damage := 0,
-        effect := .move .own (.top 1) .hand .any .all,
-        gx := false },
-      { name := "Leaf Step", cost := [.grass], damage := 3,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv5_152,
+  sv5_153,
+  sv5_154,
   sv5_156,
   sv5_157,
   sv5_161,
@@ -1879,6 +1893,7 @@ def cards : List Card := [
   sv6_114,
   sv6_115,
   sv6_116,
+  sv6_117,
   sv6_118,
   sv6_119,
   sv6_120,
@@ -1935,6 +1950,7 @@ def cards : List Card := [
   sv6pt5_30,
   sv6pt5_31,
   sv6pt5_32,
+  sv6pt5_35,
   sv6pt5_38,
   sv6pt5_41,
   sv6pt5_43,
@@ -1945,12 +1961,7 @@ def cards : List Card := [
   sv6pt5_51,
   sv6pt5_52,
   sv6pt5_53,
-  sv6pt5_54,
-  sv6pt5_57,
-  sv6pt5_58,
-  sv6pt5_61,
-  sv7_2,
-  sv7_4]
+  sv6pt5_54]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel
@@ -1963,10 +1974,10 @@ theorem cards_notInert : cards.all (fun c => !c.inert) = true := by decide +kern
 theorem cards_nodup : nodupFp cards = true := by decide +kernel
 
 /-- The cards of this part with a static HP effect (milestone M6), by name. -/
-theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.label = ["Okidogi"] := by decide +kernel
+theorem cards_staticHp : (cards.filter (Card.hasStatic Static.isHp)).map Card.label = ["Hero's Cape", "Okidogi"] := by decide +kernel
 
 /-- The cards of this part with a static damage bonus effect (milestone M6), by name. -/
-theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Okidogi"] := by decide +kernel
+theorem cards_staticBonus : (cards.filter (Card.hasStatic Static.isBonus)).map Card.label = ["Maximum Belt", "Okidogi"] := by decide +kernel
 
 /-- The cards of this part with a static damage reduction effect (milestone M6), by name. -/
 theorem cards_staticReduce : (cards.filter (Card.hasStatic Static.isReduce)).map Card.label = ["Tangrowth"] := by decide +kernel

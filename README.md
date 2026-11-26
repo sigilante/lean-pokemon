@@ -12,7 +12,7 @@ The deck condition `StoreSafe` was called `Faithful` before 2026-11-22; it was r
 the old name read as "faithful to the printed cards", which it never meant (it only keeps the
 stored damage modifiers bounded).
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 40 constructors) of
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 40 constructors at milestone M5; 45 since milestone MV12) of
 thirty-six primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`, milestone MV6 `look`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
@@ -478,6 +478,23 @@ and `Pokemon/Heals.lean` (Item cards played from well-formed, settled starts, wi
 negative case each, and general theorems on every resolution: a `.all` take leaves nothing that
 passes the filter, "to 1 of your Benched Pokémon" changes one place of the Bench, a filtered heal
 changes only Pokémon that pass the filter).
+Milestone MV12 (computed damage spread and counters; survey S26) added two effect primitives and no
+state. `Effect.hitBy w sp m f hurt dmg a` puts on the `w` player's Active Pokémon, if it is a target,
+or on `m` distinct Benched targets (all if fewer; `HitsP`, the relation of `Hits` with a test on the
+whole Pokémon) an amount computed for each target (`HAmt`: a constant, `k` per unit of a count, `k`
+per damage counter on the target, or "until its remaining HP is `n`"); a target's card passes `f`
+and, with `hurt`, it has a damage counter; on the Bench the amount is attack damage (`dmg`, attacks
+only) or counters, at the Active Spot counters. `Effect.dumpCounters f sp` moves all damage counters
+of one of the player's Benched Pokémon passing `f` to the opponent's Pokémon at `sp`. Every amount
+only raises the target's damage by a quantity that depends on the old damage through the target
+alone, so it commutes with any cap (`Cap.dmg_inflate`); "has a damage counter" is kept by the capped
+clamp because its bound is positive (`InPlay.Agree.hitOk`); counts and derived HP are kept by both
+clamps. `Run.cap_sim` and `Run.xcap_sim` gained these cases, as did conservation, the frame, the marks
+and the store potential; no headline statement changed in text. Effects that lower or move the
+opponent's damage are not in the language (a cap does not commute with them; survey S26). Witnesses:
+`Pokemon/Computed.lean` (Item cards with the counters forms from a well-formed, settled start, and
+general theorems on every resolution: "until its remaining HP is `n`" adds nothing below that HP; with
+`hurt` only damaged Pokémon change; with no eligible Benched Pokémon `dumpCounters` changes nothing).
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
@@ -949,9 +966,14 @@ list of the rest, and the set-level theorems, ending in `PokemonCards.Standard.s
 every game whose cards all come from the imported pool is `StoreSafe`, all five clauses, and
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
-damage reduction). Of the pool's 2,161 cards, 1,579 are imported (1,080 exactly, 499 with
-caveats) as 1,570 distinct terms, and 582 are refused, each with a reason
-(`tools/importer/out/coverage.md`; importer 0.18.0, which since 0.18.0 translates attached Energy put
+damage reduction). Of the pool's 2,161 cards, 1,604 are imported (1,089 exactly, 515 with
+caveats) as 1,595 distinct terms, and 557 are refused, each with a reason
+(`tools/importer/out/coverage.md`; importer 0.19.0, which since 0.19.0 translates computed spread
+("N damage to 1 of your opponent's Pokémon for each …", "for each damage counter on that Pokémon"),
+targets filtered by damage ("… that has any damage counters on it"), "until its remaining HP is N",
+doubling and quadrupling of damage counters, counters computed from a count, damage to the player's
+own named Pokémon, and moves of all damage counters from a Benched Pokémon (`hitBy`, `dumpCounters`);
+since 0.18.0 it translates attached Energy put
 into the hand or shuffled into the deck (`returnEnergy`), directed and any-way Energy moves
 (`shiftEnergy`, `iter moveEnergy`), "You may put / shuffle / discard Energy … to have this attack do N
 more damage", and heals of each, of one filtered or of all damage of a Benched Pokémon
