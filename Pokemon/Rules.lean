@@ -723,10 +723,13 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   protecting cards, not by the attackers);
   (e) `Filter.hasAbility` reads the printed card, so "each Pokémon that has an Ability" misses an
   Ability a Tool gives (caveat `abilityByTool`, both). What is not in the language, and why: an effect
-  that lowers or moves the opponent's damage ("move any number of damage counters from your opponent's
+  that lowers a capped damage of the opponent's to a positive value or carries part of it to another
+  place (a partial move; "move any number of damage counters from your opponent's
   Benched Pokémon to their Active Pokémon", Sableye sv5-107, Alakazam sv6-82): inside an attack the
   capped clamp identifies a damage `d ≥ k` with `k`, and moving `j` counters off a Pokémon with `k`
-  and off one with `k + 5` leaves `k - j` and `k + 5 - j`, which the cap can tell apart, so
+  and off one with `k + 5` leaves `k - j` and `k + 5 - j`, which the cap can tell apart (for "any
+  number" the other state may move `j + 5`, and then the destination, below the cap, tells them
+  apart), so
   `Run.cap_sim` would fail on that state (survey S26 §2); a count of Pokémon filtered by damage as an
   attack amount ("50 more damage for each of your Benched Pokémon that has any damage counters on it",
   Gourgeist ex me4-41), which would break `Count.val_clampAt` as a `Count` for the opponent's side and

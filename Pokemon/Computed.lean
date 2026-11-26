@@ -6,7 +6,7 @@ survey S26)
 
 `Effect.hitBy w sp m f hurt dmg a`: at `sp = .active` damage counters on the `w` player's Active
 Pokémon if it is a target (`InPlay.hitOk f hurt`: its card passes `f` and, with `hurt`, it has a
-damage counter), nothing otherwise; at `sp = .bench`, on `m` distinct Benched targets (all if fewer),
+damage counter), nothing otherwise (no resolution if the Active Spot is empty); at `sp = .bench`, on `m` distinct Benched targets (all if fewer),
 attack damage (`dmg`, none on a Tera Pokémon) or damage counters. The amount (`HAmt`) is computed for
 each target from the state the effect starts in and from the target: a constant, `k` per unit of a
 count, `k` per damage counter on the target, or as many as bring its remaining HP down to `n`.
@@ -35,7 +35,7 @@ damage form, `dmg = true`, is for attacks only, `Effect.benchHitFree`):
 * `to_hp` (positive): "until its remaining HP is 5": the opponent's Active Pokémon (HP 10, 3 counters)
   ends with 5; `toHp_noop` (general negative, every resolution in every state): a Pokémon already at or
   below the remaining HP keeps its damage;
-* `double` (positive): `per 1` doubles the opponent's Active Pokémon's 3 counters to 6;
+* `double_witness` (positive): `per 1` doubles the opponent's Active Pokémon's 3 counters to 6;
 * `hurt_only` (positive and negative on one move): "2 damage counters on each of your opponent's Benched
   Pokémon that has any damage counters on it": the damaged one gets 2, the undamaged one none;
   `hitBy_bench_targets` (general): in every resolution every changed Benched Pokémon had a damage

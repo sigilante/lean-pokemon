@@ -582,9 +582,10 @@ target from the state the effect starts in and from the target itself (`HAmt.amt
   damage) down to `n`, none if it is already at or below `n` ("Put damage counters on your opponent's
   Active Pokémon until its remaining HP is 50", Medicham ex sv7-80, is `toHp 5`).
 
-Each amount is added to the target's damage: the new damage is the old plus a quantity that depends on
-the old damage only through the target, so it is at least the old one, which is why a cap on the
-damage commutes with it (`HAmt.capped`). -/
+Each amount is added to the target's damage: the new damage is the old plus a function of it,
+the same function in both of two clamp-related states (it reads counts and derived HP, which the
+clamps keep), so it is at least the old one, which is why a cap on the damage commutes with it
+(`Cap.dmg_inflate`). -/
 inductive HAmt where
   | const (n : Nat)
   | count (c : Count) (k : Nat)
@@ -821,7 +822,7 @@ inductive Effect where
   | look (w : Whose) (src : Src) (f : Filter) (q : Qty) (into : Into) (rest : Dst)
   /-- (milestone MV12) **a computed amount on chosen or filtered Pokémon**: at `sp = .active`, damage
   counters on the `w` player's Active Pokémon if its card passes `f` (and, with `hurt`, it has a damage
-  counter), nothing otherwise; at `sp = .bench`, on each of `m` distinct Benched Pokémon of the `w`
+  counter), nothing otherwise (no resolution if the Active Spot is empty); at `sp = .bench`, on each of `m` distinct Benched Pokémon of the `w`
   player that pass the same test, chosen when the effect resolves, all of them if fewer pass (as
   `benchSome`), attack damage (`dmg = true`: no modifier, none on a Tera Pokémon, `InPlay.hitBench`) or
   damage counters (`dmg = false`). The amount is computed for each target (`HAmt`). At the Active Spot
