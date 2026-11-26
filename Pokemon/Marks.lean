@@ -442,6 +442,7 @@ theorem Fire.marks {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : F
       obtain ⟨hp, hc, ho⟩ := hr.marks.2.2 hk
       exact ⟨ih.1.trans hp, fun hc' => ih.2.1 (ho hc'), fun ho' => ih.2.2 (hc ho')⟩
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 theorem Fire.marksOk {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g')
     (hm : g.MarksOk) : g'.MarksOk :=

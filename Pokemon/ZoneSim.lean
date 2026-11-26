@@ -406,6 +406,17 @@ theorem Fire.clamp_sim {co cp cbo cbp : Cap} {k : Nat} {ev : TrigEvent} {l : Lis
       intro g₂ hc
       obtain ⟨h₂, ht, hc₂⟩ := ih hc
       exact ⟨h₂, .decline ho ht, hc₂⟩
+  | @vacant ab l g g₃ hk ha hn _ ih =>
+      intro g₂ hc
+      obtain ⟨h₂, ht, hc₂⟩ := ih hc
+      have e := congrArg (fun x : GameState => x.cur.active) hc
+      simp only [GameState.clampAt, ha, Option.map_none] at e
+      have ha₂ : g₂.cur.active = none := Option.map_eq_none_iff.1 e.symm
+      have hs : g₂.swap.clampAt cp co cbp cbo k = g.swap.clampAt cp co cbp cbo k := by
+        rw [GameState.swap_clampAt, GameState.swap_clampAt, hc]
+      refine ⟨h₂, .vacant hk ha₂ (fun x hx => ?_) ht, hc₂⟩
+      obtain ⟨y, hy, -⟩ := hx.trig_sim hk hs
+      exact hn y hy
 
 /-- **The player to move's own triggers are simulated under any clamp** (milestone MV7c): they are
 `Fire` on the exchanged state, whose clamp has the caps exchanged. -/

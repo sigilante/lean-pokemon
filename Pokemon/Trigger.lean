@@ -135,6 +135,7 @@ theorem Fire.zoneOnly {ev : TrigEvent} {l : List Ability} {g g' : GameState}
   | nil => exact .refl _
   | run hk hr _ ih => exact (hr.zoneOnly hk).unswap.trans ih
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 /-! ## Existence -/
 

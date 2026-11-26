@@ -427,6 +427,7 @@ theorem Fire.perm {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fi
   | @run ab l g g₁ g₂ _ hr _ ih =>
       exact ih.trans ((g₁.swap_perm).trans (hr.perm.trans g.swap_perm))
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 /-- **The player to move's own triggers permute the cards** (milestone MV7c). -/
 theorem FireMine.perm {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :

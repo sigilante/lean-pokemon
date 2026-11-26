@@ -1,6 +1,7 @@
 import Pokemon.Lock
 import Pokemon.StoreSafe
 import Pokemon.Shield
+import Pokemon.TriggerWitness
 
 /-!
 # Return from play (milestone MV15, survey S29)
@@ -805,5 +806,190 @@ theorem attack_retFree {g : GameState} {a : InPlay} {atk : Attack} (hR : g.RetFr
   have := hR c (GameState.mem_allCards_of_cur_active ha hc)
   simp only [Card.retFree, Bool.and_eq_true, List.all_eq_true] at this
   exact this.2 atk hmc
+
+/-! ## Triggers aimed at an attacker that has left play (fix round 2)
+
+A `damaged` trigger of the Defending Pokémon resolves after the attack's script, on the state the
+script leaves (`Move.attack`: `HitTrig`, then `Fire .damaged`). After a return of the attacker
+(`returnPokemon .own .active`) the attacker's Active Spot is empty, and a trigger aimed at "the
+Attacking Pokémon" (`counters`, `inflict` on `.opp` of the exchanged state) has no resolution. Before
+this round `Fire` could only skip an optional trigger, so the whole attack had no `Move` against a
+defender with a mandatory one (`fireOld_stuck`); in print the trigger finds no Attacking Pokémon and does
+nothing. `Fire.vacant` lets such a trigger do nothing. -/
+
+/-- `Fire` before fix round 2 of milestone MV15 (copied: `nil`, `run`, `decline`). -/
+inductive FireOld (ev : TrigEvent) : List Ability → GameState → GameState → Prop where
+  | nil (g : GameState) : FireOld ev [] g g
+  | run {ab : Ability} {l : List Ability} {g g₁ g₂ : GameState}
+      (hk : (ab.script ev.place).trigOk = true)
+      (hr : Run (ab.script ev.place) g.swap g₁) (ht : FireOld ev l g₁.swap g₂) :
+      FireOld ev (ab :: l) g g₂
+  | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
+      (ho : ab.use.optional = true) (ht : FireOld ev l g g₂) : FireOld ev (ab :: l) g g₂
+
+/-- A zone step that is not a return of the Active Pokémon keeps the Active Spot filled. -/
+theorem _root_.Pokemon.ZStep.active_isSome {e : Effect} {s s' : PlayerState} (h : ZStep e s s')
+    (hr : ∀ w d, e ≠ .returnPokemon w .active d) (ha : s.active.isSome = true) :
+    s'.active.isSome = true := by
+  have e1 := h.active_pokemonCards hr
+  cases hs : s.active with
+  | none => rw [hs] at ha; cases ha
+  | some p =>
+      rw [hs] at e1
+      cases hs' : s'.active with
+      | none => rw [hs'] at e1; cases e1
+      | some _ => rfl
+
+/-- **A trigger's effect keeps the Active Spot of the side it is aimed at filled** (`.opp` of the state
+it runs on): the trigger fragment has no switch and no return. -/
+theorem _root_.Pokemon.Run.opp_isSome_of_trigOk {e : Effect} {g g' : GameState} (h : Run e g g') :
+    e.trigOk = true → g.opp.active.isSome = true → g'.opp.active.isSome = true := by
+  induction h with
+  | seq _ _ ih₁ ih₂ =>
+      intro hk ha; simp only [Effect.trigOk, Bool.and_eq_true] at hk; exact ih₂ hk.2 (ih₁ hk.1 ha)
+  | choiceL _ ih =>
+      intro hk ha; simp only [Effect.trigOk, Bool.and_eq_true] at hk; exact ih hk.1 ha
+  | choiceR _ ih =>
+      intro hk ha; simp only [Effect.trigOk, Bool.and_eq_true] at hk; exact ih hk.2 ha
+  | counters => intro _ _; rfl
+  | inflict => intro _ _; rfl
+  | skip => intro _ ha; exact ha
+  | draw => intro _ ha; exact ha
+  | drawEmpty => intro _ ha; exact ha
+  | shuffle => intro _ ha; exact ha
+  | @zone e w g s' hw hz =>
+      intro hk ha
+      cases w with
+      | own => exact ha
+      | opp =>
+          show (s'.active).isSome = true
+          refine hz.active_isSome ?_ ha
+          rintro w' d rfl; simp [Effect.trigOk] at hk
+  | @touchActive e w f g p he h =>
+      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
+  | @touchBench e w f g q b₁ b₂ he h =>
+      intro hk; cases e <;> simp [Effect.touch, Effect.trigOk] at he hk
+  | _ => intro hk; simp [Effect.trigOk] at hk
+
+/-- **No change where the attacker is in play**: from a state whose player to move has an Active
+Pokémon, `Fire` is the pre-round relation `FireOld` (the new case `vacant` needs that spot empty, and
+a trigger's effect never empties it). The spot is empty at a `Fire` only after the turn's attack
+returned the player's own Active Pokémon (argued from the moves that fire: `Move.attack`'s `damaged`
+triggers run on the state the script leaves; `koByAttack` triggers after a batch step that went on,
+whose promotions fill both spots; owed triggers from a state with both spots filled). -/
+theorem fire_old {ev : TrigEvent} {l : List Ability} {g g' : GameState} (ha : g.cur.active.isSome = true) :
+    Fire ev l g g' ↔ FireOld ev l g g' := by
+  constructor
+  · intro h
+    induction h with
+    | nil g => exact .nil g
+    | @run ab l g g₁ g₂ hk hr _ ih =>
+        exact .run hk hr (ih (hr.opp_isSome_of_trigOk hk ha))
+    | decline ho _ ih => exact .decline ho (ih ha)
+    | vacant _ hv _ _ => rw [hv] at ha; cases ha
+  · intro h
+    induction h with
+    | nil g => exact .nil g
+    | @run ab l g g₁ g₂ hk hr _ ih => exact .run hk hr (ih (hr.opp_isSome_of_trigOk hk ha))
+    | decline ho _ ih => exact .decline ho (ih ha)
+
+/-! ### The test pair -/
+
+/-- Base damage 10, no text. -/
+def jab : Attack := ⟨"Jab", [], 1, .skip, false, .none⟩
+
+/-- The returning attacker: Fade Out and Jab. -/
+def fader : PokemonCard := ⟨"Fader", .basic, none, 10, .grass, [fadeOut, jab], 1, none, none, .none, false, []⟩
+
+/-- The player to move has `fader` Active and `big` on the Bench; the opponent has `spiky false`
+Active (a **mandatory** `damaged` trigger: "put 3 damage counters on the Attacking Pokémon",
+`TriggerWitness.spikes`) and `big` on the Bench. -/
+def t0 : GameState :=
+  ⟨side [] [.energy .fire] (InPlay.ofBasic fader) [InPlay.ofBasic big],
+    side [] [.energy .fire] (InPlay.ofBasic (TriggerWitness.spiky false)) [InPlay.ofBasic big],
+    true, false, false, false, none, none, false, false, false⟩
+
+theorem t0_wf : WellFormed t0 := by
+  refine ⟨fun _ => ⟨by simp [t0, side], by simp [t0, side]⟩, ?_, ?_, .of_b rfl⟩ <;> intro p hp <;>
+    · simp only [t0, side, List.mem_singleton] at hp
+      subst hp; exact ⟨rfl, rfl, rfl, rfl⟩
+
+theorem t0_settled : Settled t0 := (GameState.settled_iff _).2 (by decide)
+
+/-- The state Fade Out's script leaves: 1 damage counter on `spiky`, `fader` in the hand. -/
+def u : GameState :=
+  { t0 with cur := { t0.cur with active := none, hand := [.pokemon fader] },
+            opp := { t0.opp with active := some { InPlay.ofBasic (TriggerWitness.spiky false) with damage := 1 } } }
+
+theorem run_fade_t0 : Run fadeOut.script t0 u := by
+  have r : Run fadeOut.script t0 _ :=
+    .seq (.damage (.const 1 _) rfl) (.zone (w := .own) rfl (.monActive rfl (.hand _ _)))
+  exact r
+
+/-- Mandatory `spikes` has no resolution on `u`: the Attacking Pokémon's spot is empty. -/
+theorem spikes_none : ∀ g₁, ¬ Run (TriggerWitness.spikes.script TrigEvent.damaged.place) u.swap g₁ := by
+  intro g₁ h
+  change Run (.counters 3) _ _ at h
+  cases h with
+  | counters _ hp => nomatch hp
+  | touchActive he => simp [Effect.touch] at he
+  | touchBench he => simp [Effect.touch] at he
+  | zone hw => simp [Effect.zSide] at hw
+
+/-- **The departure the round fixes (step 1)**: under the pre-round `FireOld`, the mandatory trigger
+of `spiky` cannot be resolved after Fade Out (no resolution, and it cannot be declined), so no
+`Move.attack` with Fade Out existed from `t0` with the old relation. -/
+theorem fireOld_stuck : ∀ g'', ¬ FireOld .damaged [TriggerWitness.spikes] u g'' := by
+  intro g'' h
+  cases h with
+  | run _ hr _ => exact spikes_none _ hr
+  | decline ho => cases ho
+
+/-- The state after Fade Out's damage step, before the return. -/
+def v : GameState :=
+  { t0 with opp := { t0.opp with active := some { InPlay.ofBasic (TriggerWitness.spiky false) with damage := 1 } } }
+
+theorem ret_v : Run (.returnPokemon .own .active .hand) v u := by
+  have r : Run (.returnPokemon .own .active .hand) v _ := .zone (w := .own) rfl (.monActive rfl (.hand _ _))
+  exact r
+
+theorem dmg_t0 : Run (.damage (.const 1)) t0 v := by
+  have r : Run (.damage (.const 1)) t0 _ := .damage (.const 1 _) rfl
+  exact r
+
+theorem hit_fade : HitTrig fadeOut t0 u [TriggerWitness.spikes] :=
+  .fire (sw := false) (.seq (h₁ := true) (s₁ := false) (h₂ := false) (s₂ := false)
+    (.hit (b := true) rfl dmg_t0 rfl (fun _ => rfl)) (.plain rfl ret_v)) (.refl _)
+
+/-- After Fade Out against `spiky`: nothing was placed by the trigger (the attacker is in the hand). -/
+def t1 : GameState := u.afterAttack .none false
+
+/-- **Witness (fixed): Fade Out is a legal move against a mandatory `damaged` trigger aimed at the
+attacker**: the trigger fires (`hit_fade`) and does nothing (`Fire.vacant`): no damage counter is on
+any Pokémon of the attacking player (the attacker is in the hand, the Benched `big` has none). The next
+move promotes `big`, with no Prize card. -/
+theorem fade_vs_spikes : WellFormed t0 ∧ Settled t0 ∧ Move t0 t1 ∧ t1.cur.active = none ∧
+    t1.cur.hand = [.pokemon fader] ∧ t1.cur.bench.map InPlay.damage = [0] ∧
+    ∃ t2, Move t1 t2 ∧ t2.cur.active = some (InPlay.ofBasic big) ∧ t2.cur.prizes = t1.cur.prizes ∧
+      t2.opp.prizes = t1.opp.prizes ∧ t2.winner = none := by
+  have m : Move t0 t1 := by
+    have m' := Move.attackOpen (hlk := rfl) (atk := fadeOut) (g := t0) rfl (.head _) (.nil _) rfl rfl
+      rfl rfl t0_settled run_fade_t0 rfl (fun h => nomatch h) rfl hit_fade
+      (.vacant rfl rfl spikes_none (.nil _))
+    exact m'
+  exact ⟨t0_wf, t0_settled, m, rfl, rfl, rfl, _,
+    Move.knockOuts_of_nil (.go (fun h => absurd ((GameState.calm_iff _).1 h) (by decide)) rfl
+      (.pick (b₁ := []) (b₂ := [])) .keep) rfl, rfl, rfl, rfl, rfl⟩
+
+/-- **The trigger still fires when the attacker stays**: Jab from the same start puts 1 damage counter on
+`spiky`, and the mandatory trigger puts 3 on `fader` (as before the round). -/
+theorem jab_vs_spikes : ∃ g, Move t0 g ∧ g.cur.active.map InPlay.damage = some 3 ∧
+    g.opp.active.map InPlay.damage = some 1 := by
+  have hr : Run jab.script t0 _ := .seq (.damage (.const 1 _) rfl) (.skip _)
+  exact ⟨_, Move.attackOpen (hlk := rfl) (atk := jab) (g := t0) rfl (.tail _ (.head _)) (.nil _) rfl rfl
+    rfl rfl t0_settled hr rfl (fun h => nomatch h) rfl (l := [TriggerWitness.spikes])
+    (.fire (.seq (.hit (b := true) rfl (.damage (.const 1 _) rfl) rfl (fun _ => rfl)) (.plain rfl (.skip _)))
+      (.refl _))
+    (.run rfl (.counters 3 rfl) (.nil _)), rfl, rfl⟩
 
 end Pokemon.Return

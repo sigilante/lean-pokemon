@@ -189,6 +189,7 @@ theorem gust_drops_holder : ∀ g₁ g₂, Move a0 g₁ → g₁.attacked = true
   rw [List.perm_singleton.1 (show l.Perm [prose] from hl)] at ht
   cases ht with
   | decline ho => cases ho
+  | vacant _ ha => nomatch ha
   | run _ hr ht =>
   cases ht.nil_eq
   cases hr with
@@ -272,6 +273,7 @@ theorem gust_adds_holder : ∀ g₁ g₂, Move b0 g₁ → g₁.attacked = true 
     rw [List.perm_singleton.1 (show l.Perm [surge false] from hl)] at ht
     cases ht with
     | decline ho => cases ho
+    | vacant _ ha => nomatch ha
     | run _ hr ht =>
     cases ht.nil_eq
     cases hr with

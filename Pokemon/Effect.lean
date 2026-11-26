@@ -1167,5 +1167,15 @@ inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → P
       Fire ev (ab :: l) g g₂
   | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
       (ho : ab.use.optional = true) (ht : Fire ev l g g₂) : Fire ev (ab :: l) g g₂
+  /-- (milestone MV15) **a trigger with no target left**: when the Active Spot of the player whose turn
+  it is (the side the trigger's effects are aimed at, `.opp` on the exchanged state) is empty and the
+  trigger's effect has no resolution there, the trigger does nothing, mandatory or not. The empty spot
+  arises only after an attack returned its own Pokémon from play (`Effect.returnPokemon .own .active`;
+  `Return.fire_old`): a `damaged` trigger aimed at "the Attacking Pokémon", which has left play, does
+  nothing, as in print -/
+  | vacant {ab : Ability} {l : List Ability} {g g₂ : GameState}
+      (hk : (ab.script ev.place).trigOk = true) (ha : g.cur.active = none)
+      (hn : ∀ g₁, ¬ Run (ab.script ev.place) g.swap g₁) (ht : Fire ev l g g₂) :
+      Fire ev (ab :: l) g g₂
 
 end Pokemon

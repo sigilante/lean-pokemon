@@ -391,6 +391,7 @@ theorem Fire.frame {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : F
   | nil => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
   | run _ hr _ ih => exact hr.frame.unswap.trans ih
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 /-- The player to move's own triggers (milestone MV7c) keep the frame. -/
 theorem FireMine.frame {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :

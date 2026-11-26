@@ -634,6 +634,7 @@ theorem Fire.disc_mono {w : Card → Nat} (hw : TrainerWeight w) {C : List Card}
       rw [GameState.swap_discW] at h1 h2
       exact Nat.le_trans h1 h2
   | decline _ _ ih => intro hl hC; exact ih (fun ab hab => hl ab (.tail _ hab)) hC
+  | vacant _ _ _ _ ih => intro hl hC; exact ih (fun ab hab => hl ab (.tail _ hab)) hC
 
 /-- The player to move's own triggers (milestone MV7c) keep the weight of the discard piles: they
 recycle nothing. -/
@@ -1973,6 +1974,7 @@ theorem Fire.abPot_le {ev : TrigEvent} {l : List Ability} {g g' : GameState}
         rw [h2]; omega
       exact Nat.le_trans ih h3
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 /-- Triggers resolved on the exchanged state do not raise the potential of the player to move of
 the state before the exchange (milestone MV7c): each step is a resolution from that player's side,
@@ -1986,6 +1988,7 @@ theorem Fire.swap_abPot_le {ev : TrigEvent} {l : List Ability} {g g' : GameState
       rw [GameState.swap_swap] at ih
       exact Nat.le_trans ih h1
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 /-- **The player to move's own triggers do not raise their potential** (milestone MV7c). -/
 theorem FireMine.abPot_le {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :
