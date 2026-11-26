@@ -348,18 +348,18 @@ theorem Run.marks {e : Effect} {g g' : GameState} (h : Run e g g') :
             ⟨OptNoOwe.some_of (ho.2.mem hb : q.owe = none), ho.2.upd hb (ho.1 a ha)⟩
   | switchNone w => cases w <;> exact marks_frame rfl id id
   | benchDamage w n h =>
-      have hq : ∀ x : InPlay, (x.hitBench n).owe = x.owe := fun x => by
+      have hq : ∀ (x : InPlay) (n : Nat), (x.hitBench n).owe = x.owe := fun x n => by
         unfold InPlay.hitBench; split <;> rfl
       cases w with
-      | own => exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.upd' h (hq _)⟩) id
-      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, ho.2.upd' h (hq _)⟩)
+      | own => exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.upd' h (hq _ _)⟩) id
+      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, ho.2.upd' h (hq _ _)⟩)
   | benchDamageNone w => cases w <;> exact marks_frame rfl id id
   | spreadDamage w n g =>
-      have hq : ∀ x : InPlay, (x.hitBench n).owe = x.owe := fun x => by
+      have hq : ∀ (x : InPlay) (n : Nat), (x.hitBench n).owe = x.owe := fun x n => by
         unfold InPlay.hitBench; split <;> rfl
       cases w with
-      | own => exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.map hq⟩) id
-      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, ho.2.map hq⟩)
+      | own => exact marks_frame rfl (fun hc => ⟨hc.1, hc.2.map (fun x => hq x _)⟩) id
+      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, ho.2.map (fun x => hq x _)⟩)
   | hitByActive w m f hurt dmg a h ho =>
       cases w with
       | own => exact marks_frame rfl (fun hc => ⟨hc.1.some_eq h rfl, hc.2⟩) id
@@ -384,14 +384,14 @@ theorem Run.marks {e : Effect} {g g' : GameState} (h : Run e g g') :
         cases n <;> exact hx
       exact marks_frame rfl (fun hc => ⟨hc.1, h.forall_of hq hc.2⟩) id
   | benchSome w m f dmg n h =>
-      have hq : ∀ x : InPlay, x.owe = none → (x.hitWith dmg n).owe = none := fun x hx => by
+      have hq : ∀ x : InPlay, ∀ n, x.owe = none → (x.hitWith dmg n).owe = none := fun x n hx => by
         cases dmg
         · exact hx
         · show (x.hitBench n).owe = none
           unfold InPlay.hitBench; split <;> exact hx
       cases w with
-      | own => exact marks_frame rfl (fun hc => ⟨hc.1, h.forall_of hq hc.2⟩) id
-      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, h.forall_of hq ho.2⟩)
+      | own => exact marks_frame rfl (fun hc => ⟨hc.1, h.forall_of (fun x => hq x _) hc.2⟩) id
+      | opp => exact marks_frame rfl id (fun ho => ⟨ho.1, h.forall_of (fun x => hq x _) ho.2⟩)
   | @zone e w g s' _ hz =>
       cases w with
       | own => exact marks_frame rfl (fun hc => hz.noMarks hc) id

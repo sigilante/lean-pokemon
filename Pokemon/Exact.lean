@@ -663,17 +663,18 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           exact ⟨_, .benchCountersNone .opp n rfl, hc⟩
   | benchSome w m f dmg n h =>
       intro _ g₂ hc
+      have hsf := GameState.sameField_of_xclampAt hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
       cases w with
       | own =>
           simp only [GameState.side] at h
-          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitWith dmg n) clampWith_top he₁
+          obtain ⟨e', h', he'⟩ := h.transfer₂ (clampWith_hitB hsf .own dmg n) clampWith_top he₁
           rw [← benchElig_congr clampWith_top f he₁] at h'
           exact ⟨_, .benchSome .own m f dmg n h', by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₂, he']⟩
       | opp =>
           simp only [GameState.side] at h
-          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitWith dmg n) clampWith_top he₂
+          obtain ⟨e', h', he'⟩ := h.transfer₂ (clampWith_hitB hsf .opp dmg n) clampWith_top he₂
           rw [← benchElig_congr clampWith_top f he₂] at h'
           exact ⟨_, .benchSome .opp m f dmg n h', by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁, he']⟩
@@ -743,13 +744,13 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
       cases w with
       | own =>
           simp only [GameState.side] at h
-          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitAmt a hcv hsf .own .bench dmg) hP he₁
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitAmtB a hcv hsf .own dmg) hP he₁
           rw [← benchEligP_congr hP he₁] at h'
           exact ⟨_, .hitByBench .own m f hurt dmg a h', by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₂, he']⟩
       | opp =>
           simp only [GameState.side] at h
-          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitAmt a hcv hsf .opp .bench dmg) hP he₂
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitAmtB a hcv hsf .opp dmg) hP he₂
           rw [← benchEligP_congr hP he₂] at h'
           exact ⟨_, .hitByBench .opp m f hurt dmg a h', by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁, he']⟩
@@ -840,6 +841,7 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           exact ⟨_, .switchNone .opp rfl, hc⟩
   | @benchDamage g q b₁ b₂ w n h =>
       intro _ g₂ hc
+      have hsf := GameState.sameField_of_xclampAt hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
       cases w with
       | own =>
@@ -848,14 +850,14 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           have hr := InPlay.agree_of_clamp h2
           exact ⟨_, .benchDamage (b₁ := d₁) .own n rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₂,
-              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.hitBench n)]⟩
+              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.hitBenchB hsf _ n)]⟩
       | opp =>
           simp only [GameState.side] at h
           obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₂)
           have hr := InPlay.agree_of_clamp h2
           exact ⟨_, .benchDamage (b₁ := d₁) .opp n rfl, by
             simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁,
-              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.hitBench n)]⟩
+              List.map_append, List.map_cons, h1, h3, InPlay.clamp_of_agree (hr.hitBenchB hsf _ n)]⟩
   | benchDamageNone w n h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
@@ -872,12 +874,13 @@ theorem Run.xcap_sim {k : Nat} {e : Effect} {g₁ g₁' : GameState} (h : Run e 
           exact ⟨_, .benchDamageNone .opp n rfl, hc⟩
   | spreadDamage w n g =>
       intro _ g₂ hc
+      have hsf := GameState.sameField_of_xclampAt hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc
       cases w <;>
         exact ⟨_, .spreadDamage _ n _, by
           simp only [GameState.xrclamp, GameState.xclampAt, GameState.updSide, hc₂, ha₂, he₁, he₂,
-            bench_map_agree (U := InPlay.hitBench n) (fun x y h => h.hitBench n) he₁,
-            bench_map_agree (U := InPlay.hitBench n) (fun x y h => h.hitBench n) he₂]⟩
+            bench_map_agree₂ (fun x y h => h.hitBenchB hsf _ n) he₁,
+            bench_map_agree₂ (fun x y h => h.hitBenchB hsf _ n) he₂]⟩
   | benchHealNone n h =>
       intro _ g₂ hc
       obtain ⟨c₂, a₂, e₁, e₂, rfl, hc₂, ha₂, he₁, he₂⟩ := GameState.xclamp_inv hc

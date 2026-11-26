@@ -836,22 +836,25 @@ inductive Run : Effect → GameState → GameState → Prop where
         (g.updSide w fun s => { s with active := some (w.noteUp (w.mover q)),
                                        bench := b₁ ++ w.noteDown a.cure.unlock :: b₂ }))
   | switchNone {g : GameState} (w : Whose) (hb : (g.side w).bench = []) : Run (.switch w) g g
-  /-- attack damage to one of the `w` player's Benched Pokémon (milestone M3) -/
+  /-- attack damage to one of the `w` player's Benched Pokémon (milestone M3); none if a static
+  prevention protects it (milestone MV13, `GameState.bAmt`) -/
   | benchDamage {g : GameState} {q : InPlay} {b₁ b₂ : List InPlay} (w : Whose) (n : Nat)
       (h : (g.side w).bench = b₁ ++ q :: b₂) :
       Run (.benchDamage w n) g
-        (g.updSide w fun s => { s with bench := b₁ ++ q.hitBench n :: b₂ })
+        (g.updSide w fun s => { s with bench := b₁ ++ q.hitBench (g.bAmt w true n q) :: b₂ })
   | benchDamageNone {g : GameState} (w : Whose) (n : Nat) (h : (g.side w).bench = []) :
       Run (.benchDamage w n) g g
-  /-- attack damage to each of the `w` player's Benched Pokémon -/
+  /-- attack damage to each of the `w` player's Benched Pokémon (none to a protected one, milestone
+  MV13) -/
   | spreadDamage (w : Whose) (n : Nat) (g : GameState) :
       Run (.spreadDamage w n) g
-        (g.updSide w fun s => { s with bench := s.bench.map (InPlay.hitBench n) })
+        (g.updSide w fun s => { s with bench := s.bench.map fun q => q.hitBench (g.bAmt w true n q) })
   /-- damage or counters on `m` distinct Benched Pokémon of the `w` player passing `f`, or on all
   that pass if fewer do (milestone MV2) -/
   | benchSome {g : GameState} {b' : List InPlay} (w : Whose) (m : Nat) (f : Filter) (dmg : Bool)
       (n : Nat)
-      (h : Hits (InPlay.hitWith dmg n) f (min m (benchElig f (g.side w).bench)) (g.side w).bench b') :
+      (h : Hits (fun q => q.hitWith dmg (g.bAmt w dmg n q)) f (min m (benchElig f (g.side w).bench))
+        (g.side w).bench b') :
       Run (.benchSome w m f dmg n) g (g.updSide w fun s => { s with bench := b' })
   /-- a computed amount of damage counters on the `w` player's Active Pokémon, if it is a target
   (milestone MV12) -/
@@ -866,7 +869,7 @@ inductive Run : Effect → GameState → GameState → Prop where
   all of them if fewer are (milestone MV12) -/
   | hitByBench {g : GameState} {b' : List InPlay} (w : Whose) (m : Nat) (f : Filter) (hurt dmg : Bool)
       (a : HAmt)
-      (h : HitsP (InPlay.hitOk f hurt) (fun q => q.hitWith dmg (a.at g w .bench q))
+      (h : HitsP (InPlay.hitOk f hurt) (fun q => q.hitWith dmg (g.bAmt w dmg (a.at g w .bench q) q))
         (min m (benchEligP (InPlay.hitOk f hurt) (g.side w).bench)) (g.side w).bench b') :
       Run (.hitBy w .bench m f hurt dmg a) g (g.updSide w fun s => { s with bench := b' })
   /-- all damage counters of one of the player's Benched Pokémon passing `f` moved to the opponent's
@@ -978,6 +981,38 @@ theorem transfer {C : InPlay → InPlay} (hC : ∀ x y, C y = C x → C (U y) = 
           exact ⟨y :: e', .keep h', by simp only [List.map_cons, he.1, he']⟩
 
 end Hits
+
+/-- As `Hits.transfer`, with two update maps, `U` on one side and `U₂` on the other (milestone
+MV13: the protected Bench update reads the state, so the two sides use two functions). -/
+theorem Hits.transfer₂ {U U₂ C : InPlay → InPlay} {f : Filter}
+    (hC : ∀ x y, C y = C x → C (U₂ y) = C (U x))
+    (ht : ∀ x y, C y = C x → y.top = x.top) {k : Nat} {b b' : List InPlay}
+    (h : Hits U f k b b') : ∀ {e : List InPlay}, e.map C = b.map C →
+      ∃ e', Hits U₂ f k e e' ∧ e'.map C = b'.map C := by
+  induction h with
+  | nil =>
+      intro e he
+      cases e with
+      | nil => exact ⟨[], .nil, rfl⟩
+      | cons _ _ => simp at he
+  | @hit x _ _ _ hx _ ih =>
+      intro e he
+      cases e with
+      | nil => simp at he
+      | cons y e =>
+          simp only [List.map_cons, List.cons.injEq] at he
+          obtain ⟨e', h', he'⟩ := ih he.2
+          exact ⟨U₂ y :: e', .hit (by rw [ht _ _ he.1]; exact hx) h',
+            by simp only [List.map_cons, hC _ _ he.1, he']⟩
+  | keep _ ih =>
+      intro e he
+      cases e with
+      | nil => simp at he
+      | cons y e =>
+          simp only [List.map_cons, List.cons.injEq] at he
+          obtain ⟨e', h', he'⟩ := ih he.2
+          exact ⟨y :: e', .keep h', by simp only [List.map_cons, he.1, he']⟩
+
 
 /-! ## `HitsP` (milestone MV12) -/
 

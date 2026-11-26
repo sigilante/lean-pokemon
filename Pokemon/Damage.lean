@@ -987,6 +987,43 @@ theorem clampWith_addAmt {K : Nat} {c : Cap} (a : HAmt) {g₁ g₂ : GameState}
       InPlay.clampWith K c (x.addDamage (a.at g₁ w sp x)) :=
   clampWith_hitAmt a hcv hsf w sp false x y h
 
+/-- **The protected Bench update commutes with the clamps** (milestone MV13): two states with the
+same field read the same protection (`GameState.SameField.bAmt`) on two agreeing Pokémon. -/
+theorem clampWith_hitB {K : Nat} {c : Cap} {g₁ g₂ : GameState} (hsf : GameState.SameField g₁ g₂)
+    (w : Whose) (dmg : Bool) (n : Nat) (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) :
+    InPlay.clampWith K c (y.hitWith dmg (g₂.bAmt w dmg n y)) =
+      InPlay.clampWith K c (x.hitWith dmg (g₁.bAmt w dmg n x)) := by
+  have hr := InPlay.agree_of_clamp h
+  rw [hsf.bAmt w dmg n hr.sv]
+  exact InPlay.clamp_of_agree (hr.hitWith dmg _)
+
+/-- `clampWith_hitB` for the damage form (milestone MV13). -/
+theorem InPlay.Agree.hitBenchB {K : Nat} {c : Cap} {g₁ g₂ : GameState}
+    (hsf : GameState.SameField g₁ g₂) (w : Whose) (n : Nat) {y x : InPlay}
+    (h : InPlay.Agree K c y x) :
+    InPlay.Agree K c (y.hitBench (g₂.bAmt w true n y)) (x.hitBench (g₁.bAmt w true n x)) := by
+  rw [hsf.bAmt w true n h.sv]
+  exact h.hitBench _
+
+/-- The `hitBy` update on the Bench, with the protection, commutes with a clamp that keeps "has a
+damage counter" (milestone MV13; `clampWith_hitAmt` without the protection). -/
+theorem clampWith_hitAmtB {K : Nat} {c : Cap} (a : HAmt) {g₁ g₂ : GameState}
+    (hcv : ∀ x : Count, x.val g₂ = x.val g₁) (hsf : GameState.SameField g₁ g₂) (w : Whose)
+    (dmg : Bool) (x y : InPlay)
+    (h : InPlay.clampWith K c y = InPlay.clampWith K c x) :
+    InPlay.clampWith K c (y.hitWith dmg (g₂.bAmt w dmg (a.at g₂ w .bench y) y)) =
+      InPlay.clampWith K c (x.hitWith dmg (g₁.bAmt w dmg (a.at g₁ w .bench x) x)) := by
+  have hr := InPlay.agree_of_clamp h
+  have hb := hsf.benchSafe w hr.sv
+  simp only [GameState.bAmt, hb]
+  rw [a.at_congr hcv hsf w .bench hr]
+  apply InPlay.clamp_of_agree
+  have := hr.hitAmt dmg
+    (fun d => if (dmg && g₁.benchSafe w x) = true then 0 else
+      a.amt (fun x => x.val g₁) (g₁.hpOf w .bench x) d)
+  simpa only [HAmt.at] using this
+
 theorem InPlay.clampWith_moveUp (c : Cap) (x : InPlay) :
     InPlay.clampWith K c x.moveUp = (InPlay.clampWith K c x).moveUp := by
   cases c <;> rfl
@@ -1003,6 +1040,21 @@ theorem bench_map_agree {c : Cap} {U : InPlay → InPlay}
   rw [List.map_map, List.map_map]
   exact map_transfer h fun x _ y hy =>
     InPlay.clamp_of_agree (hU x y (InPlay.agree_of_clamp hy))
+
+/-- As `bench_map_agree`, with two updates (milestone MV13). -/
+theorem bench_map_agree₂ {c : Cap} {U U₂ : InPlay → InPlay}
+    (hU : ∀ x y, InPlay.Agree K c y x → InPlay.Agree K c (U₂ y) (U x)) {b e : List InPlay}
+    (h : e.map (InPlay.clampWith K c) = b.map (InPlay.clampWith K c)) :
+    (e.map U₂).map (InPlay.clampWith K c) = (b.map U).map (InPlay.clampWith K c) := by
+  induction b generalizing e with
+  | nil => cases e with
+    | nil => rfl
+    | cons _ _ => simp at h
+  | cons x b ih => cases e with
+    | nil => simp at h
+    | cons y e =>
+        simp only [List.map_cons, List.cons.injEq] at h ⊢
+        exact ⟨InPlay.clamp_of_agree (hU x y (InPlay.agree_of_clamp h.1)), ih h.2⟩
 
 theorem InPlay.clampWith_unfresh (c : Cap) (x : InPlay) :
     InPlay.clampWith K c x.unfresh = (InPlay.clampWith K c x).unfresh := by
