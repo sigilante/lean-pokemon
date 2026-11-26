@@ -300,6 +300,32 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
       have hq : ∀ x, Benched x → Benched (x.healBy n) := fun x hx => by
         cases n <;> exact hx.of_eq rfl rfl rfl rfl
       exact ⟨fun hb => h.forall_of hq hb, id, rfl, rfl, rfl, rfl, rfl⟩
+  | hitByActive w _ _ _ _ _ _ _ => cases w <;> exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
+  | @hitByBench g₀ b' w m f hurt dmg a h =>
+      have hq : ∀ x, Benched x → Benched (x.hitWith dmg (a.at g₀ w .bench x)) := fun x hx => by
+        cases dmg
+        · exact hx.of_eq rfl rfl rfl rfl
+        · obtain ⟨-, -, -, -, e1, e2, e3, e4, -⟩ := x.hitBench_fields (a.at g₀ w .bench x)
+          exact hx.of_eq e1 e2 e3 e4
+      cases w <;>
+        exact ⟨fun hb => by
+            first
+            | exact h.forall_of hq hb
+            | exact hb,
+          fun hb => by
+            first
+            | exact h.forall_of hq hb
+            | exact hb, rfl, rfl, rfl, rfl, rfl⟩
+  | @dumpActive g q p b₁ b₂ f h hf ho =>
+      exact ⟨fun hb => benched_update h hb
+          ((hb q (by rw [h]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl),
+        id, rfl, rfl, rfl, rfl, rfl⟩
+  | @dumpBench g q r b₁ b₂ c₁ c₂ f h hf ho =>
+      exact ⟨fun hb => benched_update h hb
+          ((hb q (by rw [h]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl),
+        fun hb => benched_update ho hb
+          ((hb r (by rw [ho]; exact List.mem_append_right _ (.head _))).of_eq rfl rfl rfl rfl),
+        rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/

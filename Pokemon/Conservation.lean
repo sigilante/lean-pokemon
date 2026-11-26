@@ -125,6 +125,15 @@ theorem Hits.benchCardList {dmg : Bool} {n k : Nat} {f : Filter} {b b' : List In
     · simp only [Pokemon.benchCardList, he]
     · simp only [Pokemon.benchCardList, he, InPlay.cardList_hitWith]
 
+/-- `Effect.hitBy` keeps the cards of the Bench (milestone MV12). -/
+theorem HitsP.benchCardList_hit {P : InPlay → Bool} {dmg : Bool} {F : InPlay → Nat} {k : Nat}
+    {b b' : List InPlay} (h : HitsP P (fun q => q.hitWith dmg (F q)) k b b') :
+    Pokemon.benchCardList b' = Pokemon.benchCardList b :=
+  h.congr Pokemon.benchCardList fun x y _ _ hy he => by
+    rcases hy with rfl | rfl
+    · simp only [Pokemon.benchCardList, he]
+    · simp only [Pokemon.benchCardList, he, InPlay.cardList_hitWith]
+
 /-- Healing keeps a Pokémon's cards (milestone MV11). -/
 theorem InPlay.cardList_healBy (n : Option Nat) (p : InPlay) : (p.healBy n).cardList = p.cardList := by
   cases n <;> rfl
@@ -266,6 +275,16 @@ theorem Run.perm {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchHealSome m f n h =>
       have hb := h.benchCardList_heal
       simp only [GameState.allCards, PlayerState.allCards, hb]; exact .refl _
+  | @hitByActive g p w m f hurt dmg a h ho =>
+      cases w <;> simp only [GameState.side] at h <;> perm_count [h, GameState.updSide, InPlay.addDamage]
+  | hitByActiveSkip => exact .refl _
+  | hitByBench w m f hurt dmg a h =>
+      have hb := h.benchCardList_hit
+      cases w <;> simp only [GameState.side] at hb <;>
+        simp only [GameState.allCards, PlayerState.allCards, GameState.updSide, hb] <;> exact .refl _
+  | dumpActive f h hf ho => perm_count [h, ho, InPlay.addDamage]
+  | dumpBench f h hf ho => perm_count [h, ho, InPlay.addDamage]
+  | dumpNone => exact .refl _
   | benchSome w m f dmg n h =>
       have hb := h.benchCardList
       cases w <;> simp only [GameState.side] at hb <;>
@@ -746,6 +765,8 @@ theorem Run.sameRec {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameRec
   | benchCounters w n h => cases w <;> exact .refl _
   | spreadCounters w n g => cases w <;> exact .refl _
   | benchSome w _ _ _ _ _ => cases w <;> exact .refl _
+  | hitByActive w _ _ _ _ _ _ _ => cases w <;> exact .refl _
+  | hitByBench w _ _ _ _ _ _ => cases w <;> exact .refl _
   | switch w ha hb => cases w <;> exact .refl _
   | benchDamage w n h => cases w <;> exact .refl _
   | spreadDamage w n g => cases w <;> exact .refl _

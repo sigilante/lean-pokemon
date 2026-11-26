@@ -194,6 +194,8 @@ theorem Run.sameTurn {e : Effect} {g g' : GameState} (h : Run e g g') : g.SameTu
   | benchCounters w n h => cases w <;> exact .refl _
   | spreadCounters w n g => cases w <;> exact .refl _
   | benchSome w _ _ _ _ _ => cases w <;> exact .refl _
+  | hitByActive w _ _ _ _ _ _ _ => cases w <;> exact .refl _
+  | hitByBench w _ _ _ _ _ _ => cases w <;> exact .refl _
   | switch w ha hb => cases w <;> exact .refl _
   | benchDamage w n h => cases w <;> exact .refl _
   | spreadDamage w n g => cases w <;> exact .refl _
@@ -268,6 +270,8 @@ theorem Run.stFlags {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchCounters w n h => cases w <;> exact ⟨rfl, rfl⟩
   | spreadCounters w n g => cases w <;> exact ⟨rfl, rfl⟩
   | benchSome w _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl⟩
+  | hitByActive w _ _ _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl⟩
+  | hitByBench w _ _ _ _ _ _ => cases w <;> exact ⟨rfl, rfl⟩
   | switch w ha hb => cases w <;> exact ⟨rfl, rfl⟩
   | benchDamage w n h => cases w <;> exact ⟨rfl, rfl⟩
   | spreadDamage w n g => cases w <;> exact ⟨rfl, rfl⟩

@@ -441,6 +441,37 @@ damage counters (`InPlay.addDamage`). -/
 def InPlay.hitWith (dmg : Bool) (n : Nat) (p : InPlay) : InPlay :=
   cond dmg (p.hitBench n) (p.addDamage n)
 
+/-- The amount of an `HAmt` on a target with damage `d` and derived HP `hp`, the counts read by `cv`
+(milestone MV12). -/
+def HAmt.amt (cv : Count → Nat) (hp d : Nat) : HAmt → Nat
+  | .const n => n
+  | .count c k => k * cv c
+  | .per k => k * d
+  | .toHp n => hp - n - d
+
+/-- The amount `Effect.hitBy` puts on the `w` player's Pokémon `p` at `sp`, read in `g`
+(milestone MV12). -/
+def HAmt.at (a : HAmt) (g : GameState) (w : Whose) (sp : Spot) (p : InPlay) : Nat :=
+  a.amt (fun c => c.val g) (g.hpOf w sp p) p.damage
+
+/-- Is `p` a target of `Effect.hitBy … f hurt …`: its card passes `f`, and with `hurt` it has a damage
+counter (milestone MV12). -/
+def InPlay.hitOk (f : Filter) (hurt : Bool) (p : InPlay) : Bool :=
+  f.eval (.pokemon p.top) && (!hurt || decide (0 < p.damage))
+
+/-- The number of Pokémon of a Bench that pass `P` (milestone MV12). -/
+def benchEligP (P : InPlay → Bool) (b : List InPlay) : Nat := b.countP P
+
+/-- `HitsP P U k b b'` (milestone MV12): as `Hits`, with a test `P` on the whole Pokémon (its damage
+included) in place of a filter on its card: `b'` is `b` with exactly `k` of its Pokémon, each passing
+`P`, changed by `U`, the others kept in place. -/
+inductive HitsP (P : InPlay → Bool) (U : InPlay → InPlay) : Nat → List InPlay → List InPlay → Prop where
+  | nil : HitsP P U 0 [] []
+  | hit {x : InPlay} {k : Nat} {b b' : List InPlay} (hx : P x = true) :
+      HitsP P U k b b' → HitsP P U (k + 1) (x :: b) (U x :: b')
+  | keep {x : InPlay} {k : Nat} {b b' : List InPlay} :
+      HitsP P U k b b' → HitsP P U k (x :: b) (x :: b')
+
 /-- The number of Pokémon of a Bench whose card passes `f`. -/
 def benchElig (f : Filter) (b : List InPlay) : Nat :=
   (b.map InPlay.top).countP fun p => f.eval (.pokemon p)
@@ -822,6 +853,40 @@ inductive Run : Effect → GameState → GameState → Prop where
       (n : Nat)
       (h : Hits (InPlay.hitWith dmg n) f (min m (benchElig f (g.side w).bench)) (g.side w).bench b') :
       Run (.benchSome w m f dmg n) g (g.updSide w fun s => { s with bench := b' })
+  /-- a computed amount of damage counters on the `w` player's Active Pokémon, if it is a target
+  (milestone MV12) -/
+  | hitByActive {g : GameState} {p : InPlay} (w : Whose) (m : Nat) (f : Filter) (hurt dmg : Bool)
+      (a : HAmt) (h : (g.side w).active = some p) (ho : p.hitOk f hurt = true) :
+      Run (.hitBy w .active m f hurt dmg a) g
+        (g.updSide w fun s => { s with active := some (p.addDamage (a.at g w .active p)) })
+  | hitByActiveSkip {g : GameState} {p : InPlay} (w : Whose) (m : Nat) (f : Filter) (hurt dmg : Bool)
+      (a : HAmt) (h : (g.side w).active = some p) (ho : p.hitOk f hurt = false) :
+      Run (.hitBy w .active m f hurt dmg a) g g
+  /-- a computed amount on `m` distinct Benched Pokémon of the `w` player that are targets, or on
+  all of them if fewer are (milestone MV12) -/
+  | hitByBench {g : GameState} {b' : List InPlay} (w : Whose) (m : Nat) (f : Filter) (hurt dmg : Bool)
+      (a : HAmt)
+      (h : HitsP (InPlay.hitOk f hurt) (fun q => q.hitWith dmg (a.at g w .bench q))
+        (min m (benchEligP (InPlay.hitOk f hurt) (g.side w).bench)) (g.side w).bench b') :
+      Run (.hitBy w .bench m f hurt dmg a) g (g.updSide w fun s => { s with bench := b' })
+  /-- all damage counters of one of the player's Benched Pokémon passing `f` moved to the opponent's
+  Active Pokémon (milestone MV12) -/
+  | dumpActive {g : GameState} {q p : InPlay} {b₁ b₂ : List InPlay} (f : Filter)
+      (h : g.cur.bench = b₁ ++ q :: b₂) (hf : f.eval (.pokemon q.top) = true)
+      (ho : g.opp.active = some p) :
+      Run (.dumpCounters f .active) g
+        { g with cur := { g.cur with bench := b₁ ++ { q with damage := 0 } :: b₂ },
+                 opp := { g.opp with active := some (p.addDamage q.damage) } }
+  /-- … to one of the opponent's Benched Pokémon (milestone MV12) -/
+  | dumpBench {g : GameState} {q r : InPlay} {b₁ b₂ c₁ c₂ : List InPlay} (f : Filter)
+      (h : g.cur.bench = b₁ ++ q :: b₂) (hf : f.eval (.pokemon q.top) = true)
+      (ho : g.opp.bench = c₁ ++ r :: c₂) :
+      Run (.dumpCounters f .bench) g
+        { g with cur := { g.cur with bench := b₁ ++ { q with damage := 0 } :: b₂ },
+                 opp := { g.opp with bench := c₁ ++ r.addDamage q.damage :: c₂ } }
+  /-- … nothing when no Benched Pokémon of the player passes `f` (milestone MV12) -/
+  | dumpNone {g : GameState} (f : Filter) (sp : Spot) (h : benchElig f g.cur.bench = 0) :
+      Run (.dumpCounters f sp) g g
   /-- a zone-move primitive (milestone MV) on the `w` player's zones -/
   | zone {e : Effect} {w : Whose} {g : GameState} {s' : PlayerState} (hw : e.zSide = some w)
       (h : ZStep e (g.side w) s') : Run e g (g.updSide w fun s => s.setZones s')
@@ -913,6 +978,105 @@ theorem transfer {C : InPlay → InPlay} (hC : ∀ x y, C y = C x → C (U y) = 
           exact ⟨y :: e', .keep h', by simp only [List.map_cons, he.1, he']⟩
 
 end Hits
+
+/-! ## `HitsP` (milestone MV12) -/
+
+namespace HitsP
+
+variable {P : InPlay → Bool} {U : InPlay → InPlay}
+
+/-- As `Hits.congr`. -/
+theorem congr {β : Type} (F : List InPlay → β)
+    (hF : ∀ x y b₁ b₂, (y = x ∨ y = U x) → F b₁ = F b₂ → F (y :: b₁) = F (x :: b₂))
+    {k : Nat} {b b' : List InPlay} (h : HitsP P U k b b') : F b' = F b := by
+  induction h with
+  | nil => rfl
+  | hit _ _ ih => exact hF _ _ _ _ (.inr rfl) ih
+  | keep _ ih => exact hF _ _ _ _ (.inl rfl) ih
+
+/-- As `Hits.forall_of`. -/
+theorem forall_of {Q : InPlay → Prop} (hU : ∀ x, Q x → Q (U x)) {k : Nat} {b b' : List InPlay}
+    (h : HitsP P U k b b') (hb : ∀ x ∈ b, Q x) : ∀ y ∈ b', Q y := by
+  induction h with
+  | nil => intro y hy; cases hy
+  | hit _ _ ih =>
+      intro y hy
+      cases hy with
+      | head => exact hU _ (hb _ (.head _))
+      | tail _ hy => exact ih (fun x hx => hb x (.tail _ hx)) y hy
+  | keep _ ih =>
+      intro y hy
+      cases hy with
+      | head => exact hb _ (.head _)
+      | tail _ hy => exact ih (fun x hx => hb x (.tail _ hx)) y hy
+
+/-- Every Pokémon of the new Bench is a kept Pokémon of the old one or the image under `U` of one
+that passes `P`. -/
+theorem cases_of {k : Nat} {b b' : List InPlay} (h : HitsP P U k b b') :
+    ∀ y ∈ b', y ∈ b ∨ ∃ x ∈ b, P x = true ∧ y = U x := by
+  induction h with
+  | nil => intro y hy; cases hy
+  | @hit x _ _ _ hx _ ih =>
+      intro y hy
+      cases hy with
+      | head => exact .inr ⟨x, .head _, hx, rfl⟩
+      | tail _ hy =>
+          rcases ih y hy with h | ⟨z, hz, hp, e⟩
+          · exact .inl (.tail _ h)
+          · exact .inr ⟨z, .tail _ hz, hp, e⟩
+  | keep _ ih =>
+      intro y hy
+      cases hy with
+      | head => exact .inl (.head _)
+      | tail _ hy =>
+          rcases ih y hy with h | ⟨z, hz, hp, e⟩
+          · exact .inl (.tail _ h)
+          · exact .inr ⟨z, .tail _ hz, hp, e⟩
+
+/-- **`HitsP` transfers along a map `C`** that keeps `P` and under which `U₂` on one side matches `U₁`
+on the other (the clamps, with the amounts read in two states that agree under them). -/
+theorem transfer {U₂ C : InPlay → InPlay} (hC : ∀ x y, C y = C x → C (U₂ y) = C (U x))
+    (hP : ∀ x y, C y = C x → P y = P x) {k : Nat} {b b' : List InPlay}
+    (h : HitsP P U k b b') : ∀ {e : List InPlay}, e.map C = b.map C →
+      ∃ e', HitsP P U₂ k e e' ∧ e'.map C = b'.map C := by
+  induction h with
+  | nil =>
+      intro e he
+      cases e with
+      | nil => exact ⟨[], .nil, rfl⟩
+      | cons _ _ => simp at he
+  | @hit x _ _ _ hx _ ih =>
+      intro e he
+      cases e with
+      | nil => simp at he
+      | cons y e =>
+          simp only [List.map_cons, List.cons.injEq] at he
+          obtain ⟨e', h', he'⟩ := ih he.2
+          exact ⟨U₂ y :: e', .hit (by rw [hP _ _ he.1]; exact hx) h',
+            by simp only [List.map_cons, hC _ _ he.1, he']⟩
+  | keep _ ih =>
+      intro e he
+      cases e with
+      | nil => simp at he
+      | cons y e =>
+          simp only [List.map_cons, List.cons.injEq] at he
+          obtain ⟨e', h', he'⟩ := ih he.2
+          exact ⟨y :: e', .keep h', by simp only [List.map_cons, he.1, he']⟩
+
+end HitsP
+
+/-- Benches with the same image under a map that keeps `P` have as many Pokémon passing `P`. -/
+theorem benchEligP_congr {P : InPlay → Bool} {C : InPlay → InPlay}
+    (hP : ∀ x y, C y = C x → P y = P x) :
+    ∀ {e b : List InPlay}, e.map C = b.map C → benchEligP P e = benchEligP P b
+  | [], [], _ => rfl
+  | [], _ :: _, he => by simp at he
+  | _ :: _, [], he => by simp at he
+  | y :: e, x :: b, he => by
+      simp only [List.map_cons, List.cons.injEq] at he
+      have ih := benchEligP_congr hP he.2
+      simp only [benchEligP, List.countP_cons, hP _ _ he.1] at ih ⊢
+      rw [ih]
 
 /-- Benches with the same image under a map that keeps the top card have the same eligible
 count. -/

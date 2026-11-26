@@ -62,6 +62,8 @@ theorem Run.noReduce {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchCounters w n h => intro _ hn; cases w <;> exact hn
   | spreadCounters w n g => intro _ hn; cases w <;> exact hn
   | benchSome w _ _ _ _ _ => intro _ hn; cases w <;> exact hn
+  | hitByActive w _ _ _ _ _ _ _ => intro _ hn; cases w <;> exact hn
+  | hitByBench w _ _ _ _ _ _ => intro _ hn; cases w <;> exact hn
   | switch w ha hb => intro _ hn; cases w <;> exact hn
   | benchDamage w n h => intro _ hn; cases w <;> exact hn
   | spreadDamage w n g => intro _ hn; cases w <;> exact hn
@@ -554,6 +556,104 @@ theorem Run.cap_sim {k : Nat} (hk0 : 0 < k) {e : Effect} {g₁ g₁' : GameState
       obtain ⟨a₂', b₂', hm, ha', hb'⟩ := h.sim (fun sp _ _ hxy => hsf.hpOf .own sp hxy) hc₂ he₁
       exact ⟨_, .moveCounter hm, by
         simp only [GameState.rclamp, GameState.clampAt, ha', hb', ha₂, hm₁, hm₂, he₂]⟩
+  | @hitByActive g p w m f hurt dmg a h ho =>
+      intro _ _ _ _ g₂ hc
+      have hsf := GameState.sameField_of_clampAt hc
+      have hcv := GameState.count_of_clampAt hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          rw [h] at hc₂
+          obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+          have ho' : q.hitOk f hurt = true := by rw [hq.hitOk (c := .exact) trivial]; exact ho
+          exact ⟨_, .hitByActive .own m f hurt dmg a rfl ho', by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, Option.map_some, ha₂,
+              hm₁, hm₂, he₁, he₂, GameState.side]
+            rw [clampWith_addAmt a hcv hsf .own .active p q (InPlay.clamp_of_agree hq)]⟩
+      | opp =>
+          simp only [GameState.side] at h
+          rw [h] at ha₂
+          obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
+          have ho' : q.hitOk f hurt = true := by
+            rw [hq.hitOk (c := .upto k) (show 0 < k from hk0)]; exact ho
+          exact ⟨_, .hitByActive .opp m f hurt dmg a rfl ho', by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, Option.map_some, hc₂,
+              hm₁, hm₂, he₁, he₂, GameState.side]
+            rw [clampWith_addAmt a hcv hsf .opp .active p q (InPlay.clamp_of_agree hq)]⟩
+  | @hitByActiveSkip g p w m f hurt dmg a h ho =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          rw [h] at hc₂
+          obtain ⟨q, rfl, hq⟩ := agree_of_map hc₂
+          have ho' : q.hitOk f hurt = false := by rw [hq.hitOk (c := .exact) trivial]; exact ho
+          exact ⟨_, .hitByActiveSkip .own m f hurt dmg a rfl ho', hc⟩
+      | opp =>
+          simp only [GameState.side] at h
+          rw [h] at ha₂
+          obtain ⟨q, rfl, hq⟩ := agree_of_map ha₂
+          have ho' : q.hitOk f hurt = false := by
+            rw [hq.hitOk (c := .upto k) (show 0 < k from hk0)]; exact ho
+          exact ⟨_, .hitByActiveSkip .opp m f hurt dmg a rfl ho', hc⟩
+  | @hitByBench g b' w m f hurt dmg a h =>
+      intro _ _ _ _ g₂ hc
+      have hsf := GameState.sameField_of_clampAt hc
+      have hcv := GameState.count_of_clampAt hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      cases w with
+      | own =>
+          simp only [GameState.side] at h
+          have hP : ∀ x y, InPlay.clampWith k .exact y = InPlay.clampWith k .exact x →
+              y.hitOk f hurt = x.hitOk f hurt := fun x y hxy =>
+            (InPlay.agree_of_clamp hxy).hitOk (c := .exact) trivial f hurt
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitAmt a hcv hsf .own .bench dmg) hP he₁
+          rw [← benchEligP_congr hP he₁] at h'
+          exact ⟨_, .hitByBench .own m f hurt dmg a h', by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂,
+              he₂, he']⟩
+      | opp =>
+          simp only [GameState.side] at h
+          have hP : ∀ x y, InPlay.clampWith k (.upto k) y = InPlay.clampWith k (.upto k) x →
+              y.hitOk f hurt = x.hitOk f hurt := fun x y hxy =>
+            (InPlay.agree_of_clamp hxy).hitOk (c := .upto k) (show 0 < k from hk0) f hurt
+          obtain ⟨e', h', he'⟩ := h.transfer (clampWith_hitAmt a hcv hsf .opp .bench dmg) hP he₂
+          rw [← benchEligP_congr hP he₂] at h'
+          exact ⟨_, .hitByBench .opp m f hurt dmg a h', by
+            simp only [GameState.rclamp, GameState.clampAt, GameState.updSide, hc₂, ha₂, hm₁, hm₂,
+              he₁, he']⟩
+  | @dumpActive g q p b₁ b₂ f h hf ho =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      obtain ⟨d₁, r, d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
+      have hr := InPlay.agree_of_clamp h2
+      rw [ho] at ha₂
+      obtain ⟨s, rfl, hs⟩ := agree_of_map ha₂
+      have hs' : InPlay.Agree k (.upto k) (s.addDamage r.damage) (p.addDamage q.damage) := by
+        rw [hr.damage_eq]; exact hs.upd.2.1 _
+      exact ⟨_, .dumpActive f rfl (by rw [hr.top]; exact hf) rfl, by
+        simp only [GameState.rclamp, GameState.clampAt, hc₂, hm₁, hm₂, he₂, List.map_append,
+          List.map_cons, h1, h3, Option.map_some, InPlay.clamp_of_agree (hr.setDamage 0),
+          InPlay.clamp_of_agree hs']⟩
+  | @dumpBench g q r b₁ b₂ c₁ c₂ f h hf ho =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨cc₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      obtain ⟨d₁, r', d₂, rfl, h1, h2, h3⟩ := map_eq_split (h ▸ he₁)
+      obtain ⟨t₁, s, t₂, rfl, i1, i2, i3⟩ := map_eq_split (ho ▸ he₂)
+      have hr := InPlay.agree_of_clamp h2
+      have hs := InPlay.agree_of_clamp i2
+      have hs' : InPlay.Agree k (.upto k) (s.addDamage r'.damage) (r.addDamage q.damage) := by
+        rw [hr.damage_eq]; exact hs.upd.2.1 _
+      exact ⟨_, .dumpBench f rfl (by rw [hr.top]; exact hf) rfl, by
+        simp only [GameState.rclamp, GameState.clampAt, hc₂, ha₂, hm₁, hm₂, List.map_append,
+          List.map_cons, h1, h3, i1, i3, InPlay.clamp_of_agree (hr.setDamage 0),
+          InPlay.clamp_of_agree hs']⟩
+  | dumpNone f sp h =>
+      intro _ _ _ _ g₂ hc
+      obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
+      exact ⟨_, .dumpNone f sp (by rw [benchElig_congr clampWith_top f he₁]; exact h), hc⟩
   | benchHealSome m f n h =>
       intro _ _ _ _ g₂ hc
       obtain ⟨c₂, a₂, m₁, m₂, e₁, e₂, rfl, hc₂, ha₂, hm₁, hm₂, he₁, he₂⟩ := GameState.clamp_inv hc
