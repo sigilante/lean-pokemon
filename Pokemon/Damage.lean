@@ -866,6 +866,19 @@ theorem clampWith_hitWith {c : Cap} (dmg : Bool) (n : Nat) (x y : InPlay)
     InPlay.clampWith K c (y.hitWith dmg n) = InPlay.clampWith K c (x.hitWith dmg n) :=
   InPlay.clamp_of_agree ((InPlay.agree_of_clamp h).hitWith dmg n)
 
+/-- Healing commutes with the uncapped clamp (milestone MV11): under `Cap.exact` two Pokémon with the
+same image have the same damage. It does not commute with a capped one (survey S25). -/
+theorem clampExact_healBy (n : Option Nat) (x y : InPlay)
+    (h : InPlay.clampWith K .exact y = InPlay.clampWith K .exact x) :
+    InPlay.clampWith K .exact (y.healBy n) = InPlay.clampWith K .exact (x.healBy n) := by
+  have hr := InPlay.agree_of_clamp h
+  apply InPlay.clamp_of_agree
+  cases n with
+  | some n =>
+      show InPlay.Agree K .exact { y with damage := y.damage - n } { x with damage := x.damage - n }
+      rw [hr.damage_eq]; exact hr.setDamage _
+  | none => exact hr.setDamage _
+
 theorem InPlay.clampWith_moveUp (c : Cap) (x : InPlay) :
     InPlay.clampWith K c x.moveUp = (InPlay.clampWith K c x).moveUp := by
   cases c <;> rfl

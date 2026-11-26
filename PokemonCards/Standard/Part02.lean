@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.17.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.18.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,21 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part02
 open Pokemon
+
+/-- Perilous Jungle (sv5-156). Records: sv5-156. -/
+def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
+    .skip [
+      { sel := .all, filt := .not (.ptype .darkness), tgt := none, src := none, need := none, eff := .condMore .poisoned 2 }]
+
+/-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec. -/
+def sv5_157 : Card := .trainer "Prime Catcher" .item
+    (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
+
+/-- Mist Energy (sv5-161). Records: sv5-161. Caveats: shieldActive, shieldReach. -/
+def sv5_161 : Card := .energy (.special "Mist Energy" [[.colorless]] { grant := { holder := .pokemon, attacks := [], abilities := [], statics := [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .shield .any }] } })
+
+/-- Neo Upper Energy (sv5-162). Records: sv5-162. Caveats: aceSpec, unitsReading. -/
+def sv5_162 : Card := .energy (.special "Neo Upper Energy" [[.colorless]] { alt := some (.holder (.stage .stage2), [[.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless], [.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless]]) })
 
 /-- Tangela (sv6-1). Records: sv6-1. -/
 def sv6_1 : Card := .pokemon
@@ -499,6 +514,20 @@ def sv6_62 : Card := .pokemon
     attacks := [
       { name := "Interjet", cost := [.water, .colorless], damage := 6,
         effect := .ifDone (.countGe (.bench .own .pokemon) 1) (.switch .own) (.switch .opp),
+        gx := false }] }
+
+/-- Wellspring Mask Ogerpon ex (sv6-64). Records: sv6-64, sv6-194, sv6-213. Caveats: benchMods, perPokemon. -/
+def sv6_64 : Card := .pokemon
+  { name := "Wellspring Mask Ogerpon ex", stage := .basic, evolvesFrom := none,
+    hp := 21, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .ex, tera := true,
+    abilities := [],
+    attacks := [
+      { name := "Sob", cost := [.colorless], damage := 2,
+        effect := .linger .opp .next (.lock .retreat),
+        gx := false },
+      { name := "Torrential Pump", cost := [.water, .colorless, .colorless], damage := 10,
+        effect := .choice (.seq (.returnEnergy .own .active .energy (.exactly 3) .shuffle) (.benchDamage .opp 12)) .skip,
         gx := false }] }
 
 /-- Zapdos (sv6-65). Records: sv6-65. -/
@@ -1212,6 +1241,10 @@ def sv6_142 : Card := .trainer "Accompanying Flute" .item
 def sv6_143 : Card := .trainer "Bug Catching Set" .item
     (.seq (.ite (.countGe (.pile .own .deck .any) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.move .own (.top 7) .hand (.or (.ptype .grass) (.energyOf .grass)) (.upTo 2)) .shuffle))
 
+/-- Community Center (sv6-146). Records: sv6-146. Caveats: noopPlay. -/
+def sv6_146 : Card := .trainer "Community Center" .stadium
+    (.ite (.countGe (.played .own (.kind .supporter)) 1) (.seq (.ite (.atLeast .own 1) .skip (.ite (.countGe (.bench .own .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1)))) (.seq (.heal 1) (.benchHealSome 5 .any (some 1)))) (.move .own (.top 0) .hand .any (.exactly 1)))
+
 /-- Cook (sv6-147). Records: sv6-147. -/
 def sv6_147 : Card := .trainer "Cook" .supporter
     (.seq (.ite (.atLeast .own 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.heal 7))
@@ -1766,77 +1799,12 @@ def sv7_4 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Lileep (sv7-5). Records: sv7-5, sv7-145. Caveats: perPokemon. -/
-def sv7_5 : Card := .pokemon
-  { name := "Lileep", stage := .stage1, evolvesFrom := some "Antique Root Fossil",
-    hp := 10, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Bind Down", cost := [.grass], damage := 5,
-        effect := .linger .opp .next (.lock .retreat),
-        gx := false }] }
-
-/-- Carnivine (sv7-7). Records: sv7-7. -/
-def sv7_7 : Card := .pokemon
-  { name := "Carnivine", stage := .basic, evolvesFrom := none,
-    hp := 11, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Nosh", cost := [.colorless], damage := 0,
-        effect := .heal 4,
-        gx := false },
-      { name := "Loom Over", cost := [.grass, .colorless, .colorless], damage := 0,
-        effect := .damage (.sub (.const 13) (.per .own 1)),
-        gx := false }] }
-
-/-- Mow Rotom (sv7-8). Records: sv7-8. -/
-def sv7_8 : Card := .pokemon
-  { name := "Mow Rotom", stage := .basic, evolvesFrom := none,
-    hp := 9, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Reaping Dash", cost := [.colorless], damage := 0,
-        effect := .seq (.seq (.discardTools .opp .active) (.discardEnergy .opp .active .specialEnergy .all)) (.damage (.const 3)),
-        gx := false }] }
-
-/-- Grubbin (sv7-9). Records: sv7-9, me2pt5-17. -/
-def sv7_9 : Card := .pokemon
-  { name := "Grubbin", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .grass, retreat := 2, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Ambush", cost := [.colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 4)) (.damage (.const 1)),
-        gx := false }] }
-
-/-- Gossifleur (sv7-10). Records: sv7-10. -/
-def sv7_10 : Card := .pokemon
-  { name := "Gossifleur", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Double Spin", cost := [.colorless], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.damage (.const 2))),
-        gx := false }] }
-
-/-- Applin (sv7-12). Records: sv7-12, sv8pt5-9. -/
-def sv7_12 : Card := .pokemon
-  { name := "Applin", stage := .basic, evolvesFrom := none,
-    hp := 4, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Spray Fluid", cost := [.grass], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv5_156,
+  sv5_157,
+  sv5_161,
+  sv5_162,
   sv6_1,
   sv6_2,
   sv6_4,
@@ -1875,6 +1843,7 @@ def cards : List Card := [
   sv6_58,
   sv6_59,
   sv6_62,
+  sv6_64,
   sv6_65,
   sv6_66,
   sv6_67,
@@ -1930,6 +1899,7 @@ def cards : List Card := [
   sv6_140,
   sv6_142,
   sv6_143,
+  sv6_146,
   sv6_147,
   sv6_148,
   sv6_151,
@@ -1980,13 +1950,7 @@ def cards : List Card := [
   sv6pt5_58,
   sv6pt5_61,
   sv7_2,
-  sv7_4,
-  sv7_5,
-  sv7_7,
-  sv7_8,
-  sv7_9,
-  sv7_10,
-  sv7_12]
+  sv7_4]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -145,6 +145,8 @@ theorem ZStep.setZones {e : Effect} {s s' : PlayerState} (h : ZStep e s s') : s.
       | put hp => cases hp <;> cases hr <;> cases src <;> rfl
       | bench _ _ => cases hr <;> cases src <;> rfl
       | attach _ => cases hr <;> cases src <;> rfl
+  | retActive _ _ _ hp => cases hp <;> rfl
+  | retBench _ _ _ hp => cases hp <;> rfl
   | _ => rfl
 
 /-- The counts of the cards in a Pokémon's card list. -/
@@ -183,6 +185,22 @@ theorem benchCardList_ofBasic : ∀ l : List PokemonCard,
   | p :: l => by
       simp only [List.map_cons, benchCardList, benchCardList_ofBasic l]
       rfl
+
+/-- Attaching Energy cards to a Bench (milestone MV11, `ShiftTo`) adds them to the cards of the
+Bench. -/
+theorem ShiftTo.count {t : List Card} {one : Bool} {b b' : List InPlay} (h : ShiftTo t one b b')
+    (x : Card) :
+    List.count x (benchCardList b') = List.count x (benchCardList b) + List.count x t := by
+  cases h with
+  | @one q q' b₁ b₂ hd =>
+      have := hd.count x
+      simp only [optCardList, benchCardList, List.count_append, List.count_nil] at this
+      simp only [count_benchCardList_append, benchCardList, List.count_append]
+      omega
+  | many hd =>
+      have := hd.count x
+      simp only [optCardList, List.count_nil] at this
+      omega
 
 /-- Placing the cards taken from a window adds them to the player's cards. -/
 theorem Place.count {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s')
@@ -279,6 +297,33 @@ theorem ZStep.count {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (x : Ca
       have h4 := hp.count x
       simp only [List.count_nil, Nat.add_zero] at h2
       omega
+  | @retActive w f q d s s' a t r ha hs hq hp =>
+      have h3 := hs.count x
+      have h4 := hp.count x
+      simp only [PlayerState.allCards, List.count_append, optCardList, ha,
+        InPlay.count_cardList] at h4 ⊢
+      omega
+  | @retBench w f q d s s' p b₁ b₂ t r hb hs hq hp =>
+      have h3 := hs.count x
+      have h4 := hp.count x
+      simp only [PlayerState.allCards, List.count_append, hb, count_benchCardList_append,
+        benchCardList, InPlay.count_cardList] at h4 ⊢
+      omega
+  | retNone => rfl
+  | @shiftAB w f q one s a t r b' ha hs hq hd =>
+      have h3 := hs.count x
+      have h4 := hd.count x
+      simp only [PlayerState.allCards, List.count_append, optCardList, ha,
+        InPlay.count_cardList]
+      omega
+  | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb hs hq hd =>
+      have h3 := hs.count x
+      have h4 := hd.count x
+      simp only [optCardList, benchCardList, List.count_nil, InPlay.count_cardList] at h4
+      simp only [PlayerState.allCards, List.count_append, optCardList, ha, hb,
+        count_benchCardList_append, benchCardList, InPlay.count_cardList]
+      omega
+  | shiftNone => rfl
 
 theorem ZStep.perm {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
     s'.allCards.Perm s.allCards :=

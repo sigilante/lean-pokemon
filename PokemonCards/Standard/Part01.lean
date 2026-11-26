@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 1 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.17.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.18.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -321,6 +321,20 @@ def svp_151 : Card := .pokemon
         gx := false },
       { name := "Blazing Charge", cost := [.fire, .fire, .colorless], damage := 0,
         effect := .ite (.countGe (.prizes .opp) 5) (.damage (.const 10)) (.damage (.const 17)),
+        gx := false }] }
+
+/-- Chien-Pao (svp-152). Records: svp-152, sv8-56. -/
+def svp_152 : Card := .pokemon
+  { name := "Chien-Pao", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .water, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [
+      { name := "Snow Sink", use := .onPlay .bench,
+        spot := none, cond := none,
+        effect := .fx .discardStadium }],
+    attacks := [
+      { name := "Icicle Loop", cost := [.water, .water, .colorless], damage := 12,
+        effect := .ite (.countGe (.energy .own .energy) 1) (.returnEnergy .own .active .energy (.exactly 1) .hand) .skip,
         gx := false }] }
 
 /-- Magneton (svp-153). Records: svp-153, svp-159, sv8-59. Caveats: koCounters, selfBench, selfKOBench, upTo0. -/
@@ -1161,6 +1175,20 @@ def sv5_75 : Card := .pokemon
         effect := .heal 1,
         gx := false }] }
 
+/-- Scream Tail (sv5-77). Records: sv5-77. -/
+def sv5_77 : Card := .pokemon
+  { name := "Scream Tail", stage := .basic, evolvesFrom := none,
+    hp := 9, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Supportive Singing", cost := [.colorless], damage := 0,
+        effect := .benchHealSome 1 (.and .pokemon (.or (.or (.or (.nameIn ["Ancient Booster Energy Capsule", "Awakening Drum", "Brute Bonnet", "Explorer's Guidance", "Flutter Mane", "Gouging Fire", "Gouging Fire ex", "Great Tusk", "Raging Bolt", "Raging Bolt ex", "Roaring Moon", "Sandy Shocks", "Scream Tail", "Scream Tail ex", "Slither Wing", "Walking Wake", "Walking Wake ex"]) (.and (.named "Koraidon") (.hasAttack "Primordial Beatdown"))) (.and (.named "Koraidon") (.hasAttack "Unrelenting Onslaught"))) (.and (.named "Koraidon ex") (.hasAttack "Retribution Strike")))) (some 10),
+        gx := false },
+      { name := "Hyper Voice", cost := [.colorless, .colorless], damage := 4,
+        effect := .skip,
+        gx := false }] }
+
 /-- Iron Valiant (sv5-79). Records: sv5-79. Caveats: benchMods. -/
 def sv5_79 : Card := .pokemon
   { name := "Iron Valiant", stage := .basic, evolvesFrom := none,
@@ -1658,6 +1686,20 @@ def sv5_130 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
+/-- Delcatty (sv5-131). Records: sv5-131. -/
+def sv5_131 : Card := .pokemon
+  { name := "Delcatty", stage := .stage1, evolvesFrom := some "Skitty",
+    hp := 11, type := .colorless, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Tail Trickery", cost := [.colorless], damage := 3,
+        effect := .inflict .confused,
+        gx := false },
+      { name := "Energy Blender", cost := [.colorless, .colorless, .colorless], damage := 11,
+        effect := .iter (.moveEnergy .own .energy),
+        gx := false }] }
+
 /-- Chatot (sv5-132). Records: sv5-132, sv5-181. -/
 def sv5_132 : Card := .pokemon
   { name := "Chatot", stage := .basic, evolvesFrom := none,
@@ -1683,6 +1725,20 @@ def sv5_134 : Card := .pokemon
         effect := .skip,
         gx := false },
       { name := "Jet Wing", cost := [.colorless, .colorless], damage := 7,
+        effect := .skip,
+        gx := false, selfLock := .all }] }
+
+/-- Unfezant (sv5-135). Records: sv5-135. Caveats: moveUnits. -/
+def sv5_135 : Card := .pokemon
+  { name := "Unfezant", stage := .stage2, evolvesFrom := some "Tranquill",
+    hp := 15, type := .colorless, retreat := 0, weakness := some .lightning,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Opposing Winds", cost := [.colorless, .colorless], damage := 7,
+        effect := .choice (.ite (.countGe (.energy .opp .energy) 2) (.returnEnergy .opp .active .energy (.exactly 2) .hand) (.returnEnergy .opp .active .energy .all .hand)) .skip,
+        gx := false },
+      { name := "Boundless Power", cost := [.colorless, .colorless, .colorless], damage := 18,
         effect := .skip,
         gx := false, selfLock := .all }] }
 
@@ -1755,21 +1811,6 @@ def sv5_154 : Card := .tool "Maximum Belt"
     statics := [
       { sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .bonus 5 (.and .pokemon (.not .noRuleBox)) }] }
 
-/-- Perilous Jungle (sv5-156). Records: sv5-156. -/
-def sv5_156 : Card := .trainer "Perilous Jungle" .stadium
-    .skip [
-      { sel := .all, filt := .not (.ptype .darkness), tgt := none, src := none, need := none, eff := .condMore .poisoned 2 }]
-
-/-- Prime Catcher (sv5-157). Records: sv5-157, sv8pt5-119. Caveats: aceSpec. -/
-def sv5_157 : Card := .trainer "Prime Catcher" .item
-    (.seq (.ite (.countGe (.bench .opp .pokemon) 1) .skip (.move .own (.top 0) .hand .any (.exactly 1))) (.seq (.switch .opp) (.switch .own)))
-
-/-- Mist Energy (sv5-161). Records: sv5-161. Caveats: shieldActive, shieldReach. -/
-def sv5_161 : Card := .energy (.special "Mist Energy" [[.colorless]] { grant := { holder := .pokemon, attacks := [], abilities := [], statics := [{ sel := .self, filt := .any, tgt := none, src := none, need := none, eff := .shield .any }] } })
-
-/-- Neo Upper Energy (sv5-162). Records: sv5-162. Caveats: aceSpec, unitsReading. -/
-def sv5_162 : Card := .energy (.special "Neo Upper Energy" [[.colorless]] { alt := some (.holder (.stage .stage2), [[.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless], [.grass, .fire, .water, .lightning, .psychic, .fighting, .darkness, .metal, .fairy, .dragon, .colorless]]) })
-
 /-- The cards of this part. -/
 def cards : List Card := [
   base1_97,
@@ -1804,6 +1845,7 @@ def cards : List Card := [
   svp_148,
   svp_150,
   svp_151,
+  svp_152,
   svp_153,
   svp_155,
   svp_157,
@@ -1869,6 +1911,7 @@ def cards : List Card := [
   sv5_73,
   sv5_74,
   sv5_75,
+  sv5_77,
   sv5_79,
   sv5_80,
   sv5_82,
@@ -1906,8 +1949,10 @@ def cards : List Card := [
   sv5_127,
   sv5_128,
   sv5_130,
+  sv5_131,
   sv5_132,
   sv5_134,
+  sv5_135,
   sv5_137,
   sv5_139,
   sv5_144,
@@ -1917,11 +1962,7 @@ def cards : List Card := [
   sv5_148,
   sv5_152,
   sv5_153,
-  sv5_154,
-  sv5_156,
-  sv5_157,
-  sv5_161,
-  sv5_162]
+  sv5_154]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -145,10 +145,13 @@ unchanged in statement (its attacks have `gx = false`).
   (`TrigEvent`); the model plays such text as no effect; the `oppBenched` triggers, which can fire
   before the attack, are admitted only with effects that recycle nothing (`Ability.trigOn`), so
   they keep the discard piles and need no new clause (`TInv.move`, case `trigger`);
-* returning a card from play to the hand or deck (Scoop Up Cyclone, and the Abilities of Abra,
-  Dudunsparce and Misty's Psyduck) and devolution are not in the model; with them a Pokémon card
-  could re-enter play within a turn, and the potential that bounds Ability uses would need
-  another argument;
+* returning a Pokémon card from play to the hand or deck (Scoop Up Cyclone, and the Abilities of
+  Abra, Dudunsparce and Misty's Psyduck) and devolution are not in the model; with them a Pokémon
+  card could re-enter play within a turn, and the potential that bounds Ability uses would need
+  another argument. Attached Energy returned to the hand or deck (`Effect.returnEnergy`, milestone
+  MV11) is covered by the clauses as they stand: it takes no card out of a discard pile
+  (`Run.disc_mono`), keeps the potential (`ZStep.abPot_le`), and a returned card played again writes
+  only if it is an Item card, a write paid by its arrival in the discard pile;
 * the model lets a played Item or Supporter recycle itself (it is in the discard pile while its
   effect resolves; the rulebook discards it afterwards); clause 3 (a) covers that case, since it
   constrains every return from the discard pile;

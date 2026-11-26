@@ -203,7 +203,14 @@ c('M', 'defender modifiers outside steps 2 and 5 (less before W/R, more after W/
   r'do \d+ less damage \(before|takes \d+ more damage from attacks|Weakness is now|has no Weakness|attack does \d+ more damage \(before|base damage is|cost Colorless more|can be used for|Weakness doesn\'t change')
 c('M', 'locks: Supporters, Stadiums, evolution, Energy attachment, retreat of Poisoned, attack coin, per-attack lock', UH,
   r"can't play any (Supporter|Stadium)|can't play any Pokémon from their hand to evolve|Energy (cards )?can't be attached|Poisoned Pokémon can't retreat|tries to use an attack|try to use a Trainer|can't use that attack|can't use Blaze Blitz|It can't attack during|Pokémon that have \d or less Energy attached can't attack")
+# importer 0.18.0 (milestone MV11, survey S25): heals of each / 1 filtered / all damage of a Benched Pokémon, filtered
+# Active heals and "1 of your Pokémon, and it recovers" are imported (`benchHealSome`); left here: heals of the opponent's
+# Pokémon (refused: not clamp-safe inside an attack), all damage from a filtered set or from the Active Pokémon of a type,
+# a target filtered by remaining HP, a computed amount, "Heal 30 damage from it"
 c('M', 'heal several Pokémon, heal filtered, heal all of a Benched Pokémon, heal the opponent\'s Pokémon', UH, r'^Heal |For each Tasty Rice Ball|^Heal 30 damage from it')
+# importer 0.18.0 (milestone MV11, survey S25): Energy to the hand or deck (`returnEnergy`), directed and any-way moves
+# (`shiftEnergy`, `iter moveEnergy`) are imported; left here: "from your other Pokémon to this Pokémon" (Iron Leaves ex),
+# "those Energy cards" from a discard pile (Sinistcha ex), "1 of your opponent's Pokémon" with a play condition
 c('M', 'Energy to the hand or deck, Energy moves of several or all, Energy moves "in any way you like"', UH,
   r'Energy attached to .* into (your|their) hand|Energy attached to this Pokémon into your deck|Move (all|up to 2|3) Energy|move any amount of|Move all Energy|Energy from the Pokémon you moved|shuffle those Energy cards')
 c('M', 'return from play (to hand or deck), discard a Pokémon in play, Knock Out by effect', UH,

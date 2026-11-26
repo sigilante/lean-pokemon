@@ -281,6 +281,21 @@ def prim(e, coin):
         if q[0] == 'all':
             return none, none
         return f_or(none, [conj(cov('upTo0'))]), none
+    if h == 'returnEnergy':
+        # importer 0.18.0 (milestone MV11): the take of `discardEnergy`, the cards put elsewhere
+        return prim(('discardEnergy',) + e[1:5], coin)
+    if h == 'shiftEnergy':
+        # importer 0.18.0 (milestone MV11): nothing moves with an empty Bench (`shiftNone`), or with nothing to take
+        _, w, src, f, q, dst, one = e
+        if q[0] == 'exactly':
+            return (TRUE, TRUE) if q[1] == 0 else (FALSE, [lit(bench(w), False)])
+        if src == ('active',):
+            must = [lit(ge(('energy', w, f)), False), lit(bench(w), False)]
+        else:
+            must = [lit(bench(w), False), conj((bench(w), True), notest('Energy on a Benched Pokémon'))]
+        if q[0] == 'upTo':
+            return f_or(must, [conj(cov('upTo0'))]), must
+        return must, must
     if h == 'switch':
         f_ = [lit(bench(e[1]), False)]
         return f_, f_
@@ -289,6 +304,13 @@ def prim(e, coin):
         return f_, f_
     if h == 'benchHeal':
         f_ = [lit(bench(OWN), False), conj((bench(OWN), True), notest('damage on a Benched Pokémon'))]
+        return f_, f_
+    if h == 'benchHealSome':
+        # importer 0.18.0 (milestone MV11): nothing with no Benched Pokémon passing the filter; otherwise the damage on
+        # the Benched Pokémon decides, which no test reads
+        _, m_, f, n = e
+        nb = ge(('bench', OWN, ('pokemon',) if f == ('any',) else f))
+        f_ = [lit(nb, False), conj((nb, True), notest('damage on a Benched Pokémon'))]
         return f_, f_
     if h == 'cure':
         f_ = [lit(ge(('conds', OWN)), False)]

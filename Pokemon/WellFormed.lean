@@ -73,6 +73,17 @@ theorem Deal.benchOk {tf : Filter} {t : List Card} {a a' : Option InPlay} {b b' 
       exact ih (benched_update rfl hb ((hb q (List.mem_append_right _ (.head _))).of_eq
         rfl rfl rfl rfl))
 
+/-- Attaching Energy cards to a Bench keeps every Benched Pokémon `Benched` (milestone MV11). -/
+theorem ShiftTo.benchOk {t : List Card} {one : Bool} {b b' : List InPlay} (h : ShiftTo t one b b')
+    (hb : BenchOk b) : BenchOk b' := by
+  cases h with
+  | @one q q' b₁ b₂ hd =>
+      have hq : BenchOk [q] := fun p hp => by
+        rw [List.mem_singleton] at hp; subst hp
+        exact hb _ (List.mem_append_right _ (.head _))
+      exact benched_update rfl hb (hd.benchOk hq q' (.head _))
+  | many hd => exact hd.benchOk hb
+
 /-- Placing the cards taken from a window keeps every Benched Pokémon `Benched` (milestone MV6). -/
 theorem Place.benchOk {i : Into} {t : List Card} {s s' : PlayerState} (h : Place i t s s')
     (hb : BenchOk s.bench) : BenchOk s'.bench := by
@@ -127,6 +138,15 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
   | @look w src f q i rest s s₁ s' t r hs hq hr hp =>
       refine hp.benchOk ?_
       rw [hr.fields.2.2, Src.set_bench]; exact hb
+  | retActive _ _ _ hp => rw [hp.fields.2.2]; exact hb
+  | @retBench w f q d s s' p b₁ b₂ t r hb' hs hq hp =>
+      rw [hp.fields.2.2]
+      exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
+  | retNone => exact hb
+  | shiftAB _ _ _ hd => exact hd.benchOk hb
+  | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb' hs hq hd =>
+      exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
+  | shiftNone => exact hb
 
 /-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
 theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
@@ -276,6 +296,10 @@ theorem Run.frame {e : Effect} {g g' : GameState} (h : Run e g g') : Run.Frame g
       | own => exact ⟨fun hb => hz.benchOk hb, id, rfl, rfl, rfl, rfl, rfl⟩
       | opp => exact ⟨id, fun hb => hz.benchOk hb, rfl, rfl, rfl, rfl, rfl⟩
   | moveCounter h => exact ⟨fun hb => h.benchOk hb, id, rfl, rfl, rfl, rfl, rfl⟩
+  | benchHealSome m f n h =>
+      have hq : ∀ x, Benched x → Benched (x.healBy n) := fun x hx => by
+        cases n <;> exact hx.of_eq rfl rfl rfl rfl
+      exact ⟨fun hb => h.forall_of hq hb, id, rfl, rfl, rfl, rfl, rfl⟩
   | _ => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Markers do not matter to `Benched`. -/

@@ -196,6 +196,9 @@ AMT = ('bonus', 'reduce', 'weaken', 'expose')
 REC = re.compile(r'move \.(own|opp) \.discard \.(\w+) ')
 LOOK = re.compile(r'look \.(own|opp) \.discard ')
 TRIG = re.compile(r'use := \.triggered \.(\w+) ')
+# importer 0.18.0 (milestone MV11): attached Energy put into the hand or the deck (`Effect.returnEnergy w sp f q d`),
+# a return from play to a zone a card can be played from again; `d = .discard` is a discard, not a return
+RET = re.compile(r'returnEnergy \.(own|opp) \.(\w+) ')
 
 
 def main(d):
@@ -261,6 +264,25 @@ def main(d):
           [x[0] for x in can if 'pokemon' in x[3]])
     print('  can return a Supporter writer:', [x[0] for x in can if 'supporter' in x[3]])
     print('  can return an Item writer:', [x[0] for x in can if 'item' in x[3]])
+    # importer 0.18.0 (milestone MV11): returns of attached Energy from play to the hand or the deck. Not recyclers in the
+    # sense of `Effect.recFilters` (no card leaves a discard pile); the filter is still checked against every writer
+    rets = collections.OrderedDict()
+    for t in terms:
+        for mm in RET.finditer(t['body']):
+            fa, j = parse_filter(t['body'], mm.end())
+            q, j = parse_filter(t['body'], j)
+            dst, j = parse_filter(t['body'], j)
+            if dst == ('discard',):
+                continue
+            sec = t['kind'] if t['ctor'] == 'trainer' else section(t['body'], mm.start(), t['ctor'])
+            if sec == 'ability':
+                sec += ':' + (ability_use(t['body'], mm.start()) or '?')
+            rets.setdefault(t['id'], (t, []))[1].append((sec, fa, dst[0]))
+    print('terms that return attached Energy from play to the hand or deck:', len(rets),
+          dict(sorted(collections.Counter(s for _, fs in rets.values() for s, _, _ in fs).items())))
+    print('  names:', [t['name'] for t, _ in rets.values()])
+    rw = [(t['name'], w['name']) for t, fs in rets.values() for w in wcards if any(ev(fa, w) for _, fa, _ in fs)]
+    print('  of them can return a writer (filter admits a writer term):', len(rw), rw)
     # importer 0.14.0: the triggered Abilities by event (`AbilityUse.triggered ev opt`; milestones M8b and MV7)
     trig = collections.OrderedDict()
     for t in terms:

@@ -656,6 +656,17 @@ inductive Effect where
   the effect resolves ("Heal 30 damage from 1 of your Benched Pokémon"); nothing if the player has
   no Benched Pokémon -/
   | benchHeal (n : Nat)
+  /-- (milestone MV11) heal `m` distinct Benched Pokémon of the player whose card passes `f`, chosen
+  when the effect resolves, all of them if fewer pass: from each, up to `n` damage counters
+  (`some n`), or all of them (`none`). "Heal 100 damage from each of your Benched Pokémon" (Leafeon ex
+  sv8pt5-6) is `benchHealSome 5 .any (some 10)` (5 = `benchLimit`: every Benched Pokémon when the Bench holds at most 5, as
+  moves keep it); "Heal 120
+  damage from 1 of your Benched Psychic Pokémon" (Meloetta me2-40), `benchHealSome 1 (.ptype .psychic)
+  (some 12)`; "Heal all damage from 1 of your Benched Pokémon" (Ho-Oh me55-12), `benchHealSome 1 .any
+  none`. Only the player's own Pokémon: a heal of the opponent's Pokémon inside an attack would not
+  commute with the capped clamp (the opponent's damage is capped during an attack, `GameState.rclamp`;
+  survey S25), and no form of it is in the language. Nothing with no Benched Pokémon passing `f` -/
+  | benchHealSome (m : Nat) (f : Filter) (n : Option Nat)
   /-- the `w` player's Active Pokémon switches with one of their Benched Pokémon, chosen when the
   effect resolves (`own`: "Switch your Active Pokémon with 1 of your Benched Pokémon", Switch;
   `opp`: "Switch in 1 of your opponent's Benched Pokémon to the Active Spot", Boss's Orders, or
@@ -714,6 +725,30 @@ inductive Effect where
   /-- move one Energy card that passes `f` from one of the `w` player's Pokémon in play to another
   ("Move an Energy from 1 of your Benched Pokémon to your Active Pokémon"); or nothing -/
   | moveEnergy (w : Whose) (f : Filter)
+  /-- (milestone MV11) put Energy cards that pass `f`, attached to one of the `w` player's Pokémon at
+  `sp`, at `d` in that player's zones, as much as `q` says, counted as `discardEnergy` counts
+  (`Qty.okE`): "Put an Energy attached to this Pokémon into your hand" (Chien-Pao svp-152) is
+  `returnEnergy .own .active .energy (.exactly 1) .hand` (under `min_take`'s test); "You may put 2
+  Energy attached to your opponent's Active Pokémon into their hand" (Unfezant sv5-135),
+  `returnEnergy .opp .active .energy …  .hand`; "shuffle all Energy attached to this Pokémon into
+  your deck" (Dialga me1-95), `returnEnergy .own .active .energy .all .shuffle`. With `d = .discard`
+  it is `discardEnergy`. The cards leave play for a zone they can be played from again: not a
+  recycler in the sense of `Effect.recFilters` (no card leaves a discard pile), and the cards it
+  moves are cards attached as Energy, which write nothing when played (`Card.wAmt`). With `bench`
+  and an empty Bench, nothing -/
+  | returnEnergy (w : Whose) (sp : Spot) (f : Filter) (q : Qty) (d : Dst)
+  /-- (milestone MV11) move Energy cards that pass `f`, as much as `q` says (counted as `discardEnergy`
+  counts, `Qty.okE`), from one of the `w` player's Pokémon at `src` to that player's Pokémon at `dst`:
+  all of them to one Pokémon there (`one = true`) or "in any way you like" (`one = false`). Only the
+  two directions between the Active Spot and the Bench have a resolution (`ZStep.shiftAB`,
+  `ZStep.shiftBA`); with an empty Bench, nothing (`ZStep.shiftNone`). "Move all Energy from this
+  Pokémon to 1 of your Benched Pokémon" (Castform Sunny Form sv8-20) is `shiftEnergy .own .active
+  .energy .all .bench true`; "… to your Benched Pokémon in any way you like" (Kilowattrel sv8-67), the
+  same with `false`; "Move up to 2 Energy from your Benched Pokémon to your Active Pokémon" (N's Plan
+  zsv10pt5-83), two steps `shiftEnergy .own .bench .energy (.upTo 1) .active true`. Unlike
+  `moveEnergy`, which moves one card between any two of the player's Pokémon, the source and the
+  targets are fixed by their spots -/
+  | shiftEnergy (w : Whose) (src : Spot) (f : Filter) (q : Qty) (dst : Spot) (one : Bool)
   /-- move one damage counter from one of the player's own Pokémon in play whose card passes `f`
   to another of the player's Pokémon (milestone M8a: "move 1 damage counter from 1 of your Team
   Rocket's Pokémon to another of your Pokémon", Team Rocket's Orbeetle sv10-89, an "as often as you
@@ -852,7 +887,8 @@ def Test.onOwn : Test → Bool
 /-- The effect neither reads nor writes the player's own Active Pokémon: no `heal`, `cure`,
 `selfDamage`, `healAll`, `scale .own`, `switch .own`, no Energy attached to, discarded from or
 moved off it (`attach .own _ _ .active _`, `discardEnergy .own .active`, `moveEnergy .own`;
-milestone MV; `look .own … (.attach _)`, milestone MV6), no test on the player's own Active Pokémon,
+milestone MV; `look .own … (.attach _)`, milestone MV6; `returnEnergy .own .active` and every
+`shiftEnergy .own`, milestone MV11), no test on the player's own Active Pokémon,
 and no damage step (`damage` and `drain` read the attacker's type for Weakness and Resistance, and
 their amount may read its damage; `drain` heals it). `mark .own` and `color .own` are allowed: they
 may choose any of the player's Pokémon in play, Active or Benched. -/
@@ -868,6 +904,8 @@ def Effect.ownFree : Effect → Bool
   | .attach .own _ _ .active _ => false
   | .discardEnergy .own .active _ _ => false
   | .moveEnergy .own _ => false
+  | .returnEnergy .own .active _ _ _ => false
+  | .shiftEnergy .own _ _ _ _ _ => false
   | .moveCounter _ _ => false
   | .look .own _ _ _ (.attach _) _ => false
   | .ite t a b => !t.onOwn && a.ownFree && b.ownFree
@@ -925,8 +963,11 @@ theorem Effect.switchSafe_of_switchesOwn : ∀ {e : Effect}, e.switchesOwn = fal
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _ | .damage _ _, _ | .drain _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .shiftEnergy _ _ _ _ _ _, _
+  | .moveCounter _ _, _ | .discardStadium, _
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
+  | .benchHealSome _ _ _, _ => rfl
 
 /-- A quantity whose zone move can fail (`exactly n`: no resolution if fewer cards can be taken). -/
 def Qty.canFail : Qty → Bool
@@ -989,8 +1030,10 @@ on it (`counters`, `scale`), Special Conditions and Poison strength (`inflict`, 
 it out or a Benched Pokémon in (`switch .opp`), lingering modifiers that print puts on the Defending
 Pokémon (`linger .opp _ (.lock .attack)`, `(.lock .retreat)`, `.weaken`, `.expose`), Energy and Tools
 discarded from it or attached to it (`discardEnergy .opp .active`, `discardTools .opp .active`,
-`attach .opp _ _ .active _`), Energy moved between the opponent's Pokémon (`moveEnergy .opp`, which
-may take from it), and markers or a Coloring counter placed on one of the opponent's Pokémon
+`attach .opp _ _ .active _`), Energy attached to it put into the opponent's hand or deck
+(`returnEnergy .opp .active`, milestone MV11), Energy moved between the opponent's Pokémon
+(`moveEnergy .opp`, which may take from it; `shiftEnergy .opp`, milestone MV11, which takes from it or
+puts on it), and markers or a Coloring counter placed on one of the opponent's Pokémon
 (`mark .opp`, `color .opp`, which may choose it). Kept: the damage step (prevented, if at all, by
 `Mod.prevent` and `SEff.prevent`; damage is not an effect), everything on the opponent's Bench, zones,
 hand and deck, the Item lock on the opponent (`linger .opp _ (.lock .item)`: a lock on the player, not
@@ -1013,6 +1056,8 @@ def Effect.shielded : Effect → Effect
   | .discardTools .opp .active => .skip
   | .attach .opp _ _ .active _ => .skip
   | .moveEnergy .opp _ => .skip
+  | .returnEnergy .opp .active _ _ _ => .skip
+  | .shiftEnergy .opp _ _ _ _ _ => .skip
   | .ite t a b => .ite t a.shielded b.shielded
   | .seq a b => .seq a.shielded b.shielded
   | .choice a b => .choice a.shielded b.shielded
@@ -1060,8 +1105,11 @@ theorem Effect.oneHit_of_hitFree : ∀ {e : Effect}, e.hitFree = true → e.oneH
   | .linger _ _ _, _ | .benchCounters _ _, _ | .spreadCounters _ _, _ | .benchHeal _, _
   | .switch _, _ | .benchDamage _ _, _ | .spreadDamage _ _, _
   | .move _ _ _ _ _, _ | .drawTo _ _, _ | .attach _ _ _ _ _, _ | .putBench _ _ _, _
-  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .moveCounter _ _, _ | .discardStadium, _
-  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _ => rfl
+  | .discardEnergy _ _ _ _, _ | .moveEnergy _ _, _ | .returnEnergy _ _ _ _ _, _
+  | .shiftEnergy _ _ _ _ _ _, _
+  | .moveCounter _ _, _ | .discardStadium, _
+  | .discardTools _ _, _ | .benchSome _ _ _ _ _, _ | .look _ _ _ _ _ _, _
+  | .benchHealSome _ _ _, _ => rfl
 
 theorem Effect.oneHit_seq_right {a b : Effect} (ha : a.hitFree = true) (hb : b.oneHit = true) :
     (Effect.seq a b).oneHit = true := by

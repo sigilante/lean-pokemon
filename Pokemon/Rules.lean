@@ -126,7 +126,10 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   cost with no card superfluous (`retreatPaid`); "for each Energy attached" (`Count.energy`,
   `Count.energyAll` under `Filter.energy`: what the cards provide, a reading (below); under any other
   filter, cards: `Filter.weight`); "discard `n` Energy" (`discardEnergy`, `Qty.okE`: cards that provide `n`, none
-  superfluous; "up to `n`" a payment of at most `n`). Not every count of Energy does: `SAmt.perEnergy`
+  superfluous; "up to `n`" a payment of at most `n`); since milestone MV11 also "put `n` Energy attached to … into
+  the hand" and "move `n` Energy" (`returnEnergy`, `shiftEnergy`, the same take; a reading, importer caveat
+  `moveUnits`, both: "move up to 2 Energy from your Benched Pokémon" is two one-card steps, each of which may
+  take a card that provides 2). Not every count of Energy does: `SAmt.perEnergy`
   and `Static.need` count cards (below). With Basic Energy only each of these is the old card count
   (`InPlay.energyCount_basic`, `retreatPaid_basic`, `Qty.okE_basic`, `Run.discardActive_does_basic`;
   per function, `Pokemon/Units.lean`; that the move relation is unchanged on Basic-only states is not
@@ -418,8 +421,9 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   strength, the switch of the Defending Pokémon in either direction (a gust from the Bench too: forbids
   some, if print lets the gust through), the Defending Pokémon's locks and damage modifiers
   (`linger .opp` with `lock .attack`, `lock .retreat`, `weaken`, `expose`), Energy and Tools discarded
-  from or attached to it, every move of Energy between the opponent's Pokémon (Bench to Bench too:
-  forbids some), and markers and the Coloring counter put on any of the opponent's Pokémon (Bench
+  from or attached to it, Energy attached to it put into the opponent's hand or deck (`returnEnergy .opp
+  .active`, milestone MV11), every move of Energy between the opponent's Pokémon (Bench to Bench too:
+  forbids some; `shiftEnergy .opp` too, which no imported card writes), and markers and the Coloring counter put on any of the opponent's Pokémon (Bench
   included: forbids some); it keeps the damage step (damage is not an
   effect; the damage half is `Mod.prevent`/`SEff.prevent`), everything on the Bench, an attachment
   from a looked-at window onto it (allows more), the removal of markers from it (`unmark .opp`:
@@ -678,9 +682,24 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   counters an effect places are not affected by Weakness, Resistance or any other effect, as the
   rulebook says (2023 p. 20, step 1);
 * `heal` and `healAll` remove damage from the player's own Active Pokémon, and `benchHeal` from
-  one of the player's own Benched Pokémon (milestone M3); no effect heals the opponent's
-  Pokémon, and none heals each of a player's Benched Pokémon at once ("Heal 20 damage from
-  each of your Pokémon" is not expressible exactly);
+  one of the player's own Benched Pokémon (milestone M3); since milestone MV11 (survey S25,
+  `Pokemon/Heals.lean`) `benchHealSome m f n` heals `m` distinct Benched Pokémon of the player whose
+  card passes `f` (all that pass if fewer do; `m = 5 = benchLimit` is "each"), up to `n` counters from
+  each or all of them (`n = none`): "Heal 30 damage from each of your Pokémon" is
+  `seq (heal 3) (benchHealSome 5 .any (some 3))`, "each of your Lightning Pokémon" the same with the
+  Active half under `ite (top .own F)`. Exact for these printed forms on states whose Bench holds at
+  most `benchLimit` Pokémon, which moves keep but `WellFormed` does not ask of a start: with 6 or
+  more Benched Pokémon "each" heals 5 of the player's choice (forbids some and allows more: both).
+  Special Energy on-attach text is not modelled, so an Energy returned to the hand and attached
+  again does nothing on its return. No effect heals the opponent's
+  Pokémon ("Heal 30 damage from each Pokémon (both yours and your opponent's)", Mega Floette ex
+  me4-35, Grisham me6-93: refused): inside an attack the capped clamp caps the opponent's damage
+  (`GameState.rclamp`), and a heal does not commute with a cap (`d ≥ k` and `k` have one image, `d - n`
+  and `k - n` may not), so `Run.cap_sim` would fail for it; the player's own damage is kept exact by
+  both clamps inside an effect, where a heal commutes (`clampExact_healBy`). Also absent: heals whose
+  amount the text computes ("for each Tasty Rice Ball card … heal 30 more damage"), a target filtered
+  by its damage ("1 of your Pokémon that has 30 HP or less remaining"), "all damage from each of" a
+  filtered set (Dachsbun ex), and the record "this Pokémon was healed this turn";
 * switching by effect (`Effect.switch`, milestone M3): the player's own Active Pokémon with one of
   their Benched Pokémon (Switch), or the opponent's ("gust": Boss's Orders, or the opponent's own
   choice; the nondeterministic choice covers whoever chooses); the Pokémon that goes to the Bench
@@ -1166,7 +1185,24 @@ Known gaps (each is a place where this model is simpler than the rulebook):
   Energy is discarded from a Pokémon or moved between a player's Pokémon
   (`moveEnergy w f`: one Energy from any of the player's Pokémon to any other, a superset of a
   printed move between particular Pokémon, "from this Pokémon to 1 of your Benched Pokémon"; the
-  importer's caveat `moveAnyPair`). Simplifications and
+  importer's caveat `moveAnyPair`). Since milestone MV11 (survey S25, `Pokemon/EnergyMoves.lean`) attached
+  Energy is also put from a Pokémon into its player's hand or deck (`returnEnergy w sp f q d`, the take of
+  `discardEnergy` with the cards put at `d`): a card leaves play for a zone it can be played from again,
+  which is not a recycler of `StoreSafe` clause 3 (no card leaves a discard pile; `Effect.recFilters` is
+  `[]`), and the cards it moves are attached cards, which write a stored amount when played only if
+  they are Item cards, a write the per-turn invariant pays by the card's arrival in the discard pile
+  (`TInv.turn`); and Energy is moved between fixed spots (`shiftEnergy w src f q dst one`: from the
+  Active Pokémon to the Bench or from one Benched Pokémon to the Active one, all of it to one Pokémon
+  or "in any way you like"; `Deal`, each card a card the target accepts). "You may move any amount of
+  Energy from your Pokémon to your other Pokémon in any way you like" is `iter (moveEnergy .own f)`,
+  exact (each card moved once, from where it is to where it ends). "Move Energy from the Pokémon you
+  moved to your Bench to the new Active Pokémon" (after a switch) takes it from a Benched Pokémon chosen
+  when the move resolves: the model does not record which Pokémon the switch moved (allows more;
+  importer caveat `shiftFromMoved`, both: a forced "move an Energy" whose only source holds a
+  holder-restricted Special Energy the new Active Pokémon may not hold has no resolution, so the card
+  cannot be played, where print plays it). The existing "Move an Energy from this Pokémon to 1 of your Benched
+  Pokémon" cards keep `moveEnergy` (caveat `moveAnyPair`); `shiftEnergy` would make them exact, a
+  change of imported terms left for a later importer. Simplifications and
   departures (since milestone MV6 also the bottom `n` cards of the deck, `Src.bottom`, and "`n`, or
   all that pass if fewer", `Qty.most`): "up to `n`" (`Qty.upTo n`, `Qty.ok`: any number of cards
   from 0 to `n`) allows 0 in
@@ -2118,6 +2154,7 @@ theorem Run.hitRun {e : Effect} {g g' : GameState} (h : Run e g g') :
   | benchDamageNone w n h => exact ⟨_, _, .plain rfl (.benchDamageNone w n h)⟩
   | spreadDamage w n g => exact ⟨_, _, .plain rfl (.spreadDamage w n g)⟩
   | benchSome w m f dmg n h => exact ⟨_, _, .plain rfl (.benchSome w m f dmg n h)⟩
+  | benchHealSome m f n h => exact ⟨_, _, .plain rfl (.benchHealSome m f n h)⟩
   | moveCounter h => exact ⟨_, _, .plain rfl (.moveCounter h)⟩
   | discardStadium g => exact ⟨_, _, .plain rfl (.discardStadium g)⟩
 

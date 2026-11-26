@@ -65,4 +65,6 @@ import Pokemon.EnergyText
 import Pokemon.Provision
 import Pokemon.Played
 import Pokemon.Shield
+import Pokemon.EnergyMoves
+import Pokemon.Heals
 import Pokemon.Audit

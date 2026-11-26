@@ -242,6 +242,8 @@ def Effect.zSide : Effect → Option Whose
   | .putBench w _ _ => some w
   | .discardEnergy w _ _ _ => some w
   | .moveEnergy w _ => some w
+  | .returnEnergy w _ _ _ _ => some w
+  | .shiftEnergy w _ _ _ _ _ => some w
   | .discardTools w _ => some w
   | .look w _ _ _ _ _ => some w
   | _ => none
@@ -286,6 +288,15 @@ inductive Place : Into → List Card → PlayerState → PlayerState → Prop wh
       Place .bench (ps.map Card.pokemon) s { s with bench := s.bench ++ ps.map InPlay.ofBasic }
   | attach {tf : Filter} {t : List Card} {s : PlayerState} {a : Option InPlay} {b : List InPlay}
       (h : Deal tf t s.active s.bench a b) : Place (.attach tf) t s { s with active := a, bench := b }
+
+/-- `ShiftTo one t b b'` (milestone MV11, `Effect.shiftEnergy`): the Energy cards `t` are attached to
+the Bench `b`, giving `b'`: all of them to one chosen Benched Pokémon (`one = true`), or one at a
+time to any Benched Pokémon, "in any way you like" (`one = false`), each as `Deal` attaches (an Energy
+card the target accepts, `Card.attachOk`). -/
+inductive ShiftTo (t : List Card) : Bool → List InPlay → List InPlay → Prop where
+  | one {q q' : InPlay} {b₁ b₂ : List InPlay} (h : Deal .any t none [q] none [q']) :
+      ShiftTo t true (b₁ ++ q :: b₂) (b₁ ++ q' :: b₂)
+  | many {b b' : List InPlay} (h : Deal .any t none b none b') : ShiftTo t false b b'
 
 /-- The semantics of the zone-move primitives on one player's state. -/
 inductive ZStep : Effect → PlayerState → PlayerState → Prop where
@@ -346,6 +357,37 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       (hok : x.attachOk q'.top = true) :
       ZStep (.moveEnergy w f) s { s with bench := c₁ ++ q'.addEnergy x :: c₂ }
   | moveNone (w : Whose) (f : Filter) (s : PlayerState) : ZStep (.moveEnergy w f) s s
+  /-- put Energy attached to the Active Pokémon at a zone (milestone MV11): taken as
+  `discardActive` takes them, then put at `d` (`Put`) -/
+  | retActive {w : Whose} {f : Filter} {q : Qty} {d : Dst} {s s' : PlayerState} {a : InPlay}
+      {t r : List Card} (ha : s.active = some a) (hs : Split f a.energy t r)
+      (hq : q.okE (f.weightOn a.top a.energy) f t r)
+      (hp : Put d t { s with active := some { a with energy := r } } s') :
+      ZStep (.returnEnergy w .active f q d) s s'
+  /-- put Energy attached to one Benched Pokémon at a zone (milestone MV11) -/
+  | retBench {w : Whose} {f : Filter} {q : Qty} {d : Dst} {s s' : PlayerState} {p : InPlay}
+      {b₁ b₂ : List InPlay} {t r : List Card} (hb : s.bench = b₁ ++ p :: b₂)
+      (hs : Split f p.energy t r) (hq : q.okE (f.weightOn p.top p.energy) f t r)
+      (hp : Put d t { s with bench := b₁ ++ { p with energy := r } :: b₂ } s') :
+      ZStep (.returnEnergy w .bench f q d) s s'
+  /-- move Energy from the Active Pokémon to the Bench (milestone MV11) -/
+  | shiftAB {w : Whose} {f : Filter} {q : Qty} {one : Bool} {s : PlayerState} {a : InPlay}
+      {t r : List Card} {b' : List InPlay} (ha : s.active = some a) (hs : Split f a.energy t r)
+      (hq : q.okE (f.weightOn a.top a.energy) f t r) (hd : ShiftTo t one s.bench b') :
+      ZStep (.shiftEnergy w .active f q .bench one) s
+        { s with active := some { a with energy := r }, bench := b' }
+  /-- move Energy from one Benched Pokémon to the Active Pokémon (milestone MV11) -/
+  | shiftBA {w : Whose} {f : Filter} {q : Qty} {one : Bool} {s : PlayerState} {a p : InPlay}
+      {b₁ b₂ : List InPlay} {t r : List Card} {a' : Option InPlay} (ha : s.active = some a)
+      (hb : s.bench = b₁ ++ p :: b₂) (hs : Split f p.energy t r)
+      (hq : q.okE (f.weightOn p.top p.energy) f t r) (hd : Deal .any t (some a) [] a' []) :
+      ZStep (.shiftEnergy w .bench f q .active one) s
+        { s with active := a', bench := b₁ ++ { p with energy := r } :: b₂ }
+  /-- with an empty Bench, nothing (milestone MV11) -/
+  | shiftNone {w : Whose} {src : Spot} {f : Filter} {q : Qty} {dst : Spot} {one : Bool}
+      {s : PlayerState} (hb : s.bench = []) : ZStep (.shiftEnergy w src f q dst one) s s
+  | retNone {w : Whose} {f : Filter} {q : Qty} {d : Dst} {s : PlayerState} (hb : s.bench = []) :
+      ZStep (.returnEnergy w .bench f q d) s s
   /-- discard the Tools of the Active Pokémon (milestone M5) -/
   | toolsActive {w : Whose} {s : PlayerState} {a : InPlay} (ha : s.active = some a) :
       ZStep (.discardTools w .active) s
@@ -387,6 +429,12 @@ inductive CMove (f : Filter) (noKO : Bool) (hp : Spot → InPlay → Nat) :
       (hc : b₁ ++ { q with damage := q.damage - 1 } :: b₂ = c₁ ++ r :: c₂)
       (hne : c₁.length ≠ b₁.length) (hk : noKO = true → r.damage + 1 < hp .bench r) :
       CMove f noKO hp a (b₁ ++ q :: b₂) a (c₁ ++ r.addDamage 1 :: c₂)
+
+/-- What `Effect.benchHealSome` does to one chosen Pokémon (milestone MV11): remove up to `n` damage
+counters (`some n`), or all of them (`none`). -/
+def InPlay.healBy : Option Nat → InPlay → InPlay
+  | some n, p => { p with damage := p.damage - n }
+  | none, p => { p with damage := 0 }
 
 /-- What `Effect.benchSome` does to one chosen Pokémon: attack damage (`InPlay.hitBench`) or
 damage counters (`InPlay.addDamage`). -/
@@ -738,6 +786,11 @@ inductive Run : Effect → GameState → GameState → Prop where
       Run (.benchHeal n) g
         { g with cur := { g.cur with bench := b₁ ++ { q with damage := q.damage - n } :: b₂ } }
   | benchHealNone {g : GameState} (n : Nat) (h : g.cur.bench = []) : Run (.benchHeal n) g g
+  /-- heal `m` distinct Benched Pokémon of the player passing `f`, or all that pass if fewer do
+  (milestone MV11) -/
+  | benchHealSome {g : GameState} {b' : List InPlay} (m : Nat) (f : Filter) (n : Option Nat)
+      (h : Hits (InPlay.healBy n) f (min m (benchElig f g.cur.bench)) g.cur.bench b') :
+      Run (.benchHealSome m f n) g { g with cur := { g.cur with bench := b' } }
   /-- the `w` player's Active Pokémon `a` switches with the Benched `q`; `a` goes to the Bench
   cured of its Special Conditions ("When your Active Pokémon goes to your Bench (whether it
   retreated or got there some other way), some things do go away—Special Conditions and any
