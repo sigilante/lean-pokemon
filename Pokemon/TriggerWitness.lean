@@ -149,6 +149,9 @@ theorem draw_forced :
     | go _ _ hc ho => rfl
   cases hf with
   | decline ho => cases ho
+  | vacant _ _ hn =>
+      exact absurd (Run.draw (g := g₁.swap) (show g₁.swap.cur.deck = _ :: [] from by
+        rw [show g₁.swap.cur.deck = g₁.opp.deck from rfl, hd])) (hn _)
   | run _ hr ht =>
       cases ht.nil_eq
       cases hr with

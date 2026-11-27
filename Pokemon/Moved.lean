@@ -173,6 +173,7 @@ theorem up_forced : ∀ g₂, Move (u1 false) g₂ → g₂.cur.hand = [.energy 
   cases h₂.nil_eq
   cases h₁ with
   | decline ho => cases ho
+  | vacant _ ha => nomatch ha
   | run _ hr ht =>
       cases ht.nil_eq
       cases hr with

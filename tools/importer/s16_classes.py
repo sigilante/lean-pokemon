@@ -226,6 +226,12 @@ c('M', 'heal several Pokémon, heal filtered, heal all of a Benched Pokémon, he
 # "those Energy cards" from a discard pile (Sinistcha ex), "1 of your opponent's Pokémon" with a play condition
 c('M', 'Energy to the hand or deck, Energy moves of several or all, Energy moves "in any way you like"', UH,
   r'Energy attached to .* into (your|their) hand|Energy attached to this Pokémon into your deck|Move (all|up to 2|3) Energy|move any amount of|Move all Energy|Energy from the Pokémon you moved|shuffle those Energy cards')
+# importer 0.22.0 (milestone MV15, survey S29): attack returns of "this Pokémon", of "1 of your Benched Pokémon" and of
+# "1 of your opponent's Benched Pokémon" (`returnPokemon`, attacks only) are imported; left here: the Item form (Scoop
+# Up Cyclone), "that Pokémon" / "those Pokémon" after a choice in another sentence (Shiftry, Sylveon, Sylveon ex),
+# "into your deck. If you do, …" (Eldegoss), "put this Pokémon into your hand. (Discard all cards attached …)"
+# (Team Rocket's Crobat ex), and the Knock Outs by effect; and cards whose return sentence translates but another
+# sentence is refused (Illumise: first-turn text; Poliwrath: "You may do N more damage. If you do, …")
 c('M', 'return from play (to hand or deck), discard a Pokémon in play, Knock Out by effect', UH,
   r'all attached cards (into|,)|Discard this Pokémon and all|Knocked Out\.$|^Knock Out|is Knocked Out|Discard 6 Basic Grass .* Knock Out|put this Pokémon into your hand|Then, return the Pokémon')
 c('M', 'evolution and devolution by effect, switching with cards outside play', UH, r'evolves from|[Dd]evolve|switch it with|Any attached cards, damage counters|Choose 1 of your Basic Pokémon in play|can\'t evolve this turn|works one time for 2|Transformation Tome|put down when you were setting up')

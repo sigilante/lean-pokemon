@@ -135,6 +135,7 @@ theorem Fire.zoneOnly {ev : TrigEvent} {l : List Ability} {g g' : GameState}
   | nil => exact .refl _
   | run hk hr _ ih => exact (hr.zoneOnly hk).unswap.trans ih
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 /-! ## Existence -/
 
@@ -368,6 +369,7 @@ theorem ZStep.exists_of_trigOk {e : Effect} {w : Whose} (hw : e.zSide = some w)
   case look => simp [Effect.trigOk] at hk
   case returnEnergy => simp [Effect.trigOk] at hk
   case shiftEnergy => simp [Effect.trigOk] at hk
+  case returnPokemon => simp [Effect.trigOk] at hk
 
 theorem GameState.BothActive.swap {g : GameState} (h : g.BothActive) : g.swap.BothActive :=
   ⟨h.2, h.1⟩
@@ -420,7 +422,7 @@ theorem Run.exists_of_trigOk : ∀ {e : Effect}, e.trigOk = true → ∀ {g : Ga
   | .benchCounters .., hk, _, _ | .spreadCounters .., hk, _, _ | .benchHeal _, hk, _, _
   | .switch _, hk, _, _ | .benchDamage .., hk, _, _ | .spreadDamage .., hk, _, _
   | .moveCounter .., hk, _, _ | .discardStadium, hk, _, _ | .iter _, hk, _, _
-  | .returnEnergy .., hk, _, _ | .shiftEnergy .., hk, _, _ => by
+  | .returnEnergy .., hk, _, _ | .shiftEnergy .., hk, _, _ | .returnPokemon .., hk, _, _ => by
       simp [Effect.trigOk] at hk
 
 /-- A trigger that fires on `ev` resolves an effect of the fragment. -/

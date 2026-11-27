@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 2 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -772,6 +772,20 @@ def sv6_84 : Card := .pokemon
         effect := .inflict .confused,
         gx := false }] }
 
+/-- Chimecho (sv6-85). Records: sv6-85, sv6-179. -/
+def sv6_85 : Card := .pokemon
+  { name := "Chimecho", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Hyper Voice", cost := [.psychic], damage := 2,
+        effect := .skip,
+        gx := false },
+      { name := "Homeward Chime", cost := [.colorless, .colorless], damage := 0,
+        effect := .returnPokemon .own .bench .shuffle,
+        gx := false }] }
+
 /-- Flabébé (sv6-86). Records: sv6-86. -/
 def sv6_86 : Card := .pokemon
   { name := "Flabébé", stage := .basic, evolvesFrom := none,
@@ -1490,6 +1504,20 @@ def sv6pt5_14 : Card := .pokemon
         effect := .seq (.discardEnergy .own .active .energy .all) (.inflict .paralyzed),
         gx := false }] }
 
+/-- Revavroom ex (sv6pt5-15). Records: sv6pt5-15, sv6pt5-81. Caveats: movedUpPromotion, returnPromote. -/
+def sv6pt5_15 : Card := .pokemon
+  { name := "Revavroom ex", stage := .stage1, evolvesFrom := some "Varoom",
+    hp := 28, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .ex, tera := true,
+    abilities := [],
+    attacks := [
+      { name := "Accelerator Flash", cost := [.metal], damage := 0,
+        effect := .ite (.movedUp .own) (.damage (.const 14)) (.damage (.const 2)),
+        gx := false },
+      { name := "Shattering Speed", cost := [.metal, .metal, .metal], damage := 25,
+        effect := .returnPokemon .own .active .discard,
+        gx := false }] }
+
 /-- Drowzee (sv6pt5-16). Records: sv6pt5-16. Caveats: hiddenInfo. -/
 def sv6pt5_16 : Card := .pokemon
   { name := "Drowzee", stage := .basic, evolvesFrom := none,
@@ -1789,28 +1817,6 @@ def sv6pt5_49 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Furfrou (sv6pt5-51). Records: sv6pt5-51. Caveats: mayFail. -/
-def sv6pt5_51 : Card := .pokemon
-  { name := "Furfrou", stage := .basic, evolvesFrom := none,
-    hp := 10, type := .colorless, retreat := 1, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Energy Assist", cost := [.colorless], damage := 3,
-        effect := .attach .own .discard .basicEnergy .bench .any,
-        gx := false }] }
-
-/-- Stufful (sv6pt5-52). Records: sv6pt5-52. Caveats: recoil. -/
-def sv6pt5_52 : Card := .pokemon
-  { name := "Stufful", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .colorless, retreat := 2, weakness := some .fighting,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Take Down", cost := [.colorless], damage := 3,
-        effect := .selfDamage 1,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
   sv5_148,
@@ -1877,6 +1883,7 @@ def cards : List Card := [
   sv6_81,
   sv6_83,
   sv6_84,
+  sv6_85,
   sv6_86,
   sv6_87,
   sv6_88,
@@ -1939,6 +1946,7 @@ def cards : List Card := [
   sv6pt5_11,
   sv6pt5_13,
   sv6pt5_14,
+  sv6pt5_15,
   sv6pt5_16,
   sv6pt5_18,
   sv6pt5_19,
@@ -1960,9 +1968,7 @@ def cards : List Card := [
   sv6pt5_44,
   sv6pt5_46,
   sv6pt5_48,
-  sv6pt5_49,
-  sv6pt5_51,
-  sv6pt5_52]
+  sv6pt5_49]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

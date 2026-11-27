@@ -113,6 +113,7 @@ theorem retreat_forced :
     rw [List.perm_singleton.1 hl] at ht
     cases ht with
     | decline ho => cases ho
+    | vacant _ ha => nomatch ha
     | run _ hr ht =>
         cases ht.nil_eq
         cases hr with
@@ -205,6 +206,7 @@ theorem copy_quiet_all : ∀ g₂ g₃, Move (s1 false) g₂ → Move g₂ g₃ 
   rw [List.perm_singleton.1 hl] at ht
   cases ht with
   | decline ho => cases ho
+  | vacant _ ha => nomatch ha
   | run _ hr ht =>
   cases ht.nil_eq
   cases hr with

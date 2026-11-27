@@ -250,6 +250,7 @@ def Effect.zSide : Effect → Option Whose
   | .shiftEnergy w _ _ _ _ _ => some w
   | .discardTools w _ => some w
   | .look w _ _ _ _ _ => some w
+  | .returnPokemon w _ _ => some w
   | _ => none
 
 /-- `s` with the five zones (deck, hand, discard pile, Active Spot, Bench) of `z`; every other
@@ -410,6 +411,19 @@ inductive ZStep : Effect → PlayerState → PlayerState → Prop where
       {s s₁ s' : PlayerState} {t r : List Card} (hs : Split f (src.get s) t r) (hq : q.ok f t r)
       (hr : Put rest r (src.set [] s) s₁) (hp : Place i t s₁ s') :
       ZStep (.look w src f q i rest) s s'
+  /-- return the Active Pokémon from play (milestone MV15): it leaves the Active Spot, which is left
+  empty, and its cards (`InPlay.cardList`: the top card, the cards under it, attached Energy and
+  Tools) are put at `d` (`Put`) -/
+  | monActive {w : Whose} {d : Dst} {s s' : PlayerState} {a : InPlay}
+      (ha : s.active = some a) (hp : Put d a.cardList { s with active := none } s') :
+      ZStep (.returnPokemon w .active d) s s'
+  /-- return one Benched Pokémon from play (milestone MV15) -/
+  | monBench {w : Whose} {d : Dst} {s s' : PlayerState} {p : InPlay} {b₁ b₂ : List InPlay}
+      (hb : s.bench = b₁ ++ p :: b₂) (hp : Put d p.cardList { s with bench := b₁ ++ b₂ } s') :
+      ZStep (.returnPokemon w .bench d) s s'
+  /-- with an empty Bench, a return from the Bench does nothing (milestone MV15) -/
+  | monNone {w : Whose} {d : Dst} {s : PlayerState} (hb : s.bench = []) :
+      ZStep (.returnPokemon w .bench d) s s
 
 /-- `CMove f noKO a b a' b'` (milestone M8a): one damage counter moves from one of the player's
 Pokémon in play (Active Pokémon `a`, Bench `b`) whose card passes `f` to another of them, giving
@@ -1144,7 +1158,9 @@ def GameState.swap (g : GameState) : GameState :=
 /-- **Resolving triggers** (milestone M8b): the triggers `l` of the opponent of the player to move,
 one after another, each with "this Pokémon" where the event leaves it (`TrigEvent.place`): its effect
 resolves on the exchanged state (`GameState.swap`) by `Run`, as a whole, and the state is exchanged
-back; an optional one (`AbilityUse.optional`, "you may") may be declined instead. -/
+back; an optional one (`AbilityUse.optional`, "you may") may be declined instead; and (milestone MV15)
+one whose effect has no resolution because the player to move's Active Spot is empty does nothing
+(`vacant`). -/
 inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → Prop where
   | nil (g : GameState) : Fire ev [] g g
   | run {ab : Ability} {l : List Ability} {g g₁ g₂ : GameState}
@@ -1153,5 +1169,18 @@ inductive Fire (ev : TrigEvent) : List Ability → GameState → GameState → P
       Fire ev (ab :: l) g g₂
   | decline {ab : Ability} {l : List Ability} {g g₂ : GameState}
       (ho : ab.use.optional = true) (ht : Fire ev l g g₂) : Fire ev (ab :: l) g g₂
+  /-- (milestone MV15) **a trigger with no target left**: when the Active Spot of `g.cur` (the side the
+  trigger's effects are aimed at, `.opp` on the exchanged state: for `damaged`, `koByAttack` and
+  `oppBenched` triggers the player to move, under `FireMine` their opponent) is empty and the
+  trigger's effect has no resolution there, the trigger does nothing, mandatory or not; the whole
+  trigger is skipped, not only the part that fails. In a game with no return card no move reaches this
+  case (`Return.attack_fire_old`, `Return.batch_fire_old`, `Return.owed_old`); that with return cards
+  it arises only after an attack returned its own Pokémon (`Effect.returnPokemon .own .active`) is
+  argued. A `damaged` trigger aimed at "the Attacking Pokémon", which has left play, then does
+  nothing, as in print -/
+  | vacant {ab : Ability} {l : List Ability} {g g₂ : GameState}
+      (hk : (ab.script ev.place).trigOk = true) (ha : g.cur.active = none)
+      (hn : ∀ g₁, ¬ Run (ab.script ev.place) g.swap g₁) (ht : Fire ev l g g₂) :
+      Fire ev (ab :: l) g g₂
 
 end Pokemon

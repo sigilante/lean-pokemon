@@ -150,6 +150,7 @@ theorem promoted_quiet : ∀ g₁ g₂ g₃, Move g0 g₁ → g₁.attacked = tr
   rw [List.perm_singleton.1 (show l.Perm [surge false] from hl)] at ht
   cases ht with
   | decline ho => cases ho
+  | vacant _ ha => nomatch ha
   | run _ hr ht =>
   cases ht.nil_eq
   cases hr with
@@ -252,6 +253,7 @@ theorem held_fires : ∀ g₁ g₂, Move (h0 10) g₁ → g₁.attacked = true �
   rw [List.perm_singleton.1 (show l.Perm [prose] from hl)] at ht
   cases ht with
   | decline ho => cases ho
+  | vacant _ ha => nomatch ha
   | run _ hr ht =>
   cases ht.nil_eq
   cases hr with

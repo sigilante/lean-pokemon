@@ -961,7 +961,8 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Prize changes; 44 cards of the 67 after-event triggers are of other shapes), Ability locks
   and "has an Ability" predicates (S8 K4), "once during your first turn" and other activated
   limits (5 in S9), VSTAR Powers, returning a Pokémon in play to the hand or deck by an Ability
-  (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45); Lycanroc sv9-85's "attach up to 2
+  (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45; excluded by `Effect.retFree` since
+  milestone MV15, which allows returns in attacks only); Lycanroc sv9-85's "attach up to 2
   Spiky Energy cards" is expressible since milestone MV5 (`Filter.named` reads a Special Energy
   card's name). The finiteness results cover activated and on-play Abilities:
   `Reach.finite` with tame, low-constant Ability effects, `StoreSafe.xfinite` under clause 4
@@ -981,8 +982,10 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   check; `koByAttack` in the batch move, after the batch step. Departures: a trigger's steps get no
   Knock Out check between them (`TRun` checks after each step of a Trainer effect); "the
   Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves (for a
-  `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check its
-  replacement is hit); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
+  `koByAttack` trigger after promotions, so if the attacker was Knocked Out by the same check, or
+  (milestone MV15) returned from play by its own attack, its replacement is hit; a `damaged` trigger
+  after the attacker returned itself finds its Active Spot empty and, if its effect has no resolution
+  there, does nothing, `Fire.vacant`; one whose effect still resolves, such as a draw, resolves); "Knocked Out by damage from an attack" is read as "Knocked Out by a check
   while the turn's attack has been made" (Knock Outs by the attack's damage counters and by later
   rounds of the check included); the failed Confused attempt (`Move.attackConfused`) also sets
   `GameState.attacked`, so in the check after it a Knock Out of an opponent's Pokémon fires its
@@ -1126,9 +1129,9 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic Water Energy
   cards from your hand to this Pokémon." (Clawitzer me1-38, expressible; "this
   Pokémon" on the Bench is a Benched Pokémon chosen at each step when the trigger resolves,
-  `SelfOp.atS`, so the two Energy may go to two different Benched Pokémon: a superset). Since importer 0.15.0 Clawitzer is imported, with caveats (survey S11); Yanmega ex is
-  still refused, for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your
-  Benched Pokémon"). The witnesses are test cards in `Pokemon/Moved.lean` (`Moved.yanC`, with one
+  `SelfOp.atS`, so the two Energy may go to two different Benched Pokémon: a superset). Since importer 0.15.0 Clawitzer is imported, with caveats (survey S11); Yanmega ex was
+  refused for an unrelated attack sentence ("Move 3 Energy from this Pokémon to 1 of your Benched
+  Pokémon") until importer 0.18.0 (`shiftEnergy`), and is imported with caveats since. The witnesses are test cards in `Pokemon/Moved.lean` (`Moved.yanC`, with one
   Grass Energy, and `Moved.clawC`, with one Water Energy), not the printed cards. The triggers
   belong to the player to move and resolve from that player's side (`FireMine`: `Fire` on the
   exchanged state). Raised where the
@@ -1358,10 +1361,66 @@ premise is false, `Threshold.threshold_breaks_clamp`, `Threshold.clamp_sim_old_f
   Active Pokémon (`Effect.ownFree`), and the attacker at a damage step is the same Pokémon (top
   card and the cards under it) as when the attack began, its attached Energy possibly changed
   (`Attack.attacker_at_hit`, restated by milestone MV: before it, the whole card list was kept).
-  Absent: returning a Pokémon in play and its cards to the hand or deck (Scoop Up Cyclone, Abra,
-  Dudunsparce, Misty's Psyduck in S10), devolution, evolution by effect, switching a card in play
+  Absent: returning a Pokémon in play and its cards to the hand or deck outside an attack (Scoop Up
+  Cyclone, Abra, Dudunsparce, Misty's Psyduck in S10; in attacks since milestone MV15, next item),
+  devolution, evolution by effect, switching a card in play
   with one in the discard pile (Transformation Tome, Ogre's Mask), Prize-card moves other than
   taking them, the Lost Zone, and "attach to each of" a varying set;
+* return from play (milestone MV15, survey S29, `Pokemon/Return.lean`): `Effect.returnPokemon w sp d`
+  puts one of the `w` player's Pokémon at `sp` (the Active Pokémon, or one Benched Pokémon chosen when
+  the effect resolves) with its cards (`InPlay.cardList`: top card, the cards under it, attached Energy
+  and Tools) at `d` (hand, deck, discard pile); its damage counters, Special Conditions, markers and
+  attack locks leave the game's state with its `InPlay` record. Both (that the Evolution cards under
+  it go with it, and that its damage counters and other effects end) are readings with no rule
+  behind them (the rulebook is silent on returns; S29 §2 (c)); they apply to all ten imported return
+  attacks, the two imported as exact (Swoobat, Chimecho) included: the importer marks them exact
+  because these readings are the only ones the physical game allows (no card is left in play to
+  hold the counters or to sit on), unlike a reading between two possible orders, which carries a
+  caveat (`thresholdRead`, milestone MV14). **Attacks only**: `Effect.retFree` is a
+  premise of `Move.item`, `Move.supporter`, `Move.stadiumUse`, `Move.ability` and `Move.onPlay`, and the
+  trigger fragment excludes it. So the Item form (Scoop Up Cyclone sv6-162) and the mid-turn Ability
+  forms (Abra sv6-80, Dudunsparce sv5-129, Misty's Psyduck sv10-45) are not expressible (refused); a
+  return outside an attack would raise the potential `GameState.abPot` on which the Ability bound of
+  `StoreSafe` rests (`Return.return_raises_abPot`, `Return.trun_raises_abPot`). An Active Spot a
+  return empties is filled by the batch step that follows (`KOBatch`: no Knock Out, no Prize card; the
+  promoted Pokémon a nondeterministic choice, which covers its owner's; rulebook 2026 p. 14 says only
+  that "The player whose Pokémon was Knocked Out chooses a new Active Pokémon from their Bench", and
+  p. 21 speaks of an Active Pokémon "Knocked Out (or otherwise removed from play)"); a player left
+  with no Pokémon in play loses there (`winWays`; 2026 p. 7: "If your opponent doesn't have any more
+  Pokémon in play, you win the game!", read at the batch step, as p. 21 reads the replacement).
+  `Fire.vacant` skips a whole trigger whose effect has no resolution, not only the part aimed at the
+  missing attacker: a trigger `seq (counters n) draw` would lose its draw, which print would probably
+  still do. Of the imported `damaged` and `koByAttack` triggers (grep of the generated terms) none mixes
+  an attacker-aimed part with an independent one, except Deluxe Bomb ("put 12 damage counters on the
+  Attacking Pokémon. If you put any damage counters in this way, discard this card",
+  `seq (counters 12) (discardTools .own .active)`), where print makes the second part conditional, so
+  skipping both matches; no imported card is affected, and no caveat was added.
+  Departures: the promotion after a return of the player's own Active Pokémon raises no `movedUp`
+  event (`GameState.promoUp` reads a removal by Knock Out), where print may count the promoted Pokémon
+  as moved from the Bench to the Active Spot in its owner's turn (importer caveat `returnPromote`,
+  both; no rule found). Concretely: Lokix me2-10 uses Jumping Shot and shuffles itself into the deck;
+  the batch step promotes a Benched Yanmega ex sv10-3 (imported since 0.18.0), whose "when this
+  Pokémon moves from your Bench to the Active Spot" trigger (Buzzing Boost) print may fire and the
+  model does not. A `damaged` trigger of an opponent's Active Pokémon that the same attack
+  damaged and then returned from play does not fire: the attack's hit is recorded (`HitRun`), but
+  the triggers are those of the Pokémon in the opponent's Active Spot when the resolution ends:
+  if that spot is empty then, none fires (`HitTrig.nil_of_empty`, which assumes it empty at the end);
+  that nothing in an attack fills it after the return (`switch` needs an Active Pokémon) is argued from
+  the `Run` constructors, not stated as a theorem. Print agrees under the reading that an Ability of a Pokémon that has left play does not work
+  (the printed exception "even if this Pokémon is Knocked Out" covers Knock Outs only); the rulebook
+  has no rule on it, and no imported card damages and then returns the Defending Pokémon. Per-player
+  lingering modifiers stay with the player (as for every lingering modifier, `perPokemon`). An
+  attack that, after `returnPokemon .own .active`, tests the player's own Active Pokémon (`ite` with
+  `Test.onOwn`, which needs an Active Pokémon to read), or that has a damage step after `returnPokemon
+  .opp .active`, passes `Attack.wf` (`switchSafe` forbids only acts on the own Active Pokémon after the
+  return, through `ownFree`) but has no resolution, so no `Move` makes it: fewer behaviours than print
+  would give such a text; none of the ten imported return attacks has anything after the return (the
+  generated terms are `returnPokemon` or `choice (returnPokemon …) skip`, the base damage first);
+  counts that read the player's own Active Pokémon after a self-return (`Count.energy .own`, …) read 0.
+  Not modelled: "that Pokémon" / "those Pokémon" chosen in another sentence
+  (Shiftry, Sylveon, Sylveon ex), the Item and Ability forms, devolution, returns of a Pokémon's
+  top card with its attached cards discarded (Team Rocket's Crobat ex), and the Knock Out replacement
+  "put it into your hand instead of the discard pile" (Gengar me3-50);
 * windows (milestone MV6, survey S19 §A, `Pokemon/Look.lean`): `Effect.look w src f q i rest` takes
   the whole window `src.get` off its source at once (the top or bottom `n` cards of the deck as they
   are when the effect starts, `Src.bottom` being new; or a whole deck, hand or discard pile), takes
@@ -2109,8 +2168,11 @@ after it, not after each of its steps as for a Trainer card (`TRun`); the effect
 read no damage (`Effect.trigOk`), so the only difference is that a later step can still act on a
 Pokémon an earlier step brought to its HP, which is what a printed sentence that is one effect does.
 "The Attacking Pokémon" is the opponent's Active Pokémon when the trigger resolves: for a
-`koByAttack` trigger after the promotions, so if the attacker was Knocked Out by the same check, the
-trigger acts on its replacement instead of on nothing. "Knocked Out by damage from an attack" is
+`koByAttack` trigger after the promotions, so if the attacker was Knocked Out by the same check, or
+(milestone MV15) returned from play by its own attack (`Effect.returnPokemon .own .active`), the
+trigger acts on its replacement instead of on nothing. A `damaged` trigger resolves before any
+promotion: after such a return it finds the attacker's Active Spot empty and, if its effect has no
+resolution there, does nothing, mandatory or not (`Fire.vacant`, milestone MV15 fix round 2). "Knocked Out by damage from an attack" is
 read as "Knocked Out by a check while the turn's attack has been made": it includes Knock Outs by
 damage counters the attack placed and by later rounds of the check. "Is damaged by an attack" is
 decided on the damage step (`HitRun`), with the reading and the corner listed in the Known gaps. -/
@@ -2397,7 +2459,8 @@ inductive Move : GameState → GameState → Prop where
       (hr : TRun e { g with cur := { g.cur with
         hand := l₁ ++ l₂, discard := Card.trainer n .item e :: g.cur.discard } } g')
       (hl : g.cur.mods.live.noItem = false) (hat : g.attacked = false)
-      (hnd : e.hitFree = true) (hbh : e.benchHitFree = true) :
+      (hnd : e.hitFree = true) (hbh : e.benchHitFree = true)
+      (hrf : e.retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- play a Supporter card, once per turn, and not on the first turn of the game ("The player
   who goes first cannot play a Supporter card on their first turn", rulebook 2023 p. 12); its
@@ -2409,7 +2472,8 @@ inductive Move : GameState → GameState → Prop where
         hand := l₁ ++ l₂, supporterPlayed := true, supCard := some (Card.trainer n .supporter e),
         discard := Card.trainer n .supporter e :: g.cur.discard } } g')
       (hat : g.attacked = false) (hf : g.firstTurn = false) (hnd : e.hitFree = true)
-      (hbh : e.benchHitFree = true) :
+      (hbh : e.benchHitFree = true)
+      (hrf : e.retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- play a Stadium card (milestone M5): "You can play only one Stadium card each turn", "You
   can't play a Stadium card if a Stadium with the same name is already in play", "Only one Stadium
@@ -2463,7 +2527,8 @@ inductive Move : GameState → GameState → Prop where
       (hs : g.stadium = some (o, Card.trainer n .stadium e ss)) (hu : g.stadiumUsed = false)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun e { g with stadiumUsed := true } g') (hnd : e.hitFree = true)
-      (hbh : e.benchHitFree = true) :
+      (hbh : e.benchHitFree = true)
+      (hrf : e.retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- use an activated Ability (milestone M8a) of one of the player's Pokémon in play, its own or
   (milestone M5) one an attached Tool gives it (`InPlay.abilities`), Active or
@@ -2482,7 +2547,8 @@ inductive Move : GameState → GameState → Prop where
       (hsp : ab.spotOk sp = true) (hn : ab.use = .once → x.used = false) (hc : ab.CondOk g)
       (hbt : g.between = false) (hst : Settled g) (hat : g.attacked = false)
       (hr : TRun (ab.script (some sp)) g₁ g') (hnd : (ab.script (some sp)).hitFree = true)
-      (hbh : (ab.script (some sp)).benchHitFree = true) :
+      (hbh : (ab.script (some sp)).benchHitFree = true)
+      (hrf : (ab.script (some sp)).retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- play a Pokémon from the hand (onto the Bench, or to evolve) and resolve an on-play Ability
   of the card played (milestone M8a: "When you play this Pokémon from your hand onto your Bench
@@ -2498,7 +2564,8 @@ inductive Move : GameState → GameState → Prop where
       (hp : PlayFromHand g x how g₁) (hm : ab ∈ x.top.abilities) (hk : ab.use = .onPlay w)
       (hw : w.fires how = true) (hst : Settled g₁) (hc : ab.CondOk g₁)
       (hr : TRun (ab.script none) g₁ g') (hnd : (ab.script none).hitFree = true)
-      (hbh : (ab.script none).benchHitFree = true) :
+      (hbh : (ab.script none).benchHitFree = true)
+      (hrf : (ab.script none).retFree = true := by first | rfl | assumption) :
       Move g g'
   /-- attack with one of the Active Pokémon's attacks, its own or (milestone M5) one an attached
   Tool gives it (`InPlay.attacks`): the attached Energy must pay the cost (`Pays`, typed); resolve the attack's script

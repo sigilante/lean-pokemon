@@ -176,11 +176,12 @@ def _root_.Pokemon.InPlay.conds (p : InPlay) : Rot × Bool × Bool × Nat :=
   (p.rot, p.poisoned, p.burned, p.poisonUp)
 
 /-- No primitive that gives a Special Condition, raises Poison strength, or switches the opponent's
-Active Pokémon. -/
+Active Pokémon, or (milestone MV15) returns it from play. -/
 def _root_.Pokemon.Effect.spares : Effect → Bool
   | .inflict _ => false
   | .poisonUp _ => false
   | .switch .opp => false
+  | .returnPokemon .opp .active _ => false
   | .ite _ a b => a.spares && b.spares
   | .seq a b => a.spares && b.spares
   | .choice a b => a.spares && b.spares
@@ -214,9 +215,13 @@ theorem _root_.Pokemon.Place.conds {i : Into} {t : List Card} {s s' : PlayerStat
   | attach h => exact h.conds
 
 /-- A zone move keeps the Special Conditions of the Active Pokémon (it moves only cards). -/
-theorem _root_.Pokemon.ZStep.conds {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
+theorem _root_.Pokemon.ZStep.conds {e : Effect} {s s' : PlayerState} (h : ZStep e s s')
+    (hr : ∀ w d, e ≠ .returnPokemon w .active d) :
     s'.active.map InPlay.conds = s.active.map InPlay.conds := by
   cases h with
+  | monActive => exact absurd rfl (hr _ _)
+  | monBench _ hp => rw [hp.fields.2.1]
+  | monNone => rfl
   | move _ _ hp => rw [hp.active, Src.set_active]
   | drawTo => rfl
   | attachActive _ ha => rw [ha]; rfl
@@ -296,7 +301,12 @@ theorem _root_.Pokemon.Run.conds {e : Effect} {g g' : GameState} (h : Run e g g'
   | @zone _ w _ _ _ h =>
       cases w with
       | own => rfl
-      | opp => exact h.conds
+      | opp =>
+          refine h.conds ?_
+          rintro w' d rfl
+          simp only [Effect.zSide, Option.some.injEq] at *
+          subst_vars
+          simp [Effect.spares] at hs
   | _ => rfl
 
 /-- **Under the protection, the opponent's attack gives no Special Condition and no Poison strength

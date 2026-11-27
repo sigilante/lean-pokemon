@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 8 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,59 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part08
 open Pokemon
+
+/-- Xerneas (me1-64). Records: me1-64. -/
+def me1_64 : Card := .pokemon
+  { name := "Xerneas", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Geo Gate", cost := [.psychic], damage := 0,
+        effect := .seq (.seq (.putBench .own .deck (.and .basic (.ptype .psychic))) (.seq (.putBench .own .deck (.and .basic (.ptype .psychic))) (.putBench .own .deck (.and .basic (.ptype .psychic))))) .shuffle,
+        gx := false },
+      { name := "Bright Horns", cost := [.psychic, .psychic, .colorless], damage := 12,
+        effect := .skip,
+        gx := false, selfLock := .this }] }
+
+/-- Greavard (me1-65). Records: me1-65. Caveats: recoil. -/
+def me1_65 : Card := .pokemon
+  { name := "Greavard", stage := .basic, evolvesFrom := none,
+    hp := 8, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stampede", cost := [.psychic], damage := 1,
+        effect := .skip,
+        gx := false },
+      { name := "Take Down", cost := [.psychic, .colorless], damage := 4,
+        effect := .selfDamage 1,
+        gx := false }] }
+
+/-- Houndstone (me1-66). Records: me1-66, me1-145. -/
+def me1_66 : Card := .pokemon
+  { name := "Houndstone", stage := .stage1, evolvesFrom := some "Greavard",
+    hp := 14, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Horrifying Bite", cost := [.psychic], damage := 3,
+        effect := .iter (.move .opp .hand .shuffle .any (.most 1)),
+        gx := false },
+      { name := "Hammer In", cost := [.psychic, .psychic, .colorless], damage := 13,
+        effect := .skip,
+        gx := false }] }
+
+/-- Gimmighoul (me1-67). Records: me1-67. -/
+def me1_67 : Card := .pokemon
+  { name := "Gimmighoul", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Slap", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
 
 /-- Sandshrew (me1-68). Records: me1-68. -/
 def me1_68 : Card := .pokemon
@@ -565,6 +618,20 @@ def me2_9 : Card := .pokemon
     attacks := [
       { name := "Flail Around", cost := [.grass], damage := 0,
         effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.damage (.const 3)))),
+        gx := false }] }
+
+/-- Lokix (me2-10). Records: me2-10. Caveats: returnPromote. -/
+def me2_10 : Card := .pokemon
+  { name := "Lokix", stage := .stage1, evolvesFrom := some "Nymble",
+    hp := 12, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Low Kick", cost := [.grass], damage := 3,
+        effect := .skip,
+        gx := false },
+      { name := "Jumping Shot", cost := [.colorless, .colorless, .colorless], damage := 15,
+        effect := .returnPokemon .own .active .shuffle,
         gx := false }] }
 
 /-- Charmeleon (me2-12). Records: me2-12. -/
@@ -1711,78 +1778,12 @@ def me2pt5_46 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Mega Froslass ex (me2pt5-47). Records: me2pt5-47, me2pt5-265, me2pt5-275. -/
-def me2pt5_47 : Card := .pokemon
-  { name := "Mega Froslass ex", stage := .stage1, evolvesFrom := some "Snorunt",
-    hp := 31, type := .water, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .megaEx, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Resentful Refrain", cost := [.water], damage := 0,
-        effect := .damage (.count (.pile .opp .hand .any) 5),
-        gx := false },
-      { name := "Absolute Snow", cost := [.water, .colorless, .colorless], damage := 15,
-        effect := .inflict .asleep,
-        gx := false }] }
-
-/-- Regice ex (me2pt5-48). Records: me2pt5-48. -/
-def me2pt5_48 : Card := .pokemon
-  { name := "Regice ex", stage := .basic, evolvesFrom := none,
-    hp := 23, type := .water, retreat := 3, weakness := some .metal,
-    resistance := none, ruleBox := .ex, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Regi Charge", cost := [.colorless], damage := 0,
-        effect := .seq (.attach .own .discard (.energyOf .water) .active .any) (.attach .own .discard (.energyOf .water) .active .any),
-        gx := false },
-      { name := "Ice Prison", cost := [.water, .colorless, .colorless, .colorless], damage := 14,
-        effect := .seq (.ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all)) (.inflict .paralyzed),
-        gx := false }] }
-
-/-- N's Vanillite (me2pt5-49). Records: me2pt5-49. -/
-def me2pt5_49 : Card := .pokemon
-  { name := "N's Vanillite", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .water, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Call for Family", cost := [.colorless], damage := 0,
-        effect := .seq (.seq (.putBench .own .deck .basic) (.putBench .own .deck .basic)) .shuffle,
-        gx := false },
-      { name := "Icy Snow", cost := [.water, .colorless], damage := 2,
-        effect := .skip,
-        gx := false }] }
-
-/-- N's Vanillish (me2pt5-50). Records: me2pt5-50. Caveats: perPokemon. -/
-def me2pt5_50 : Card := .pokemon
-  { name := "N's Vanillish", stage := .stage1, evolvesFrom := some "N's Vanillite",
-    hp := 10, type := .water, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Flop", cost := [.colorless], damage := 2,
-        effect := .skip,
-        gx := false },
-      { name := "Sheer Cold", cost := [.water, .colorless, .colorless], damage := 6,
-        effect := .linger .opp .next (.lock .attack),
-        gx := false }] }
-
-/-- N's Vanilluxe (me2pt5-51). Records: me2pt5-51. Caveats: benchMods. -/
-def me2pt5_51 : Card := .pokemon
-  { name := "N's Vanilluxe", stage := .stage2, evolvesFrom := some "N's Vanillish",
-    hp := 15, type := .water, retreat := 2, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Snow Coating", cost := [.colorless, .colorless], damage := 0,
-        effect := .seq (.hitBy .opp .active 1 .any false false (.per 1)) (.hitBy .opp .bench 5 .any false false (.per 1)),
-        gx := false },
-      { name := "Blizzard", cost := [.water, .colorless, .colorless], damage := 12,
-        effect := .spreadDamage .opp 1,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  me1_64,
+  me1_65,
+  me1_66,
+  me1_67,
   me1_68,
   me1_70,
   me1_71,
@@ -1833,6 +1834,7 @@ def cards : List Card := [
   me2_6,
   me2_8,
   me2_9,
+  me2_10,
   me2_12,
   me2_14,
   me2_15,
@@ -1927,12 +1929,7 @@ def cards : List Card := [
   me2pt5_41,
   me2pt5_42,
   me2pt5_43,
-  me2pt5_46,
-  me2pt5_47,
-  me2pt5_48,
-  me2pt5_49,
-  me2pt5_50,
-  me2pt5_51]
+  me2pt5_46]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 7 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,56 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part07
 open Pokemon
+
+/-- Mienfoo (rsv10pt5-52). Records: rsv10pt5-52, rsv10pt5-133. -/
+def rsv10pt5_52 : Card := .pokemon
+  { name := "Mienfoo", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .fighting, retreat := 1, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Kick", cost := [.fighting], damage := 2,
+        effect := .skip,
+        gx := false }] }
+
+/-- Mienshao (rsv10pt5-53). Records: rsv10pt5-53, rsv10pt5-134. -/
+def rsv10pt5_53 : Card := .pokemon
+  { name := "Mienshao", stage := .stage1, evolvesFrom := some "Mienfoo",
+    hp := 10, type := .fighting, retreat := 1, weakness := some .psychic,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Low Sweep", cost := [.fighting], damage := 4,
+        effect := .skip,
+        gx := false },
+      { name := "Smash Uppercut", cost := [.fighting, .fighting], damage := 0,
+        effect := .damage (.const 8) { resist := true },
+        gx := false }] }
+
+/-- Terrakion (rsv10pt5-54). Records: rsv10pt5-54, rsv10pt5-135. Caveats: koAttackWide. -/
+def rsv10pt5_54 : Card := .pokemon
+  { name := "Terrakion", stage := .basic, evolvesFrom := none,
+    hp := 14, type := .fighting, retreat := 3, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Retaliate", cost := [.fighting, .colorless], damage := 0,
+        effect := .ite (.countGe (.koLast .own true) 1) (.damage (.const 13)) (.damage (.const 5)),
+        gx := false },
+      { name := "Land Crush", cost := [.fighting, .fighting, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Purrloin (rsv10pt5-55). Records: rsv10pt5-55, rsv10pt5-136. -/
+def rsv10pt5_55 : Card := .pokemon
+  { name := "Purrloin", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .darkness, retreat := 1, weakness := some .grass,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Invite Evil", cost := [.darkness], damage := 0,
+        effect := .seq (.move .own .deck .hand (.ptype .darkness) (.upTo 3)) .shuffle,
+        gx := false }] }
 
 /-- Liepard (rsv10pt5-56). Records: rsv10pt5-56, rsv10pt5-137. -/
 def rsv10pt5_56 : Card := .pokemon
@@ -1796,61 +1846,12 @@ def me1_63 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Xerneas (me1-64). Records: me1-64. -/
-def me1_64 : Card := .pokemon
-  { name := "Xerneas", stage := .basic, evolvesFrom := none,
-    hp := 12, type := .psychic, retreat := 1, weakness := some .metal,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Geo Gate", cost := [.psychic], damage := 0,
-        effect := .seq (.seq (.putBench .own .deck (.and .basic (.ptype .psychic))) (.seq (.putBench .own .deck (.and .basic (.ptype .psychic))) (.putBench .own .deck (.and .basic (.ptype .psychic))))) .shuffle,
-        gx := false },
-      { name := "Bright Horns", cost := [.psychic, .psychic, .colorless], damage := 12,
-        effect := .skip,
-        gx := false, selfLock := .this }] }
-
-/-- Greavard (me1-65). Records: me1-65. Caveats: recoil. -/
-def me1_65 : Card := .pokemon
-  { name := "Greavard", stage := .basic, evolvesFrom := none,
-    hp := 8, type := .psychic, retreat := 3, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Stampede", cost := [.psychic], damage := 1,
-        effect := .skip,
-        gx := false },
-      { name := "Take Down", cost := [.psychic, .colorless], damage := 4,
-        effect := .selfDamage 1,
-        gx := false }] }
-
-/-- Houndstone (me1-66). Records: me1-66, me1-145. -/
-def me1_66 : Card := .pokemon
-  { name := "Houndstone", stage := .stage1, evolvesFrom := some "Greavard",
-    hp := 14, type := .psychic, retreat := 3, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Horrifying Bite", cost := [.psychic], damage := 3,
-        effect := .iter (.move .opp .hand .shuffle .any (.most 1)),
-        gx := false },
-      { name := "Hammer In", cost := [.psychic, .psychic, .colorless], damage := 13,
-        effect := .skip,
-        gx := false }] }
-
-/-- Gimmighoul (me1-67). Records: me1-67. -/
-def me1_67 : Card := .pokemon
-  { name := "Gimmighoul", stage := .basic, evolvesFrom := none,
-    hp := 7, type := .psychic, retreat := 2, weakness := some .darkness,
-    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Slap", cost := [.colorless], damage := 1,
-        effect := .skip,
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  rsv10pt5_52,
+  rsv10pt5_53,
+  rsv10pt5_54,
+  rsv10pt5_55,
   rsv10pt5_56,
   rsv10pt5_57,
   rsv10pt5_58,
@@ -1996,11 +1997,7 @@ def cards : List Card := [
   me1_58,
   me1_59,
   me1_62,
-  me1_63,
-  me1_64,
-  me1_65,
-  me1_66,
-  me1_67]
+  me1_63]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

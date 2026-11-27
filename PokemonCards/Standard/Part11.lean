@@ -1,7 +1,7 @@
 /-
-Imported Standard cards, part 11 of 11 (106 cards).
+Imported Standard cards, part 11 of 11 (116 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,117 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part11
 open Pokemon
+
+/-- Sylveon ex (me55-71). Records: me55-71, me55-153. -/
+def me55_71 : Card := .pokemon
+  { name := "Sylveon ex", stage := .stage1, evolvesFrom := some "Eevee",
+    hp := 27, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .ex, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Colorful Harmony", cost := [.psychic, .colorless, .colorless], damage := 0,
+        effect := .damage (.count (.energyTypes .own) 5),
+        gx := false }] }
+
+/-- Drifloon (me55-73). Records: me55-73, me55-136. Caveats: returnPromote. -/
+def me55_73 : Card := .pokemon
+  { name := "Drifloon", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Float Up", cost := [.psychic], damage := 2,
+        effect := .choice (.returnPokemon .own .active .shuffle) .skip,
+        gx := false }] }
+
+/-- Cresselia (me55-74). Records: me55-74. -/
+def me55_74 : Card := .pokemon
+  { name := "Cresselia", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Aurora Gain", cost := [.psychic, .colorless], damage := 3,
+        effect := .heal 3,
+        gx := false },
+      { name := "Lunar Blast", cost := [.psychic, .colorless, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Chandelure (me55-75). Records: me55-75, me55-137. -/
+def me55_75 : Card := .pokemon
+  { name := "Chandelure", stage := .stage2, evolvesFrom := some "Lampent",
+    hp := 14, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Eerie Glow", cost := [.psychic, .psychic], damage := 13,
+        effect := .seq (.inflict .burned) (.inflict .confused),
+        gx := false }] }
+
+/-- Xerneas (me55-76). Records: me55-76. -/
+def me55_76 : Card := .pokemon
+  { name := "Xerneas", stage := .basic, evolvesFrom := none,
+    hp := 12, type := .psychic, retreat := 2, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Geonavigation", cost := [.colorless], damage := 0,
+        effect := .seq (.move .own .deck .hand (.kind .stadium) (.upTo 2)) .shuffle,
+        gx := false },
+      { name := "Aurora Horns", cost := [.psychic, .psychic, .colorless], damage := 10,
+        effect := .skip,
+        gx := false }] }
+
+/-- Comfey (me55-77). Records: me55-77. -/
+def me55_77 : Card := .pokemon
+  { name := "Comfey", stage := .basic, evolvesFrom := none,
+    hp := 7, type := .psychic, retreat := 1, weakness := some .metal,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Comforting Aroma", cost := [.colorless], damage := 0,
+        effect := .benchHeal 8,
+        gx := false },
+      { name := "Magical Shot", cost := [.psychic], damage := 3,
+        effect := .skip,
+        gx := false }] }
+
+/-- Cosmog (me55-78). Records: me55-78. -/
+def me55_78 : Card := .pokemon
+  { name := "Cosmog", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .psychic, retreat := 1, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Splash", cost := [.colorless], damage := 1,
+        effect := .skip,
+        gx := false }] }
+
+/-- Cosmoem (me55-79). Records: me55-79. Caveats: perPokemon. -/
+def me55_79 : Card := .pokemon
+  { name := "Cosmoem", stage := .stage1, evolvesFrom := some "Cosmog",
+    hp := 10, type := .psychic, retreat := 3, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Stiffen", cost := [.colorless, .colorless], damage := 0,
+        effect := .linger .own .next (.reduce 6),
+        gx := false }] }
+
+/-- Lunala (me55-80). Records: me55-80. -/
+def me55_80 : Card := .pokemon
+  { name := "Lunala", stage := .stage2, evolvesFrom := some "Cosmoem",
+    hp := 16, type := .psychic, retreat := 2, weakness := some .darkness,
+    resistance := some (.fighting, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Midnight Ray", cost := [.psychic], damage := 0,
+        effect := .damage (.add (.const 2) (.count (.pile .own .discard .energy) 2)),
+        gx := false },
+      { name := "Lunar Blast", cost := [.psychic, .colorless, .colorless], damage := 12,
+        effect := .skip,
+        gx := false }] }
 
 /-- Gimmighoul (me55-81). Records: me55-81. Caveats: searchAny. -/
 def me55_81 : Card := .pokemon
@@ -516,6 +627,20 @@ def me6_5 : Card := .pokemon
         gx := false },
       { name := "Punishing Needles", cost := [.grass], damage := 0,
         effect := .damage (.add (.const 1) (.count (.inPlay .opp (.and .pokemon .hasAbility)) 5)),
+        gx := false }] }
+
+/-- Combee (me6-6). Records: me6-6. Caveats: returnPromote. -/
+def me6_6 : Card := .pokemon
+  { name := "Combee", stage := .basic, evolvesFrom := none,
+    hp := 5, type := .grass, retreat := 1, weakness := some .fire,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Fade Out", cost := [.grass], damage := 1,
+        effect := .returnPokemon .own .active .hand,
+        gx := false },
+      { name := "Bug Out", cost := [.colorless, .colorless, .colorless], damage := 0,
+        effect := .seq (.damage (.count (.pile .own (.bottom 7) (.and .pokemon (.hasAttack "Bug Out"))) 5)) (.look .own (.bottom 7) .pokemon .all (.put .shuffle) .discard),
         gx := false }] }
 
 /-- Vespiquen (me6-7). Records: me6-7. -/
@@ -1357,6 +1482,15 @@ def me6_103 : Card := .trainer "Zinnia's Trust" .supporter
 
 /-- The cards of this part. -/
 def cards : List Card := [
+  me55_71,
+  me55_73,
+  me55_74,
+  me55_75,
+  me55_76,
+  me55_77,
+  me55_78,
+  me55_79,
+  me55_80,
   me55_81,
   me55_82,
   me55_83,
@@ -1396,6 +1530,7 @@ def cards : List Card := [
   me6_3,
   me6_4,
   me6_5,
+  me6_6,
   me6_7,
   me6_8,
   me6_9,
@@ -1524,6 +1659,6 @@ theorem cards_trigsOk : cards.all Card.trigsOk = true := by decide +kernel
 
 /-- The cards of this part that are not `Card.tame` (a `drain` attack or a stored damage reduction), by
 name. -/
-theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
+theorem cards_untame : (cards.filter (fun c => !c.tame)).map Card.label = ["Cosmoem", "Nidoran ♀", "Zamazenta", "Jangmo-o", "Onix", "Jangmo-o"] := by decide +kernel
 
 end PokemonCards.Standard.Part11

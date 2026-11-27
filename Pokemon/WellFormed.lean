@@ -147,6 +147,17 @@ theorem ZStep.benchOk {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hb :
   | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb' hs hq hd =>
       exact benched_update hb' hb ((hb p (mem hb')).of_eq rfl rfl rfl rfl)
   | shiftNone => exact hb
+  | monActive _ hp => rw [hp.fields.2.2]; exact hb
+  | @monBench w d s s' p b₁ b₂ hb' hp =>
+      rw [hp.fields.2.2]
+      intro x hx
+      apply hb x
+      show x ∈ s.bench
+      rw [hb']
+      rcases List.mem_append.1 hx with hx | hx
+      · exact List.mem_append_left _ hx
+      · exact List.mem_append_right _ (.tail _ hx)
+  | monNone => exact hb
 
 /-- Moving a damage counter keeps every Benched Pokémon `Benched` (milestone M8a). -/
 theorem CMove.benchOk {f : Filter} {noKO : Bool} {a a' : Option InPlay} {b b' : List InPlay}
@@ -380,6 +391,7 @@ theorem Fire.frame {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : F
   | nil => exact ⟨id, id, rfl, rfl, rfl, rfl, rfl⟩
   | run _ hr _ ih => exact hr.frame.unswap.trans ih
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 /-- The player to move's own triggers (milestone MV7c) keep the frame. -/
 theorem FireMine.frame {u d : List Ability} {g g' : GameState} (h : FireMine u d g g') :

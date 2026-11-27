@@ -226,6 +226,15 @@ theorem ZStep.noMarks {e : Effect} {s s' : PlayerState} (h : ZStep e s s') (hs :
   | @shiftBA w f q one s a p b₁ b₂ t r a' ha hb _ _ hd =>
       exact ⟨(hd.noOwe (hs.1.some_eq ha rfl) (fun _ h => nomatch h)).1, hs.2.upd' hb rfl⟩
   | shiftNone => exact hs
+  | monActive _ hp => exact hp.noMarks ⟨OptNoOwe.none, hs.2⟩
+  | @monBench w d s s' p b₁ b₂ hb hp =>
+      have hsub : ∀ x ∈ b₁ ++ b₂, x ∈ s.bench := fun x hx => by
+        rw [hb]
+        rcases List.mem_append.1 hx with hx | hx
+        · exact List.mem_append_left _ hx
+        · exact List.mem_append_right _ (.tail _ hx)
+      exact hp.noMarks ⟨hs.1, hs.2.sub hsub⟩
+  | monNone => exact hs
 
 theorem CMove.noOwe {f : Filter} {noKO : Bool} {hp : Spot → InPlay → Nat} {a a' : Option InPlay}
     {b b' : List InPlay} (h : CMove f noKO hp a b a' b') (ha : OptNoOwe a) (hb : ListNoOwe b) :
@@ -433,6 +442,7 @@ theorem Fire.marks {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : F
       obtain ⟨hp, hc, ho⟩ := hr.marks.2.2 hk
       exact ⟨ih.1.trans hp, fun hc' => ih.2.1 (ho hc'), fun ho' => ih.2.2 (hc ho')⟩
   | decline _ _ ih => exact ih
+  | vacant _ _ _ _ ih => exact ih
 
 theorem Fire.marksOk {ev : TrigEvent} {l : List Ability} {g g' : GameState} (h : Fire ev l g g')
     (hm : g.MarksOk) : g'.MarksOk :=

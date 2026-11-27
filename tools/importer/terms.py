@@ -160,6 +160,9 @@ def own_free(e):
     if h == 'hitBy' and e[1] == OWN and e[2] == ('active',):
         # importer 0.19.0 (milestone MV12)
         return False
+    if h == 'returnPokemon' and e[1] == OWN and e[2] == ('active',):
+        # importer 0.22.0 (milestone MV15)
+        return False
     if h == 'look' and e[1] == OWN and e[5][0] == 'attach':
         # milestone MV6: a window attached to the player's Pokémon may attach to the Active Pokémon
         return False
@@ -169,7 +172,7 @@ def own_free(e):
 
 
 def switches_own(e):
-    if e == ('switch', OWN):
+    if e == ('switch', OWN) or (e[0] == 'returnPokemon' and e[1] == OWN and e[2] == ('active',)):
         return True
     return any(switches_own(s) for s in subs(e))
 

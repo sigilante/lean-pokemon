@@ -1,7 +1,7 @@
 /-
 Imported Standard cards, part 4 of 11 (150 cards).
 
-GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.21.0
+GENERATED FILE: do not edit. Written by tools/importer/importer.py version 0.22.0
 from pokemon-tcg-data commit 90f27d0e14cefe48ccb2b8922a7a356b2fcf0072 (pool: regulation marks H, I, J plus Basic Energy,
 survey S9 pool B). Regenerate with `python3 -I tools/importer/importer.py <dataset>`.
 -/
@@ -10,6 +10,28 @@ import PokemonCards.Props
 
 namespace PokemonCards.Standard.Part04
 open Pokemon
+
+/-- Iron Bundle (sv8-55). Records: sv8-55. Caveats: printedRetreat. -/
+def sv8_55 : Card := .pokemon
+  { name := "Iron Bundle", stage := .basic, evolvesFrom := none,
+    hp := 10, type := .water, retreat := 1, weakness := some .lightning,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Gusting Collision", cost := [.water, .water, .colorless], damage := 0,
+        effect := .damage (.sub (.const 20) (.count (.retreat .opp) 5)),
+        gx := false }] }
+
+/-- Magnemite (sv8-58). Records: sv8-58. -/
+def sv8_58 : Card := .pokemon
+  { name := "Magnemite", stage := .basic, evolvesFrom := none,
+    hp := 6, type := .lightning, retreat := 1, weakness := some .fighting,
+    resistance := none, ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Lightning Ball", cost := [.lightning], damage := 2,
+        effect := .skip,
+        gx := false }] }
 
 /-- Magnezone (sv8-60). Records: sv8-60. Caveats: perPokemon. -/
 def sv8_60 : Card := .pokemon
@@ -680,6 +702,20 @@ def sv8_129 : Card := .pokemon
         gx := false },
       { name := "Duralubeam", cost := [.metal, .metal, .metal], damage := 13,
         effect := .ite (.countGe (.energy .own .energy) 2) (.discardEnergy .own .active .energy (.exactly 2)) (.discardEnergy .own .active .energy .all),
+        gx := false }] }
+
+/-- Gholdengo (sv8-131). Records: sv8-131. Caveats: returnPromote. -/
+def sv8_131 : Card := .pokemon
+  { name := "Gholdengo", stage := .stage1, evolvesFrom := some "Gimmighoul",
+    hp := 13, type := .metal, retreat := 2, weakness := some .fire,
+    resistance := some (.grass, 3), ruleBox := .none, tera := false,
+    abilities := [],
+    attacks := [
+      { name := "Strike It Rich", cost := [.metal], damage := 0,
+        effect := .ite (.evolved .own) (.damage (.const 12)) (.damage (.const 3)),
+        gx := false },
+      { name := "Surf Back", cost := [.colorless, .colorless, .colorless], damage := 10,
+        effect := .choice (.returnPokemon .own .active .shuffle) .skip,
         gx := false }] }
 
 /-- Iron Crown (sv8-132). Records: sv8-132. -/
@@ -1701,44 +1737,10 @@ def sv9_15 : Card := .pokemon
         effect := .skip,
         gx := false }] }
 
-/-- Sprigatito (sv9-16). Records: sv9-16. -/
-def sv9_16 : Card := .pokemon
-  { name := "Sprigatito", stage := .basic, evolvesFrom := none,
-    hp := 6, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Tons of Treading", cost := [.colorless], damage := 0,
-        effect := .choice (.damage (.const 0)) (.choice (.damage (.const 1)) (.choice (.damage (.const 2)) (.damage (.const 3)))),
-        gx := false }] }
-
-/-- Floragato (sv9-17). Records: sv9-17. -/
-def sv9_17 : Card := .pokemon
-  { name := "Floragato", stage := .stage1, evolvesFrom := some "Sprigatito",
-    hp := 9, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [],
-    attacks := [
-      { name := "Magical Leaf", cost := [.colorless, .colorless], damage := 0,
-        effect := .choice (.damage (.const 3)) (.seq (.damage (.const 6)) (.heal 3)),
-        gx := false }] }
-
-/-- Meowscarada (sv9-18). Records: sv9-18. Caveats: selfBench. -/
-def sv9_18 : Card := .pokemon
-  { name := "Meowscarada", stage := .stage2, evolvesFrom := some "Floragato",
-    hp := 16, type := .grass, retreat := 1, weakness := some .fire,
-    resistance := none, ruleBox := .none, tera := false,
-    abilities := [
-      { name := "Showtime", use := .once,
-        spot := some .bench, cond := none,
-        effect := .self .switchIn }],
-    attacks := [
-      { name := "Rising Bloom", cost := [.colorless, .colorless], damage := 0,
-        effect := .ite (.top .opp .ex) (.damage (.const 18)) (.damage (.const 9)),
-        gx := false }] }
-
 /-- The cards of this part. -/
 def cards : List Card := [
+  sv8_55,
+  sv8_58,
   sv8_60,
   sv8_61,
   sv8_62,
@@ -1791,6 +1793,7 @@ def cards : List Card := [
   sv8_127,
   sv8_128,
   sv8_129,
+  sv8_131,
   sv8_132,
   sv8_134,
   sv8_135,
@@ -1885,10 +1888,7 @@ def cards : List Card := [
   sv9_12,
   sv9_13,
   sv9_14,
-  sv9_15,
-  sv9_16,
-  sv9_17,
-  sv9_18]
+  sv9_15]
 
 /-- Every card of this part passes the per-card checks (`Card.importOk`). -/
 theorem cards_ok : cards.all Card.importOk = true := by decide +kernel

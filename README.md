@@ -12,7 +12,7 @@ The deck condition `StoreSafe` was called `Faithful` before 2026-11-22; it was r
 the old name read as "faithful to the printed cards", which it never meant (it only keeps the
 stored damage modifiers bounded).
 
-Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 40 constructors at milestone M5; 45 since milestone MV12) of
+Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 40 constructors at milestone M5; 45 since milestone MV12; 46 since milestone MV15) of
 thirty-six primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`, milestone MV6 `look`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
 Special Conditions, a cure, Croagunk's stacking Poison ("This effect can be applied more than
 once"), markers (Imprison, Shock-wave, Lightning Rod and Char as flags, the Coloring counter as a
@@ -102,7 +102,7 @@ all Pokémon in play) as amounts (`Amt.count`, "30 damage for each Energy attach
 (`Test.countGe`). Its simplifications are in the Known gaps of `Pokemon/Rules.lean` ("up to"
 allows 0 everywhere; `attach`, `putBench` and `moveEnergy` may do nothing; no hidden
 information; a played Trainer is in the discard pile while it resolves; absent: returning a
-Pokémon in play to the hand or deck, devolution, evolution by effect). Zone moves change only zones
+Pokémon in play to the hand or deck (in attacks since milestone MV15), devolution, evolution by effect). Zone moves change only zones
 and attached Energy and counts read no damage, so both clamps keep them exact and every clamp
 theorem was re-proved without new hypotheses (`ZStep.sim`, `Count.val_clampAt`). Milestone M8a
 added activated and on-play Abilities: a Pokémon card has a list of Abilities (`Ability`: a use
@@ -203,7 +203,7 @@ two events for the player's own Pokémon, "Once during your turn, when this Pok�
 Bench to the Active Spot" and "… from the Active Spot to your Bench" (`TrigEvent.movedUp`,
 `TrigEvent.movedDown`, `TrigEvent` now 5 constructors; Yanmega ex sv10-3 and Clawitzer me1-38
 expressible (the witnesses use test cards; since importer 0.15.0 Clawitzer is imported, on the Bench a superset, and
-Yanmega ex is refused for an attack sentence): a
+since importer 0.18.0 Yanmega ex, whose attack sentence became expressible): a
 retreat, a switch of the player's own Active Pokémon, and the promotion of
 the player's Pokémon after a Knock Out of their Active Pokémon in their own turn mark the Pokémon
 that moved (`InPlay.noteMove`: the `owe` mark, now on either side, and the "once during your turn"
@@ -539,6 +539,58 @@ or Roggenrola is not tame (as with a damage reduction), and `Mods.NoReduce` now 
 no threshold the damage step is the old one (`GameState.dealt_old`, `Run.damage_old`). Witnesses:
 `Pokemon/Threshold.lean` (30 against "30 or more" prevented, 20 lands, also on the Bench; 20 against
 "20 or less" prevented, 30 lands; universal forms over every resolution).
+Milestone MV15 (return from play; survey S29) added one effect primitive and no state:
+`Effect.returnPokemon w sp d` puts one of the `w` player's Pokémon at `sp` (the Active Pokémon, or one
+Benched Pokémon chosen when the effect resolves) with its cards (top card, the cards under it, attached
+Energy and Tools) at `d` (hand, deck, discard pile); its damage counters, Special Conditions, markers and
+locks go with its record. It is a zone step (`ZStep.monActive`, `monBench`, `monNone`), so conservation,
+both clamp simulations (`ZStep.sim`), the Bench and mark conditions of `WellFormed` gained a case each
+and no hypothesis; two lemmas stated for every zone step were false for a return and gained one
+(`ZStep.active_pokemonCards`, `Shield`'s `ZStep.conds`: the step is not a return of the Active Pokémon). It is **attacks only**: `Effect.retFree` (no return in the effect) is a new premise
+of `Move.item`, `Move.supporter`, `Move.stadiumUse`, `Move.ability` and `Move.onPlay` (an auto-parameter,
+proved by `rfl` for every closed effect, so no existing witness changed), and the trigger fragment
+excludes it. The reason: the store bound counts the uses of "once during your turn" and on-play
+Abilities in a turn by a potential of the player's board (`GameState.abPot`) that no move before the
+turn's attack raises, and a return raises it (`Return.return_raises_abPot`, `Return.trun_raises_abPot`);
+a play–use–return loop would leave it unchanged while its uses add up. An attack ends the turn, and
+the potential is read only before the turn's attack, so `Run.abPot_le`, `TRun.abPot_le` and
+`ZStep.abPot_le` now take `Effect.retFree`, and `Move.abPot_le` the hypothesis `g'.attacked = false`
+(internal statements; `TInv.same`, `TInv.same'`, `TInv.bounded_use` restated to match). An empty Active
+Spot is filled by the batch step that follows (no Knock Out, no Prize card), and a player left with no
+Pokémon in play loses there (rulebook 2026 pp. 7, 21). `Reach.finite`, `Reach.clamp_mem`,
+`Move.clamp_sim`, `Move.xclamp_sim`, `Reach.xclamp_mem_bounded`, `StoreSafe` and `StoreSafe.xfinite`,
+the negative theorems, `Counter.universal` and the count theorems are unchanged in text; they now range
+over decks whose attacks return Pokémon, with no new hypothesis. For a game with no return card
+(`GameState.RetFree`, kept by play, `Reach.retFree`) the move relation is the pre-MV15 one, proved in
+pieces, not as one equivalence (no copy of the old `Move`, `Run` and `ZStep` was made): the five
+constructors with the new premise are legal from their old premises (`Move.item_old`, `supporter_old`,
+`stadiumUse_old`, `ability_old`, `onPlay_old`; the other direction is dropping the premise); every
+attack of such a game has no return (`Return.attack_retFree`), and for such an attack the changed
+definitions that `Move.attack` reads have their old values (`Return.attack_old`: `Attack.wf` through
+`switchSafe_old`, `Attack.lockSet` through `switchesOwn_old`, `Attack.against` through `shielded_old`;
+also `spares_old`, `ownFree_old`, with `switchesOwnOld`, `ownFreeOld`, `sparesOld`, `shieldedOld`,
+`switchSafeOld` copied from the pre-MV15 sources); the three new zone-step constructors are exactly
+those indexed by `returnPokemon` (by inspection of the inductive, so an effect with no return uses
+none; `Run` gained no constructor); the trigger fragment `Effect.trigOk` is unchanged; and every
+`Fire` a move resolves is the pre-MV15 relation (copied as `Return.FireOld`): `Return.fire_old`
+(`Fire ↔ FireOld` from a state whose player to move has an Active Pokémon), with that hypothesis
+proved at the three firing sites, `Return.attack_fire_old` (`Move.attack`, in a game with no return
+card), `Return.batch_fire_old` (`Move.knockOuts`, every game) and `Return.owed_old` (`Owed`, under
+`Move.trigger` and `Resolve.trigger`, every game, against a copy `Return.OwedOld`). A `damaged`
+trigger aimed at "the Attacking Pokémon" after the attacker returned itself finds that Active Spot
+empty; if its effect has no resolution there it does nothing, mandatory or not (`Fire.vacant`, a
+fourth constructor of `Fire`, which skips the whole trigger; Known gaps). Before it, the trigger step
+had no result after Fade Out against a mandatory trigger (`Return.fireOld_stuck`, one step), so such
+an attack had no `Move` (argued); witnesses `Return.fade_vs_spikes` and `Return.jab_vs_spikes`. A `koByAttack` trigger after such a return
+acts on the promoted Pokémon (Known gaps, triggered Abilities; caveat `trigAttacker`). Witnesses in
+`Pokemon/Return.lean`: from a well-formed, settled start, a Pokémon uses its once-per-turn Ability (a
+stored bonus), returns itself to the hand by its attack (with its Energy; its damage counters on no Pokémon in play), the
+Benched Pokémon is promoted with no Prize card, the turns pass, and the card is played again and uses its
+Ability again (`Return.trace`: the danger is not hidden, it is paid by the attack's end of turn);
+returns to the deck, of the opponent's Benched and Active Pokémon (with the opponent's promotion), and a
+player who returns their only Pokémon losing. Not modelled: the Item form (Scoop Up Cyclone) and the
+mid-turn Ability forms (Abra, Dudunsparce, Misty's Psyduck), which need a new deck condition; devolution;
+"that Pokémon" chosen in another sentence; Knock Out replacements (Known gaps).
 Milestone MV6 (effect vocabulary 6; census in survey S19) added, in stage 1, a window primitive:
 `Effect.look w src f q i rest` takes a whole window of the `w` player's zones off its source at once
 (the top `n` cards of the deck as they are when the effect starts, since MV6 also the bottom `n`,
@@ -847,7 +899,7 @@ finiteness; the deck condition `StoreSafe` buys it back:
   modifiers (Feraligatr sv5-41: `Abilities.feraligatr_storeSafe`) and recycle writers
   (`Abilities.once_recycler_storeSafe`): their uses in one turn are bounded by a potential of the
   player's Pokémon in play and the opponent's Prize cards (`GameState.abPot`), which no move of the
-  turn raises; this rests on the model having no return of a Pokémon from play to the hand or deck. The bound is per turn:
+  turn raises; this rests on the model having no return of a Pokémon from play to the hand or deck before the turn's attack (since milestone MV15 returns exist in attacks only, below). The bound is per turn:
   within a turn, before its attack, each writer Item is played at most once unless a Stadium use returns it (clause 3) and
   one Supporter at most, so Trainers write at most twice the Trainer amounts in a turn; at most one
   attack is made per turn; carried amounts expire within three turn boundaries; the rest-of-game
@@ -927,8 +979,9 @@ Not covered by `StoreSafe`, or not in the model: recycling outside clause 3 (an 
 a modifier-writing Item, as in `Recycle.recycling_breaks_bound`, or an "as often as you like"
 Ability that does, `Abilities.unlimited_recycler_breaks_bound`); "as often as you like" Abilities
 that write a modifier (outside clause 4); static and triggered Abilities and Stadium effects
-(absent); returning a card from play to the hand (absent; with it a Pokémon could re-enter play and
-use or trigger its Ability again in the same turn, which the Ability bound does not cover);
+(absent); returning a Pokémon from play to the hand or deck outside an attack (absent: refused by
+`Effect.retFree` since milestone MV15; with it a Pokémon could re-enter play and use or trigger its
+Ability again in the same turn, which the Ability bound does not cover);
 "attack twice", "attack again" after a Knock Out, and extra turns (absent: more than
 one attack's amounts per turn); rest-of-game modifiers from VSTAR Powers (absent), from Abilities
 (outside clause 4) and from Stadium effects (outside clause 5); copy attacks, for instance copying a GX attack (absent); static modifiers outside the language of `Static`
@@ -1011,8 +1064,12 @@ every game whose cards all come from the imported pool is `StoreSafe`, all five 
 `PokemonCards.Standard.xfinite`, `StoreSafe.xfinite` for those games, both stated with the clamp
 at `Enum.bound` of the cards, which since milestone M6 bounds every derived HP and every static
 damage reduction, and since milestone MV14 every static damage threshold). Of the pool's 2,161 cards,
-1,615 are imported (1,093 exactly, 522 with caveats) as 1,606 distinct terms, and 546 are refused, each
-with a reason (`tools/importer/out/coverage.md`; importer 0.21.0, which since 0.21.0 translates threshold
+1,625 are imported (1,095 exactly, 530 with caveats) as 1,616 distinct terms, and 536 are refused, each
+with a reason (`tools/importer/out/coverage.md`; importer 0.22.0, which since 0.22.0 translates returns from
+play in attacks, "Put this Pokémon and all attached cards into your hand", "(You may) shuffle this Pokémon and
+all attached cards into your deck", "Discard this Pokémon and all attached cards", "Put / Shuffle 1 of your
+Benched Pokémon and all attached cards into your hand / deck" and "Shuffle 1 of your opponent's Benched Pokémon
+and all attached cards into their deck" (`returnPokemon`; caveat `returnPromote`); since 0.21.0 threshold
 prevention, "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon if that
 damage is N or more" and "During your opponent's next turn, prevent all damage done to this Pokémon by
 attacks if that damage is N or less" (caveat `thresholdRead`); since 0.20.0 it translates static damage

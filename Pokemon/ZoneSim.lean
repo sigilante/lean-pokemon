@@ -282,6 +282,23 @@ theorem ZStep.sim {c cb : Cap} {e : Effect} {s₁ s₁' s₂ : PlayerState} (h :
       have hm := ha.bench
       rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
       exact ⟨s₂, .shiftNone hm, ha⟩
+  | @monActive w d s s' a hac hp =>
+      have hm := ha.active
+      rw [hac] at hm
+      obtain ⟨a₂, ha₂, hag⟩ := agree_of_map hm
+      obtain ⟨y₂, hp₂, hy⟩ := hp.sim (c := c) (cb := cb) (x₂ := { s₂ with active := none })
+        ⟨ha.deck, ha.hand, ha.discard, rfl, ha.bench⟩
+      exact ⟨y₂, .monActive ha₂ (by rw [hag.cardList]; exact hp₂), hy⟩
+  | @monBench w d s s' p b₁ b₂ hb hp =>
+      obtain ⟨d₁, q₂, d₂, hb₂, h1, h2, h3⟩ := map_eq_split (hb ▸ ha.bench)
+      have hpa := InPlay.agree_of_clamp h2
+      obtain ⟨y₂, hp₂, hy⟩ := hp.sim (c := c) (cb := cb) (x₂ := { s₂ with bench := d₁ ++ d₂ })
+        ⟨ha.deck, ha.hand, ha.discard, ha.active, by simp only [List.map_append, h1, h3]⟩
+      exact ⟨y₂, .monBench hb₂ (by rw [hpa.cardList]; exact hp₂), hy⟩
+  | monNone hb =>
+      have hm := ha.bench
+      rw [hb, List.map_nil, List.map_eq_nil_iff] at hm
+      exact ⟨s₂, .monNone hm, ha⟩
 
 /-! ## Triggers (milestone M8b)
 
@@ -389,6 +406,17 @@ theorem Fire.clamp_sim {co cp cbo cbp : Cap} {k : Nat} {ev : TrigEvent} {l : Lis
       intro g₂ hc
       obtain ⟨h₂, ht, hc₂⟩ := ih hc
       exact ⟨h₂, .decline ho ht, hc₂⟩
+  | @vacant ab l g g₃ hk ha hn _ ih =>
+      intro g₂ hc
+      obtain ⟨h₂, ht, hc₂⟩ := ih hc
+      have e := congrArg (fun x : GameState => x.cur.active) hc
+      simp only [GameState.clampAt, ha, Option.map_none] at e
+      have ha₂ : g₂.cur.active = none := Option.map_eq_none_iff.1 e.symm
+      have hs : g₂.swap.clampAt cp co cbp cbo k = g.swap.clampAt cp co cbp cbo k := by
+        rw [GameState.swap_clampAt, GameState.swap_clampAt, hc]
+      refine ⟨h₂, .vacant hk ha₂ (fun x hx => ?_) ht, hc₂⟩
+      obtain ⟨y, hy, -⟩ := hx.trig_sim hk hs
+      exact hn y hy
 
 /-- **The player to move's own triggers are simulated under any clamp** (milestone MV7c): they are
 `Fire` on the exchanged state, whose clamp has the caps exchanged. -/

@@ -553,10 +553,14 @@ theorem Place.active_pokemonCards {i : Into} {t : List Card} {s s' : PlayerState
   | attach hd => exact hd.active_pokemonCards
 
 /-- A zone step leaves the same Pokémon (top card and the cards under it) in its player's Active
-Spot; it may attach or discard Energy there. -/
-theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e s s') :
+Spot; it may attach or discard Energy there. Since milestone MV15 the step is not a return of the
+Active Pokémon from play (`hr`), which empties the Active Spot. -/
+theorem ZStep.active_pokemonCards {e : Effect} {s s' : PlayerState} (h : ZStep e s s')
+    (hr : ∀ w d, e ≠ .returnPokemon w .active d) :
     s'.active.map InPlay.pokemonCards = s.active.map InPlay.pokemonCards := by
   cases h with
+  | monActive => exact absurd rfl (hr _ _)
+  | monBench _ hp => rw [hp.fields.2.1]
   | @move w src dst f q s s' t r hs hq hp => rw [hp.fields.2.1, Src.set_active]
   | @attachActive w src f tf s r t a hs ha ht => rw [ha]; rfl
   | @attachBench w src f tf s r t q b₁ b₂ hs hb ht => cases src <;> rfl
@@ -617,7 +621,12 @@ theorem Run.cardList_of_switchesOwn {e : Effect} {g g' : GameState} (h : Run e g
   | @zone e w g s' hw hz =>
       cases w
       · simp only [GameState.side] at hz
-        simp only [GameState.updSide, PlayerState.setZones]; exact hz.active_pokemonCards
+        simp only [GameState.updSide, PlayerState.setZones]
+        refine hz.active_pokemonCards ?_
+        rintro w' d rfl
+        simp only [Effect.zSide, Option.some.injEq] at hw
+        subst hw
+        simp [Effect.switchesOwn] at hs
       · rfl
   | @benchCounters _ _ _ _ w _ _ => cases w <;> rfl
   | spreadCounters w _ _ => cases w <;> rfl
