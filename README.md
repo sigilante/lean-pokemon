@@ -1,5 +1,7 @@
 # lean-pokemon
 
+**Status ~2026.11.28:  Return from play in attacks only (MV15); 1,625 of 2,161 Standard cards imported; work paused before Prize-changing triggers.**
+
 A Lean 4 model of the Pokémon Trading Card Game, built to settle whether the game is Turing
 complete. The working hypothesis for the printed game is that it is not: the game has no token
 generation, and a Pokémon whose damage reaches its HP is Knocked Out, and the survey of the
@@ -11,6 +13,97 @@ stores, and the finiteness results below need a hypothesis on the deck: tame dec
 The deck condition `StoreSafe` was called `Faithful` before 2026-11-22; it was renamed because
 the old name read as "faithful to the printed cards", which it never meant (it only keeps the
 stored damage modifiers bounded).
+
+## What needs to change
+
+This section lists what the model does not yet do and what would have to change to do it. It is
+written at importer 0.22.0 (master after milestone MV15): 1,625 of the 2,161 Standard cards are
+imported (1,095 with no card-specific caveat, 530 with caveats) and 536 are refused. The proofs
+say nothing about a game that uses a refused card. The detailed list of departures from the
+rulebook is the "Known gaps" block at the top of `Pokemon/Rules.lean`.
+
+### Held for a decision (each would change what a headline theorem means)
+
+These are not missing by oversight. Each one touches an assumption behind a headline theorem
+(termination for item 1, the store bound `StoreSafe.xfinite` for items 2 and 3) or needs an item
+that does (item 4), so each waits for a design decision rather than an importer rule.
+
+1. **Effects and triggers that change the number of Prize cards taken.** Nothing is built.
+   Termination of the Knock Out step rests on every Knock Out taking a Prize card and on nothing
+   returning one (`KOMove.acc`, `Move.unsettled_acc`, Known gaps in `Pokemon/Rules.lean`). What
+   must change: the Prize step, the termination measure, and the triggers on taking a Prize
+   card. The cards are Shedinja, Lillie's Pearl, Munkidori ex, Mega Gengar ex, Legendary Summit,
+   Togekiss and Hydreigon ex. They sit in the largest refused group, triggers of other events
+   (59 cards; 56 have no other blocker), most of which do not touch Prize cards.
+2. **Return from play by an Item** (Scoop Up Cyclone). A return raises the Ability potential
+   (`Return.return_raises_abPot`), so the returning card must pay for it. The weight it needs
+   depends on the whole deck (`2Q`, where `Q` is the deck's Ability bound), and `Card.wAmt` is a
+   function of the card alone. What must change: a deck-dependent weight, and clause 3
+   (`RecycleSafe`) read with it. That changes what `StoreSafe` means.
+3. **Return from play by an Ability used during the turn** (Abra, Dudunsparce, Misty's Psyduck).
+   A deck that meets all five clauses can grow a store without bound in one turn if an Ability
+   may both write a modifier and return its own Pokémon (argued, not built: the move relation
+   refuses returning Abilities, `Effect.retFree`). What must change: a sixth clause of
+   `StoreSafe`, with a witness that it cannot be dropped from the proof. The three printed
+   cards write no modifier and recycle nothing, so by the sketch in survey S29 they would meet
+   it; that is not checked in Lean.
+4. **Devolution** (6 cards). Four are attacks and would fit the attacks-only rule of MV15; one
+   is an Ability (Archeops) and one an Item (Strange Timepiece), which meet items 2 and 3.
+
+### Stated but not proved
+
+- **No single statement that a game without a return card is the pre-MV15 game.** The pieces are
+  proved (the five guarded moves, the attack premises, every `Fire` inside a move:
+  `Return.attack_fire_old`, `Return.batch_fire_old`, `Return.owed_old`), not one equivalence.
+- **Where a trigger can find an empty Active Spot.** In a game with return cards, that it happens
+  only after an attack returned its own Pokémon is argued. That nothing in an attack refills an
+  opponent's emptied Active Spot is argued.
+- **Thresholds.** `Move.clamp_sim` covers a static threshold of at most `k` (proved, through
+  `GameState.ThrLe k`). At `k = 3` a threshold of 8 makes the old statement false
+  (`Threshold.clamp_sim_old_false`). No theorem covers any other threshold above `k`; that a
+  threshold of `k + 1` is harmless is an argument in `Pokemon/Threshold.lean`, not a proof.
+- **No printed combination gives an unbounded store through a return.** This rests on a text scan
+  (the only Ability in the pool that writes a stored damage modifier is Feraligatr, a Stage 2)
+  and on the rule against evolving a Pokémon the turn it is played. It is not a theorem.
+- **Whether a term says what its card says.** No proof ties a term to its card. LLM agents
+  compared them; a person has read a sample of 20, at an earlier commit.
+
+### Readings with no rule or ruling behind them
+
+Each is marked in Known gaps. The threshold order and the promotion after a return carry caveats
+(`thresholdRead`, `returnPromote`); the other readings are stated as the model's semantics and
+carry none.
+
+- When "that damage" is compared with a threshold: after every other effect of the damage
+  calculation (caveat `thresholdRead`).
+- What "done to this Pokémon" covers for prevention of effects of attacks.
+- A returned Pokémon takes every card under and on it, and its damage counters and effects end.
+- After a return, the Active Spot is refilled as after a Knock Out, with no Prize card; a player
+  left with no Pokémon in play loses at that step.
+- A trigger aimed at an attacker that has left play does nothing, and the whole trigger is
+  skipped, not only the part that needs the attacker (`Fire.vacant`).
+
+### Refused for want of a construct
+
+The refused cards and the importer's reason for each are in
+`tools/importer/out/not-imported.tsv`. The largest remaining groups, by cards that need the
+construct (a card can need several; the grouping is the output of
+`tools/importer/s16_classes.py`, which is not in the repository): static effects whose condition reads the state (36); counts of Tools, Special
+Conditions, Prize cards taken and the like (30); consequences of an action the model may do
+nothing for (21); evolution and devolution by effect (20); static locks (20); filtered lingering
+modifiers (18); cost changes and Energy provision (18). Also not done: prevention of effects of
+Abilities; heals of the opponent's Pokémon and partial moves of the opponent's damage counters
+(they do not commute with the capped clamp); Bench protection from anything but damage.
+
+### Outside the model
+
+- Only the Standard pool (regulation marks H, I and J, and Basic Energy) is imported. That these
+  marks are today's Standard is an assumption.
+- Multi-card Pokémon (LEGEND, V-UNION) are not modelled. The Standard pool has none.
+- Deck construction rules (60 cards, four copies) are not modelled; the theorems range over any
+  multiset of card terms.
+
+## The model in detail
 
 Status: early. The model covers a core of the rules: state; an effect language (`Pokemon.Effect`, 40 constructors at milestone M5; 45 since milestone MV12; 46 since milestone MV15) of
 thirty-six primitive effects (`skip` included; milestone M5 added `discardStadium` and `discardTools`, milestone MV2 `benchSome`, milestone MV6 `look`) and four combinators (`ite`, `seq`, `choice`, `iter`), including the five
